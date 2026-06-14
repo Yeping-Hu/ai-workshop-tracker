@@ -5,7 +5,8 @@
 A static website that aggregates **ML conference workshop** information in one place:
 
 - 📅 **Upcoming submission deadlines** for COLM, CVPR, CoRL, ICLR, ICML, ICRA, IROS, and NeurIPS workshops — with live countdowns and AoE → local-time conversion; the board shows open calls only — paginated 25 per page with the same numbered pager as search results — with everything else reachable through search (subscribable `.ics` calendar feeds exist but are paused until dates are verified; see `CALENDAR_ENABLED`)
-- 🔎 **One unified, faceted search** (Pagefind, fully static, dual-index) across every workshop edition and 19k+ accepted-paper titles — filter by conference, status, year, and topic — the filter bar sits right under the search box and works without typing a keyword. Facet counts are exact and mutually consistent: selecting a value in one facet instantly re-counts the others (computed client-side from build-time data). Results paginate 50 per page with numbered pages; the headline counts exactly what is listed: distinct workshops shown and individual matching papers inside them ("N workshops · M matching papers · by relevance · page x/y"); facet-only browsing shows a clean workshop count plus the active ordering ("N workshops · open calls first"). Multiple keywords are AND at both levels: a workshop must contain all of them, and a listed paper must individually match all of them (workshops where keywords only co-occur across different papers get a quiet link instead). Results are grouped per workshop, with matching papers nested beneath each one (deep links to every paper). Statuses are inferred from dates *and* paper caches (accepted papers prove a call closed): "Open call", "Deadline unknown" (venue never published one), or "Past". Filter-only browsing lists open calls first (soonest deadline on top, then upcoming-TBA, this year's closed calls, and past editions newest-first); typing keywords switches to relevance ranking — the result count line always states which ordering is active.
+- 🔎 **One unified, faceted search** across every workshop edition and 20k+ accepted-paper titles, filterable by conference, status, year, and topic — fully static (Pagefind), so it runs entirely in the browser with no search server
+- ⭐ **Save workshops and papers** to a personal list, stored in your own browser (no account, no sign-in)
 - 📄 **Auto-generated accepted-paper listings** for OpenReview-hosted workshops on each workshop's page
 
 Conference deadline trackers exist; *workshop* deadlines never had one. This fills that gap. Ships with 660+ real workshop editions (2024–2026, across all eight conferences) and 20,000+ accepted-paper titles imported from OpenReview venue records. (CVPR workshops use OpenReview for reviewing only — their accepted papers live on CVF Open Access, so those entries track deadlines and links rather than inline paper lists.)
@@ -25,16 +26,15 @@ GitHub repo (single source of truth)
  └── .github/workflows/        CI validation + scheduled automation
 ```
 
-Key design decisions (all in service of zero cost / low maintenance):
+The guiding principle is **zero hosting cost and near-zero maintenance**: the Git
+repo is the only source of truth, the site is fully static (no backend, no
+database), accepted-paper lists are cached from OpenReview by a scheduled job,
+and deadline statuses are derived at build time rather than stored. Contributions
+are validated by CI, not by hand.
 
-- **No backend, no database.** The Git repo *is* the database; the site is fully static (Astro), hosted free on GitHub Pages or Cloudflare Pages. The UI is deliberately three pages — a search-first homepage (big search box over the deadline board; searching swaps in faceted results), a device-local Saved list, and About. Old /archive, /search, /contribute, /calendar URLs redirect.
-- **Favorites without accounts.** Star ☆ any workshop or paper — on the deadline board, in search/filter results, or on a workshop page — and it lands in the visitor's own `localStorage` (`site/src/scripts/favorites.js`); no login, no server, no PII. The `/saved/` page re-hydrates workshops from `/api/workshops.json` (deadlines stay live; open calls first), clusters saved papers by conference (A→Z, latest year first inside each), and links every paper title to its workshop page with an exact PDF link beside it (`/api/papers-without-pdf.json` keeps derived PDF links honest). GoatCounter star events measure whether the feature ever justifies real accounts.
-- **Every content link opens a new tab.** A single delegated click-time handler in the base layout covers links rendered at any moment (board, search results, the saved page); only the site header and same-page anchors navigate in place, and modified clicks keep native behavior.
-- **Search survives deploys.** Pagefind loads its hashed data files lazily, and every deploy replaces them — so an open tab would get zero results for any filter. The client detects this (zero results where the build-time facet counts expect more, or a thrown engine error), re-imports the engine in place, and only then falls back to an honest message with a reload button.
-- **Statuses are derived, never stored.** `upcoming` / `deadline_passed` / `past` are computed from dates at build time; a weekly scheduled rebuild keeps them fresh with zero commits.
-- **Calendar feeds instead of email.** Static `.ics` feeds (all / per-conference / per-topic / per-workshop) with built-in 7-day and 1-day alarms replace any notification infrastructure. *Currently paused* via the `CALENDAR_ENABLED` flag in `site/src/lib/site.ts` until imported dates are human-verified — while paused, feeds publish zero events so earlier subscribers' calendars self-clean.
-- **OpenReview only, cached.** Paper lists are fetched from the OpenReview API by a monthly job into committed JSON; builds never touch the live API. Non-OpenReview workshops just link out — no scraping.
-- **Contributors are validated by CI, not by you.** Schema + sanity checks comment on PRs with exactly what to fix; an issue form auto-converts to PRs for non-technical contributors.
+For the reasoning behind these choices and the behavior details that matter when
+modifying the site (search semantics, the deploy-resilient search engine,
+favorites storage, link handling), see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
 ## Quickstart (local)
 
