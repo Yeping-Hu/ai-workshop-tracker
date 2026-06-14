@@ -4,12 +4,12 @@
 
 A static website that aggregates **ML conference workshop** information in one place:
 
-- 📅 **Upcoming submission deadlines** for COLM, CVPR, CoRL, ICLR, ICML, ICRA, IROS, and NeurIPS workshops — with live countdowns and AoE → local-time conversion; the board shows open calls only — paginated 25 per page with the same numbered pager as search results — with everything else reachable through search (subscribable `.ics` calendar feeds exist but are paused until dates are verified; see `CALENDAR_ENABLED`)
+- 📅 **Upcoming submission deadlines** for COLM, CVPR, CoRL, ICLR, ICML, ICRA, IROS, and NeurIPS workshops, with live countdowns and AoE → local-time conversion; the board shows open calls, and everything else is reachable through search
 - 🔎 **One unified, faceted search** across every workshop edition and 20k+ accepted-paper titles, filterable by conference, status, year, and topic — fully static (Pagefind), so it runs entirely in the browser with no search server
 - ⭐ **Save workshops and papers** to a personal list, stored in your own browser (no account, no sign-in)
 - 📄 **Auto-generated accepted-paper listings** for OpenReview-hosted workshops on each workshop's page
 
-Conference deadline trackers exist; *workshop* deadlines never had one. This fills that gap. Ships with 660+ real workshop editions (2024–2026, across all eight conferences) and 20,000+ accepted-paper titles imported from OpenReview venue records. (CVPR workshops use OpenReview for reviewing only — their accepted papers live on CVF Open Access, so those entries track deadlines and links rather than inline paper lists.)
+Conference deadline trackers exist; *workshop* deadlines never had one. This fills that gap. Ships with 660+ real workshop editions (2024–2026, across all eight conferences) and 20,000+ accepted-paper titles imported from OpenReview venue records.
 
 ## How it works
 
