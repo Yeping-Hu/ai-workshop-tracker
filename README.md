@@ -2,7 +2,7 @@
 
 **Live at [aiworkshoptracker.com](https://aiworkshoptracker.com)**
 
-A static website that aggregates **ML conference workshop** information in one place:
+A static website that aggregates **AI/ML/Robotics conference workshop** information in one place:
 
 - 📅 **Upcoming submission deadlines** for COLM, CVPR, CoRL, ICLR, ICML, ICRA, IROS, and NeurIPS workshops, with live countdowns and AoE → local-time conversion; the board shows open calls, and everything else is reachable through search
 - 🔎 **One unified, faceted search** across every workshop edition and 20k+ accepted-paper titles, filterable by conference, status, year, and topic — fully static (Pagefind), so it runs entirely in the browser with no search server
