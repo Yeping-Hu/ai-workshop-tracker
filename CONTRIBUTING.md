@@ -35,6 +35,7 @@ One YAML file per workshop **edition** (same series ⇒ new file each year).
 | `submission_deadline` |  | `YYYY-MM-DD HH:MM` or `YYYY-MM-DD` (means 23:59) — **wall-clock time in `timezone`** |
 | `timezone` |  | `AoE` (default, = UTC−12), `UTC`, or an IANA name like `America/Los_Angeles` |
 | `deadline_notes` |  | e.g. `"extended from Aug 15"` |
+| `tracks` |  | For multi-track workshops (e.g. Full + Short): list of `{ name, submission_deadline?, timezone? }`. Omit `submission_deadline` for a track whose date isn't announced yet. See note below. |
 | `notification_date` |  | `YYYY-MM-DD` |
 | `workshop_date` |  | `YYYY-MM-DD` |
 | `openreview_venue_id` |  | e.g. `NeurIPS.cc/2026/Workshop/MATH-AI` — enables the automatic paper list |
@@ -50,6 +51,19 @@ A workshop with no deadline and no `workshop_date` becomes **Past** automaticall
 conference edition ends — edition dates live in `data/editions.yml` (one row per
 conference-year, `end` required; `node scripts/validate.mjs` notes any tracked year missing
 a row). When a year has no row, the coarser `typical_month` from `data/conferences.yml` is used.
+
+### Multi-track workshops (`tracks`)
+
+Some workshops split submissions into tracks with **different** deadlines (e.g. a Full-paper
+track and a Short-paper track). List them under `tracks`; give each a `name`, and a
+`submission_deadline` (+ `timezone`) if it's known, or leave the deadline off for a track that
+hasn't announced one yet. The site derives everything from the list: the headline deadline is
+the **soonest track still open** (it rolls to the next track as each one closes), and the status
+follows what's actionable — any open track shows **Open call**; if every announced track has
+closed but one is still unannounced it shows **Deadline unknown** (not Past, since a track may
+still open); only once all tracks have passed does it show **Past**. The workshop page lists each
+track. Don't bother with `tracks` when every track shares one deadline — just use a single
+`submission_deadline`.
 
 ### Adding a missing deadline
 

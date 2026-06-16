@@ -69,6 +69,27 @@ if that also fails does it show an honest message with a reload button.
 weekly scheduled rebuild keeps them current with zero commits, so an "Open call"
 becomes "Past" on its own without anyone editing data.
 
+## Multi-track workshops (per-track deadlines)
+
+Some workshops split submissions into tracks with different deadlines (e.g. ECCV
+MARINE: Full + Short). The importer detects this via `subTrackInfo()` (sub-track
+child groups on OpenReview) and stores a `tracks: [{name, submission_deadline?,
+timezone?}]` field; identical-deadline or single tracks collapse to a plain
+`submission_deadline` instead. `resolveWorkshop` (lib/workshops.mjs) then derives,
+at build time:
+
+- **a rolling headline deadline** — the soonest track still in the future, so when
+  an earlier track closes the next one becomes the headline on the next build;
+- **status by actionability** — any future track → Open call; else any still-
+  unannounced (TBA) track → Deadline unknown (deliberately *not* Past, since a
+  track may still open, and the paper-count "call closed" heuristic is suppressed
+  while a track is pending); else all announced-and-passed → Past.
+
+The board, search, countdowns, and JSON API consume only the single derived
+deadline/status, so they're unchanged; the workshop page additionally renders the
+per-track breakdown. The rules are pinned by `scripts/tracks_test.mjs` (run in the
+validate CI workflow).
+
 ## Favorites without accounts
 
 Starring a workshop or paper (on the board, in search/filter results, or on a

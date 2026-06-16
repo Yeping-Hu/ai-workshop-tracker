@@ -18,6 +18,12 @@ timezone: "AoE"                # "AoE" (default), "UTC", or IANA e.g. "America/L
 deadline_notes: ""             # e.g. "extended from Aug 15"
 notification_date: ""          # "YYYY-MM-DD"
 workshop_date: ""              # "YYYY-MM-DD"
+# Multi-track workshops only (tracks with DIFFERENT deadlines, e.g. Full + Short).
+# Omit entirely for a single deadline. Headline = soonest open track; a track
+# with no submission_deadline shows as "not yet announced".
+# tracks:
+#   - { name: "Full",  submission_deadline: "2026-07-13 12:00", timezone: "UTC" }
+#   - { name: "Short" }   # deadline not announced yet
 
 # --- Papers ---
 openreview_venue_id: ""        # e.g. "NeurIPS.cc/2026/Workshop/MATH-AI" -> auto paper list
