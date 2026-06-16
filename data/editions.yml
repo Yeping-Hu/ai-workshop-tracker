@@ -107,3 +107,13 @@
   start: "2026-12-06"
   end: "2026-12-13"
   source: "https://neurips.cc/"
+- conference: eccv
+  year: 2024
+  start: "2024-09-29"
+  end: "2024-10-04"
+  source: "https://eccv.ecva.net/"
+- conference: eccv
+  year: 2026
+  start: "2026-09-08"
+  end: "2026-09-13"
+  source: "https://eccv.ecva.net/"

@@ -1,0 +1,127 @@
+{
+ "venue_id": "thecvf.com/ECCV/2024/Workshop/W-CODA",
+ "source_api": "v2",
+ "fetched_at": "2026-06-16T20:46:17.146Z",
+ "paper_count": 9,
+ "papers": [
+  {
+   "title": "A Multimodal Hybrid Late-Cascade Fusion Network for Enhanced 3D Object Detection",
+   "authors": [
+    "Carlo Sgaravatti",
+    "Roberto Basla",
+    "Riccardo Pieroni",
+    "Matteo Corno",
+    "Sergio M. Savaresi",
+    "Luca Magri",
+    "Giacomo Boracchi"
+   ],
+   "forum_url": "https://openreview.net/forum?id=ad6Q54fHMr",
+   "pdf_url": "https://openreview.net/pdf?id=ad6Q54fHMr"
+  },
+  {
+   "title": "AnoVox: A Benchmark for Multimodal Anomaly Detection in Autonomous Driving",
+   "authors": [
+    "Daniel Bogdoll",
+    "Iramm Hamdard",
+    "Lukas Roessler",
+    "Felix Geisler",
+    "Muhammed Bayram",
+    "Felix Wang",
+    "Jan Imhof",
+    "Miguel de Campos",
+    "Anushervon Tabarov",
+    "Yitian Yang",
+    "Martin Gontscharow",
+    "Hanno Gottschalk",
+    "J. Marius Zoellner"
+   ],
+   "forum_url": "https://openreview.net/forum?id=Xzb1QlJ98b",
+   "pdf_url": "https://openreview.net/pdf?id=Xzb1QlJ98b"
+  },
+  {
+   "title": "HumanSim: Human-Like Multi-Agent Novel Driving Simulation for Corner Case Generation",
+   "authors": [
+    "Lingfeng Zhou",
+    "Mohan Jiang",
+    "Dequan Wang"
+   ],
+   "forum_url": "https://openreview.net/forum?id=lVMKJxsIdC",
+   "pdf_url": "https://openreview.net/pdf?id=lVMKJxsIdC"
+  },
+  {
+   "title": "Loop Mining Large-Scale Unlabeled Data for Corner Case Detection in Autonomous Driving",
+   "authors": [
+    "Jiawei Zhao",
+    "Yiting Duan",
+    "Jinming Su",
+    "yangwangwang",
+    "Tingyi Guo",
+    "Xingyue Chen",
+    "Junfeng Luo"
+   ],
+   "forum_url": "https://openreview.net/forum?id=SyqqPooxxm",
+   "pdf_url": "https://openreview.net/pdf?id=SyqqPooxxm"
+  },
+  {
+   "title": "On Camera and LiDAR Positions in End-to-End Autonomous Driving",
+   "authors": [
+    "Malte Stelzer",
+    "Jan Pirklbauer",
+    "Jan Bickerdt",
+    "Volker Patricio Schomerus",
+    "Jan Piewek",
+    "Thorsten Bagdonat",
+    "Tim Fingscheidt"
+   ],
+   "forum_url": "https://openreview.net/forum?id=nFA8MWo9Ks",
+   "pdf_url": "https://openreview.net/pdf?id=nFA8MWo9Ks"
+  },
+  {
+   "title": "ProGBA: Prompt Guided Bayesian Augmentation for Zero-shot Domain Adaptation",
+   "authors": [
+    "Jian Zou",
+    "Guanglei Yang",
+    "Tao Luo",
+    "Chun-Mei Feng",
+    "Wangmeng Zuo"
+   ],
+   "forum_url": "https://openreview.net/forum?id=5nglB4rkux",
+   "pdf_url": "https://openreview.net/pdf?id=5nglB4rkux"
+  },
+  {
+   "title": "ReGentS: Real-World Safety-Critical Driving Scenario Generation Made Stable",
+   "authors": [
+    "Yuan Yin",
+    "Pegah KHAYATAN",
+    "Eloi Zablocki",
+    "Alexandre Boulch",
+    "Matthieu Cord"
+   ],
+   "forum_url": "https://openreview.net/forum?id=dJqcdUgEdw",
+   "pdf_url": "https://openreview.net/pdf?id=dJqcdUgEdw"
+  },
+  {
+   "title": "RoSA Dataset: Road construct zone Segmentation for Autonomous Driving",
+   "authors": [
+    "JINWOO KIM",
+    "Kyounghwan An",
+    "Donghwan Lee"
+   ],
+   "forum_url": "https://openreview.net/forum?id=ygF6aFhdxC",
+   "pdf_url": "https://openreview.net/pdf?id=ygF6aFhdxC"
+  },
+  {
+   "title": "Talk to Parallel LiDARs: A Human-LiDAR Interaction Method Based on 3D Visual Grounding",
+   "authors": [
+    "Yuhang Liu",
+    "Boyi Sun",
+    "Yishuo Wang",
+    "Jing Yang",
+    "Xingxia Wang",
+    "Fei-Yue Wang"
+   ],
+   "forum_url": "https://openreview.net/forum?id=zLWJR53KxC",
+   "pdf_url": "https://openreview.net/pdf?id=zLWJR53KxC"
+  }
+ ]
+}

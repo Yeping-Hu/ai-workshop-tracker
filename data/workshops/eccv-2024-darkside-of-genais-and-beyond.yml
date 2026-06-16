@@ -1,0 +1,14 @@
+name: ECCV 2024 Workshop The Dark Side of Generative AIs and Beyond
+acronym: DarkSide of GenAIs and Beyond
+conference: eccv
+year: 2024
+website: https://sites.google.com/view/darksideofgenaiandbeyond
+topics:
+  - generative-models
+submission_deadline: 2024-08-11 11:59
+timezone: UTC
+deadline_notes: imported from OpenReview — check the website for extensions
+openreview_venue_id: thecvf.com/ECCV/2024/Workshop/DarkSide_of_GenAIs_and_Beyond
+submission_portal: openreview
+notes: Auto-imported from the OpenReview venue record on 2026-06-16 — please verify and enrich (topics are keyword-guessed).
+added: "2026-06-16"

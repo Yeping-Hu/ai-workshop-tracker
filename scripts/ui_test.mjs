@@ -145,7 +145,7 @@ await page.click('summary[data-facet-summary="status"]');
 await page.check('[data-facet="status"] input[value="Open call"]');
 await page.waitForFunction(() => document.querySelectorAll('#results .pf-result').length > 0);
 const browseCount = await page.$eval('#searchCount', (el) => el.textContent);
-check('browse headline omits papers segment', /^\d+ workshops? · open calls first$/.test(browseCount), browseCount);
+check('browse headline omits papers segment', /^\d+ workshops? · open calls first( · page \d+\/\d+)?$/.test(browseCount), browseCount);
 check('browse entries have no paper sublists', (await page.$$('.pf-papers')).length === 0);
 await page.uncheck('[data-facet="status"] input[value="Open call"]');
 await page.waitForSelector('#homeDefault:not([hidden])');

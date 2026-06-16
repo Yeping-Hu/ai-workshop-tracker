@@ -1,0 +1,15 @@
+name: "ECCV 2026 Workshop - Event-Based Multimodal Vision: From Imaging to Perception and Understanding"
+acronym: ECCV 2026 Workshop EBMV
+conference: eccv
+year: 2026
+website: https://eventbasemultimodalvision.github.io/
+topics:
+  - vision
+  - multimodal
+submission_deadline: 2026-07-20 23:59
+timezone: UTC
+deadline_notes: imported from OpenReview — check the website for extensions
+openreview_venue_id: thecvf.com/ECCV/2026/Workshop/EBMV
+submission_portal: openreview
+notes: Auto-imported from the OpenReview venue record on 2026-06-16 — please verify and enrich (topics are keyword-guessed).
+added: "2026-06-16"

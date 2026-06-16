@@ -1,0 +1,50 @@
+{
+ "venue_id": "thecvf.com/ECCV/2024/Workshop/ROAM",
+ "source_api": "v2",
+ "fetched_at": "2026-06-16T20:46:14.882Z",
+ "paper_count": 4,
+ "papers": [
+  {
+   "title": "High Dynamic Range Modulo Imaging for Robust Object Detection in Autonomous Driving",
+   "authors": [
+    "Kebin Contreras",
+    "Brayan Monroy",
+    "Jorge Luis Bacca"
+   ],
+   "forum_url": "https://openreview.net/forum?id=2GqZFx2I7s",
+   "pdf_url": "https://openreview.net/pdf?id=2GqZFx2I7s"
+  },
+  {
+   "title": "Improving Online Source-Free Domain Adaptation for Object Detection by Unsupervised Data Acquisition",
+   "authors": [
+    "Xiangyu Shi",
+    "Yanyuan Qiao",
+    "Qi Wu",
+    "Lingqiao Liu",
+    "Feras Dayoub"
+   ],
+   "forum_url": "https://openreview.net/forum?id=rcj64Hg6vu",
+   "pdf_url": "https://openreview.net/pdf?id=rcj64Hg6vu"
+  },
+  {
+   "title": "RLNet: Adaptive Fusion of 4D Radar and Lidar for 3D Object Detection",
+   "authors": [
+    "Ruoyu Xu",
+    "Zhiyu Xiang"
+   ],
+   "forum_url": "https://openreview.net/forum?id=I5IIhtSbMe",
+   "pdf_url": "https://openreview.net/pdf?id=I5IIhtSbMe"
+  },
+  {
+   "title": "What Matters in Autonomous Driving Anomaly Detection: A Weakly Supervised Horizon",
+   "authors": [
+    "Utkarsh Tiwari",
+    "Snehashis Majhi",
+    "Michal Balazia",
+    "Francois Bremond"
+   ],
+   "forum_url": "https://openreview.net/forum?id=IxG4XmfXQC",
+   "pdf_url": "https://openreview.net/pdf?id=IxG4XmfXQC"
+  }
+ ]
+}

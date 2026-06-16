@@ -1,0 +1,387 @@
+{
+ "venue_id": "thecvf.com/ECCV/2024/Workshop/Wild3D",
+ "source_api": "v2",
+ "fetched_at": "2026-06-16T20:46:18.289Z",
+ "paper_count": 32,
+ "papers": [
+  {
+   "title": "3D-GSR: 3D Super-Resolution with Multi-View Adapter and Gaussian Splatting",
+   "authors": [
+    "Anna-Alina Bondarets",
+    "Taras Rumezhak",
+    "Hlib Plakhtii",
+    "Alina Muliak",
+    "Volodymyr Karpiv"
+   ],
+   "forum_url": "https://openreview.net/forum?id=sRCAgwBUL6",
+   "pdf_url": "https://openreview.net/pdf?id=sRCAgwBUL6"
+  },
+  {
+   "title": "BoostMVSNeRFs: Boosting MVS-based NeRFs to Generalizable View Synthesis in Large-scale Scenes",
+   "authors": [
+    "Chih-Hai Su",
+    "Chih Yao Hu",
+    "Shr-Ruei Tsai",
+    "Jie-Ying Lee",
+    "Chin-Yang Lin",
+    "Yu-Lun Liu"
+   ],
+   "forum_url": "https://openreview.net/forum?id=CzlQ2RL4M2",
+   "pdf_url": "https://openreview.net/pdf?id=CzlQ2RL4M2"
+  },
+  {
+   "title": "CHOSEN: Contrastive Hypothesis Selection for Multi-View Depth Refinement",
+   "authors": [
+    "Di Qiu",
+    "Yinda Zhang",
+    "Thabo Beeler",
+    "Vladimir Tankovich",
+    "Christian Häne",
+    "Sean Fanello",
+    "Christoph Rhemann",
+    "Sergio Orts-Escolano"
+   ],
+   "forum_url": "https://openreview.net/forum?id=cv7X2FU1BM",
+   "pdf_url": "https://openreview.net/pdf?id=cv7X2FU1BM"
+  },
+  {
+   "title": "Coloring the Past: Neural Historical Monuments Reconstruction from Archival Photography",
+   "authors": [
+    "Dávid Komorowicz",
+    "Lu Sang",
+    "Ferdinand Maiwald",
+    "Daniel Cremers"
+   ],
+   "forum_url": "https://openreview.net/forum?id=bvuNLaQPvu",
+   "pdf_url": "https://openreview.net/pdf?id=bvuNLaQPvu"
+  },
+  {
+   "title": "CrossScore: Towards Multi-View Image Evaluation and Scoring",
+   "authors": [
+    "Zirui Wang",
+    "Wenjing Bian",
+    "Victor Adrian Prisacariu"
+   ],
+   "forum_url": "https://openreview.net/forum?id=r8QWoNMlMA",
+   "pdf_url": "https://openreview.net/pdf?id=r8QWoNMlMA"
+  },
+  {
+   "title": "D$^3$RoMa:Disparity Diffusion-based Depth Sensing for Material-Agnostic Robotic Manipulation",
+   "authors": [
+    "Songlin Wei",
+    "Haoran Geng",
+    "Jiayi Chen",
+    "Congyue Deng",
+    "Cui Wenbo",
+    "Chengyang Zhao",
+    "Xiaomeng Fang",
+    "Leonidas Guibas",
+    "He Wang"
+   ],
+   "forum_url": "https://openreview.net/forum?id=jFRUsiuhUy",
+   "pdf_url": "https://openreview.net/pdf?id=jFRUsiuhUy"
+  },
+  {
+   "title": "DecentNeRFs: Decentralized Neural Radiance Fields from Crowdsourced Images",
+   "authors": [
+    "Zaid Tasneem",
+    "Akshat Dave",
+    "Abhishek Singh",
+    "Kushagra Tiwary",
+    "Praneeth Vepakomma",
+    "Ashok Veeraraghavan",
+    "Ramesh Raskar"
+   ],
+   "forum_url": "https://openreview.net/forum?id=2Zb5B88yRk",
+   "pdf_url": "https://openreview.net/pdf?id=2Zb5B88yRk"
+  },
+  {
+   "title": "Deceptive-NeRF/3DGS: Diffusion-Generated Pseudo-Observations for High-Quality Sparse-View Reconstruction",
+   "authors": [
+    "Xinhang Liu",
+    "Jiaben Chen",
+    "Shiu-hong Kao",
+    "Yu-Wing Tai",
+    "Chi-Keung Tang"
+   ],
+   "forum_url": "https://openreview.net/forum?id=qruUX7Te6H",
+   "pdf_url": "https://openreview.net/pdf?id=qruUX7Te6H"
+  },
+  {
+   "title": "Dynamic Scene Reconstruction from Single Landscape Image Using 4D Gaussian in the Wild",
+   "authors": [
+    "In-Hwan Jin",
+    "Haesoo Choo",
+    "Seong-Hun Jeong",
+    "Park Heemoon",
+    "Junghwan Kim",
+    "Oh-joon Kwon",
+    "Kyeongbo Kong"
+   ],
+   "forum_url": "https://openreview.net/forum?id=HrwrydyPBD",
+   "pdf_url": "https://openreview.net/pdf?id=HrwrydyPBD"
+  },
+  {
+   "title": "Enhancing Surface Neural Implicits with Curvature-Guided Sampling and Uncertainty-Augmented Representations",
+   "authors": [
+    "Lu Sang",
+    "Maolin Gao",
+    "Abhishek Saroha",
+    "Daniel Cremers"
+   ],
+   "forum_url": "https://openreview.net/forum?id=MPnjVhkhTw",
+   "pdf_url": "https://openreview.net/pdf?id=MPnjVhkhTw"
+  },
+  {
+   "title": "Fast Encoder-Based 3D from Casual Videos via Point Track Processing",
+   "authors": [
+    "Yoni Kasten",
+    "Wuyue Lu",
+    "Haggai Maron"
+   ],
+   "forum_url": "https://openreview.net/forum?id=2hRdGzSj02",
+   "pdf_url": "https://openreview.net/pdf?id=2hRdGzSj02"
+  },
+  {
+   "title": "Free-Viewpoint Video in the Wild Using a Flying Camera",
+   "authors": [
+    "Zhengdong Hong",
+    "Wenhao Shen"
+   ],
+   "forum_url": "https://openreview.net/forum?id=AsPHD00Wer",
+   "pdf_url": "https://openreview.net/pdf?id=AsPHD00Wer"
+  },
+  {
+   "title": "G3R: Gradient Guided Generalizable Reconstruction",
+   "authors": [
+    "Yun Chen",
+    "Jingkang Wang",
+    "Ze Yang",
+    "Sivabalan Manivasagam",
+    "Raquel Urtasun"
+   ],
+   "forum_url": "https://openreview.net/forum?id=5D4mSdUCmC",
+   "pdf_url": "https://openreview.net/pdf?id=5D4mSdUCmC"
+  },
+  {
+   "title": "GS2Mesh: Surface Reconstruction from Gaussian Splatting via Novel Stereo Views",
+   "authors": [
+    "Yaniv Wolf",
+    "Amit Bracha",
+    "Ron Kimmel"
+   ],
+   "forum_url": "https://openreview.net/forum?id=4WEtbfizmh",
+   "pdf_url": "https://openreview.net/pdf?id=4WEtbfizmh"
+  },
+  {
+   "title": "HAHA: Highly Articulated Gaussian Human Avatars with Textured Mesh Prior",
+   "authors": [
+    "David Svitov",
+    "Pietro Morerio",
+    "Alessio Del Bue",
+    "Lourdes Agapito"
+   ],
+   "forum_url": "https://openreview.net/forum?id=nMxA0tzrDw",
+   "pdf_url": "https://openreview.net/pdf?id=nMxA0tzrDw"
+  },
+  {
+   "title": "High Frame Rate, Dense Depth Stream by a Low Frame Rate, Sparse Active Sensor",
+   "authors": [
+    "Andrea Conti",
+    "Matteo Poggi",
+    "Valerio Cambareri",
+    "Stefano Mattoccia"
+   ],
+   "forum_url": "https://openreview.net/forum?id=Rc6E7k99vX",
+   "pdf_url": "https://openreview.net/pdf?id=Rc6E7k99vX"
+  },
+  {
+   "title": "latentSplat: Autoencoding Variational Gaussians for Fast Generalizable 3D Reconstruction",
+   "authors": [
+    "Christopher Wewer",
+    "Kevin Raj",
+    "Eddy Ilg",
+    "Bernt Schiele",
+    "Jan Eric Lenssen"
+   ],
+   "forum_url": "https://openreview.net/forum?id=s7E4k6Uk9l",
+   "pdf_url": "https://openreview.net/pdf?id=s7E4k6Uk9l"
+  },
+  {
+   "title": "OccFusion: Rendering Occluded Humans with Generative Diffusion Priors",
+   "authors": [
+    "Adam Sun",
+    "Tiange Xiang",
+    "Scott Delp",
+    "Li Fei-Fei",
+    "Ehsan Adeli"
+   ],
+   "forum_url": "https://openreview.net/forum?id=LAIwOYV5Ha",
+   "pdf_url": "https://openreview.net/pdf?id=LAIwOYV5Ha"
+  },
+  {
+   "title": "Optimizing Dynamic NeRF and 3DGS with No Video Synchronization",
+   "authors": [
+    "Seoha Kim",
+    "Jeongmin Bae",
+    "Youngsik Yun",
+    "HyunSeung Son",
+    "Hahyun Lee",
+    "Gun Bang",
+    "Youngjung Uh"
+   ],
+   "forum_url": "https://openreview.net/forum?id=RQutkn4V9I",
+   "pdf_url": "https://openreview.net/pdf?id=RQutkn4V9I"
+  },
+  {
+   "title": "PhysPart: Physically Plausible Part Completion for Interactable Objects",
+   "authors": [
+    "Rundong Luo",
+    "Haoran Geng",
+    "Congyue Deng",
+    "Puhao Li",
+    "Zan Wang",
+    "Baoxiong Jia",
+    "Leonidas Guibas",
+    "Siyuan Huang"
+   ],
+   "forum_url": "https://openreview.net/forum?id=X99EMQs8G7",
+   "pdf_url": "https://openreview.net/pdf?id=X99EMQs8G7"
+  },
+  {
+   "title": "Shape Translation of Dental Point Clouds",
+   "authors": [
+    "Stefan Engelmann Jensen",
+    "Johan Ziruo Ye"
+   ],
+   "forum_url": "https://openreview.net/forum?id=GiHxKlHd0f",
+   "pdf_url": "https://openreview.net/pdf?id=GiHxKlHd0f"
+  },
+  {
+   "title": "Single Image, Any Face: Generalisable 3D Face Generation",
+   "authors": [
+    "Wenqing Wang",
+    "Haosen Yang",
+    "Josef Kittler",
+    "Xiatian Zhu"
+   ],
+   "forum_url": "https://openreview.net/forum?id=Byudld8ZPE",
+   "pdf_url": "https://openreview.net/pdf?id=Byudld8ZPE"
+  },
+  {
+   "title": "SlotLifter: Slot-guided Feature Lifting for Learning Object-centric Radiance Fields",
+   "authors": [
+    "Yu Liu",
+    "Baoxiong Jia",
+    "Yixin Chen",
+    "Siyuan Huang"
+   ],
+   "forum_url": "https://openreview.net/forum?id=SgieQWN9mZ",
+   "pdf_url": "https://openreview.net/pdf?id=SgieQWN9mZ"
+  },
+  {
+   "title": "Sp2360: Sparse-view 360◦ Scene Reconstruction using Cascaded 2D Diffusion Priors",
+   "authors": [
+    "Soumava Paul",
+    "Christopher Wewer",
+    "Bernt Schiele",
+    "Jan Eric Lenssen"
+   ],
+   "forum_url": "https://openreview.net/forum?id=XuNhNyHHwK",
+   "pdf_url": "https://openreview.net/pdf?id=XuNhNyHHwK"
+  },
+  {
+   "title": "SpaRP: Fast 3D Object Reconstruction and Pose Estimation from Sparse Views",
+   "authors": [
+    "Chao Xu",
+    "Ang Li",
+    "Linghao Chen",
+    "Yulin Liu",
+    "Ruoxi Shi",
+    "Hao Su",
+    "Minghua Liu"
+   ],
+   "forum_url": "https://openreview.net/forum?id=8h9XIscgHy",
+   "pdf_url": "https://openreview.net/pdf?id=8h9XIscgHy"
+  },
+  {
+   "title": "SpotLessSplats: Ignoring Distractors in 3D Gaussian Splatting",
+   "authors": [
+    "Sara Sabour",
+    "Lily Goli",
+    "Georgios Kopanas",
+    "Mark J. Matthews",
+    "Dmitry Lagun",
+    "Leonidas Guibas",
+    "Alec Jacobson",
+    "David J. Fleet",
+    "Andrea Tagliasacchi"
+   ],
+   "forum_url": "https://openreview.net/forum?id=CWhAtuwVvE",
+   "pdf_url": "https://openreview.net/pdf?id=CWhAtuwVvE"
+  },
+  {
+   "title": "SuperGaussian: Repurposing Video Models for 3D Super Resolution",
+   "authors": [
+    "Yuan Shen",
+    "Duygu Ceylan",
+    "Paul Guerrero",
+    "Zexiang Xu",
+    "Niloy Mitra",
+    "Shenlong Wang",
+    "Anna Frühstück"
+   ],
+   "forum_url": "https://openreview.net/forum?id=HZcJFNAka4",
+   "pdf_url": "https://openreview.net/pdf?id=HZcJFNAka4"
+  },
+  {
+   "title": "SWAG: Splatting in the Wild images with Appearance-conditioned Gaussians",
+   "authors": [
+    "Hiba Dahmani"
+   ],
+   "forum_url": "https://openreview.net/forum?id=Z6gDkuI5fu",
+   "pdf_url": "https://openreview.net/pdf?id=Z6gDkuI5fu"
+  },
+  {
+   "title": "Synchronization of Projective Transformations",
+   "authors": [
+    "Rakshith Madhavan",
+    "Andrea Fusiello",
+    "Federica Arrigoni"
+   ],
+   "forum_url": "https://openreview.net/forum?id=uSBb0FDpAx",
+   "pdf_url": "https://openreview.net/pdf?id=uSBb0FDpAx"
+  },
+  {
+   "title": "TriNeRFLet: A Wavelet Based Triplane NeRF Representation",
+   "authors": [
+    "Rajaei Khatib",
+    "Raja Giryes"
+   ],
+   "forum_url": "https://openreview.net/forum?id=j8fmIuvqgk",
+   "pdf_url": "https://openreview.net/pdf?id=j8fmIuvqgk"
+  },
+  {
+   "title": "WildTalker: Talking Portrait Synthesis In the Wild",
+   "authors": [
+    "Seonghak Lee",
+    "Jisoo Park",
+    "Junseok Kwon"
+   ],
+   "forum_url": "https://openreview.net/forum?id=296BblZfXx",
+   "pdf_url": "https://openreview.net/pdf?id=296BblZfXx"
+  },
+  {
+   "title": "Zero-Shot Metric Depth with a Field-of-View Conditioned Diffusion Model",
+   "authors": [
+    "Saurabh Saxena",
+    "Junhwa Hur",
+    "Charles Herrmann",
+    "Deqing Sun",
+    "David J. Fleet"
+   ],
+   "forum_url": "https://openreview.net/forum?id=nWrjxMaAnT",
+   "pdf_url": "https://openreview.net/pdf?id=nWrjxMaAnT"
+  }
+ ]
+}

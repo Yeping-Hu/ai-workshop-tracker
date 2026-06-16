@@ -1,0 +1,14 @@
+name: "ECCV 2024 Workshop - HumanFoundation: Foundation Models for 3D Humans"
+acronym: ECCV 2024 Workshop HumanFoundation
+conference: eccv
+year: 2024
+website: https://human-foundation.github.io/workshop-eccv-2024/
+topics:
+  - llms
+submission_deadline: 2024-07-22 23:59
+timezone: UTC
+deadline_notes: imported from OpenReview — check the website for extensions
+openreview_venue_id: thecvf.com/ECCV/2024/Workshop/HumanFoundation
+submission_portal: openreview
+notes: Auto-imported from the OpenReview venue record on 2026-06-16 — please verify and enrich (topics are keyword-guessed).
+added: "2026-06-16"

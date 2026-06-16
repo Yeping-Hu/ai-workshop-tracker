@@ -1,0 +1,14 @@
+name: ECCV 2026 Workshop on Data Curation & Augmentation in Medical Imaging
+acronym: ECCV 2026 DCA-MI
+conference: eccv
+year: 2026
+website: https://dca-in-mi.github.io/#home
+topics:
+  - healthcare-bio
+submission_deadline: 2026-07-01 11:00
+timezone: UTC
+deadline_notes: imported from OpenReview — check the website for extensions
+openreview_venue_id: thecvf.com/ECCV/2026/Workshop/DCA-MI
+submission_portal: openreview
+notes: Auto-imported from the OpenReview venue record on 2026-06-16 — please verify and enrich (topics are keyword-guessed).
+added: "2026-06-16"

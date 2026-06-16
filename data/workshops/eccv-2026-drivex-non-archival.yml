@@ -1,0 +1,14 @@
+name: "[Non-Archival Track] ECCV 2026 DriveX - 6th Workshop on Foundation Models for Autonomous Driving"
+acronym: ECCV 2026 Workshop DriveX
+conference: eccv
+year: 2026
+website: https://drivex-workshop.github.io/eccv2026/
+topics:
+  - llms
+submission_deadline: 2026-08-01 06:59
+timezone: UTC
+deadline_notes: imported from OpenReview — check the website for extensions
+openreview_venue_id: thecvf.com/ECCV/2026/Workshop/DriveX_Non-Archival
+submission_portal: openreview
+notes: Auto-imported from the OpenReview venue record on 2026-06-16 — please verify and enrich (topics are keyword-guessed).
+added: "2026-06-16"

@@ -1,0 +1,72 @@
+{
+ "venue_id": "thecvf.com/ECCV/2024/Workshop/DarkSide_of_GenAIs_and_Beyond",
+ "source_api": "v2",
+ "fetched_at": "2026-06-16T20:46:02.423Z",
+ "paper_count": 7,
+ "papers": [
+  {
+   "title": "Defending Text-to-image Diffusion Models: Surprising Efficacy of Textual Perturbations Against Backdoor Attacks",
+   "authors": [
+    "Oscar Chew",
+    "Po-Yi Lu",
+    "Jayden Lin",
+    "Hsuan-Tien Lin"
+   ],
+   "forum_url": "https://openreview.net/forum?id=8g2PejwZi6",
+   "pdf_url": "https://openreview.net/pdf?id=8g2PejwZi6"
+  },
+  {
+   "title": "Gender Bias in Vision-Language Assistants",
+   "authors": [
+    "Leander Girrbach",
+    "Yiran Huang",
+    "Isabel Rio-Torto",
+    "Stephan Alaniz",
+    "Trevor Darrell",
+    "Zeynep Akata"
+   ],
+   "forum_url": "https://openreview.net/forum?id=ZLWthjuLO4",
+   "pdf_url": "https://openreview.net/pdf?id=ZLWthjuLO4"
+  },
+  {
+   "title": "High-Frequency Anti-DreamBooth: Robust Defense against Personalized Image Synthesis",
+   "authors": [
+    "Takuto Onikubo",
+    "Yusuke Matsui"
+   ],
+   "forum_url": "https://openreview.net/forum?id=uRqU6l1GmH",
+   "pdf_url": "https://openreview.net/pdf?id=uRqU6l1GmH"
+  },
+  {
+   "title": "Illuminating the Shadows - Challenges and Risks of Generative AI in Computer Vision for Brands",
+   "authors": [
+    "Alex Kaplunovich"
+   ],
+   "forum_url": "https://openreview.net/forum?id=OMG9OqLN47",
+   "pdf_url": "https://openreview.net/pdf?id=OMG9OqLN47"
+  },
+  {
+   "title": "Is Model Collapse Inevitable? Breaking the Curse of Recursion by Accumulating Real and Synthetic Data",
+   "authors": [],
+   "forum_url": "https://openreview.net/forum?id=y4vaskUK1b",
+   "pdf_url": "https://openreview.net/pdf?id=y4vaskUK1b"
+  },
+  {
+   "title": "Keeping Segment Mask Quality with Self-generated Masks",
+   "authors": [],
+   "forum_url": "https://openreview.net/forum?id=Y2I9KnlsSa",
+   "pdf_url": "https://openreview.net/pdf?id=Y2I9KnlsSa"
+  },
+  {
+   "title": "On Copyright Risks of Text-to-Image Diffusion Models",
+   "authors": [
+    "Yang Zhang",
+    "Teoh Tze Tzun",
+    "Lim Wei Hern",
+    "Kenji Kawaguchi"
+   ],
+   "forum_url": "https://openreview.net/forum?id=mKFpkOVoFz",
+   "pdf_url": "https://openreview.net/pdf?id=mKFpkOVoFz"
+  }
+ ]
+}

@@ -1,0 +1,15 @@
+name: Artificial Intelligence for Medical 3D Vision Workshop
+acronym: AI4M3D
+conference: eccv
+year: 2026
+website: https://ai4m3d.github.io/
+topics:
+  - healthcare-bio
+  - vision
+submission_deadline: 2026-07-10 21:59
+timezone: UTC
+deadline_notes: imported from OpenReview — check the website for extensions
+openreview_venue_id: thecvf.com/ECCV/2026/Workshop/AI4M3D
+submission_portal: openreview
+notes: Auto-imported from the OpenReview venue record on 2026-06-16 — please verify and enrich (topics are keyword-guessed).
+added: "2026-06-16"

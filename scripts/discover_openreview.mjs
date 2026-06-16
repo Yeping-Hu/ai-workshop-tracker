@@ -47,6 +47,7 @@ const CONF_TEMPLATE = {
   cvpr: 'thecvf.com/CVPR/{year}/Workshop',
   corl: 'robot-learning.org/CoRL/{year}/Workshop',
   colm: 'colmweb.org/COLM/{year}/Workshop',
+  eccv: 'thecvf.com/ECCV/{year}/Workshop',
 };
 
 const args = process.argv.slice(2);

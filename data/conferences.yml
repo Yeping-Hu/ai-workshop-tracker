@@ -55,3 +55,10 @@
   workshop_list_url_pattern: "https://colmweb.org"
   color: "#A21CAF"
   typical_month: 10
+- id: eccv
+  name: "ECCV"
+  full_name: "European Conference on Computer Vision"
+  website: "https://eccv.ecva.net"
+  workshop_list_url_pattern: "https://eccv.ecva.net"
+  color: "#0891B2"
+  typical_month: 10

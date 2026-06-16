@@ -1,0 +1,16 @@
+name: Workshop on Embodied Multimodal Reasoning in Physical Environments
+acronym: EMR 2026
+conference: eccv
+year: 2026
+website: https://emr-workshop.github.io/
+topics:
+  - math-reasoning
+  - physics
+  - robotics
+submission_deadline: 2026-07-13 11:59
+timezone: UTC
+deadline_notes: imported from OpenReview — check the website for extensions
+openreview_venue_id: thecvf.com/ECCV/2026/Workshop/EMR
+submission_portal: openreview
+notes: Auto-imported from the OpenReview venue record on 2026-06-16 — please verify and enrich (topics are keyword-guessed).
+added: "2026-06-16"
