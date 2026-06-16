@@ -244,19 +244,40 @@ export async function subTrackInfo(g, fetchGroups) {
       (c) => c.id !== g.id && c.id.startsWith(`${g.id}/`) && val(c.content ?? {}, 'submission_id'),
     );
   } catch {
-    return { deadline: null, website: null };
+    return { deadline: null, website: null, tracks: [] };
   }
-  if (!children.length) return { deadline: null, website: null };
+  if (!children.length) return { deadline: null, website: null, tracks: [] };
   let best = null, website = null;
+  const tracks = [];
   for (const c of children) {
     if (!website) {
       const w = String(val(c.content ?? {}, 'website') || '').trim();
       if (/^https?:\/\//.test(w)) website = w.slice(0, 500);
     }
     const dl = parseGroupDeadline(val(c.content ?? {}, 'date')) || (await deadlineFromInvitation(c));
+    // Track name: the segment after the parent (e.g. ".../MARINE/Full" -> "Full").
+    const name = c.id.slice(g.id.length + 1).replace(/[_/]+/g, ' ').trim() || c.id.split('/').pop();
+    tracks.push({ name, deadline: dl }); // dl may be null = TBA track
     if (dl && (!best || dl.submission_deadline < best.submission_deadline)) best = dl;
   }
-  return { deadline: best, website };
+  // Collapse: if every track shares one deadline (or there's only one), it's
+  // not really multi-track — let the caller treat it as a plain workshop.
+  const dated = tracks.filter((t) => t.deadline);
+  const allSame =
+    dated.length === tracks.length &&
+    dated.every((t) => t.deadline.submission_deadline === dated[0].deadline.submission_deadline);
+  const multiTrack = tracks.length > 1 && !allSame;
+  return { deadline: best, website, tracks: multiTrack ? tracks : [] };
+}
+
+/** Convert subTrackInfo's track list into the stored `tracks` YAML shape:
+ *  [{name, submission_deadline?, timezone?}]. TBA tracks keep just a name. */
+function tracksToYaml(tracks) {
+  return (tracks || []).map((t) =>
+    t.deadline
+      ? { name: t.name, submission_deadline: t.deadline.submission_deadline, timezone: t.deadline.timezone }
+      : { name: t.name },
+  );
 }
 
 async function main() {
@@ -297,13 +318,14 @@ async function main() {
       // Backfill: organizers sometimes publish the deadline on OpenReview
       // after we imported the venue. Fill it in when it appears.
       const { path: fp, raw } = known.get(g.id);
-      if (!raw.submission_deadline || !raw.website) {
+      if (!raw.submission_deadline || !raw.website || !raw.tracks) {
         let dl = parseGroupDeadline(val(g.content ?? {}, 'date')) || (await deadlineFromInvitation(g));
-        let subWebsite = null;
-        if (!dl || !raw.website) {
+        let subWebsite = null, subTracks = [];
+        if (!dl || !raw.website || !raw.tracks) {
           const sub = await subTrackInfo(g, fetchGroups);
           if (!dl && sub.deadline) dl = sub.deadline;
           subWebsite = sub.website;
+          subTracks = tracksToYaml(sub.tracks);
         }
         let changed = false;
         if (!raw.submission_deadline && dl) {
@@ -314,6 +336,7 @@ async function main() {
           backfilled++;
         }
         if (!raw.website && subWebsite) { raw.website = subWebsite; changed = true; }
+        if (!raw.tracks && subTracks.length) { raw.tracks = subTracks; changed = true; }
         if (changed && !dryRun) fs.writeFileSync(fp, yaml.dump(raw, { lineWidth: 200, quotingType: '"' }));
       }
       skipped++;
@@ -327,12 +350,15 @@ async function main() {
     const websiteRaw = String(val(c, 'website') || '').trim();
     let website = /^https?:\/\//.test(websiteRaw) ? websiteRaw.slice(0, 500) : null;
     let deadline = parseGroupDeadline(val(c, 'date')) || (await deadlineFromInvitation(g));
+    let tracks = [];
     // Empty parent with sub-track children (e.g. MARINE/Full + MARINE/Short):
-    // inherit the earliest child deadline and a child website.
+    // inherit the earliest child deadline, a child website, and record the
+    // per-track breakdown so the page can show each track honestly.
     if (!deadline || !website) {
       const sub = await subTrackInfo(g, fetchGroups);
       if (!deadline && sub.deadline) deadline = sub.deadline;
       if (!website && sub.website) website = sub.website;
+      tracks = tracksToYaml(sub.tracks);
     }
 
     const record = { name: title, acronym, conference: conf, year };
@@ -343,6 +369,7 @@ async function main() {
       record.timezone = deadline.timezone;
       record.deadline_notes = 'imported from OpenReview — check the website for extensions';
     }
+    if (tracks.length) record.tracks = tracks;
     record.openreview_venue_id = g.id;
     record.submission_portal = 'openreview';
     record.notes = `Auto-imported from the OpenReview venue record on ${today} — please verify and enrich (topics are keyword-guessed).`;

@@ -456,3 +456,8 @@ h2 .count { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 400;
 .pf-result > .star-btn { font-size: 0.95rem; margin-left: 0.1rem; vertical-align: 0.05em; }
 .pf-papers li > .star-btn { font-size: 0.92rem; margin-right: 0.2rem; margin-left: -0.25rem; }
 .saved-papers .pdf-link { font-size: 0.85rem; white-space: nowrap; }
+
+/* ---------- multi-track workshop breakdown (workshop page) ---------- */
+.tracks-list { list-style: none; margin: 0; padding: 0; }
+.tracks-list li { display: flex; gap: 0.6rem; align-items: baseline; padding: 0.15rem 0; flex-wrap: wrap; }
+.tracks-list .track-name { font-weight: 600; min-width: 4rem; }

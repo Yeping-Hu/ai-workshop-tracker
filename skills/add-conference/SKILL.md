@@ -183,11 +183,16 @@ season is when the site spreads.
 - Sub-track submission groups: some workshops leave the parent group empty
   and split submissions into children (`…/Full` + `…/Short`, Long/Short
   paper tracks, etc.) that carry the real `submission_id`/website. Discovery
-  descends one level via `subTrackInfo()` and takes the EARLIEST child
-  deadline (so "one track open, one TBA" still surfaces a real deadline) plus
-  an inherited website. If a workshop shows "Deadline unknown" but its
-  OpenReview page has multiple Submission buttons, this is the path that
-  handles it — a clean re-run backfills it.
+  descends one level via `subTrackInfo()` and, when the tracks have *different*
+  deadlines, records a `tracks: [{name, submission_deadline?, timezone?}]`
+  field (TBA tracks keep just a name; identical-deadline tracks collapse to a
+  plain single deadline). `resolveWorkshop` then derives a ROLLING headline
+  deadline (soonest track still in the future) and status: any future track →
+  Open call; else any TBA track → Deadline unknown (NOT Past — a track may
+  still open); else all-passed → Past. The workshop page shows the per-track
+  breakdown. If a workshop shows "Deadline unknown" but its OpenReview page
+  has multiple Submission buttons, this is the path that handles it — a clean
+  re-run backfills it. Logic is guarded by `scripts/tracks_test.mjs` (CI).
 - Statuses derive from dates AND paper caches (papers ⇒ call closed).
 - The eyebrow ↔ dropdown order is pinned by a test; both use plain `.sort()`.
 - Prefer `add_conference.mjs` over manual edits; verify anchors if you must

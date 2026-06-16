@@ -117,6 +117,28 @@ const searchOrder = (() => {
           </>
         )}
       </dd>
+      {Array.isArray(w.tracks) && w.tracks.length > 0 && (
+        <>
+          <dt>Tracks</dt>
+          <dd>
+            <ul class="tracks-list">
+              {w.tracks.map((t) => (
+                <li>
+                  <span class="track-name">{t.name}</span>
+                  {t.deadlineWallClock ? (
+                    <span class={t.passed ? 'muted' : ''}>
+                      <span class="mono">{t.deadlineWallClock}</span>{t.passed ? ' · closed' : ''}
+                    </span>
+                  ) : (
+                    <span class="muted">deadline not yet announced</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <div class="muted small">Each track has its own deadline; the headline above shows the soonest one still open.</div>
+          </dd>
+        </>
+      )}
       {w.notification_date && (
         <>
           <dt>Notification</dt>
