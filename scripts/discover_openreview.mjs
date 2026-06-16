@@ -8,9 +8,12 @@
  * from the venue's human-written `date` line or, when that is blank, from
  * the submission invitation's machine-readable `duedate` (expired
  * invitations included; it's the value shown next to the Submission button
- * on openreview.net). Nothing is estimated. Entries that still lack a
- * deadline are written with a comment template inviting contributors to
- * add it — the site's "know the deadline? Add it in one line" link lands
+ * on openreview.net). Nothing is estimated. When a workshop leaves its
+ * parent group empty and splits submissions into sub-track children
+ * (e.g. MARINE/Full + MARINE/Short), discovery descends one level and uses
+ * the earliest child deadline plus an inherited website. Entries that still
+ * lack a deadline are written with a comment template inviting contributors
+ * to add it — the site's "know the deadline? Add it in one line" link lands
  * there — and the weekly backfill's rewrite removes the template the
  * moment a real deadline appears.
  *
@@ -200,6 +203,62 @@ export async function deadlineFromInvitation(g) {
   return null;
 }
 
+/** Fetch OpenReview groups under a prefix, retrying on 429/5xx (same
+ *  rate-limit hardening as the deadline lookup). Returns [] on persistent
+ *  failure rather than throwing, so a throttled sub-track probe degrades to
+ *  "no sub-tracks" instead of crashing the whole import. */
+export async function fetchGroups(prefix) {
+  const url = `https://api2.openreview.net/groups?prefix=${encodeURIComponent(prefix)}&limit=1000`;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      await new Promise((r) => setTimeout(r, attempt === 0 ? 0 : attempt * attempt * 600));
+      const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+      if (res.status === 429 || res.status >= 500) {
+        if (attempt < 3) continue;
+        throw new Error(`HTTP ${res.status} after retries`);
+      }
+      if (!res.ok) return [];
+      const { groups = [] } = await res.json();
+      return groups;
+    } catch (err) {
+      if (attempt < 3) continue;
+      console.warn(`  ⚠ group lookup failed for ${prefix}: ${err.message}`);
+      return [];
+    }
+  }
+  return [];
+}
+
+/** Some workshops split submissions into sub-track child groups (e.g.
+ *  MARINE/Full + MARINE/Short, or Long/Short paper tracks) and leave the
+ *  parent group empty — no date, no website, no submission_id. Descend one
+ *  level: collect each child's invitation deadline and website. Returns the
+ *  EARLIEST deadline across tracks (so "one track open, one TBA" surfaces the
+ *  real soonest deadline, not "unknown") plus a website inherited from a
+ *  child. Returns {deadline:null, website:null} when there are no such
+ *  children, so callers fall through to the normal "Deadline unknown" path. */
+export async function subTrackInfo(g, fetchGroups) {
+  let children = [];
+  try {
+    children = (await fetchGroups(`${g.id}/`)).filter(
+      (c) => c.id !== g.id && c.id.startsWith(`${g.id}/`) && val(c.content ?? {}, 'submission_id'),
+    );
+  } catch {
+    return { deadline: null, website: null };
+  }
+  if (!children.length) return { deadline: null, website: null };
+  let best = null, website = null;
+  for (const c of children) {
+    if (!website) {
+      const w = String(val(c.content ?? {}, 'website') || '').trim();
+      if (/^https?:\/\//.test(w)) website = w.slice(0, 500);
+    }
+    const dl = parseGroupDeadline(val(c.content ?? {}, 'date')) || (await deadlineFromInvitation(c));
+    if (dl && (!best || dl.submission_deadline < best.submission_deadline)) best = dl;
+  }
+  return { deadline: best, website };
+}
+
 async function main() {
   const prefix = CONF_TEMPLATE[conf].replace('{year}', String(year));
   const res = await fetch(
@@ -238,15 +297,24 @@ async function main() {
       // Backfill: organizers sometimes publish the deadline on OpenReview
       // after we imported the venue. Fill it in when it appears.
       const { path: fp, raw } = known.get(g.id);
-      if (!raw.submission_deadline) {
-        const dl = parseGroupDeadline(val(g.content ?? {}, 'date')) || (await deadlineFromInvitation(g));
-        if (dl) {
+      if (!raw.submission_deadline || !raw.website) {
+        let dl = parseGroupDeadline(val(g.content ?? {}, 'date')) || (await deadlineFromInvitation(g));
+        let subWebsite = null;
+        if (!dl || !raw.website) {
+          const sub = await subTrackInfo(g, fetchGroups);
+          if (!dl && sub.deadline) dl = sub.deadline;
+          subWebsite = sub.website;
+        }
+        let changed = false;
+        if (!raw.submission_deadline && dl) {
           raw.submission_deadline = dl.submission_deadline;
           raw.timezone = dl.timezone;
           raw.deadline_notes = 'imported from OpenReview — check the website for extensions';
-          if (!dryRun) fs.writeFileSync(fp, yaml.dump(raw, { lineWidth: 200, quotingType: '"' }));
+          changed = true;
           backfilled++;
         }
+        if (!raw.website && subWebsite) { raw.website = subWebsite; changed = true; }
+        if (changed && !dryRun) fs.writeFileSync(fp, yaml.dump(raw, { lineWidth: 200, quotingType: '"' }));
       }
       skipped++;
       continue;
@@ -257,8 +325,15 @@ async function main() {
     let acronym = String(val(c, 'subtitle') || tail).trim();
     if (acronym.length > 40 || acronym === title) acronym = tail.slice(0, 40);
     const websiteRaw = String(val(c, 'website') || '').trim();
-    const website = /^https?:\/\//.test(websiteRaw) ? websiteRaw.slice(0, 500) : null;
-    const deadline = parseGroupDeadline(val(c, 'date')) || (await deadlineFromInvitation(g));
+    let website = /^https?:\/\//.test(websiteRaw) ? websiteRaw.slice(0, 500) : null;
+    let deadline = parseGroupDeadline(val(c, 'date')) || (await deadlineFromInvitation(g));
+    // Empty parent with sub-track children (e.g. MARINE/Full + MARINE/Short):
+    // inherit the earliest child deadline and a child website.
+    if (!deadline || !website) {
+      const sub = await subTrackInfo(g, fetchGroups);
+      if (!deadline && sub.deadline) deadline = sub.deadline;
+      if (!website && sub.website) website = sub.website;
+    }
 
     const record = { name: title, acronym, conference: conf, year };
     if (website) record.website = website;

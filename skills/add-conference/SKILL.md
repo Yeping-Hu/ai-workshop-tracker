@@ -130,7 +130,10 @@ must never be "Open call"; venues without deadline metadata read
 "Deadline unknown" — their YAML opens with a fill-in comment template and the
 page shows a "know the deadline? Add it in one line" link; the weekly
 discovery job backfills them from venue date lines or submission-invitation
-`duedate`s (expired included) whenever those appear.
+`duedate`s (expired included) whenever those appear. Workshops that split
+submissions into sub-track child groups (e.g. `…/Full` + `…/Short`) are
+handled too: discovery descends one level and takes the earliest child
+deadline plus an inherited website.
 
 **Also check the deadline-unknown ratio for the new conference's current
 year.** If a large fraction (say >25%) of current/future-year venues read
@@ -177,6 +180,14 @@ season is when the site spreads.
   discovery; don't re-add them manually. If a new twin suffix shows up,
   extend `TRACK_SUFFIX` in `discover_openreview.mjs` rather than deleting the
   file by hand (discovery would just re-create it next run).
+- Sub-track submission groups: some workshops leave the parent group empty
+  and split submissions into children (`…/Full` + `…/Short`, Long/Short
+  paper tracks, etc.) that carry the real `submission_id`/website. Discovery
+  descends one level via `subTrackInfo()` and takes the EARLIEST child
+  deadline (so "one track open, one TBA" still surfaces a real deadline) plus
+  an inherited website. If a workshop shows "Deadline unknown" but its
+  OpenReview page has multiple Submission buttons, this is the path that
+  handles it — a clean re-run backfills it.
 - Statuses derive from dates AND paper caches (papers ⇒ call closed).
 - The eyebrow ↔ dropdown order is pinned by a test; both use plain `.sort()`.
 - Prefer `add_conference.mjs` over manual edits; verify anchors if you must
