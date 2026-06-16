@@ -10,6 +10,27 @@ Adding a conference = research it, wire 4 touchpoints, import from
 OpenReview, verify, ship. Each step below exists because skipping it has
 caused a real failure at least once. Total time: ~10–15 minutes.
 
+## Definition of done (read before you start, check before you push)
+
+Docs travel with the change — this repo's standing rule. Before pushing ANY
+change here, confirm:
+
+- [ ] If you added/renamed/removed a workshop **field** (in
+      `schema/workshop.schema.json`): update **CONTRIBUTING.md**'s Field
+      reference table AND **data/workshops/_template.yml**. CI enforces this
+      via `scripts/docs_sync_test.mjs` — a missed field fails the build.
+- [ ] If you changed **behavior** (status logic, deadline parsing, import
+      flow): update this **SKILL.md**, the relevant **script header comment**,
+      and **docs/ARCHITECTURE.md**. No test catches conceptual doc drift —
+      this one is on you.
+- [ ] If you added a conference: **README.md** conference list (dropdown
+      order) + edition count.
+- [ ] Tests green: `node scripts/tracks_test.mjs`, `node scripts/docs_sync_test.mjs`,
+      `node scripts/validate.mjs`, and the gated UI suite (§4).
+
+These four files are the ones that historically fall behind. The two
+`*_test.mjs` guards run in `.github/workflows/validate.yml` on every push.
+
 ## 0. Environment
 
 If `/home/claude/ml-workshop-tracker` (or another checkout) already exists in

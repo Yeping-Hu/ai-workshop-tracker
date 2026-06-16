@@ -76,15 +76,23 @@ next time it touches the file.
 
 ## What CI checks
 
-`node scripts/validate.mjs` (also run on every PR) enforces:
+The `validate` workflow runs on every PR and enforces three things:
 
+`node scripts/validate.mjs`:
 - JSON Schema (`schema/workshop.schema.json`) — types, required fields, URL/date formats, no unknown fields
 - `conference` and every `topics` id exist in their vocabulary files
 - Filename matches `conference` + `year`
 - Deadline parses, is within ±2 years of today, and precedes `workshop_date`
 - No duplicate entries (same conference + year + near-identical name)
 
-Failures are posted as a PR comment listing every problem at once.
+`node scripts/docs_sync_test.mjs` — every field in the schema is documented in
+this file's Field reference table and in `_template.yml` (so new fields can't
+ship undocumented).
+
+`node scripts/tracks_test.mjs` — the multi-track deadline/status rules behave
+correctly.
+
+Validation failures are posted as a PR comment listing every problem at once.
 
 ## Paper lists
 

@@ -25,6 +25,8 @@ jobs:
       - run: npm ci
       - name: Test multi-track deadline logic
         run: node scripts/tracks_test.mjs
+      - name: Check schema-docs parity
+        run: node scripts/docs_sync_test.mjs
       - name: Validate workshop data
         id: validate
         run: node scripts/validate.mjs --report validation-report.md
