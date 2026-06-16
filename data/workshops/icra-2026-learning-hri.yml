@@ -1,10 +1,3 @@
-# --- Missing: submission deadline -----------------------------------------
-# Know it? Add two lines anywhere below, for example:
-#   submission_deadline: 2026-09-15 23:59    # or just a date: 2026-09-15
-#   timezone: AoE                            # AoE / UTC / America/Los_Angeles
-# Then click "Commit changes..." -> "Propose changes" to open a pull request.
-# It is validated automatically and usually merged within a day.
-# ---------------------------------------------------------------------------
 name: ICRA 2026 Workshop on Bridging the Gap between Robot Learning and Human-Robot Interaction
 acronym: ICRA26 Learning-HRI Workshop
 conference: icra
@@ -16,3 +9,6 @@ openreview_venue_id: IEEE.org/ICRA/2026/Workshop/Learning-HRI
 submission_portal: openreview
 notes: Auto-imported from the OpenReview venue record on 2026-06-10 — please verify and enrich (topics are keyword-guessed).
 added: "2026-06-10"
+submission_deadline: 2026-05-18 03:09
+timezone: UTC
+deadline_notes: imported from OpenReview — check the website for extensions

@@ -1,0 +1,14 @@
+name: IEEE IROS 2026 Space Robotics Workshop
+acronym: IEEE IROS 2026 Workshop SRW
+conference: iros
+year: 2026
+website: https://space-robots.org/iros2026/
+topics:
+  - robotics
+submission_deadline: 2026-08-16 08:59
+timezone: UTC
+deadline_notes: imported from OpenReview — check the website for extensions
+openreview_venue_id: IEEE.org/IROS/2026/Workshop/SRW
+submission_portal: openreview
+notes: Auto-imported from the OpenReview venue record on 2026-06-16 — please verify and enrich (topics are keyword-guessed).
+added: "2026-06-16"

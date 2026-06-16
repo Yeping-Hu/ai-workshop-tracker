@@ -1,0 +1,19 @@
+# --- Missing: submission deadline -----------------------------------------
+# Know it? Add two lines anywhere below, for example:
+#   submission_deadline: 2026-09-15 23:59    # or just a date: 2026-09-15
+#   timezone: AoE                            # AoE / UTC / America/Los_Angeles
+# Then click "Commit changes..." -> "Propose changes" to open a pull request.
+# It is validated automatically and usually merged within a day.
+# ---------------------------------------------------------------------------
+name: "Leveraging Behavioral Models in Human-Autonomy Teams (BEMHAT): From Theory to Applied Socio-Technical Systems"
+acronym: BEMHAT at IROS 2026
+conference: iros
+year: 2026
+website: https://sites.google.com/asu.edu/behavioral-models-iros26/home
+topics:
+  - systems
+  - theory
+openreview_venue_id: IEEE.org/IROS/2026/Workshop/BEMHAT
+submission_portal: openreview
+notes: Auto-imported from the OpenReview venue record on 2026-06-16 — please verify and enrich (topics are keyword-guessed).
+added: "2026-06-16"
