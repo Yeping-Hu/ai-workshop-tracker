@@ -85,6 +85,20 @@ node scripts/validate.mjs
 Lines like `(skipped N archival/non-archival track twin(s))` are normal —
 workshops often register duplicate track venues and discovery merges them.
 
+**Run discovery for each year a second time before shipping.** Discovery
+backfills missing deadlines from submission-invitation `duedate`s, but those
+per-venue lookups get rate-limited (HTTP 429) during a large first import and
+fail silently — a throttled lookup is indistinguishable from "no deadline",
+so venues land as "Deadline unknown" despite having a visible deadline on
+OpenReview (this is exactly how ECCV's WICV and ~20 siblings slipped through).
+A second pass, when the API is less throttled, recovers them and reports
+`N deadline(s) backfilled`. Repeat until a run backfills 0:
+
+```bash
+for y in <years>; do node scripts/discover_openreview.mjs --conf <id> --year $y; sleep 2; done
+# re-run any year that still reports backfills until it reports 0
+```
+
 Fetch paper caches in **resumable passes** — OpenReview rate-limits (HTTP
 429) bulk fetches, so never parallelize and expect multiple rounds:
 
@@ -118,6 +132,14 @@ page shows a "know the deadline? Add it in one line" link; the weekly
 discovery job backfills them from venue date lines or submission-invitation
 `duedate`s (expired included) whenever those appear.
 
+**Also check the deadline-unknown ratio for the new conference's current
+year.** If a large fraction (say >25%) of current/future-year venues read
+"Deadline unknown", suspect rate-limit gaps from the first import, not
+genuine absence — re-run discovery for that year (see §3) and recount. Only
+treat a venue as truly deadline-less after a clean re-run still skips it; you
+can confirm by querying its `…/-/Submission` invitation directly for a
+`duedate`.
+
 README sync (standing repo rule — every push updates it): the conference
 list appears in the features bullet **in the dropdown's order** (plain JS
 `.sort()` of display names — case-sensitive, so e.g. CVPR < CoRL), and bump
@@ -150,8 +172,11 @@ season is when the site spreads.
 - Review-only conferences produce empty caches — correct behavior, say so.
 - 429s on fetch: pace, resume, never parallelize.
 - `notes` API: no `count` field; `len(notes)`.
-- Track-twin venues (`_Non_Archival`, `_Proceedings_Track`, `_Pre_Reviewed`)
-  are auto-skipped by discovery; don't re-add them manually.
+- Track-twin venues (`_Non_Archival`, `_Proceedings_Track`, `_Pre_Reviewed`,
+  `_Abstract_Paper_Track`, `_Extended_Abstract_Track`) are auto-skipped by
+  discovery; don't re-add them manually. If a new twin suffix shows up,
+  extend `TRACK_SUFFIX` in `discover_openreview.mjs` rather than deleting the
+  file by hand (discovery would just re-create it next run).
 - Statuses derive from dates AND paper caches (papers ⇒ call closed).
 - The eyebrow ↔ dropdown order is pinned by a test; both use plain `.sort()`.
 - Prefer `add_conference.mjs` over manual edits; verify anchors if you must

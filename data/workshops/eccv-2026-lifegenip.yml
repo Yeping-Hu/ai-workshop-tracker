@@ -1,10 +1,3 @@
-# --- Missing: submission deadline -----------------------------------------
-# Know it? Add two lines anywhere below, for example:
-#   submission_deadline: 2026-09-15 23:59    # or just a date: 2026-09-15
-#   timezone: AoE                            # AoE / UTC / America/Los_Angeles
-# Then click "Commit changes..." -> "Propose changes" to open a pull request.
-# It is validated automatically and usually merged within a day.
-# ---------------------------------------------------------------------------
 name: "The 1st Workshop on LifeGenIP: Life-Cycle Intellectual Property Governance of Visual Generative Models"
 acronym: LifeGenIP 2026
 conference: eccv
@@ -17,3 +10,6 @@ openreview_venue_id: thecvf.com/ECCV/2026/Workshop/LifeGenIP
 submission_portal: openreview
 notes: Auto-imported from the OpenReview venue record on 2026-06-16 — please verify and enrich (topics are keyword-guessed).
 added: "2026-06-16"
+submission_deadline: 2026-07-09 12:00
+timezone: UTC
+deadline_notes: imported from OpenReview — check the website for extensions

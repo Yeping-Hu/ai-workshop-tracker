@@ -173,17 +173,31 @@ export function msToDeadline(ms) {
  *  (it's what renders next to the Submission button on openreview.net). */
 export async function deadlineFromInvitation(g) {
   const invId = val(g.content ?? {}, 'submission_id') || `${g.id}/-/Submission`;
-  try {
-    await new Promise((r) => setTimeout(r, 150)); // be polite to the API
-    const res = await fetch(`https://api2.openreview.net/invitations?id=${encodeURIComponent(invId)}&expired=true`, {
-      headers: { 'User-Agent': UA, Accept: 'application/json' },
-    });
-    if (!res.ok) return null;
-    const { invitations = [] } = await res.json();
-    return msToDeadline(invitations[0]?.duedate);
-  } catch {
-    return null;
+  const url = `https://api2.openreview.net/invitations?id=${encodeURIComponent(invId)}&expired=true`;
+  // OpenReview rate-limits bulk callers (HTTP 429). A swallowed 429 looks
+  // identical to "no deadline exists", which is how ECCV's WICV and ~20
+  // siblings imported as "Deadline unknown" despite having a visible duedate.
+  // Retry 429/5xx with backoff so throttling no longer masquerades as absence.
+  const MAX = 4;
+  for (let attempt = 0; attempt < MAX; attempt++) {
+    try {
+      await new Promise((r) => setTimeout(r, 150 + attempt * attempt * 600)); // 150ms, then backoff
+      const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+      if (res.status === 429 || res.status >= 500) {
+        if (attempt < MAX - 1) continue; // retry
+        throw new Error(`rate-limited (HTTP ${res.status}) after ${MAX} attempts for ${invId}`);
+      }
+      if (!res.ok) return null; // genuine miss (e.g. 404 — no submission invitation)
+      const { invitations = [] } = await res.json();
+      return msToDeadline(invitations[0]?.duedate);
+    } catch (err) {
+      if (attempt < MAX - 1) continue;
+      // Surface persistent throttling instead of hiding it as "no deadline".
+      console.warn(`  ⚠ deadline lookup failed for ${invId}: ${err.message}`);
+      return null;
+    }
   }
+  return null;
 }
 
 async function main() {
@@ -198,7 +212,7 @@ async function main() {
   const allVenues = groups.filter((g) => topRe.test(g.id));
   // Workshops often register separate archival / non-archival track venues —
   // one workshop, two ids. Skip the track twin when its base is present.
-  const TRACK_SUFFIX = /[_-](non[_-]?archival(?:[_-]track)?|archival[_-]?track|proceedings[_-]?track|pre[_-]?reviewed)$/i;
+  const TRACK_SUFFIX = /[_-](non[_-]?archival(?:[_-]track)?|archival[_-]?track|proceedings[_-]?track|pre[_-]?reviewed|abstract[_-]?(?:paper[_-]?)?track|extended[_-]?abstract[_-]?track)$/i;
   const tailOf = (id) => id.split('/').pop().toLowerCase();
   const tails = new Set(allVenues.map((g) => tailOf(g.id)));
   const venues = allVenues.filter((g) => {
@@ -206,7 +220,7 @@ async function main() {
     const m = TRACK_SUFFIX.exec(t);
     if (!m) return true;
     const base = t.replace(TRACK_SUFFIX, '');
-    return !(tails.has(base) || tails.has(`${base}_archival_track`) || tails.has(`${base}_proceedings_track`));
+    return !(tails.has(base) || tails.has(`${base}_archival_track`) || tails.has(`${base}_proceedings_track`) || tails.has(`${base}_main_track`));
   });
   if (venues.length < allVenues.length)
     console.log(`  (skipped ${allVenues.length - venues.length} archival/non-archival track twin(s))`);
