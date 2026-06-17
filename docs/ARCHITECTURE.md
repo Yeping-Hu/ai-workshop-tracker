@@ -29,6 +29,15 @@ are maintained, one for workshop editions and one for the ~20k accepted-paper
 titles, so results can be grouped per workshop with matching papers nested
 beneath.
 
+The two indexes must be initialized in the right order: `pf.init()` (primary
+workshops index) **first**, then `await pf.mergeIndex(papers)`. The reverse
+races — `mergeIndex` only waits for the primary's wasm, not its full init — so
+a search firing mid-merge can hit a partially/inconsistently merged papers
+index and return a different (over- or under-counted) result set for the same
+query. Both are awaited inside the single-flight init promise before any search
+runs (`ensurePagefind` in index.astro); a ui_test asserts the same query gives
+identical counts across cold loads.
+
 Behavior worth knowing before you touch the search code:
 
 - **Faceting is exact and mutually consistent.** Conference / status / year /

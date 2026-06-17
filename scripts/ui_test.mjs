@@ -520,6 +520,27 @@ check('identical keyword search → identical order (run 1 vs 2)', JSON.stringif
 check('identical keyword search → identical order (run 2 vs 3)', JSON.stringify(ord2) === JSON.stringify(ord3));
 await page.evaluate(() => localStorage.clear());
 
+// Dual-index init must be race-free: the same query on repeated COLD loads
+// must return the same counts. (A prior bug merged the papers index before
+// init(), so a search could fire mid-merge and report a different, inflated
+// paper count — the same 'llm' query showed 2325 vs 7824 across loads.)
+console.log('— the same query returns identical counts across cold loads (no init race) —');
+async function coldCount(term) {
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  await page.fill('#q', term);
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('#results .pf-result', { timeout: 10000 });
+  await page.waitForFunction(() => /\d+ workshop/.test(document.querySelector('#searchCount')?.textContent || ''), { timeout: 8000 }).catch(() => {});
+  await page.waitForTimeout(500);
+  return page.$eval('#searchCount', (el) => el.textContent.replace(/· page \d+\/\d+/, '').trim());
+}
+const cc1 = await coldCount('llm');
+const cc2 = await coldCount('llm');
+const cc3 = await coldCount('llm');
+check('cold-load counts identical (run 1 vs 2)', cc1 === cc2, `${cc1} | ${cc2}`);
+check('cold-load counts identical (run 2 vs 3)', cc2 === cc3, `${cc2} | ${cc3}`);
+await page.evaluate(() => localStorage.clear());
+
 const apiWs = JSON.parse(rfL('site/dist/api/workshops.json', 'utf8')).workshops;
 const byConfT = {};
 for (const w of apiWs) (byConfT[w.conference] ||= []).push(w);

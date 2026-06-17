@@ -217,8 +217,16 @@ const FW = workshops.map((w) => ({
         pfReady = (async () => {
           const pf = await import(`${base}/pagefind/pagefind.js${pfBust ? `?v=${pfBust}` : ''}`);
           await pf.options({ baseUrl: `${base}/` });
-          await pf.mergeIndex(`${base}/pagefind-papers/`, { baseUrl: `${base}/` });
+          // Order matters: init() the primary (workshops) index FIRST, then
+          // await mergeIndex() for the papers index. The reverse order races —
+          // mergeIndex only waits for the primary's wasm, not its full init —
+          // so a search could fire against a partially-merged papers index and
+          // return a different, smaller result set for the same query (e.g.
+          // "llm" yielding 2325 vs 7824 papers depending on load timing). Both
+          // are awaited before `pagefind` is set, so no search runs until the
+          // dual index is fully ready.
           await pf.init();
+          await pf.mergeIndex(`${base}/pagefind-papers/`, { baseUrl: `${base}/` });
           pagefind = pf;
           return pf;
         })().catch((err) => {
