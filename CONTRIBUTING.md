@@ -93,6 +93,9 @@ ship undocumented).
 `node scripts/tracks_test.mjs` — the multi-track deadline/status rules behave
 correctly.
 
+`node scripts/tz_normalize_test.mjs` — the importer converts every extracted
+deadline (AoE or any offset) to UTC, so stored deadlines stay consistent.
+
 Validation failures are posted as a PR comment listing every problem at once.
 
 ## Paper lists

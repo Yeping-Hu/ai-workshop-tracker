@@ -8,14 +8,18 @@
  * from the venue's human-written `date` line or, when that is blank, from
  * the submission invitation's machine-readable `duedate` (expired
  * invitations included; it's the value shown next to the Submission button
- * on openreview.net). Nothing is estimated. When a workshop leaves its
- * parent group empty and splits submissions into sub-track children
- * (e.g. MARINE/Full + MARINE/Short), discovery descends one level and uses
- * the earliest child deadline plus an inherited website. Entries that still
- * lack a deadline are written with a comment template inviting contributors
- * to add it — the site's "know the deadline? Add it in one line" link lands
- * there — and the weekly backfill's rewrite removes the template the
- * moment a real deadline appears.
+ * on openreview.net). Nothing is estimated. Every imported deadline is
+ * stored in UTC: whatever offset the venue used (including AoE = UTC-12) is
+ * converted to the equivalent UTC instant, so the dataset stays
+ * timezone-consistent (the site converts to the viewer's local time at
+ * display time regardless). When a workshop leaves its parent group empty
+ * and splits submissions into sub-track children (e.g. MARINE/Full +
+ * MARINE/Short), discovery descends one level and uses the earliest child
+ * deadline plus an inherited website. Entries that still lack a deadline are
+ * written with a comment template inviting contributors to add it — the
+ * site's "know the deadline? Add it in one line" link lands there — and the
+ * weekly backfill's rewrite removes the template the moment a real deadline
+ * appears.
  *
  * Usage:
  *   node scripts/discover_openreview.mjs --conf icml --year 2026
@@ -52,16 +56,6 @@ const CONF_TEMPLATE = {
   colm: 'colmweb.org/COLM/{year}/Workshop',
   eccv: 'thecvf.com/ECCV/{year}/Workshop',
 };
-
-const args = process.argv.slice(2);
-const getArg = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : null);
-const conf = getArg('--conf');
-const year = Number(getArg('--year'));
-const dryRun = args.includes('--dry-run');
-if (!CONF_TEMPLATE[conf] || !Number.isInteger(year)) {
-  console.error(`Usage: node scripts/discover_openreview.mjs --conf <${Object.keys(CONF_TEMPLATE).join('|')}> --year <YYYY> [--dry-run]`);
-  process.exit(1);
-}
 
 const val = (c, k) => {
   const x = c?.[k];
@@ -118,8 +112,9 @@ const MONTHS = { Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8,
 /**
  * Parse the deadline out of a group's `date` string, e.g.
  * "Submission Start: Mar 20 2026 12:00PM UTC-0, Submission Deadline: Apr 27 2026 12:00PM UTC-0"
- * Returns { submission_deadline, timezone } normalized to UTC (or AoE when the
- * venue used UTC-12), or null when absent/unparseable.
+ * Returns { submission_deadline, timezone } with the instant always normalized
+ * to UTC (any offset, including AoE = UTC-12, is converted — the moment is
+ * unchanged, only the representation), or null when absent/unparseable.
  */
 export function parseGroupDeadline(dateStr) {
   if (typeof dateStr !== 'string') return null;
@@ -270,7 +265,7 @@ function tracksToYaml(tracks) {
   );
 }
 
-async function main() {
+async function main({ conf, year, dryRun }) {
   const prefix = CONF_TEMPLATE[conf].replace('{year}', String(year));
   const res = await fetch(
     `https://api2.openreview.net/groups?prefix=${encodeURIComponent(prefix + '/')}&limit=1000`,
@@ -381,4 +376,18 @@ async function main() {
   console.log(`${conf} ${year}: ${venues.length} venues on OpenReview — ${created} created, ${skipped} already tracked${backfilled ? `, ${backfilled} deadline(s) backfilled` : ''}.`);
 }
 
-main().catch((e) => { console.error(e.message); process.exit(1); });
+// Only run the CLI when invoked directly, so the exported helpers
+// (parseGroupDeadline, msToDeadline, subTrackInfo…) can be imported in tests
+// without the module parsing argv and exiting.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const args = process.argv.slice(2);
+  const getArg = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : null);
+  const conf = getArg('--conf');
+  const year = Number(getArg('--year'));
+  const dryRun = args.includes('--dry-run');
+  if (!CONF_TEMPLATE[conf] || !Number.isInteger(year)) {
+    console.error(`Usage: node scripts/discover_openreview.mjs --conf <${Object.keys(CONF_TEMPLATE).join('|')}> --year <YYYY> [--dry-run]`);
+    process.exit(1);
+  }
+  main({ conf, year, dryRun }).catch((e) => { console.error(e.message); process.exit(1); });
+}

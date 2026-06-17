@@ -25,7 +25,8 @@ change here, confirm:
       this one is on you.
 - [ ] If you added a conference: **README.md** conference list (dropdown
       order) + edition count.
-- [ ] Tests green: `node scripts/tracks_test.mjs`, `node scripts/docs_sync_test.mjs`,
+- [ ] Tests green: `node scripts/tracks_test.mjs`, `node scripts/tz_normalize_test.mjs`,
+      `node scripts/docs_sync_test.mjs`,
       `node scripts/validate.mjs`, and the gated UI suite (§4).
 
 These four files are the ones that historically fall behind. The two
@@ -62,6 +63,14 @@ The probe reports venue counts per year, deadline-metadata coverage (venue
 date lines, plus a sample of submission invitations checked for
 machine-readable `duedate`s — the importer reads both, expired included),
 samples public paper availability, and prints one of three verdicts:
+
+> **Deadlines are stored in UTC, automatically.** Whatever timezone a venue
+> uses — including AoE (UTC−12) — `parseGroupDeadline`/`msToDeadline`
+> convert it to the equivalent UTC instant before writing, so the dataset
+> stays timezone-consistent without manual cleanup (the site converts to the
+> viewer's local time at display). Hand-entered deadlines must carry an
+> explicit `timezone` (validator rejects a deadline without one); `AoE` is
+> the right pick for a date-only CFP.
 
 - **fully-hosted (CoRL-like)** — papers are public notes; everything imports.
 - **review-only (CVPR-like)** — deadlines and links import; accepted papers

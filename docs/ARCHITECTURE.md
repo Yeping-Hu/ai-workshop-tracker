@@ -69,6 +69,16 @@ if that also fails does it show an honest message with a reload button.
 weekly scheduled rebuild keeps them current with zero commits, so an "Open call"
 becomes "Past" on its own without anyone editing data.
 
+Deadlines are stored in **UTC**. The importer converts any timezone OpenReview
+reports — including AoE (UTC−12) — to the equivalent UTC instant before writing
+(`parseGroupDeadline`/`msToDeadline` in `scripts/discover_openreview.mjs`), so
+the dataset stays timezone-consistent; the data was migrated off a former
+UTC/AoE mix in one pass. AoE remains a *valid* value for hand-entered date-only
+deadlines (it's the ML convention), and `validate.mjs` requires every deadline —
+top-level or per-track — to carry an explicit `timezone`. Whatever the stored
+zone, the board and workshop pages convert to the **viewer's local time** at
+display, so the label is only reference.
+
 ## Multi-track workshops (per-track deadlines)
 
 Some workshops split submissions into tracks with different deadlines (e.g. ECCV
