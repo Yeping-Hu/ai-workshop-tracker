@@ -29,14 +29,34 @@ are maintained, one for workshop editions and one for the ~20k accepted-paper
 titles, so results can be grouped per workshop with matching papers nested
 beneath.
 
-The two indexes must be initialized in the right order: `pf.init()` (primary
-workshops index) **first**, then `await pf.mergeIndex(papers)`. The reverse
-races — `mergeIndex` only waits for the primary's wasm, not its full init — so
-a search firing mid-merge can hit a partially/inconsistently merged papers
-index and return a different (over- or under-counted) result set for the same
-query. Both are awaited inside the single-flight init promise before any search
-runs (`ensurePagefind` in index.astro); a ui_test asserts the same query gives
-identical counts across cold loads.
+Both indexes are loaded into one Pagefind engine: `pf.init()` for the primary
+(workshops) index, then `await pf.mergeIndex(papers)` for the papers index, all
+awaited inside a single-flight init promise so no search runs until the dual
+index is ready (`ensurePagefind` in index.astro).
+
+The subtle hazard is that Pagefind's `init()` / `mergeIndex()` are **not
+idempotent — they append.** A dynamic `import()` of the same engine URL returns
+the *same cached module*, backed by the *same Web Worker*, so re-running
+init+merge on it loads the papers index a **second** time as duplicate
+documents. Locally the duplicates share identical URLs and the per-result URL
+de-duplication collapses them, so the counts still look right; on the live CDN
+the two loads can resolve paper URLs under slightly different bases, de-dup
+fails, and the **same query inflates** — e.g. `llm` climbing from 260 workshops
+/ 2325 papers to 513 / 7894 across a warm, repeatedly-loaded or back/forward
+restored session (the cold/first load stays correct). The trigger was the
+failure-retry path: a heal re-imports the engine under a cache-busted URL, but
+the load-failure `.catch` used to reset the engine **without** changing that
+URL, so the next retry re-imported the *same* (now half-loaded) cached worker
+and merged the papers index onto it again; repeated retries kept stacking.
+
+Two guards in `ensurePagefind` prevent it: init+merge run **at most once per
+module instance** (a reused cached module is a no-op), and **every** load
+failure bumps the cache-bust so a retry always imports a fresh URL — hence a
+clean, singly-loaded worker on every code path. A ui_test probes the worker
+directly (total paper documents vs distinct paper pages, plus an engine-level
+check that a second merge stacks while the guard keeps it single) so a
+regression is caught even though the headline's URL de-dup would otherwise
+mask it.
 
 Behavior worth knowing before you touch the search code:
 

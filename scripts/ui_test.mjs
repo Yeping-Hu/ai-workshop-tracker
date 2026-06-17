@@ -520,25 +520,81 @@ check('identical keyword search → identical order (run 1 vs 2)', JSON.stringif
 check('identical keyword search → identical order (run 2 vs 3)', JSON.stringify(ord2) === JSON.stringify(ord3));
 await page.evaluate(() => localStorage.clear());
 
-// Dual-index init must be race-free: the same query on repeated COLD loads
-// must return the same counts. (A prior bug merged the papers index before
-// init(), so a search could fire mid-merge and report a different, inflated
-// paper count — the same 'llm' query showed 2325 vs 7824 across loads.)
-console.log('— the same query returns identical counts across cold loads (no init race) —');
-async function coldCount(term) {
-  await page.goto(BASE, { waitUntil: 'networkidle' });
-  await page.fill('#q', term);
-  await page.keyboard.press('Enter');
-  await page.waitForSelector('#results .pf-result', { timeout: 10000 });
-  await page.waitForFunction(() => /\d+ workshop/.test(document.querySelector('#searchCount')?.textContent || ''), { timeout: 8000 }).catch(() => {});
-  await page.waitForTimeout(500);
-  return page.$eval('#searchCount', (el) => el.textContent.replace(/· page \d+\/\d+/, '').trim());
+// The papers index must be merged into the engine EXACTLY ONCE per worker.
+// Pagefind's init()/mergeIndex() are NOT idempotent — they append — and a
+// dynamic import of the same URL reuses one cached module backed by one Web
+// Worker, so any code path that re-runs init+merge on it stacks the papers
+// index as duplicate documents. Locally those duplicates share URLs, so the
+// app's URL de-dup hides them in the headline; asserting on the headline alone
+// would pass even with a doubly-loaded worker. So probe the worker directly —
+// total paper documents vs distinct paper pages — which catches a regression
+// HERE rather than only on the live CDN, where the duplicates pick up slightly
+// different URLs, defeat de-dup, and inflate the visible counts (the reported
+// symptom: the same 'llm' query climbing 260/2325 → 513/7894 over a warm,
+// repeatedly-loaded or back/forward-restored session). Each load uses a FRESH
+// context so it is genuinely cold (its own HTTP cache, module registry, worker).
+console.log('— the papers index is merged exactly once per worker (no stacking) —');
+async function coldWorkerLoad() {
+  const ctx = await browser.newContext();
+  const jsUrls = [];
+  const p = await ctx.newPage();
+  p.on('request', (req) => { if (/\/pagefind\/pagefind\.js(\?|$)/.test(req.url())) jsUrls.push(req.url()); });
+  await p.goto(`${BASE}/?q=llm`, { waitUntil: 'domcontentloaded' });
+  await p.waitForFunction(() => /\d+ workshop/.test(document.querySelector('#searchCount')?.textContent || ''), { timeout: 15000 });
+  const headline = await p.$eval('#searchCount', (el) => el.textContent.replace(/· page \d+\/\d+/, '').trim());
+  // Read the worker the app actually settled on by importing the SAME engine
+  // URL it loaded (plain on a clean load; cache-busted after a heal) — search
+  // only, never init/merge, so we observe the worker rather than mutate it.
+  const probeUrl = jsUrls[jsUrls.length - 1] || `${BASE}/pagefind/pagefind.js`;
+  const w = await p.evaluate(async (url) => {
+    const pf = await import(url);
+    const res = await pf.search('llm');
+    const data = await Promise.all(res.results.map((x) => x.data()));
+    let docs = 0; const distinct = new Set();
+    const slug = (u) => (u.match(/\/workshop\/([^/]+)\//) || [])[1] || u;
+    for (const d of data) if ((d.filters?.type ?? []).includes('Papers')) { docs++; distinct.add(slug(d.url)); }
+    return { docs, distinct: distinct.size, raw: res.results.length };
+  }, probeUrl);
+  await ctx.close();
+  return { headline, ...w };
 }
-const cc1 = await coldCount('llm');
-const cc2 = await coldCount('llm');
-const cc3 = await coldCount('llm');
-check('cold-load counts identical (run 1 vs 2)', cc1 === cc2, `${cc1} | ${cc2}`);
-check('cold-load counts identical (run 2 vs 3)', cc2 === cc3, `${cc2} | ${cc3}`);
+const r1 = await coldWorkerLoad();
+const r2 = await coldWorkerLoad();
+check('cold-load counts identical (run 1 vs 2)', r1.headline === r2.headline, `${r1.headline} | ${r2.headline}`);
+check('papers index merged once — docs == distinct (run 1)', r1.docs === r1.distinct, JSON.stringify(r1));
+check('papers index merged once — docs == distinct (run 2)', r2.docs === r2.distinct, JSON.stringify(r2));
+
+// Engine-level guard: lock in the mechanism the fix depends on. Re-running
+// init+merge on the SAME module stacks the papers index (the hazard); guarding
+// on module identity, and re-importing under a fresh URL, each keep it single.
+console.log('— engine guard: a reused module must not re-merge (the fix mechanism) —');
+{
+  const ctx = await browser.newContext();
+  const p = await ctx.newPage();
+  await p.goto(`${BASE}/about/`, { waitUntil: 'domcontentloaded' }); // a page that does NOT run the search
+  const g = await p.evaluate(async () => {
+    const papers = async (pf) => {
+      const res = await pf.search('llm');
+      const data = await Promise.all(res.results.map((x) => x.data()));
+      let n = 0; for (const d of data) if ((d.filters?.type ?? []).includes('Papers')) n++; return n;
+    };
+    const m0 = await import('/pagefind/pagefind.js?v=guard0');
+    await m0.options({ baseUrl: '/' }); await m0.init(); await m0.mergeIndex('/pagefind-papers/', { baseUrl: '/' });
+    const single = await papers(m0);
+    await m0.mergeIndex('/pagefind-papers/', { baseUrl: '/' }); // second merge on the same module
+    const stacked = await papers(m0);
+    // guarded body (mirrors ensurePagefind): a no-op on an already-inited module
+    let inited = null;
+    const m1 = await import('/pagefind/pagefind.js?v=guard1');
+    const guarded = async (pf) => { if (inited !== pf) { await pf.options({ baseUrl: '/' }); await pf.init(); await pf.mergeIndex('/pagefind-papers/', { baseUrl: '/' }); inited = pf; } };
+    await guarded(m1); await guarded(m1); await guarded(m1);
+    const guardedN = await papers(m1);
+    return { single, stacked, guardedN };
+  });
+  await ctx.close();
+  check('second merge on same module stacks (hazard present)', g.stacked === g.single * 2, JSON.stringify(g));
+  check('guarded re-init stays single-loaded (fix mechanism)', g.guardedN === g.single, JSON.stringify(g));
+}
 await page.evaluate(() => localStorage.clear());
 
 const apiWs = JSON.parse(rfL('site/dist/api/workshops.json', 'utf8')).workshops;

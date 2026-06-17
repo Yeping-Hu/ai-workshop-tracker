@@ -139,6 +139,7 @@ const FW = workshops.map((w) => ({
     const sel = Object.fromEntries(FACETS.map((f) => [f, new Set()]));
     let pfReady = null, pagefind = null;
     let pfBust = 0; // appended to the engine URL when re-importing after a deploy
+    let pfInited = null; // the engine module whose worker has already loaded both indexes
     let healAttempted = false;
     const initialCounts = facetCounts;
     let facetOptions = null;
@@ -216,21 +217,32 @@ const FW = workshops.map((w) => ({
       if (!pfReady) {
         pfReady = (async () => {
           const pf = await import(`${base}/pagefind/pagefind.js${pfBust ? `?v=${pfBust}` : ''}`);
-          await pf.options({ baseUrl: `${base}/` });
-          // Order matters: init() the primary (workshops) index FIRST, then
-          // await mergeIndex() for the papers index. The reverse order races —
-          // mergeIndex only waits for the primary's wasm, not its full init —
-          // so a search could fire against a partially-merged papers index and
-          // return a different, smaller result set for the same query (e.g.
-          // "llm" yielding 2325 vs 7824 papers depending on load timing). Both
-          // are awaited before `pagefind` is set, so no search runs until the
-          // dual index is fully ready.
-          await pf.init();
-          await pf.mergeIndex(`${base}/pagefind-papers/`, { baseUrl: `${base}/` });
+          // Load each engine instance's index EXACTLY ONCE. A dynamic import of
+          // the same URL returns the same cached module, backed by the same Web
+          // Worker — and Pagefind's init()/mergeIndex() are NOT idempotent, they
+          // APPEND. Running them again on an already-loaded worker merges the
+          // papers index a second time, so every paper ends up indexed twice.
+          // That doubles the worker's data and, once the two copies resolve to
+          // even slightly different URLs (as happens across a deploy, or if the
+          // merge baseUrl differs), it defeats the URL de-duplication below and
+          // inflates the headline counts — the same "llm" query climbing from
+          // 260 workshops / 2325 papers to 513 / 7894 over a warm, repeatedly
+          // loaded or back/forward-restored session. Guarding on the module's
+          // identity makes a reused module a no-op; together with the cache-bust
+          // in the catch (a fresh URL after any failure) it guarantees a clean,
+          // singly-loaded worker on every code path.
+          if (pfInited !== pf) {
+            await pf.options({ baseUrl: `${base}/` });
+            await pf.init();
+            await pf.mergeIndex(`${base}/pagefind-papers/`, { baseUrl: `${base}/` });
+            pfInited = pf;
+          }
           pagefind = pf;
           return pf;
         })().catch((err) => {
-          pfReady = null; // transient failure must not brick search until reload
+          pfReady = null;      // transient failure must not brick search until reload
+          pfBust = Date.now(); // next import uses a fresh URL → a clean worker, never
+                               // the half-initialized one this attempt just failed on
           const st = $('#searchStatus');
           st.hidden = false;
           st.textContent = "Search couldn't load: " + (err?.message || err) + ' (in local dev, run a full build first).';
