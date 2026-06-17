@@ -86,9 +86,11 @@ check('LA winter -> UTC instant (DST-aware)', r.dl === '2026-02-02 01:00' && r.t
 r = run(body({ tz: 'UTC' }));
 check('UTC stays UTC, no note', r.dl === '2026-08-22 17:00' && r.tz === 'UTC' && r.notes === null, JSON.stringify(r));
 
-// 4. AoE input -> kept as AoE (academic convention, not converted).
+// 4. AoE input -> converted to UTC too (consistent with the importer).
+//    17:00 AoE (UTC-12) = 05:00 UTC the next day.
 r = run(body({ tz: 'AoE' }));
-check('AoE kept verbatim', r.dl === '2026-08-22 17:00' && r.tz === 'AoE', JSON.stringify(r));
+check('AoE -> UTC instant', r.dl === '2026-08-23 05:00' && r.tz === 'UTC', JSON.stringify(r));
+check('AoE -> provenance note kept', /AoE/.test(r.notes || ''), JSON.stringify(r));
 
 console.log(failed === 0 ? '\nContributor timezones convert to UTC correctly.' : `\n${failed} test(s) failed.`);
 process.exit(failed === 0 ? 0 : 1);

@@ -80,15 +80,14 @@ for (const [k, v] of Object.entries(optional)) if (v) record[k] = v;
 if (record.timezone && !record.submission_deadline) delete record.timezone;
 
 // Normalize a contributor's deadline to UTC so stored deadlines are uniform,
-// without forcing them to do the math: they pick any timezone, the bot
-// converts. The original wall-clock + zone is kept in deadline_notes as a
-// provenance breadcrumb (so it still matches the CFP they read). AoE is left
-// as-is — it's the ML convention for date-only deadlines and is most
-// meaningful kept verbatim; only real civil timezones are converted.
+// without forcing them to do the math: they pick any timezone (AoE, a civil
+// zone, whatever the CFP uses) and the bot converts to the equivalent UTC
+// instant — same rule as the OpenReview importer. The original wall-clock +
+// zone is kept in deadline_notes as a provenance breadcrumb that still matches
+// the CFP. UTC needs no conversion.
 if (record.submission_deadline && record.timezone && isValidTimezone(record.timezone)) {
   const tz = record.timezone;
-  const isCivilZone = tz !== 'UTC' && tz !== 'AoE'; // an IANA name like America/Los_Angeles
-  if (isCivilZone) {
+  if (tz !== 'UTC') {
     const ms = resolveDeadlineUtcMs(record.submission_deadline, tz);
     if (Number.isFinite(ms)) {
       const d = new Date(ms);
