@@ -109,7 +109,11 @@ Search state lives in the URL (`?q=…&conf=…&page=…`), so results are
 reconstructable on any load. `hydrateFromUrl()` (index.astro) rebuilds the
 search from the URL on first paint and runs the search *immediately* (the
 non-debounced `pf.search`, since a lone debounced call on restore can be
-superseded and swallowed).
+superseded and swallowed). Results are rendered in a **deterministic order**:
+Pagefind sorts by score, but ties (common) aren't ordered stably and its two
+indexes load in parallel, so the same keyword could render differently each
+run — the page re-sorts by score then by the result's fixed `id`, so identical
+searches always produce identical order (guarded by a ui_test assertion).
 
 Back/forward is handled on `pageshow`. A bfcache restore (`event.persisted`)
 brings the page back fully intact — rendered results, JS state, listeners — so

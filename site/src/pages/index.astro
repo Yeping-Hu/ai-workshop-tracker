@@ -335,7 +335,16 @@ const FW = workshops.map((w) => ({
         if (res.results.length > 150) {
           $('#results').innerHTML = `<li class="muted">Loading ${res.results.length} results…</li>`;
         }
-        const data = await Promise.all(res.results.map((r) => r.data()));
+        // Pagefind returns results sorted by score, but ties (equal-score
+        // matches, which are common) aren't ordered deterministically — and
+        // the two indexes (workshops + papers) load in parallel, so tied
+        // items could interleave differently run-to-run, making the SAME
+        // keyword search render in a different order each time. Re-sort with
+        // an explicit, stable tie-break: score first (preserving relevance /
+        // the browse sort), then the result's fixed id, so identical searches
+        // always produce identical order.
+        const ordered = [...res.results].sort((a, b) => (b.score - a.score) || String(a.id).localeCompare(String(b.id)));
+        const data = await Promise.all(ordered.map((r) => r.data()));
         const groups = new Map();
         for (const d of data) {
           const gkey = d.url.split('#')[0];

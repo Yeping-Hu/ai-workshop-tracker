@@ -504,7 +504,22 @@ const bnOpenedTab = await bnPopup;
 check('internal link after Back stays in the SAME tab', bnOpenedTab === false && ctx.pages().length === bnTabs1);
 await page.evaluate(() => localStorage.clear());
 
-console.log('— saved papers cluster by conference (A→Z), years desc inside —');
+console.log('— the same keyword search returns a deterministic order —');
+async function searchOrder(term) {
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  await page.fill('#q', term);
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('#results .pf-result .pf-title', { timeout: 10000 });
+  await page.waitForFunction(() => document.querySelectorAll('#results .pf-result').length > 1, { timeout: 8000 }).catch(() => {});
+  return page.$$eval('#results .pf-result .pf-title', (els) => els.slice(0, 10).map((e) => e.textContent.trim()));
+}
+const ord1 = await searchOrder('learning');
+const ord2 = await searchOrder('learning');
+const ord3 = await searchOrder('learning');
+check('identical keyword search → identical order (run 1 vs 2)', JSON.stringify(ord1) === JSON.stringify(ord2), `${ord1[0]} | ${ord2[0]}`);
+check('identical keyword search → identical order (run 2 vs 3)', JSON.stringify(ord2) === JSON.stringify(ord3));
+await page.evaluate(() => localStorage.clear());
+
 const apiWs = JSON.parse(rfL('site/dist/api/workshops.json', 'utf8')).workshops;
 const byConfT = {};
 for (const w of apiWs) (byConfT[w.conference] ||= []).push(w);
