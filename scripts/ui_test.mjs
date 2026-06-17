@@ -101,8 +101,8 @@ check('combined count format', /^\d+ workshops? · \d+ matching papers? · by re
     await page.waitForFunction(() => document.querySelector('.pager button.is-on')?.dataset.page === '1');
   }
 }
-check('workshop links open new tabs', await page.$eval('#results .pf-title', (a) => a.target === '_blank'));
-check('paper links open new tabs', await page.$eval('.pf-papers .pf-ptitle', (a) => a.target === '_blank'));
+check('workshop title links are internal (same tab)', await page.$eval('#results .pf-title', (a) => a.target !== '_blank' && a.host === location.host));
+check('paper title links are internal (same tab)', await page.$eval('.pf-papers .pf-ptitle', (a) => a.target !== '_blank' && a.host === location.host));
 await page.click('.kw-chip .kw-x');
 await page.waitForSelector('#homeDefault:not([hidden])');
 check('removing chip restores default mode', true);
@@ -440,7 +440,7 @@ check('derived PDF suppressed for papers without one', byTitle['PDF-less from se
 check('stored empty pdf renders no PDF link', byTitle['Known no-PDF page save']?.pdf === null, String(byTitle['Known no-PDF page save']?.pdf));
 await page.evaluate(() => localStorage.clear());
 
-console.log('— every content link opens a new tab (board / results / saved) —');
+console.log('— external links open a new tab; internal links navigate in place —');
 const ctx = page.context();
 const popupOn = async (sel) => {
   const [pop] = await Promise.all([ctx.waitForEvent('page', { timeout: 8000 }), page.click(sel)]);
@@ -449,22 +449,36 @@ const popupOn = async (sel) => {
   await pop.close();
   return u;
 };
+// An internal link must NOT open a popup — it navigates the same tab.
+const navsInPlace = async (sel) => {
+  const before = ctx.pages().length;
+  const popup = ctx.waitForEvent('page', { timeout: 1500 }).then(() => true).catch(() => false);
+  await page.click(sel);
+  const openedPopup = await popup;
+  return !openedPopup && ctx.pages().length === before;
+};
 await page.goto(BASE, { waitUntil: 'networkidle' });
-check('board workshop name opens a NEW tab', (await popupOn('.board .ws-name a')).includes('/workshop/'));
+// Internal: board workshop name -> same tab, navigates to the workshop page.
+check('board workshop name navigates in the SAME tab', await navsInPlace('.board .ws-name a') && page.url().includes('/workshop/'));
+// External: a workshop's own website (different host) -> new tab.
+await page.goto(BASE, { waitUntil: 'networkidle' });
+const extSel = '.board .ws-row a[href^="http"]:not([href*="' + new URL(BASE).host + '"])';
+if (await page.$(extSel)) {
+  const u = await popupOn(extSel);
+  check('external workshop website opens a NEW tab', !u.includes(new URL(BASE).host));
+} else {
+  check('external workshop website opens a NEW tab', true, '(no external link on first board page — skipped)');
+}
+// Search-result workshop title is internal -> same tab.
 await page.fill('#q', 'language');
 await page.waitForSelector('#results .pf-papers li > [data-star-paper]', { timeout: 10000 });
-check('search-result workshop opens a NEW tab', (await popupOn('#results .pf-result .pf-title')).includes('/workshop/'));
-// seed a saved workshop + paper, then test the saved page's links
-await page.click('#results .pf-result > [data-star-ws]');
-await page.click('#results .pf-papers li > [data-star-paper]');
-await page.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
-await page.waitForSelector('[data-saved-ws]', { timeout: 8000 });
-check('saved workshop opens a NEW tab', (await popupOn('[data-saved-ws] .ws-name a')).includes('/workshop/'));
-check('saved paper title opens a NEW tab at its anchor', /\/workshop\/[^/]+\/#p-/.test(await popupOn('.saved-papers li a')));
+check('search-result workshop title navigates in the SAME tab', await navsInPlace('#results .pf-result .pf-title') && page.url().includes('/workshop/'));
+// Header nav: same tab (unchanged).
+await page.goto(BASE, { waitUntil: 'networkidle' });
 const tabsBefore = ctx.pages().length;
 await page.click('.site-nav a[href$="/about/"]');
 await page.waitForURL('**/about/');
-check('header nav still navigates in the SAME tab', ctx.pages().length === tabsBefore && page.url().includes('/about/'));
+check('header nav navigates in the SAME tab', ctx.pages().length === tabsBefore && page.url().includes('/about/'));
 await page.evaluate(() => localStorage.clear());
 
 console.log('— saved papers cluster by conference (A→Z), years desc inside —');

@@ -437,17 +437,17 @@ const FW = workshops.map((w) => ({
                 const pt = String(sr.title).replace(/^[\s☆★]+/, '');
                 const ppid = (String(sr.url).match(/#p-([^#?]+)/) || [])[1] || '';
                 return `
-              <li>${ppid ? `<button type="button" class="star-btn" data-star-paper="${esc(ppid)}" data-title="${esc(pt)}" data-ws="${esc(slug)}" data-wsname="${esc(wsLabel)}" aria-pressed="false" aria-label="Save paper: ${esc(pt)}">☆</button>` : ''}<a class="pf-ptitle" target="_blank" rel="noopener" href="${esc(sr.url)}">${esc(pt)}</a><p class="pf-excerpt">${stripLeadingTitle(sr.excerpt, pt)}</p></li>`;
+              <li>${ppid ? `<button type="button" class="star-btn" data-star-paper="${esc(ppid)}" data-title="${esc(pt)}" data-ws="${esc(slug)}" data-wsname="${esc(wsLabel)}" aria-pressed="false" aria-label="Save paper: ${esc(pt)}">☆</button>` : ''}<a class="pf-ptitle" href="${esc(sr.url)}">${esc(pt)}</a><p class="pf-excerpt">${stripLeadingTitle(sr.excerpt, pt)}</p></li>`;
               })()).join('') +
             (subs.length > SUBS_PER_WS
-              ? `<li class="pf-more"><a target="_blank" rel="noopener" href="${esc(key)}#papers">…${subs.length - SUBS_PER_WS} more matching papers →</a></li>`
+              ? `<li class="pf-more"><a href="${esc(key)}#papers">…${subs.length - SUBS_PER_WS} more matching papers →</a></li>`
               : '') +
             '</ul>';
         }
         rows.push(`
         <li class="pf-result">
           <div class="result-meta"><span class="badge" style="--conf:${color}; padding:0.2rem 0.6rem;">${esc(conf)} ${esc(src.meta?.year ?? '')}</span><span class="pill ${pillClass}">${esc(src.meta?.status ?? '')}</span>${src.meta?.status === 'Open call' && src.meta?.deadline ? `<span class="muted" style="font-size:0.82rem;">due ${esc(src.meta.deadline)}</span>` : ''}</div>
-          <a class="pf-title" target="_blank" rel="noopener" href="${esc(key)}">${esc(wsName)}</a>${slug ? `<button type="button" class="star-btn" data-star-ws="${esc(slug)}" aria-pressed="false" aria-label="Save ${esc(wsName)} to your list" title="Save for later (stays in this browser)">☆</button>` : ''}
+          <a class="pf-title" href="${esc(key)}">${esc(wsName)}</a>${slug ? `<button type="button" class="star-btn" data-star-ws="${esc(slug)}" aria-pressed="false" aria-label="Save ${esc(wsName)} to your list" title="Save for later (stays in this browser)">☆</button>` : ''}
           ${g.ws ? `<p class="pf-excerpt">${g.ws.excerpt}</p>` : ''}
           ${papersHtml}
         </li>`);

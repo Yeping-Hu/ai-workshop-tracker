@@ -114,20 +114,23 @@ const current = (p: string) =>
       // Every content link opens in a new tab — internal (workshops, papers,
       // saved items) and external alike. Decided at CLICK time via
       // delegation, so links rendered after page load (search results, the
-      // saved page) are covered too: the previous load-time loop only saw
-      // links that existed at first paint, which is why dynamic surfaces
-      // kept regressing to same-tab. Exceptions: the site header (wordmark +
-      // nav) navigates in place, and same-page anchors stay put. Modified
-      // clicks (ctrl/cmd/shift/middle) keep their native behavior.
+      // External links (a different host — arXiv PDFs, a workshop's own site)
+      // open in a new tab so the tracker stays available behind them. Internal
+      // navigation between tracker pages stays in the same tab (the standard
+      // expectation; forcing new tabs for in-site links just clutters the tab
+      // bar). Covers links rendered at any time (board, search results, the
+      // saved page), not only those present at first paint. Exceptions: the
+      // site header navigates in place, and same-page anchors stay put.
+      // Modified clicks (ctrl/cmd/shift/middle) keep their native behavior.
       document.addEventListener('click', (e) => {
         if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
         const a = e.target.closest('a[href]');
         if (!a || a.closest('.site-header')) return;
         const href = a.getAttribute('href') || '';
         if (href.startsWith('javascript:')) return;
-        if (a.hash && a.host === location.host && a.pathname === location.pathname) return;
+        if (a.host === location.host) return; // internal link → same tab
         a.target = '_blank';
-        if (a.host !== location.host) a.rel = 'noopener';
+        a.rel = 'noopener';
       });
       // Manual light/dark toggle (falls back to the OS preference until used).
       document.getElementById('themeToggle')?.addEventListener('click', () => {
