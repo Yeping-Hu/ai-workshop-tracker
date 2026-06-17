@@ -597,6 +597,41 @@ console.log('— engine guard: a reused module must not re-merge (the fix mechan
 }
 await page.evaluate(() => localStorage.clear());
 
+// The headline must survive the engine returning the SAME workshop under
+// DIFFERENT URLs — the real-world inflation (one "llm" query reading 513
+// workshops instead of 260 in some browsers). Counting is keyed on the
+// workshop slug, not the raw URL, so duplicate-URL copies collapse. Reproduce
+// the failure shape directly: merge the papers index a second time under an
+// absolute baseUrl into the worker the app uses, then make the app recount.
+console.log('— duplicate-URL documents must not inflate the headline —');
+{
+  const ctx = await browser.newContext();
+  const p = await ctx.newPage();
+  const readCount = () => p.$eval('#searchCount', (el) => el.textContent.trim());
+  const waitForCount = () => p.waitForFunction(() => /\d+ workshop/.test(document.querySelector('#searchCount')?.textContent || ''), { timeout: 15000 });
+  await p.goto(`${BASE}/?q=llm`, { waitUntil: 'domcontentloaded' });
+  await waitForCount();
+  const clean = await readCount();
+  // force the engine to return each page under two distinct URL bases
+  const dup = await p.evaluate(async () => {
+    const pf = await import('/pagefind/pagefind.js'); // the app's cached module/worker
+    await pf.mergeIndex('/pagefind-papers/', { baseUrl: 'https://example.com/' });
+    const r = await pf.search('llm'); const data = await Promise.all(r.results.map((x) => x.data()));
+    const slug = (u) => (u.match(/workshop\/([^/?#]+)/) || [])[1] || u;
+    return { distinctBase: new Set(data.map((d) => d.url.split('#')[0])).size, distinctSlug: new Set(data.map((d) => slug(d.url))).size };
+  });
+  // recount in the app (clear + re-search busts the per-query cache)
+  await p.evaluate(() => document.querySelector('#clearSearch')?.click());
+  await p.waitForSelector('#homeDefault:not([hidden])', { timeout: 8000 });
+  await p.fill('#q', 'llm'); await p.keyboard.press('Enter');
+  await waitForCount();
+  const afterDup = await readCount();
+  check('engine returns duplicate-URL docs when provoked', dup.distinctBase > dup.distinctSlug, JSON.stringify(dup));
+  check('headline unchanged despite duplicate-URL docs', afterDup === clean, `clean="${clean}" afterDup="${afterDup}"`);
+  await ctx.close();
+}
+await page.evaluate(() => localStorage.clear());
+
 const apiWs = JSON.parse(rfL('site/dist/api/workshops.json', 'utf8')).workshops;
 const byConfT = {};
 for (const w of apiWs) (byConfT[w.conference] ||= []).push(w);

@@ -365,13 +365,30 @@ const FW = workshops.map((w) => ({
         // always produce identical order.
         const ordered = [...res.results].sort((a, b) => (b.score - a.score) || String(a.id).localeCompare(String(b.id)));
         const data = await Promise.all(ordered.map((r) => r.data()));
+        // Group by a STABLE workshop identity, not the raw result URL. Pagefind
+        // can hand back the same workshop page under more than one URL — e.g.
+        // when the papers index resolves its base differently from the
+        // workshops index, or a merge runs twice — and keying on the URL then
+        // counts that one workshop two or three times (the "513 workshops for
+        // llm" inflation, which surfaced in some browsers but not others
+        // depending on load timing). The slug in /workshop/<slug>/ is unique per
+        // workshop and identical across any such duplicate, so it collapses
+        // them; matched papers from the duplicate copies are merged here and
+        // de-duped by paper id below. URLs that aren't workshop pages (none
+        // today) fall back to the URL itself.
+        const slugOf = (u) => (String(u).match(/\/workshop\/([^/?#]+)/) || [])[1] || null;
         const groups = new Map();
         for (const d of data) {
-          const gkey = d.url.split('#')[0];
-          if (!groups.has(gkey)) groups.set(gkey, { ws: null, papers: null });
+          const s = slugOf(d.url);
+          const gkey = s ? `ws:${s}` : d.url.split('#')[0];
+          if (!groups.has(gkey)) groups.set(gkey, { ws: null, papers: null, slug: s, url: s ? `${base}/workshop/${s}/` : d.url.split('#')[0] });
           const g = groups.get(gkey);
-          if ((d.filters?.type ?? []).includes('Papers')) g.papers = d;
-          else g.ws = d;
+          if ((d.filters?.type ?? []).includes('Papers')) {
+            if (!g.papers) g.papers = d;
+            else g.papers = { ...g.papers, sub_results: [...(g.papers.sub_results || []), ...(d.sub_results || [])] };
+          } else if (!g.ws) {
+            g.ws = d;
+          }
         }
         // Headline counts describe exactly what's listed: distinct workshops,
         // and the individual papers matched inside them. (Previously '2
@@ -396,12 +413,22 @@ const FW = workshops.map((w) => ({
         const entries = [...groups.entries()].map(([gkey, g]) => {
           let subs = [];
           if (hasQuery && g.papers) {
-            subs = (g.papers.sub_results || []).filter((sr) => sr.url.includes('#p-') && paperMatchesAll(sr.excerpt));
+            // De-dupe by paper id: a duplicated papers doc contributes the same
+            // paper anchors more than once, which would otherwise inflate the
+            // paper count just as duplicate workshop URLs inflated the workshop
+            // count (see the slug grouping above).
+            const seen = new Set();
+            subs = (g.papers.sub_results || []).filter((sr) => {
+              if (!sr.url.includes('#p-') || !paperMatchesAll(sr.excerpt)) return false;
+              const id = (sr.url.match(/#p-([^#?]+)/) || [])[1];
+              if (id) { if (seen.has(id)) return false; seen.add(id); }
+              return true;
+            });
             nPapers += subs.length;
             if (subs.length === 0) {
               subs = [{
                 title: terms.length > 1 ? 'Keywords matched across different papers →' : 'Matching papers →',
-                url: `${gkey}#papers`,
+                url: `${g.url}#papers`,
                 fall: true,
               }];
             }
@@ -455,7 +482,7 @@ const FW = workshops.map((w) => ({
         const color = confColors[conf] ?? '#888';
         const pillClass = { 'Open call': 'upcoming', 'Deadline unknown': 'unknown' }[src.meta?.status] ?? 'past';
         const wsName = g.ws?.meta?.title ?? String(g.papers?.meta?.title ?? '').replace(/ — accepted papers$/, '');
-        const slug = (key.match(/\/workshop\/([^/]+)\//) || [])[1] || '';
+        const slug = g.slug || '';
         const wsLabel = `${wsName} — ${conf} ${src.meta?.year ?? ''}`.trim();
         let papersHtml = '';
         if (hasQuery && g.subs.length) {
@@ -469,17 +496,17 @@ const FW = workshops.map((w) => ({
                 const pt = String(sr.title).replace(/^[\s☆★]+/, '');
                 const ppid = (String(sr.url).match(/#p-([^#?]+)/) || [])[1] || '';
                 return `
-              <li>${ppid ? `<button type="button" class="star-btn" data-star-paper="${esc(ppid)}" data-title="${esc(pt)}" data-ws="${esc(slug)}" data-wsname="${esc(wsLabel)}" aria-pressed="false" aria-label="Save paper: ${esc(pt)}">☆</button>` : ''}<a class="pf-ptitle" href="${esc(sr.url)}">${esc(pt)}</a><p class="pf-excerpt">${stripLeadingTitle(sr.excerpt, pt)}</p></li>`;
+              <li>${ppid ? `<button type="button" class="star-btn" data-star-paper="${esc(ppid)}" data-title="${esc(pt)}" data-ws="${esc(slug)}" data-wsname="${esc(wsLabel)}" aria-pressed="false" aria-label="Save paper: ${esc(pt)}">☆</button>` : ''}<a class="pf-ptitle" href="${esc(ppid ? `${g.url}#p-${ppid}` : sr.url)}">${esc(pt)}</a><p class="pf-excerpt">${stripLeadingTitle(sr.excerpt, pt)}</p></li>`;
               })()).join('') +
             (subs.length > SUBS_PER_WS
-              ? `<li class="pf-more"><a href="${esc(key)}#papers">…${subs.length - SUBS_PER_WS} more matching papers →</a></li>`
+              ? `<li class="pf-more"><a href="${esc(g.url)}#papers">…${subs.length - SUBS_PER_WS} more matching papers →</a></li>`
               : '') +
             '</ul>';
         }
         rows.push(`
         <li class="pf-result">
           <div class="result-meta"><span class="badge" style="--conf:${color}; padding:0.2rem 0.6rem;">${esc(conf)} ${esc(src.meta?.year ?? '')}</span><span class="pill ${pillClass}">${esc(src.meta?.status ?? '')}</span>${src.meta?.status === 'Open call' && src.meta?.deadline ? `<span class="muted" style="font-size:0.82rem;">due ${esc(src.meta.deadline)}</span>` : ''}</div>
-          <a class="pf-title" href="${esc(key)}">${esc(wsName)}</a>${slug ? `<button type="button" class="star-btn" data-star-ws="${esc(slug)}" aria-pressed="false" aria-label="Save ${esc(wsName)} to your list" title="Save for later (stays in this browser)">☆</button>` : ''}
+          <a class="pf-title" href="${esc(g.url)}">${esc(wsName)}</a>${slug ? `<button type="button" class="star-btn" data-star-ws="${esc(slug)}" aria-pressed="false" aria-label="Save ${esc(wsName)} to your list" title="Save for later (stays in this browser)">☆</button>` : ''}
           ${g.ws ? `<p class="pf-excerpt">${g.ws.excerpt}</p>` : ''}
           ${papersHtml}
         </li>`);
