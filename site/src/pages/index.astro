@@ -140,6 +140,7 @@ const FW = workshops.map((w) => ({
     let pfReady = null, pagefind = null;
     let pfBust = 0; // appended to the engine URL when re-importing after a deploy
     let pfInited = null; // the engine module whose worker has already loaded both indexes
+    let settleTimers = []; // pending "recount once the merged index finishes settling" timers
     let healAttempted = false;
     const initialCounts = facetCounts;
     let facetOptions = null;
@@ -236,6 +237,12 @@ const FW = workshops.map((w) => ({
             await pf.init();
             await pf.mergeIndex(`${base}/pagefind-papers/`, { baseUrl: `${base}/` });
             pfInited = pf;
+            // mergeIndex() resolves before the papers index has finished loading
+            // its data, so the very first search can over-match while it settles
+            // (a deep link showing 513/479 workshops that a later identical
+            // search corrects to 260). The query doesn't change on a deep link,
+            // so nothing recounts — schedule recounts until the number is stable.
+            scheduleSettleRecounts();
           }
           pagefind = pf;
           return pf;
@@ -469,6 +476,28 @@ const FW = workshops.map((w) => ({
       $('#results').innerHTML =
         '<li class="muted">The search index changed since this page was loaded (the site updates itself), and it couldn\'t be refreshed in place: ' + esc(err?.message || err) + '. <button type="button" class="btn-quiet" onclick="location.reload()">Reload the page</button> or try the filter again in a moment.</li>';
       $('#searchCount').textContent = '';
+    }
+
+    // After the workshops + papers indexes merge, Pagefind keeps loading the
+    // merged index's data, and a search issued in that window over-counts until
+    // it settles. On a deep link the query never changes, so the inflated count
+    // would stick. Re-run the active search a few times on a back-off until the
+    // workshop count stops changing (two stable reads), then stop. Re-running an
+    // already-settled search just re-renders the same numbers, so this is a
+    // no-op once correct and self-heals the transient inflation otherwise.
+    function scheduleSettleRecounts() {
+      settleTimers.forEach(clearTimeout);
+      settleTimers = [];
+      let prev = -1, stable = 0;
+      for (const ms of [400, 900, 1600, 2800, 4500]) {
+        settleTimers.push(setTimeout(async () => {
+          if (!isSearching() || stable >= 2) return;
+          rState.key = '\u0000';        // force a recount past the per-query cache
+          await runSearch(true);
+          const n = rState.groups.length;
+          if (n === prev) stable++; else { stable = 0; prev = n; }
+        }, ms));
+      }
     }
 
     function renderResultsPage() {
