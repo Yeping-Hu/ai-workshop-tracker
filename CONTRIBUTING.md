@@ -33,7 +33,7 @@ One YAML file per workshop **edition** (same series ⇒ new file each year).
 | `website` | ✅ | Full `http(s)` URL |
 | `topics` | ✅ | 1–5 ids from `data/topics.yml` |
 | `submission_deadline` |  | `YYYY-MM-DD HH:MM` or `YYYY-MM-DD` (means 23:59) — **wall-clock time in `timezone`** |
-| `timezone` |  | `AoE` (default, = UTC−12), `UTC`, or an IANA name like `America/Los_Angeles` |
+| `timezone` | ⚠️ | **Required whenever `submission_deadline` is set** (CI rejects a deadline without one). `AoE` (Anywhere on Earth, UTC−12 — the ML default for date-only CFPs), `UTC`, or an IANA name like `America/Los_Angeles` |
 | `deadline_notes` |  | e.g. `"extended from Aug 15"` |
 | `tracks` |  | For multi-track workshops (e.g. Full + Short): list of `{ name, submission_deadline?, timezone? }`. Omit `submission_deadline` for a track whose date isn't announced yet. See note below. |
 | `notification_date` |  | `YYYY-MM-DD` |
@@ -68,11 +68,12 @@ track. Don't bother with `tracks` when every track shares one deadline — just 
 ### Adding a missing deadline
 
 Entries without a `submission_deadline` start with a comment template showing
-exactly which two lines to add (`submission_deadline` and, if it isn't AoE,
-`timezone`) — every "Deadline TBA" workshop page links straight to that file
-in the GitHub editor. Add the lines, propose the change, done. You can delete
-the comment block or leave it: the weekly bot removes it automatically the
-next time it touches the file.
+exactly which two lines to add — `submission_deadline` **and** `timezone`
+(always include it; CI rejects a deadline without one, and `AoE` is the right
+choice when the CFP just gives a date). Every "Deadline TBA" workshop page
+links straight to that file in the GitHub editor. Add the lines, propose the
+change, done. You can delete the comment block or leave it: the weekly bot
+removes it automatically the next time it touches the file.
 
 ## What CI checks
 

@@ -60,7 +60,7 @@ body:
     id: timezone
     attributes:
       label: Timezone
-      description: AoE (Anywhere on Earth, UTC−12) is the ML default.
+      description: "Required if you entered a deadline above. AoE (Anywhere on Earth, UTC−12) is the ML default — pick it if the CFP just says a date with no zone."
       options:
         - AoE
         - UTC
@@ -73,7 +73,8 @@ body:
         - Asia/Seoul
         - Asia/Singapore
         - Australia/Sydney
-      default: 0
+    validations:
+      required: true
   - type: input
     id: deadline_notes
     attributes:

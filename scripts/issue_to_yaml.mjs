@@ -74,6 +74,9 @@ const optional = {
   submission_portal: get('Submission portal').toLowerCase(),
 };
 for (const [k, v] of Object.entries(optional)) if (v) record[k] = v;
+// timezone is meaningless without a deadline — drop an orphan one so the data
+// stays clean (the form requires a timezone, but the deadline is optional).
+if (record.timezone && !record.submission_deadline) delete record.timezone;
 const organizers = get('Organizers').split('\n').map((s) => s.trim()).filter(Boolean);
 if (organizers.length) record.organizers = organizers;
 const notes = get('Anything else');

@@ -126,6 +126,15 @@ for (const filePath of listWorkshopFiles()) {
 
   let deadlineMs = null;
   if (w.submission_deadline) {
+    // A deadline without a timezone is ambiguous (off by up to a day depending
+    // on what the submitter meant), so require it explicitly rather than
+    // silently assuming AoE. Date-only "YYYY-MM-DD" still needs a timezone too.
+    if (!w.timezone) {
+      errors.push({
+        file: rel,
+        msg: '`submission_deadline` is set but `timezone` is missing. Add `timezone: AoE` (Anywhere on Earth, the ML default), `timezone: UTC`, or an IANA name like `America/Los_Angeles` so the deadline is unambiguous.',
+      });
+    }
     deadlineMs = resolveDeadlineUtcMs(w.submission_deadline, w.timezone || 'AoE');
     if (deadlineMs == null) {
       errors.push({
@@ -157,6 +166,31 @@ for (const filePath of listWorkshopFiles()) {
       // Conference is over — the entry renders as "Past", which is fine.
     } else {
       warnings.push({ file: rel, msg: 'No `submission_deadline` set for a current/future edition (will show as TBA).' });
+    }
+  }
+
+  // Per-track deadlines need an explicit, valid timezone too (same ambiguity).
+  if (Array.isArray(w.tracks)) {
+    for (const t of w.tracks) {
+      if (t && t.submission_deadline) {
+        if (!t.timezone) {
+          errors.push({
+            file: rel,
+            msg: `Track "${t.name ?? '?'}" has a \`submission_deadline\` but no \`timezone\`. Add one (AoE / UTC / IANA name).`,
+          });
+        } else if (!isValidTimezone(t.timezone)) {
+          errors.push({
+            file: rel,
+            msg: `Track "${t.name ?? '?'}" has invalid timezone \`${t.timezone}\`. Use "AoE", "UTC", or an IANA name.`,
+          });
+        }
+        if (resolveDeadlineUtcMs(t.submission_deadline, t.timezone || 'AoE') == null) {
+          errors.push({
+            file: rel,
+            msg: `Track "${t.name ?? '?'}" \`submission_deadline\` "${t.submission_deadline}" is not a valid "YYYY-MM-DD" or "YYYY-MM-DD HH:MM".`,
+          });
+        }
+      }
     }
   }
 
