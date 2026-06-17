@@ -27,6 +27,8 @@ jobs:
         run: node scripts/tracks_test.mjs
       - name: Test timezone normalization (import -> UTC)
         run: node scripts/tz_normalize_test.mjs
+      - name: Test contributor timezone conversion (bot -> UTC)
+        run: node scripts/issue_tz_test.mjs
       - name: Check schema-docs parity
         run: node scripts/docs_sync_test.mjs
       - name: Validate workshop data

@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { WORKSHOPS_DIR } from '../lib/workshops.mjs';
+import { resolveDeadlineUtcMs, isValidTimezone } from '../lib/dates.mjs';
 
 const body = process.env.ISSUE_BODY;
 if (!body) {
@@ -77,6 +78,29 @@ for (const [k, v] of Object.entries(optional)) if (v) record[k] = v;
 // timezone is meaningless without a deadline — drop an orphan one so the data
 // stays clean (the form requires a timezone, but the deadline is optional).
 if (record.timezone && !record.submission_deadline) delete record.timezone;
+
+// Normalize a contributor's deadline to UTC so stored deadlines are uniform,
+// without forcing them to do the math: they pick any timezone, the bot
+// converts. The original wall-clock + zone is kept in deadline_notes as a
+// provenance breadcrumb (so it still matches the CFP they read). AoE is left
+// as-is — it's the ML convention for date-only deadlines and is most
+// meaningful kept verbatim; only real civil timezones are converted.
+if (record.submission_deadline && record.timezone && isValidTimezone(record.timezone)) {
+  const tz = record.timezone;
+  const isCivilZone = tz !== 'UTC' && tz !== 'AoE'; // an IANA name like America/Los_Angeles
+  if (isCivilZone) {
+    const ms = resolveDeadlineUtcMs(record.submission_deadline, tz);
+    if (Number.isFinite(ms)) {
+      const d = new Date(ms);
+      const pad = (n) => String(n).padStart(2, '0');
+      const original = `${record.submission_deadline} ${tz}`;
+      record.submission_deadline = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+      record.timezone = 'UTC';
+      const note = `submitted as ${original}`;
+      record.deadline_notes = record.deadline_notes ? `${record.deadline_notes} (${note})` : note;
+    }
+  }
+}
 const organizers = get('Organizers').split('\n').map((s) => s.trim()).filter(Boolean);
 if (organizers.length) record.organizers = organizers;
 const notes = get('Anything else');

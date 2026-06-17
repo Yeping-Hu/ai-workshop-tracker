@@ -60,7 +60,7 @@ body:
     id: timezone
     attributes:
       label: Timezone
-      description: "Required if you entered a deadline above. AoE (Anywhere on Earth, UTC−12) is the ML default — pick it if the CFP just says a date with no zone."
+      description: "Required if you entered a deadline above. Pick whatever timezone the CFP uses — we convert it to UTC for you. AoE (Anywhere on Earth, UTC−12) is the ML default; pick it if the CFP just says a date with no zone."
       options:
         - AoE
         - UTC

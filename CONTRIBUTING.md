@@ -33,7 +33,7 @@ One YAML file per workshop **edition** (same series ⇒ new file each year).
 | `website` | ✅ | Full `http(s)` URL |
 | `topics` | ✅ | 1–5 ids from `data/topics.yml` |
 | `submission_deadline` |  | `YYYY-MM-DD HH:MM` or `YYYY-MM-DD` (means 23:59) — **wall-clock time in `timezone`** |
-| `timezone` | ⚠️ | **Required whenever `submission_deadline` is set** (CI rejects a deadline without one). `AoE` (Anywhere on Earth, UTC−12 — the ML default for date-only CFPs), `UTC`, or an IANA name like `America/Los_Angeles` |
+| `timezone` | ⚠️ | **Required whenever `submission_deadline` is set** (CI rejects a deadline without one). `AoE` (Anywhere on Earth, UTC−12 — the ML default for date-only CFPs), `UTC`, or an IANA name like `America/Los_Angeles`. Via the issue form, pick any zone and the bot converts the deadline to UTC for you (keeping the original in `deadline_notes`); AoE is kept as-is. |
 | `deadline_notes` |  | e.g. `"extended from Aug 15"` |
 | `tracks` |  | For multi-track workshops (e.g. Full + Short): list of `{ name, submission_deadline?, timezone? }`. Omit `submission_deadline` for a track whose date isn't announced yet. See note below. |
 | `notification_date` |  | `YYYY-MM-DD` |
@@ -95,6 +95,10 @@ correctly.
 
 `node scripts/tz_normalize_test.mjs` — the importer converts every extracted
 deadline (AoE or any offset) to UTC, so stored deadlines stay consistent.
+
+`node scripts/issue_tz_test.mjs` — the issue-to-PR bot converts a contributor's
+deadline to UTC (any civil timezone, DST-aware), keeping the original in
+`deadline_notes`; UTC and AoE pass through unchanged.
 
 Validation failures are posted as a PR comment listing every problem at once.
 
