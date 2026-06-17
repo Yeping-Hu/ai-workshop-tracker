@@ -19,6 +19,7 @@ const buildDate = new Date().toISOString().slice(0, 10);
 const ogImage = Astro.site ? new URL(href('/og.png'), Astro.site).href : undefined;
 const GOATCOUNTER = import.meta.env.PUBLIC_GOATCOUNTER;
 const CF_TOKEN = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN;
+const BUILD_ID = import.meta.env.PUBLIC_BUILD_ID;
 const current = (p: string) =>
   Astro.url.pathname.replace(/\/+$/, '/') === href(p).replace(/\/+$/, '/') ||
   (p === '/' && Astro.url.pathname === href('/'));
@@ -29,6 +30,7 @@ const current = (p: string) =>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="build-id" content={BUILD_ID} />
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
     {canonical && <link rel="canonical" href={canonical} />}
@@ -135,6 +137,22 @@ const current = (p: string) =>
         // opening new tabs (even internal ones). This leaves the DOM untouched.
         e.preventDefault();
         window.open(a.href, '_blank', 'noopener');
+      });
+
+      // Stale back/forward-cache guard. bfcache restores a page exactly as it
+      // was — including JS from a build that predates a since-shipped deploy,
+      // which is how a restored page can show an old header or run an old
+      // click handler. On a persisted restore, check the live build id; if the
+      // restored page is from an older build, reload it once so it can't serve
+      // stale code or markup. Same-build restores are left fast and untouched.
+      window.addEventListener('pageshow', (e) => {
+        if (!e.persisted) return;
+        const mine = document.querySelector('meta[name="build-id"]')?.content;
+        if (!mine) return;
+        fetch('/version.json', { cache: 'no-store' })
+          .then((r) => r.ok ? r.json() : null)
+          .then((v) => { if (v && v.build && v.build !== mine) location.reload(); })
+          .catch(() => {});
       });
       // Manual light/dark toggle (falls back to the OS preference until used).
       document.getElementById('themeToggle')?.addEventListener('click', () => {

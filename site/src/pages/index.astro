@@ -532,9 +532,6 @@ const FW = workshops.map((w) => ({
     );
 
     // hydrate from URL, THEN render panels so deep-linked boxes draw checked.
-    // Run on first load AND on pageshow: a back/forward navigation (especially
-    // a bfcache restore) re-shows this page, and we must re-sync the rendered
-    // results to the URL's query rather than leaving a stale/empty view.
     function hydrateFromUrl() {
       const p = new URLSearchParams(location.search);
       keywords = (p.get('q') || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
@@ -547,6 +544,28 @@ const FW = workshops.map((w) => ({
       else setMode(false);
     }
     hydrateFromUrl();
-    window.addEventListener('pageshow', (e) => { if (e.persisted) hydrateFromUrl(); });
+
+    // Back/forward navigation. A bfcache restore (persisted) brings the page
+    // back fully intact — rendered results, JS state, and the live click
+    // handler — so re-running the search would be wasteful AND can reorder the
+    // results (Pagefind may merge its dual index in a different order on a
+    // fresh call). So on restore we only re-hydrate when the rendered results
+    // are actually MISSING or no longer match the URL's query; otherwise we
+    // leave the restored DOM exactly as the user left it.
+    window.addEventListener('pageshow', (e) => {
+      if (!e.persisted) return;
+      const urlQ = new URLSearchParams(location.search).toString();
+      const renderedQ = (() => {
+        const p = new URLSearchParams();
+        if (keywords.length) p.set('q', keywords.join(','));
+        for (const f of FACETS) if (sel[f].size) p.set(f, [...sel[f]].join(','));
+        if (isSearching() && rState.page > 1) p.set('page', String(rState.page));
+        return p.toString();
+      })();
+      const hasResults = $('#results').querySelector('.pf-result, .pf-empty, .pf-error');
+      // Re-hydrate only if the restored view doesn't match the URL, or results
+      // somehow didn't survive the restore. Matching state → leave it untouched.
+      if (urlQ !== renderedQ || (isSearching() && !hasResults)) hydrateFromUrl();
+    });
   </script>
 </Base>

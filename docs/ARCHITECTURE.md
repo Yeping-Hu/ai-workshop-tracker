@@ -103,6 +103,25 @@ deadline/status, so they're unchanged; the workshop page additionally renders th
 per-track breakdown. The rules are pinned by `scripts/tracks_test.mjs` (run in the
 validate CI workflow).
 
+## Back/forward navigation & the bfcache guard
+
+Search state lives in the URL (`?q=…&conf=…&page=…`), so results are
+reconstructable on any load. `hydrateFromUrl()` (index.astro) rebuilds the
+search from the URL on first paint and runs the search *immediately* (the
+non-debounced `pf.search`, since a lone debounced call on restore can be
+superseded and swallowed).
+
+Back/forward is handled on `pageshow`. A bfcache restore (`event.persisted`)
+brings the page back fully intact — rendered results, JS state, listeners — so
+re-running the search would be wasteful and can reorder Pagefind's merged
+results; the handler therefore re-hydrates *only* when the restored view no
+longer matches the URL (or results didn't survive). Separately, because
+bfcache can serve a page from a build that predates a deploy (stale markup or
+JS — e.g. an old header, or a pre-fix click handler), every page stamps a
+`<meta name="build-id">` and, on a persisted restore, fetches the no-store
+`/version.json`; if the live build id differs it reloads once. Same-build
+restores stay fast and untouched. `BUILD_ID` is the commit SHA in CI.
+
 ## Favorites without accounts
 
 Starring a workshop or paper (on the board, in search/filter results, or on a
