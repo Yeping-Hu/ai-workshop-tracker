@@ -129,8 +129,12 @@ const current = (p: string) =>
         const href = a.getAttribute('href') || '';
         if (href.startsWith('javascript:')) return;
         if (a.host === location.host) return; // internal link → same tab
-        a.target = '_blank';
-        a.rel = 'noopener';
+        // External → new tab. Open programmatically instead of setting
+        // a.target='_blank' on the element: mutating the DOM persists into the
+        // back/forward cache, which left restored pages with links stuck
+        // opening new tabs (even internal ones). This leaves the DOM untouched.
+        e.preventDefault();
+        window.open(a.href, '_blank', 'noopener');
       });
       // Manual light/dark toggle (falls back to the OS preference until used).
       document.getElementById('themeToggle')?.addEventListener('click', () => {

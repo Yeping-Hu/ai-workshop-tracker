@@ -297,7 +297,7 @@ const FW = workshops.map((w) => ({
     let pendingPage = 1; // from a deep link, consumed once
     const PAGE_SIZE = 50;
 
-    async function runSearch() {
+    async function runSearch(immediate = false) {
       setMode(isSearching());
       if (!isSearching()) { $('#results').innerHTML = ''; $('#searchCount').textContent = ''; rState.key = ''; syncUrl(); return; }
       const pf = await ensurePagefind();
@@ -313,7 +313,10 @@ const FW = workshops.map((w) => ({
         ? { filters: { ...filters, type: { any: ['Workshops'] } }, sort: { order: 'asc' } }
         : { filters };
       try {
-      const res = await pf.debouncedSearch(query, opts, 220);
+      // On restore (back/forward, deep link) search immediately: debouncedSearch
+      // returns null when superseded, and a lone restore-time call can be
+      // swallowed, leaving the results empty even though the query is valid.
+      const res = immediate ? await pf.search(query, opts) : await pf.debouncedSearch(query, opts, 220);
       if (res === null) return; // superseded
       // Build-time truth check: in browse mode (no keywords) this page knows
       // exactly how many workshops the current selection matches (FW). Zero
@@ -528,13 +531,22 @@ const FW = workshops.map((w) => ({
       Object.fromEntries(FACETS.map((f) => [f, Object.freeze(facetSort(f, Object.keys(initialCounts[f] ?? {})))])),
     );
 
-    // hydrate from URL, THEN render panels so deep-linked boxes draw checked
-    const p = new URLSearchParams(location.search);
-    keywords = (p.get('q') || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-    for (const f of FACETS) for (const v of (p.get(f) || '').split(',').filter(Boolean)) sel[f].add(v);
-    pendingPage = Math.max(1, Number(p.get('page')) || 1);
-    renderChips();
-    renderFacetPanels();
-    if (isSearching()) runSearch();
+    // hydrate from URL, THEN render panels so deep-linked boxes draw checked.
+    // Run on first load AND on pageshow: a back/forward navigation (especially
+    // a bfcache restore) re-shows this page, and we must re-sync the rendered
+    // results to the URL's query rather than leaving a stale/empty view.
+    function hydrateFromUrl() {
+      const p = new URLSearchParams(location.search);
+      keywords = (p.get('q') || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+      for (const f of FACETS) { sel[f].clear(); for (const v of (p.get(f) || '').split(',').filter(Boolean)) sel[f].add(v); }
+      pendingPage = Math.max(1, Number(p.get('page')) || 1);
+      input.value = ''; // committed keywords live in `keywords`; clear any stale partial text
+      renderChips();
+      renderFacetPanels();
+      if (isSearching()) runSearch(true);
+      else setMode(false);
+    }
+    hydrateFromUrl();
+    window.addEventListener('pageshow', (e) => { if (e.persisted) hydrateFromUrl(); });
   </script>
 </Base>

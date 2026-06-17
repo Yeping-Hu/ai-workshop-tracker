@@ -481,6 +481,29 @@ await page.waitForURL('**/about/');
 check('header nav navigates in the SAME tab', ctx.pages().length === tabsBefore && page.url().includes('/about/'));
 await page.evaluate(() => localStorage.clear());
 
+console.log('— back-navigation restores results and keeps internal links in-tab —');
+await page.goto(BASE, { waitUntil: 'networkidle' });
+await page.fill('#q', 'language');
+await page.keyboard.press('Enter');
+await page.waitForSelector('#results .pf-result .pf-title', { timeout: 10000 });
+const bnResultsBefore = (await page.$$('#results .pf-result')).length;
+const bnTabs0 = ctx.pages().length;
+await page.click('#results .pf-result .pf-title');
+await page.waitForURL('**/workshop/**', { timeout: 8000 }).catch(() => {});
+check('result click navigates in the SAME tab', ctx.pages().length === bnTabs0 && page.url().includes('/workshop/'));
+await page.goBack();
+// the fix: results must repopulate on back (was empty — debounced search swallowed)
+await page.waitForFunction(() => document.querySelectorAll('#results .pf-result').length > 0, { timeout: 8000 }).catch(() => {});
+const bnResultsAfter = (await page.$$('#results .pf-result')).length;
+check('search results restore after Back', bnResultsAfter > 0 && bnResultsAfter === bnResultsBefore, `${bnResultsBefore} -> ${bnResultsAfter}`);
+// clicking another internal link after Back must NOT open a new tab
+const bnTabs1 = ctx.pages().length;
+const bnPopup = ctx.waitForEvent('page', { timeout: 1500 }).then(() => true).catch(() => false);
+await page.click('#results .pf-result .pf-title');
+const bnOpenedTab = await bnPopup;
+check('internal link after Back stays in the SAME tab', bnOpenedTab === false && ctx.pages().length === bnTabs1);
+await page.evaluate(() => localStorage.clear());
+
 console.log('— saved papers cluster by conference (A→Z), years desc inside —');
 const apiWs = JSON.parse(rfL('site/dist/api/workshops.json', 'utf8')).workshops;
 const byConfT = {};
