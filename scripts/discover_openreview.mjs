@@ -135,11 +135,8 @@ export function parseGroupDeadline(dateStr) {
   const minute = hh != null ? Number(mm) : 59;
   const offset = off != null ? Number(off) : 0;
   const pad = (n) => String(n).padStart(2, '0');
-  if (offset === -12) {
-    // The venue used AoE — keep the wall-clock time as written.
-    return { submission_deadline: `${y}-${pad(month)}-${pad(d)} ${pad(hour)}:${pad(minute)}`, timezone: 'AoE' };
-  }
-  // Normalize any other offset to UTC for exactness.
+  // Normalize every offset (including AoE = UTC-12) to exact UTC, so all
+  // stored deadlines share one timezone. The instant is unchanged.
   const utcMs = Date.UTC(Number(y), month - 1, Number(d), hour, minute) - offset * 3_600_000;
   const dt = new Date(utcMs);
   return {
@@ -151,19 +148,12 @@ export function parseGroupDeadline(dateStr) {
 const slugify = (s) =>
   String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'workshop';
 
-/** Convert an OpenReview epoch-ms duedate to our deadline shape.
- *  If the wall clock at UTC-12 is exactly 23:59 the organizers meant AoE —
- *  keep that representation (community convention); otherwise store exact UTC. */
+/** Convert an OpenReview epoch-ms duedate to our deadline shape, always as
+ *  exact UTC so every stored deadline shares one timezone (the instant is the
+ *  true value from OpenReview either way). */
 export function msToDeadline(ms) {
   if (!Number.isFinite(ms)) return null;
   const pad = (n) => String(n).padStart(2, '0');
-  const aoe = new Date(ms - 12 * 3600 * 1000);
-  if (aoe.getUTCHours() === 23 && aoe.getUTCMinutes() === 59) {
-    return {
-      submission_deadline: `${aoe.getUTCFullYear()}-${pad(aoe.getUTCMonth() + 1)}-${pad(aoe.getUTCDate())} 23:59`,
-      timezone: 'AoE',
-    };
-  }
   const d = new Date(ms);
   return {
     submission_deadline: `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`,

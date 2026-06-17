@@ -1,14 +1,14 @@
-name: "IROS 2026 5th Workshop on Future of Construction: Collaborative Robots for Fabrication, Manufacturing, and Inspection"
+name: 'IROS 2026 5th Workshop on Future of Construction: Collaborative Robots for Fabrication, Manufacturing, and Inspection'
 acronym: FoC
 conference: iros
 year: 2026
 website: https://construction-robots.github.io/
 topics:
-  - robotics
+- robotics
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/FoC
 submission_portal: openreview
 notes: Auto-imported from the OpenReview venue record on 2026-06-10 — please verify and enrich (topics are keyword-guessed).
-added: "2026-06-10"
-submission_deadline: 2026-08-24 23:59
-timezone: AoE
+added: '2026-06-10'
+submission_deadline: 2026-08-25 11:59
+timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

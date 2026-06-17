@@ -1,14 +1,17 @@
-name: "ES-FoMo III: 3rd Workshop on Efficient Systems for Foundation Models"
-acronym: "ES-FoMo"
+name: 'ES-FoMo III: 3rd Workshop on Efficient Systems for Foundation Models'
+acronym: ES-FoMo
 conference: icml
 year: 2025
-website: "https://es-fomo.com/"
-topics: [efficiency, systems, llms]
-submission_deadline: "2025-05-26 23:59"
-timezone: "AoE"
-deadline_notes: "SEED estimate of the historical deadline — verify"
-workshop_date: "2025-07-19"
-openreview_venue_id: "ICML.cc/2025/Workshop/ES-FoMo-III"
+website: https://es-fomo.com/
+topics:
+- efficiency
+- systems
+- llms
+submission_deadline: 2025-05-27 11:59
+timezone: UTC
+deadline_notes: SEED estimate of the historical deadline — verify
+workshop_date: '2025-07-19'
+openreview_venue_id: ICML.cc/2025/Workshop/ES-FoMo-III
 submission_portal: openreview
-notes: "SEED DATA — name/website from the OpenReview venue record; workshop date estimated — verify."
-added: "2026-06-09"
+notes: SEED DATA — name/website from the OpenReview venue record; workshop date estimated — verify.
+added: '2026-06-09'

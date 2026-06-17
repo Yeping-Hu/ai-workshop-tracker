@@ -1,14 +1,16 @@
-name: "Workshop on Machine Learning for Genomics Explorations"
-acronym: "MLGenX"
+name: Workshop on Machine Learning for Genomics Explorations
+acronym: MLGenX
 conference: iclr
 year: 2025
-website: "https://mlgenx.github.io/"
-topics: [genomics, healthcare-bio]
-submission_deadline: "2025-02-10 23:59"
-timezone: "AoE"
-deadline_notes: "SEED estimate of the historical deadline — verify"
-workshop_date: "2025-04-27"
-openreview_venue_id: "ICLR.cc/2025/Workshop/MLGenX"
+website: https://mlgenx.github.io/
+topics:
+- genomics
+- healthcare-bio
+submission_deadline: 2025-02-11 11:59
+timezone: UTC
+deadline_notes: SEED estimate of the historical deadline — verify
+workshop_date: '2025-04-27'
+openreview_venue_id: ICLR.cc/2025/Workshop/MLGenX
 submission_portal: openreview
-notes: "SEED DATA — name/website from the OpenReview venue record; dates estimated — verify."
-added: "2026-06-09"
+notes: SEED DATA — name/website from the OpenReview venue record; dates estimated — verify.
+added: '2026-06-09'

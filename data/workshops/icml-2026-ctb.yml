@@ -1,16 +1,16 @@
-name: "ICML 2026 Workshop on Combining Theory and Benchmarks: Towards A Virtuous Cycle to Understand and Guarantee Foundation Model Performance"
+name: 'ICML 2026 Workshop on Combining Theory and Benchmarks: Towards A Virtuous Cycle to Understand and Guarantee Foundation Model Performance'
 acronym: CTB@ICML 2026
 conference: icml
 year: 2026
 website: https://sites.google.com/view/icml-ctb/home
 topics:
-  - llms
-  - theory
-  - evaluation-benchmarks
+- llms
+- theory
+- evaluation-benchmarks
 openreview_venue_id: ICML.cc/2026/Workshop/CTB
 submission_portal: openreview
 notes: Auto-imported from the OpenReview venue record on 2026-06-10 — please verify and enrich (topics are keyword-guessed).
-added: "2026-06-10"
-submission_deadline: 2026-05-08 23:59
-timezone: AoE
+added: '2026-06-10'
+submission_deadline: 2026-05-09 11:59
+timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

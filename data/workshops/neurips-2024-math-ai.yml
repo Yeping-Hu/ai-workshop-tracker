@@ -1,14 +1,16 @@
-name: "The 4th Workshop on Mathematical Reasoning and AI"
-acronym: "MATH-AI"
+name: The 4th Workshop on Mathematical Reasoning and AI
+acronym: MATH-AI
 conference: neurips
 year: 2024
-website: "https://mathai2024.github.io/"
-topics: [math-reasoning, llms]
-submission_deadline: "2024-09-15 23:59"
-timezone: "AoE"
-deadline_notes: "SEED estimate of the historical deadline — verify"
-workshop_date: "2024-12-14"
-openreview_venue_id: "NeurIPS.cc/2024/Workshop/MATH-AI"
+website: https://mathai2024.github.io/
+topics:
+- math-reasoning
+- llms
+submission_deadline: 2024-09-16 11:59
+timezone: UTC
+deadline_notes: SEED estimate of the historical deadline — verify
+workshop_date: '2024-12-14'
+openreview_venue_id: NeurIPS.cc/2024/Workshop/MATH-AI
 submission_portal: openreview
-notes: "SEED DATA — name/website/date taken from the OpenReview venue record; verify remaining fields."
-added: "2026-06-09"
+notes: SEED DATA — name/website/date taken from the OpenReview venue record; verify remaining fields.
+added: '2026-06-09'

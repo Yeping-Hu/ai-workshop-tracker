@@ -1,14 +1,17 @@
-name: "2nd AI for Math Workshop"
-acronym: "AI4Math"
+name: 2nd AI for Math Workshop
+acronym: AI4Math
 conference: icml
 year: 2025
-website: "https://sites.google.com/view/ai4mathworkshopicml2025"
-topics: [math-reasoning, llms, theory]
-submission_deadline: "2025-05-25 23:59"
-timezone: "AoE"
-deadline_notes: "SEED estimate of the historical deadline — verify"
-workshop_date: "2025-07-18"
-openreview_venue_id: "ICML.cc/2025/Workshop/AI4MATH"
+website: https://sites.google.com/view/ai4mathworkshopicml2025
+topics:
+- math-reasoning
+- llms
+- theory
+submission_deadline: 2025-05-26 11:59
+timezone: UTC
+deadline_notes: SEED estimate of the historical deadline — verify
+workshop_date: '2025-07-18'
+openreview_venue_id: ICML.cc/2025/Workshop/AI4MATH
 submission_portal: openreview
-notes: "SEED DATA — name/website/date taken from the OpenReview venue record; verify remaining fields."
-added: "2026-06-09"
+notes: SEED DATA — name/website/date taken from the OpenReview venue record; verify remaining fields.
+added: '2026-06-09'

@@ -4,11 +4,11 @@ conference: icml
 year: 2026
 website: https://mechinterpworkshop.com/
 topics:
-  - interpretability
+- interpretability
 openreview_venue_id: ICML.cc/2026/Workshop/Mech_Interp
 submission_portal: openreview
 notes: Auto-imported from the OpenReview venue record on 2026-06-10 — please verify and enrich (topics are keyword-guessed).
-added: "2026-06-10"
-submission_deadline: 2026-05-08 23:59
-timezone: AoE
+added: '2026-06-10'
+submission_deadline: 2026-05-09 11:59
+timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
