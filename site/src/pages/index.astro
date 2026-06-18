@@ -10,6 +10,7 @@ import {
   paperCount,
   proposalCalls,
   conferenceById,
+  loadPaperCache,
 } from '../lib/data';
 import { href, REPO_URL } from '../lib/site';
 
@@ -35,6 +36,57 @@ const FW = workshops.map((w) => ({
   year: String(w.year),
   topic: (w.topics ?? []).map((t: string) => topicLabel.get(t) ?? t),
 }));
+// Build-time index sizes, handed to the client so it can tell a fully-loaded
+// search engine from one that loaded incompletely. A dropped data chunk on a
+// cold-cache fetch burst leaves the index non-empty but short — Pagefind
+// swallows the failed fetch (no error thrown), so the same query returns
+// fewer matches with no error and the load-failure heal never fires. The
+// client compares the engine's own page counts against these.
+//   ws     — every workshop page carries `data-pf-ws` (the Workshops index).
+//   papers — the `data-pf-papers` section is rendered only when the workshop
+//            has cached papers; this mirrors [slug].astro's exact condition,
+//            so the two stay in sync across the weekly rebuilds.
+const EXPECT_WS = workshops.length;
+const EXPECT_PP = workshops.filter((w) => {
+  const c = loadPaperCache(w.slug);
+  return c && Array.isArray(c.papers) && c.papers.length > 0;
+}).length;
+// Canary keyword counts. A dropped *word-index* chunk is invisible to the page
+// totals above — search(null) and filters() stay full — yet it silently guts
+// the matches for whatever words lived in that chunk (e.g. "llm" 276 -> 43,
+// "graph" 192 -> 3 in testing). So ALSO pin a spread of common terms to their
+// build-time page-match counts; at load the client re-runs them and heals if
+// any returns a fraction of expected, which only a dropped chunk causes. The
+// counts come from the same text Pagefind indexes — workshop name / acronym /
+// conference / topics, plus each workshop's paper titles — so they track the
+// data across the weekly rebuilds. Plain substring counting differs slightly
+// from Pagefind's stemming, so the client compares with a wide margin, never
+// equality. (This is a strong common-term guard, not a total one: a chunk
+// holding only rare words would still slip past, affecting only rare queries.)
+const PF_CANARY_TERMS = [
+  'learning', 'model', 'data', 'network', 'neural', 'graph', 'language',
+  'vision', 'reinforcement', 'robot', 'transformer', 'diffusion', 'llm',
+  'agent', 'generative', 'optimization', 'representation', 'segmentation',
+];
+const canaryExpect: Record<string, number> = Object.fromEntries(PF_CANARY_TERMS.map((t) => [t, 0]));
+for (const w of workshops) {
+  const conf = conferenceById.get(w.conference)?.name ?? w.conference;
+  const wsText = [w.name, w.acronym, conf, ...(w.topics ?? []).map((t: string) => topicLabel.get(t) ?? t)]
+    .join(' ').toLowerCase();
+  const c = loadPaperCache(w.slug);
+  const hasPapers = !!(c && Array.isArray(c.papers) && c.papers.length > 0);
+  const ppText = hasPapers ? (w.name + ' ' + c.papers.map((p: any) => p.title ?? '').join(' ')).toLowerCase() : '';
+  for (const t of PF_CANARY_TERMS) {
+    if (wsText.includes(t)) canaryExpect[t]++;          // the workshop page matches
+    if (hasPapers && ppText.includes(t)) canaryExpect[t]++; // its paper-section page matches
+  }
+}
+const pfExpect = {
+  ws: EXPECT_WS,
+  papers: EXPECT_PP,
+  total: EXPECT_WS + EXPECT_PP,
+  canaries: canaryExpect,
+};
 ---
 
 <Base>
@@ -128,7 +180,7 @@ const FW = workshops.map((w) => ({
 
   <script src="../scripts/board.js"></script>
 
-  <script is:inline define:vars={{ base, confColors, facetCounts, FW }}>
+  <script is:inline define:vars={{ base, confColors, facetCounts, FW, pfExpect }}>
     // ---- Unified search over every workshop & paper (Pagefind, faceted) ----
     const $ = (s) => document.querySelector(s);
     const input = $('#q');
@@ -212,40 +264,100 @@ const FW = workshops.map((w) => ({
       history.replaceState(null, '', p.toString() ? `?${p}` : location.pathname);
     }
 
+    const PF_LOAD_TRIES = 3; // re-imports allowed when a load comes back short
+
+    // Did the engine load its WHOLE index, or silently a fraction of it?
+    // When a data chunk's fetch is dropped during a cold-cache burst, Pagefind
+    // catches the failure internally and carries on — so the index ends up
+    // short, the same query returns fewer matches, and NOTHING throws (the
+    // load-failure heal below never fires). Two independent failures, two
+    // checks, both against build-time truth in pfExpect:
+    //
+    //  (1) Page totals. search(null) enumerates every indexed page and
+    //      filters().type splits that by sub-index. A dropped metadata/filter
+    //      chunk (or a stale post-deploy index) shows up as a near-total
+    //      shortfall here. Tight margin — these numbers are exact.
+    //
+    //  (2) Word index. A dropped *.pf_index* chunk does NOT move the totals in
+    //      (1) at all — it only guts the matches for the words that lived in
+    //      that chunk. So re-run a spread of common terms and fail if any comes
+    //      back a fraction of its build-time count, which only a dropped chunk
+    //      causes. Wide margin: the expected counts are substring-derived and
+    //      Pagefind stems, so a healthy load still lands ~0.85–1.0 of expected
+    //      while a dropped chunk craters the term to near zero.
+    //
+    // Over-counting is never treated as incomplete — the pfInited guard already
+    // prevents the double-merge that would cause it.
+    async function pagefindLoadedFully(pf) {
+      try {
+        const all = await pf.search(null);
+        const total = all && all.results ? all.results.length : 0;
+        const f = await pf.filters();
+        const t = (f && f.type) || {};
+        const enough = (got, want, frac) => !want || got >= Math.ceil(want * frac);
+        if (!enough(total, pfExpect.total, 0.95)
+          || !enough(t.Workshops || 0, pfExpect.ws, 0.95)
+          || !enough(t.Papers || 0, pfExpect.papers, 0.95)) return false;
+        const canaries = pfExpect.canaries || {};
+        for (const term of Object.keys(canaries)) {
+          if (canaries[term] < 40) continue; // too rare to tell a drop from noise
+          const r = await pf.search(term);
+          const got = r && r.results ? r.results.length : 0;
+          if (!enough(got, canaries[term], 0.5)) return false;
+        }
+        return true;
+      } catch {
+        return false; // couldn't even probe the engine → reload it fresh
+      }
+    }
+
     async function ensurePagefind() {
       // Single-flight: concurrent callers (idle prefetch, focus, first click)
       // share one initialization promise — double-init corrupted the facets.
       if (!pfReady) {
         pfReady = (async () => {
-          const pf = await import(`${base}/pagefind/pagefind.js${pfBust ? `?v=${pfBust}` : ''}`);
-          // Load each engine instance's index EXACTLY ONCE. A dynamic import of
-          // the same URL returns the same cached module, backed by the same Web
-          // Worker — and Pagefind's init()/mergeIndex() are NOT idempotent, they
-          // APPEND. Running them again on an already-loaded worker merges the
-          // papers index a second time, so every paper ends up indexed twice.
-          // That doubles the worker's data and, once the two copies resolve to
-          // even slightly different URLs (as happens across a deploy, or if the
-          // merge baseUrl differs), it defeats the URL de-duplication below and
-          // inflates the headline counts — the same "llm" query climbing from
-          // 260 workshops / 2325 papers to 513 / 7894 over a warm, repeatedly
-          // loaded or back/forward-restored session. Guarding on the module's
-          // identity makes a reused module a no-op; together with the cache-bust
-          // in the catch (a fresh URL after any failure) it guarantees a clean,
-          // singly-loaded worker on every code path.
-          if (pfInited !== pf) {
-            await pf.options({ baseUrl: `${base}/` });
-            await pf.init();
-            await pf.mergeIndex(`${base}/pagefind-papers/`, { baseUrl: `${base}/` });
-            pfInited = pf;
-            // mergeIndex() resolves before the papers index has finished loading
-            // its data, so the very first search can over-match while it settles
-            // (a deep link showing 513/479 workshops that a later identical
-            // search corrects to 260). The query doesn't change on a deep link,
-            // so nothing recounts — schedule recounts until the number is stable.
-            scheduleSettleRecounts();
+          for (let attempt = 1; ; attempt++) {
+            const pf = await import(`${base}/pagefind/pagefind.js${pfBust ? `?v=${pfBust}` : ''}`);
+            // Load each engine instance's index EXACTLY ONCE. A dynamic import of
+            // the same URL returns the same cached module, backed by the same Web
+            // Worker — and Pagefind's init()/mergeIndex() are NOT idempotent, they
+            // APPEND. Running them again on an already-loaded worker merges the
+            // papers index a second time, so every paper ends up indexed twice.
+            // That doubles the worker's data and, once the two copies resolve to
+            // even slightly different URLs (as happens across a deploy, or if the
+            // merge baseUrl differs), it defeats the URL de-duplication below and
+            // inflates the headline counts — the same "llm" query climbing from
+            // 260 workshops / 2325 papers to 513 / 7894 over a warm, repeatedly
+            // loaded or back/forward-restored session. Guarding on the module's
+            // identity makes a reused module a no-op; together with the cache-bust
+            // in the catch (a fresh URL after any failure) it guarantees a clean,
+            // singly-loaded worker on every code path.
+            if (pfInited !== pf) {
+              await pf.options({ baseUrl: `${base}/` });
+              await pf.init();
+              await pf.mergeIndex(`${base}/pagefind-papers/`, { baseUrl: `${base}/` });
+              // Verify the whole index actually arrived BEFORE committing this
+              // worker as the canonical one. If a chunk dropped, the load is
+              // silently short — discard this worker and re-import under a fresh
+              // URL (a clean module + worker), up to PF_LOAD_TRIES. After that,
+              // accept whatever loaded rather than leave search unusable: a few
+              // missing rows is better than no search at all, and the per-query
+              // truth checks below still guard the worst case.
+              if (attempt < PF_LOAD_TRIES && !(await pagefindLoadedFully(pf))) {
+                pfBust = Date.now(); // fresh URL → a clean worker on the retry;
+                continue;            // pfInited stays unset so the retry re-inits
+              }
+              pfInited = pf;
+              // mergeIndex() resolves before the papers index has finished loading
+              // its data, so the very first search can over-match while it settles
+              // (a deep link showing 513/479 workshops that a later identical
+              // search corrects to 260). The query doesn't change on a deep link,
+              // so nothing recounts — schedule recounts until the number is stable.
+              scheduleSettleRecounts();
+            }
+            pagefind = pf;
+            return pf;
           }
-          pagefind = pf;
-          return pf;
         })().catch((err) => {
           pfReady = null;      // transient failure must not brick search until reload
           pfBust = Date.now(); // next import uses a fresh URL → a clean worker, never
