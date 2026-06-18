@@ -36,56 +36,21 @@ const FW = workshops.map((w) => ({
   year: String(w.year),
   topic: (w.topics ?? []).map((t: string) => topicLabel.get(t) ?? t),
 }));
-// Build-time index sizes, handed to the client so it can tell a fully-loaded
-// search engine from one that loaded incompletely. A dropped data chunk on a
-// cold-cache fetch burst leaves the index non-empty but short — Pagefind
-// swallows the failed fetch (no error thrown), so the same query returns
-// fewer matches with no error and the load-failure heal never fires. The
-// client compares the engine's own page counts against these.
-//   ws     — every workshop page carries `data-pf-ws` (the Workshops index).
-//   papers — the `data-pf-papers` section is rendered only when the workshop
-//            has cached papers; this mirrors [slug].astro's exact condition,
-//            so the two stay in sync across the weekly rebuilds.
-const EXPECT_WS = workshops.length;
-const EXPECT_PP = workshops.filter((w) => {
-  const c = loadPaperCache(w.slug);
-  return c && Array.isArray(c.papers) && c.papers.length > 0;
-}).length;
-// Canary keyword counts. A dropped *word-index* chunk is invisible to the page
-// totals above — search(null) and filters() stay full — yet it silently guts
-// the matches for whatever words lived in that chunk (e.g. "llm" 276 -> 43,
-// "graph" 192 -> 3 in testing). So ALSO pin a spread of common terms to their
-// build-time page-match counts; at load the client re-runs them and heals if
-// any returns a fraction of expected, which only a dropped chunk causes. The
-// counts come from the same text Pagefind indexes — workshop name / acronym /
-// conference / topics, plus each workshop's paper titles — so they track the
-// data across the weekly rebuilds. Plain substring counting differs slightly
-// from Pagefind's stemming, so the client compares with a wide margin, never
-// equality. (This is a strong common-term guard, not a total one: a chunk
-// holding only rare words would still slip past, affecting only rare queries.)
-const PF_CANARY_TERMS = [
-  'learning', 'model', 'data', 'network', 'neural', 'graph', 'language',
-  'vision', 'reinforcement', 'robot', 'transformer', 'diffusion', 'llm',
-  'agent', 'generative', 'optimization', 'representation', 'segmentation',
-];
-const canaryExpect: Record<string, number> = Object.fromEntries(PF_CANARY_TERMS.map((t) => [t, 0]));
-for (const w of workshops) {
-  const conf = conferenceById.get(w.conference)?.name ?? w.conference;
-  const wsText = [w.name, w.acronym, conf, ...(w.topics ?? []).map((t: string) => topicLabel.get(t) ?? t)]
-    .join(' ').toLowerCase();
-  const c = loadPaperCache(w.slug);
-  const hasPapers = !!(c && Array.isArray(c.papers) && c.papers.length > 0);
-  const ppText = hasPapers ? (w.name + ' ' + c.papers.map((p: any) => p.title ?? '').join(' ')).toLowerCase() : '';
-  for (const t of PF_CANARY_TERMS) {
-    if (wsText.includes(t)) canaryExpect[t]++;          // the workshop page matches
-    if (hasPapers && ppText.includes(t)) canaryExpect[t]++; // its paper-section page matches
-  }
-}
+// Build-time index sizes, handed to the client to sanity-check the search
+// engine after it loads. The two Pagefind indexes are merged in the browser,
+// and that merge can occasionally stack the papers index twice — the cause of
+// the inflated "llm 516 / 14144 papers" counts. filters().type.Papers is an
+// exact tell: one clean merge reports this many papers pages, a double reports
+// twice as many. ws = every workshop page (data-pf-ws); papers = pages with a
+// data-pf-papers section, which is rendered only when the workshop has cached
+// papers — the same condition [slug].astro uses, so the numbers track the data
+// across the weekly rebuilds.
 const pfExpect = {
-  ws: EXPECT_WS,
-  papers: EXPECT_PP,
-  total: EXPECT_WS + EXPECT_PP,
-  canaries: canaryExpect,
+  ws: workshops.length,
+  papers: workshops.filter((w) => {
+    const c = loadPaperCache(w.slug);
+    return c && Array.isArray(c.papers) && c.papers.length > 0;
+  }).length,
 };
 ---
 
@@ -192,7 +157,9 @@ const pfExpect = {
     let pfReady = null, pagefind = null;
     let pfBust = 0; // appended to the engine URL when re-importing after a deploy
     let pfInited = null; // the engine module whose worker has already loaded both indexes
-    let settleTimers = []; // pending "recount once the merged index finishes settling" timers
+    let pfStable = false; // false until a keyword search has confirmed the merged
+                          // index's count is steady; a freshly (re)loaded worker
+                          // can briefly over-match while its merge settles
     let healAttempted = false;
     const initialCounts = facetCounts;
     let facetOptions = null;
@@ -264,50 +231,25 @@ const pfExpect = {
       history.replaceState(null, '', p.toString() ? `?${p}` : location.pathname);
     }
 
-    const PF_LOAD_TRIES = 3; // re-imports allowed when a load comes back short
+    const PF_MERGE_TRIES = 3; // re-imports allowed when a merge looks unclean
 
-    // Did the engine load its WHOLE index, or silently a fraction of it?
-    // When a data chunk's fetch is dropped during a cold-cache burst, Pagefind
-    // catches the failure internally and carries on — so the index ends up
-    // short, the same query returns fewer matches, and NOTHING throws (the
-    // load-failure heal below never fires). Two independent failures, two
-    // checks, both against build-time truth in pfExpect:
-    //
-    //  (1) Page totals. search(null) enumerates every indexed page and
-    //      filters().type splits that by sub-index. A dropped metadata/filter
-    //      chunk (or a stale post-deploy index) shows up as a near-total
-    //      shortfall here. Tight margin — these numbers are exact.
-    //
-    //  (2) Word index. A dropped *.pf_index* chunk does NOT move the totals in
-    //      (1) at all — it only guts the matches for the words that lived in
-    //      that chunk. So re-run a spread of common terms and fail if any comes
-    //      back a fraction of its build-time count, which only a dropped chunk
-    //      causes. Wide margin: the expected counts are substring-derived and
-    //      Pagefind stems, so a healthy load still lands ~0.85–1.0 of expected
-    //      while a dropped chunk craters the term to near zero.
-    //
-    // Over-counting is never treated as incomplete — the pfInited guard already
-    // prevents the double-merge that would cause it.
-    async function pagefindLoadedFully(pf) {
+    // Does the just-merged engine look like ONE clean merge, or did the dual
+    // index stack twice? filters().type is query-independent and exact: a single
+    // clean merge reports the build-time page counts, a double reports ~2x (the
+    // papers index is the one that stacks). Flag a gross deviation either way —
+    // far too high means a stacked merge (the "llm 516/14144" inflation), far
+    // too low means a wipeout or a partial filter load. Cheap: filters() pulls
+    // only a few small chunks. (A subtle dropped *search* chunk that only dents
+    // keyword matches isn't visible here; that rarer case is left to the
+    // existing per-query heal rather than slowing every load down to probe it.)
+    async function mergeLooksClean(pf) {
       try {
-        const all = await pf.search(null);
-        const total = all && all.results ? all.results.length : 0;
         const f = await pf.filters();
         const t = (f && f.type) || {};
-        const enough = (got, want, frac) => !want || got >= Math.ceil(want * frac);
-        if (!enough(total, pfExpect.total, 0.95)
-          || !enough(t.Workshops || 0, pfExpect.ws, 0.95)
-          || !enough(t.Papers || 0, pfExpect.papers, 0.95)) return false;
-        const canaries = pfExpect.canaries || {};
-        for (const term of Object.keys(canaries)) {
-          if (canaries[term] < 40) continue; // too rare to tell a drop from noise
-          const r = await pf.search(term);
-          const got = r && r.results ? r.results.length : 0;
-          if (!enough(got, canaries[term], 0.5)) return false;
-        }
-        return true;
+        const ok = (got, want) => !want || (got >= Math.ceil(want * 0.5) && got <= Math.floor(want * 1.5));
+        return ok(t.Workshops || 0, pfExpect.ws) && ok(t.Papers || 0, pfExpect.papers);
       } catch {
-        return false; // couldn't even probe the engine → reload it fresh
+        return false; // couldn't even read filters → reload the engine fresh
       }
     }
 
@@ -327,33 +269,24 @@ const pfExpect = {
             // even slightly different URLs (as happens across a deploy, or if the
             // merge baseUrl differs), it defeats the URL de-duplication below and
             // inflates the headline counts — the same "llm" query climbing from
-            // 260 workshops / 2325 papers to 513 / 7894 over a warm, repeatedly
+            // 260 workshops / 2325 papers to 516 / 14144 over a warm, repeatedly
             // loaded or back/forward-restored session. Guarding on the module's
-            // identity makes a reused module a no-op; together with the cache-bust
-            // in the catch (a fresh URL after any failure) it guarantees a clean,
-            // singly-loaded worker on every code path.
+            // identity makes a reused module a no-op.
             if (pfInited !== pf) {
               await pf.options({ baseUrl: `${base}/` });
               await pf.init();
               await pf.mergeIndex(`${base}/pagefind-papers/`, { baseUrl: `${base}/` });
-              // Verify the whole index actually arrived BEFORE committing this
-              // worker as the canonical one. If a chunk dropped, the load is
-              // silently short — discard this worker and re-import under a fresh
-              // URL (a clean module + worker), up to PF_LOAD_TRIES. After that,
-              // accept whatever loaded rather than leave search unusable: a few
-              // missing rows is better than no search at all, and the per-query
-              // truth checks below still guard the worst case.
-              if (attempt < PF_LOAD_TRIES && !(await pagefindLoadedFully(pf))) {
+              // Confirm it merged cleanly BEFORE committing this worker. If the
+              // merge stacked (or a chunk dropped), discard it and re-import under
+              // a fresh URL — a clean module + worker, so the next merge is single
+              // and clean. Bounded so a persistent problem can't loop; after the
+              // last try we accept what loaded rather than leave search unusable.
+              if (attempt < PF_MERGE_TRIES && !(await mergeLooksClean(pf))) {
                 pfBust = Date.now(); // fresh URL → a clean worker on the retry;
                 continue;            // pfInited stays unset so the retry re-inits
               }
               pfInited = pf;
-              // mergeIndex() resolves before the papers index has finished loading
-              // its data, so the very first search can over-match while it settles
-              // (a deep link showing 513/479 workshops that a later identical
-              // search corrects to 260). The query doesn't change on a deep link,
-              // so nothing recounts — schedule recounts until the number is stable.
-              scheduleSettleRecounts();
+              pfStable = false; // fresh worker: let the first keyword search settle
             }
             pagefind = pf;
             return pf;
@@ -436,6 +369,126 @@ const pfExpect = {
     let pendingPage = 1; // from a deep link, consumed once
     const PAGE_SIZE = 50;
 
+    // Build rState (the model renderResultsPage draws) from a search result.
+    // Pure compute, no DOM — called once per search, and repeatedly by the
+    // settle gate while a freshly-merged index's count is still moving. Returns
+    // the workshop count so the gate can tell when it has stopped changing.
+    async function buildState(res, query, filters, terms) {
+      const key = JSON.stringify([query, filters]);
+      // Pagefind returns results sorted by score, but ties (equal-score
+      // matches, which are common) aren't ordered deterministically — and the
+      // two indexes (workshops + papers) load in parallel, so tied items could
+      // interleave differently run-to-run, making the SAME keyword search render
+      // in a different order each time. Re-sort with an explicit, stable
+      // tie-break: score first (preserving relevance / the browse sort), then
+      // the result's fixed id, so identical searches always produce identical
+      // order.
+      const ordered = [...res.results].sort((a, b) => (b.score - a.score) || String(a.id).localeCompare(String(b.id)));
+      const data = await Promise.all(ordered.map((r) => r.data()));
+      // Group by a STABLE workshop identity, not the raw result URL. Pagefind
+      // can hand back the same workshop page under more than one URL — e.g.
+      // when the papers index resolves its base differently from the workshops
+      // index, or a merge runs twice — and keying on the URL then counts that
+      // one workshop two or three times (the "516 workshops for llm" inflation,
+      // which surfaced in some browsers but not others depending on load
+      // timing). The slug in /workshop/<slug>/ is unique per workshop and
+      // identical across any such duplicate, so it collapses them; matched
+      // papers from the duplicate copies are merged here and de-duped by paper
+      // id below. URLs that aren't workshop pages (none today) fall back to the
+      // URL itself.
+      const slugOf = (u) => (String(u).match(/\/workshop\/([^/?#]+)/) || [])[1] || null;
+      const groups = new Map();
+      for (const d of data) {
+        const s = slugOf(d.url);
+        const gkey = s ? `ws:${s}` : d.url.split('#')[0];
+        if (!groups.has(gkey)) groups.set(gkey, { ws: null, papers: null, slug: s, url: s ? `${base}/workshop/${s}/` : d.url.split('#')[0] });
+        const g = groups.get(gkey);
+        if ((d.filters?.type ?? []).includes('Papers')) {
+          if (!g.papers) g.papers = d;
+          else g.papers = { ...g.papers, sub_results: [...(g.papers.sub_results || []), ...(d.sub_results || [])] };
+        } else if (!g.ws) {
+          g.ws = d;
+        }
+      }
+      // Headline counts describe exactly what's listed: distinct workshops, and
+      // the individual papers matched inside them.
+      const hasQuery = query !== null;
+      // Keywords are AND for workshops (the page must contain all of them).
+      // Enforce the same AND per individual paper: a paper counts only if its
+      // own excerpt carries highlight marks for every keyword.
+      const paperMatchesAll = (excerpt) => {
+        if (terms.length < 2) return true;
+        const marked = [...String(excerpt).matchAll(/<mark>([^<]*)<\/mark>/g)].map((m) => m[1].toLowerCase());
+        return terms.every((t) =>
+          t.toLowerCase().split(/\s+/).every((tok) => marked.some((w) => w.startsWith(tok) || tok.startsWith(w))),
+        );
+      };
+      let nPapers = 0;
+      const entries = [...groups.entries()].map(([gkey, g]) => {
+        let subs = [];
+        if (hasQuery && g.papers) {
+          // De-dupe by paper id: a duplicated papers doc contributes the same
+          // paper anchors more than once, which would otherwise inflate the
+          // paper count just as duplicate workshop URLs inflated the workshop
+          // count (see the slug grouping above).
+          const seen = new Set();
+          subs = (g.papers.sub_results || []).filter((sr) => {
+            if (!sr.url.includes('#p-') || !paperMatchesAll(sr.excerpt)) return false;
+            const id = (sr.url.match(/#p-([^#?]+)/) || [])[1];
+            if (id) { if (seen.has(id)) return false; seen.add(id); }
+            return true;
+          });
+          nPapers += subs.length;
+          if (subs.length === 0) {
+            subs = [{
+              title: terms.length > 1 ? 'Keywords matched across different papers →' : 'Matching papers →',
+              url: `${g.url}#papers`,
+              fall: true,
+            }];
+          }
+        }
+        return [gkey, { ...g, subs }];
+      });
+      rState = {
+        key,
+        groups: entries,
+        page: Math.min(Math.max(1, pendingPage), Math.max(1, Math.ceil(entries.length / PAGE_SIZE))),
+        nPapers,
+        hasQuery,
+      };
+      pendingPage = 1;
+      return entries.length;
+    }
+
+    // First keyword search against a freshly (re)loaded index: the dual-index
+    // merge can briefly over-match, so the count would otherwise pop up high and
+    // visibly tick DOWN over a second or two (with the result list re-rendering
+    // each time — the "flashing / page keeps refreshing" problem). Instead, hold
+    // the render behind a quiet "Searching…", re-query until the count stops
+    // changing, then show the settled result ONCE. Subsequent searches skip this
+    // (pfStable stays true until a reload or a heal) and render immediately.
+    async function settleAndRender(pf, query, opts, filters, terms) {
+      $('#searchCount').textContent = 'Searching…';
+      $('#results').innerHTML = '<li class="muted">Searching…</li>';
+      let prev = -1;
+      for (const ms of [0, 250, 550, 1000, 1700, 2800]) {
+        if (ms) await new Promise((r) => setTimeout(r, ms));
+        if (!isSearching()) return; // user cleared the search
+        const liveTerms = [...keywords, input.value.trim()].filter(Boolean);
+        if ((liveTerms.join(' ') || null) !== query) return; // a newer query supersedes
+        let res;
+        try { res = await pf.search(query, opts); }
+        catch (err) { return handleSearchFailure(err); }
+        if (res === null) continue;
+        const n = await buildState(res, query, filters, terms);
+        if (n === prev) break; // count held still across two reads → settled
+        prev = n;
+      }
+      pfStable = true;       // settled (or gave up waiting): trust it from here
+      healAttempted = false;
+      renderResultsPage();
+    }
+
     async function runSearch(immediate = false) {
       setMode(isSearching());
       if (!isSearching()) { $('#results').innerHTML = ''; $('#searchCount').textContent = ''; rState.key = ''; syncUrl(); return; }
@@ -445,125 +498,37 @@ const pfExpect = {
       const filters = {};
       for (const f of FACETS) if (sel[f].size) filters[f] = { any: [...sel[f]] };
       const query = terms.join(' ') || null;
-      // Empty query = browsing: order by the build-time key (open calls
-      // first, soonest deadline on top). With keywords, Pagefind's
-      // relevance ranking is what people expect — don't override it.
+      // Empty query = browsing: order by the build-time key (open calls first,
+      // soonest deadline on top), and filter to Workshops so browsing never
+      // touches the papers index (so it has no settle/over-match to wait on).
+      // With keywords, Pagefind's relevance ranking is what people expect.
       const opts = query === null
         ? { filters: { ...filters, type: { any: ['Workshops'] } }, sort: { order: 'asc' } }
         : { filters };
       try {
-      // On restore (back/forward, deep link) search immediately: debouncedSearch
-      // returns null when superseded, and a lone restore-time call can be
-      // swallowed, leaving the results empty even though the query is valid.
-      const res = immediate ? await pf.search(query, opts) : await pf.debouncedSearch(query, opts, 220);
-      if (res === null) return; // superseded
-      // Build-time truth check: in browse mode (no keywords) this page knows
-      // exactly how many workshops the current selection matches (FW). Zero
-      // results where >0 are expected can only mean the engine's lazily
-      // loaded data files are gone — i.e. a deploy replaced them after this
-      // tab was opened.
-      if (query === null && res.results.length === 0) {
-        const expected = FW.filter((w) => FACETS.every((f) => {
-          const vals = Array.isArray(w[f]) ? w[f] : [w[f]];
-          return sel[f].size === 0 || vals.some((v) => sel[f].has(v));
-        })).length;
-        if (expected > 0) throw new Error(`0 results where ${expected} expected`);
-      }
-      const key = JSON.stringify([query, filters]);
-      if (key !== rState.key) {
-        if (res.results.length > 150) {
-          $('#results').innerHTML = `<li class="muted">Loading ${res.results.length} results…</li>`;
+        // On restore (back/forward, deep link) search immediately: debouncedSearch
+        // returns null when superseded, and a lone restore-time call can be
+        // swallowed, leaving the results empty even though the query is valid.
+        const res = immediate ? await pf.search(query, opts) : await pf.debouncedSearch(query, opts, 220);
+        if (res === null) return; // superseded
+        // Build-time truth check: in browse mode (no keywords) this page knows
+        // exactly how many workshops the current selection matches (FW). Zero
+        // results where >0 are expected can only mean the engine's lazily loaded
+        // data files are gone — i.e. a deploy replaced them after this tab opened.
+        if (query === null && res.results.length === 0) {
+          const expected = FW.filter((w) => FACETS.every((f) => {
+            const vals = Array.isArray(w[f]) ? w[f] : [w[f]];
+            return sel[f].size === 0 || vals.some((v) => sel[f].has(v));
+          })).length;
+          if (expected > 0) throw new Error(`0 results where ${expected} expected`);
         }
-        // Pagefind returns results sorted by score, but ties (equal-score
-        // matches, which are common) aren't ordered deterministically — and
-        // the two indexes (workshops + papers) load in parallel, so tied
-        // items could interleave differently run-to-run, making the SAME
-        // keyword search render in a different order each time. Re-sort with
-        // an explicit, stable tie-break: score first (preserving relevance /
-        // the browse sort), then the result's fixed id, so identical searches
-        // always produce identical order.
-        const ordered = [...res.results].sort((a, b) => (b.score - a.score) || String(a.id).localeCompare(String(b.id)));
-        const data = await Promise.all(ordered.map((r) => r.data()));
-        // Group by a STABLE workshop identity, not the raw result URL. Pagefind
-        // can hand back the same workshop page under more than one URL — e.g.
-        // when the papers index resolves its base differently from the
-        // workshops index, or a merge runs twice — and keying on the URL then
-        // counts that one workshop two or three times (the "513 workshops for
-        // llm" inflation, which surfaced in some browsers but not others
-        // depending on load timing). The slug in /workshop/<slug>/ is unique per
-        // workshop and identical across any such duplicate, so it collapses
-        // them; matched papers from the duplicate copies are merged here and
-        // de-duped by paper id below. URLs that aren't workshop pages (none
-        // today) fall back to the URL itself.
-        const slugOf = (u) => (String(u).match(/\/workshop\/([^/?#]+)/) || [])[1] || null;
-        const groups = new Map();
-        for (const d of data) {
-          const s = slugOf(d.url);
-          const gkey = s ? `ws:${s}` : d.url.split('#')[0];
-          if (!groups.has(gkey)) groups.set(gkey, { ws: null, papers: null, slug: s, url: s ? `${base}/workshop/${s}/` : d.url.split('#')[0] });
-          const g = groups.get(gkey);
-          if ((d.filters?.type ?? []).includes('Papers')) {
-            if (!g.papers) g.papers = d;
-            else g.papers = { ...g.papers, sub_results: [...(g.papers.sub_results || []), ...(d.sub_results || [])] };
-          } else if (!g.ws) {
-            g.ws = d;
-          }
+        const key = JSON.stringify([query, filters]);
+        if (!pfStable && query !== null) { await settleAndRender(pf, query, opts, filters, terms); return; }
+        if (key !== rState.key) {
+          if (res.results.length > 150) $('#results').innerHTML = `<li class="muted">Loading ${res.results.length} results…</li>`;
+          await buildState(res, query, filters, terms);
         }
-        // Headline counts describe exactly what's listed: distinct workshops,
-        // and the individual papers matched inside them. (Previously '2
-        // workshops · 67 with matching papers' counted two different page
-        // types — metadata matches vs papers-section matches — which read
-        // as nonsense next to a 69-entry list.)
-        const hasQuery = query !== null;
-        // Keywords are AND for workshops (the page must contain all of
-        // them). Enforce the same AND per individual paper: a paper counts
-        // only if its own excerpt carries highlight marks for every
-        // keyword. (Previously a papers section containing both words
-        // anywhere listed papers matching EITHER word — so adding a
-        // keyword could inflate the paper count while workshops shrank.)
-        const paperMatchesAll = (excerpt) => {
-          if (terms.length < 2) return true;
-          const marked = [...String(excerpt).matchAll(/<mark>([^<]*)<\/mark>/g)].map((m) => m[1].toLowerCase());
-          return terms.every((t) =>
-            t.toLowerCase().split(/\s+/).every((tok) => marked.some((w) => w.startsWith(tok) || tok.startsWith(w))),
-          );
-        };
-        let nPapers = 0;
-        const entries = [...groups.entries()].map(([gkey, g]) => {
-          let subs = [];
-          if (hasQuery && g.papers) {
-            // De-dupe by paper id: a duplicated papers doc contributes the same
-            // paper anchors more than once, which would otherwise inflate the
-            // paper count just as duplicate workshop URLs inflated the workshop
-            // count (see the slug grouping above).
-            const seen = new Set();
-            subs = (g.papers.sub_results || []).filter((sr) => {
-              if (!sr.url.includes('#p-') || !paperMatchesAll(sr.excerpt)) return false;
-              const id = (sr.url.match(/#p-([^#?]+)/) || [])[1];
-              if (id) { if (seen.has(id)) return false; seen.add(id); }
-              return true;
-            });
-            nPapers += subs.length;
-            if (subs.length === 0) {
-              subs = [{
-                title: terms.length > 1 ? 'Keywords matched across different papers →' : 'Matching papers →',
-                url: `${g.url}#papers`,
-                fall: true,
-              }];
-            }
-          }
-          return [gkey, { ...g, subs }];
-        });
-        rState = {
-          key,
-          groups: entries,
-          page: Math.min(Math.max(1, pendingPage), Math.max(1, Math.ceil(entries.length / PAGE_SIZE))),
-          nPapers,
-          hasQuery,
-        };
-        pendingPage = 1;
-      }
-      healAttempted = false; // healthy — a future deploy may heal again
+        healAttempted = false; // healthy — a future deploy may heal again
       } catch (err) {
         return handleSearchFailure(err);
       }
@@ -588,28 +553,6 @@ const pfExpect = {
       $('#results').innerHTML =
         '<li class="muted">The search index changed since this page was loaded (the site updates itself), and it couldn\'t be refreshed in place: ' + esc(err?.message || err) + '. <button type="button" class="btn-quiet" onclick="location.reload()">Reload the page</button> or try the filter again in a moment.</li>';
       $('#searchCount').textContent = '';
-    }
-
-    // After the workshops + papers indexes merge, Pagefind keeps loading the
-    // merged index's data, and a search issued in that window over-counts until
-    // it settles. On a deep link the query never changes, so the inflated count
-    // would stick. Re-run the active search a few times on a back-off until the
-    // workshop count stops changing (two stable reads), then stop. Re-running an
-    // already-settled search just re-renders the same numbers, so this is a
-    // no-op once correct and self-heals the transient inflation otherwise.
-    function scheduleSettleRecounts() {
-      settleTimers.forEach(clearTimeout);
-      settleTimers = [];
-      let prev = -1, stable = 0;
-      for (const ms of [400, 900, 1600, 2800, 4500]) {
-        settleTimers.push(setTimeout(async () => {
-          if (!isSearching() || stable >= 2) return;
-          rState.key = '\u0000';        // force a recount past the per-query cache
-          await runSearch(true);
-          const n = rState.groups.length;
-          if (n === prev) stable++; else { stable = 0; prev = n; }
-        }, ms));
-      }
     }
 
     function renderResultsPage() {
