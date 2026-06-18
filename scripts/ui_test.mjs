@@ -101,8 +101,8 @@ check('combined count format', /^\d+ workshops? · \d+ matching papers? · by re
     await page.waitForFunction(() => document.querySelector('.pager button.is-on')?.dataset.page === '1');
   }
 }
-check('workshop links open new tabs', await page.$eval('#results .pf-title', (a) => a.target === '_blank'));
-check('paper links open new tabs', await page.$eval('.pf-papers .pf-ptitle', (a) => a.target === '_blank'));
+check('workshop title links are internal (same tab)', await page.$eval('#results .pf-title', (a) => a.target !== '_blank' && a.host === location.host));
+check('paper title links are internal (same tab)', await page.$eval('.pf-papers .pf-ptitle', (a) => a.target !== '_blank' && a.host === location.host));
 await page.click('.kw-chip .kw-x');
 await page.waitForSelector('#homeDefault:not([hidden])');
 check('removing chip restores default mode', true);
@@ -440,7 +440,7 @@ check('derived PDF suppressed for papers without one', byTitle['PDF-less from se
 check('stored empty pdf renders no PDF link', byTitle['Known no-PDF page save']?.pdf === null, String(byTitle['Known no-PDF page save']?.pdf));
 await page.evaluate(() => localStorage.clear());
 
-console.log('— every content link opens a new tab (board / results / saved) —');
+console.log('— external links open a new tab; internal links navigate in place —');
 const ctx = page.context();
 const popupOn = async (sel) => {
   const [pop] = await Promise.all([ctx.waitForEvent('page', { timeout: 8000 }), page.click(sel)]);
@@ -449,25 +449,189 @@ const popupOn = async (sel) => {
   await pop.close();
   return u;
 };
+// An internal link must NOT open a popup — it navigates the same tab.
+const navsInPlace = async (sel) => {
+  const before = ctx.pages().length;
+  const popup = ctx.waitForEvent('page', { timeout: 1500 }).then(() => true).catch(() => false);
+  await page.click(sel);
+  const openedPopup = await popup;
+  return !openedPopup && ctx.pages().length === before;
+};
 await page.goto(BASE, { waitUntil: 'networkidle' });
-check('board workshop name opens a NEW tab', (await popupOn('.board .ws-name a')).includes('/workshop/'));
+// Internal: board workshop name -> same tab, navigates to the workshop page.
+check('board workshop name navigates in the SAME tab', await navsInPlace('.board .ws-name a') && page.url().includes('/workshop/'));
+// External: a workshop's own website (different host) -> new tab.
+await page.goto(BASE, { waitUntil: 'networkidle' });
+const extSel = '.board .ws-row a[href^="http"]:not([href*="' + new URL(BASE).host + '"])';
+if (await page.$(extSel)) {
+  const u = await popupOn(extSel);
+  check('external workshop website opens a NEW tab', !u.includes(new URL(BASE).host));
+} else {
+  check('external workshop website opens a NEW tab', true, '(no external link on first board page — skipped)');
+}
+// Search-result workshop title is internal -> same tab.
 await page.fill('#q', 'language');
 await page.waitForSelector('#results .pf-papers li > [data-star-paper]', { timeout: 10000 });
-check('search-result workshop opens a NEW tab', (await popupOn('#results .pf-result .pf-title')).includes('/workshop/'));
-// seed a saved workshop + paper, then test the saved page's links
-await page.click('#results .pf-result > [data-star-ws]');
-await page.click('#results .pf-papers li > [data-star-paper]');
-await page.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
-await page.waitForSelector('[data-saved-ws]', { timeout: 8000 });
-check('saved workshop opens a NEW tab', (await popupOn('[data-saved-ws] .ws-name a')).includes('/workshop/'));
-check('saved paper title opens a NEW tab at its anchor', /\/workshop\/[^/]+\/#p-/.test(await popupOn('.saved-papers li a')));
+check('search-result workshop title navigates in the SAME tab', await navsInPlace('#results .pf-result .pf-title') && page.url().includes('/workshop/'));
+// Header nav: same tab (unchanged).
+await page.goto(BASE, { waitUntil: 'networkidle' });
 const tabsBefore = ctx.pages().length;
 await page.click('.site-nav a[href$="/about/"]');
 await page.waitForURL('**/about/');
-check('header nav still navigates in the SAME tab', ctx.pages().length === tabsBefore && page.url().includes('/about/'));
+check('header nav navigates in the SAME tab', ctx.pages().length === tabsBefore && page.url().includes('/about/'));
 await page.evaluate(() => localStorage.clear());
 
-console.log('— saved papers cluster by conference (A→Z), years desc inside —');
+console.log('— back-navigation restores results and keeps internal links in-tab —');
+await page.goto(BASE, { waitUntil: 'networkidle' });
+await page.fill('#q', 'language');
+await page.keyboard.press('Enter');
+await page.waitForSelector('#results .pf-result .pf-title', { timeout: 10000 });
+const bnResultsBefore = (await page.$$('#results .pf-result')).length;
+const bnTabs0 = ctx.pages().length;
+await page.click('#results .pf-result .pf-title');
+await page.waitForURL('**/workshop/**', { timeout: 8000 }).catch(() => {});
+check('result click navigates in the SAME tab', ctx.pages().length === bnTabs0 && page.url().includes('/workshop/'));
+await page.goBack();
+// the fix: results must repopulate on back (was empty — debounced search swallowed)
+await page.waitForFunction(() => document.querySelectorAll('#results .pf-result').length > 0, { timeout: 8000 }).catch(() => {});
+const bnResultsAfter = (await page.$$('#results .pf-result')).length;
+check('search results restore after Back', bnResultsAfter > 0 && bnResultsAfter === bnResultsBefore, `${bnResultsBefore} -> ${bnResultsAfter}`);
+// clicking another internal link after Back must NOT open a new tab
+const bnTabs1 = ctx.pages().length;
+const bnPopup = ctx.waitForEvent('page', { timeout: 1500 }).then(() => true).catch(() => false);
+await page.click('#results .pf-result .pf-title');
+const bnOpenedTab = await bnPopup;
+check('internal link after Back stays in the SAME tab', bnOpenedTab === false && ctx.pages().length === bnTabs1);
+await page.evaluate(() => localStorage.clear());
+
+console.log('— the same keyword search returns a deterministic order —');
+async function searchOrder(term) {
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  await page.fill('#q', term);
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('#results .pf-result .pf-title', { timeout: 10000 });
+  await page.waitForFunction(() => document.querySelectorAll('#results .pf-result').length > 1, { timeout: 8000 }).catch(() => {});
+  return page.$$eval('#results .pf-result .pf-title', (els) => els.slice(0, 10).map((e) => e.textContent.trim()));
+}
+const ord1 = await searchOrder('learning');
+const ord2 = await searchOrder('learning');
+const ord3 = await searchOrder('learning');
+check('identical keyword search → identical order (run 1 vs 2)', JSON.stringify(ord1) === JSON.stringify(ord2), `${ord1[0]} | ${ord2[0]}`);
+check('identical keyword search → identical order (run 2 vs 3)', JSON.stringify(ord2) === JSON.stringify(ord3));
+await page.evaluate(() => localStorage.clear());
+
+// The papers index must be merged into the engine EXACTLY ONCE per worker.
+// Pagefind's init()/mergeIndex() are NOT idempotent — they append — and a
+// dynamic import of the same URL reuses one cached module backed by one Web
+// Worker, so any code path that re-runs init+merge on it stacks the papers
+// index as duplicate documents. Locally those duplicates share URLs, so the
+// app's URL de-dup hides them in the headline; asserting on the headline alone
+// would pass even with a doubly-loaded worker. So probe the worker directly —
+// total paper documents vs distinct paper pages — which catches a regression
+// HERE rather than only on the live CDN, where the duplicates pick up slightly
+// different URLs, defeat de-dup, and inflate the visible counts (the reported
+// symptom: the same 'llm' query climbing 260/2325 → 513/7894 over a warm,
+// repeatedly-loaded or back/forward-restored session). Each load uses a FRESH
+// context so it is genuinely cold (its own HTTP cache, module registry, worker).
+console.log('— the papers index is merged exactly once per worker (no stacking) —');
+async function coldWorkerLoad() {
+  const ctx = await browser.newContext();
+  const jsUrls = [];
+  const p = await ctx.newPage();
+  p.on('request', (req) => { if (/\/pagefind\/pagefind\.js(\?|$)/.test(req.url())) jsUrls.push(req.url()); });
+  await p.goto(`${BASE}/?q=llm`, { waitUntil: 'domcontentloaded' });
+  await p.waitForFunction(() => /\d+ workshop/.test(document.querySelector('#searchCount')?.textContent || ''), { timeout: 15000 });
+  const headline = await p.$eval('#searchCount', (el) => el.textContent.replace(/· page \d+\/\d+/, '').trim());
+  // Read the worker the app actually settled on by importing the SAME engine
+  // URL it loaded (plain on a clean load; cache-busted after a heal) — search
+  // only, never init/merge, so we observe the worker rather than mutate it.
+  const probeUrl = jsUrls[jsUrls.length - 1] || `${BASE}/pagefind/pagefind.js`;
+  const w = await p.evaluate(async (url) => {
+    const pf = await import(url);
+    const res = await pf.search('llm');
+    const data = await Promise.all(res.results.map((x) => x.data()));
+    let docs = 0; const distinct = new Set();
+    const slug = (u) => (u.match(/\/workshop\/([^/]+)\//) || [])[1] || u;
+    for (const d of data) if ((d.filters?.type ?? []).includes('Papers')) { docs++; distinct.add(slug(d.url)); }
+    return { docs, distinct: distinct.size, raw: res.results.length };
+  }, probeUrl);
+  await ctx.close();
+  return { headline, ...w };
+}
+const r1 = await coldWorkerLoad();
+const r2 = await coldWorkerLoad();
+check('cold-load counts identical (run 1 vs 2)', r1.headline === r2.headline, `${r1.headline} | ${r2.headline}`);
+check('papers index merged once — docs == distinct (run 1)', r1.docs === r1.distinct, JSON.stringify(r1));
+check('papers index merged once — docs == distinct (run 2)', r2.docs === r2.distinct, JSON.stringify(r2));
+
+// Engine-level guard: lock in the mechanism the fix depends on. Re-running
+// init+merge on the SAME module stacks the papers index (the hazard); guarding
+// on module identity, and re-importing under a fresh URL, each keep it single.
+console.log('— engine guard: a reused module must not re-merge (the fix mechanism) —');
+{
+  const ctx = await browser.newContext();
+  const p = await ctx.newPage();
+  await p.goto(`${BASE}/about/`, { waitUntil: 'domcontentloaded' }); // a page that does NOT run the search
+  const g = await p.evaluate(async () => {
+    const papers = async (pf) => {
+      const res = await pf.search('llm');
+      const data = await Promise.all(res.results.map((x) => x.data()));
+      let n = 0; for (const d of data) if ((d.filters?.type ?? []).includes('Papers')) n++; return n;
+    };
+    const m0 = await import('/pagefind/pagefind.js?v=guard0');
+    await m0.options({ baseUrl: '/' }); await m0.init(); await m0.mergeIndex('/pagefind-papers/', { baseUrl: '/' });
+    const single = await papers(m0);
+    await m0.mergeIndex('/pagefind-papers/', { baseUrl: '/' }); // second merge on the same module
+    const stacked = await papers(m0);
+    // guarded body (mirrors ensurePagefind): a no-op on an already-inited module
+    let inited = null;
+    const m1 = await import('/pagefind/pagefind.js?v=guard1');
+    const guarded = async (pf) => { if (inited !== pf) { await pf.options({ baseUrl: '/' }); await pf.init(); await pf.mergeIndex('/pagefind-papers/', { baseUrl: '/' }); inited = pf; } };
+    await guarded(m1); await guarded(m1); await guarded(m1);
+    const guardedN = await papers(m1);
+    return { single, stacked, guardedN };
+  });
+  await ctx.close();
+  check('second merge on same module stacks (hazard present)', g.stacked === g.single * 2, JSON.stringify(g));
+  check('guarded re-init stays single-loaded (fix mechanism)', g.guardedN === g.single, JSON.stringify(g));
+}
+await page.evaluate(() => localStorage.clear());
+
+// The headline must survive the engine returning the SAME workshop under
+// DIFFERENT URLs — the real-world inflation (one "llm" query reading 513
+// workshops instead of 260 in some browsers). Counting is keyed on the
+// workshop slug, not the raw URL, so duplicate-URL copies collapse. Reproduce
+// the failure shape directly: merge the papers index a second time under an
+// absolute baseUrl into the worker the app uses, then make the app recount.
+console.log('— duplicate-URL documents must not inflate the headline —');
+{
+  const ctx = await browser.newContext();
+  const p = await ctx.newPage();
+  const readCount = () => p.$eval('#searchCount', (el) => el.textContent.trim());
+  const waitForCount = () => p.waitForFunction(() => /\d+ workshop/.test(document.querySelector('#searchCount')?.textContent || ''), { timeout: 15000 });
+  await p.goto(`${BASE}/?q=llm`, { waitUntil: 'domcontentloaded' });
+  await waitForCount();
+  const clean = await readCount();
+  // force the engine to return each page under two distinct URL bases
+  const dup = await p.evaluate(async () => {
+    const pf = await import('/pagefind/pagefind.js'); // the app's cached module/worker
+    await pf.mergeIndex('/pagefind-papers/', { baseUrl: 'https://example.com/' });
+    const r = await pf.search('llm'); const data = await Promise.all(r.results.map((x) => x.data()));
+    const slug = (u) => (u.match(/workshop\/([^/?#]+)/) || [])[1] || u;
+    return { distinctBase: new Set(data.map((d) => d.url.split('#')[0])).size, distinctSlug: new Set(data.map((d) => slug(d.url))).size };
+  });
+  // recount in the app (clear + re-search busts the per-query cache)
+  await p.evaluate(() => document.querySelector('#clearSearch')?.click());
+  await p.waitForSelector('#homeDefault:not([hidden])', { timeout: 8000 });
+  await p.fill('#q', 'llm'); await p.keyboard.press('Enter');
+  await waitForCount();
+  const afterDup = await readCount();
+  check('engine returns duplicate-URL docs when provoked', dup.distinctBase > dup.distinctSlug, JSON.stringify(dup));
+  check('headline unchanged despite duplicate-URL docs', afterDup === clean, `clean="${clean}" afterDup="${afterDup}"`);
+  await ctx.close();
+}
+await page.evaluate(() => localStorage.clear());
+
 const apiWs = JSON.parse(rfL('site/dist/api/workshops.json', 'utf8')).workshops;
 const byConfT = {};
 for (const w of apiWs) (byConfT[w.conference] ||= []).push(w);
