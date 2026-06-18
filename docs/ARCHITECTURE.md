@@ -214,13 +214,41 @@ Paper snapshots store a stable id (OpenReview forum id where available), the
 title, the workshop slug, and the exact PDF url when known. A pre-2026 snapshot
 shape (with a `url` field) still renders, so no migration is needed.
 
-## Every content link opens a new tab
+## External links open a new tab; internal navigation stays in place
 
-A single delegated click-time handler in the base layout opens all content links
-in a new tab, including links rendered after page load (search results, the
-saved page). Only the site header and same-page anchors navigate in place;
-modified clicks (ctrl/cmd/shift/middle) keep native behavior. Deciding at click
-time is what makes it cover dynamically rendered surfaces.
+A single delegated, click-time handler in the base layout decides link targets
+by **host**. A link to a different host (a workshop's own website, an arXiv or
+OpenReview PDF) opens in a **new tab**, so the tracker stays available behind it;
+a link within the site (a workshop page, a nested paper anchor, the saved list)
+navigates in the **same tab** — the standard expectation, and forcing new tabs
+for in-site links just clutters the tab bar. Because the decision is made at
+click time by comparing `a.host` to `location.host` — not baked into each link's
+markup — it automatically covers links rendered after first paint (search
+results, the saved page) with nothing to annotate per link. The site header and
+same-page anchors are left to navigate in place, and modified clicks
+(ctrl/cmd/shift/alt/middle) keep their native behavior.
+
+External links open **programmatically** — `window.open(href, '_blank',
+'noopener')` — rather than by setting `target="_blank"` on the element. Mutating
+the DOM that way persisted into the back/forward cache, so a restored page came
+back with links *(internal ones included)* stuck opening new tabs; opening
+programmatically leaves the DOM untouched and keeps the behavior bfcache-safe.
+Combined with search state living in the URL and being re-hydrated on a
+back/forward restore (see *Back/forward navigation & the bfcache guard* above),
+pressing Back brings the results view back **and** internal links still navigate
+in the same tab.
+
+This rule is **content-agnostic**, which is what keeps it stable as the data
+grows. Host comparison at click time means a newly added workshop's external
+website opens a new tab and its in-site page/paper links stay in-tab
+automatically — adding workshops or papers never touches the link logic and
+cannot change it. The behavior is pinned by `scripts/ui_test.mjs` (internal
+workshop/paper titles, the board's workshop name, header nav, and a clicked
+result all navigate same-tab; an external workshop website opens a new tab; and
+after Back the results restore with internal links still in-tab), so a code
+change that regressed any of it would fail the test. See commits `d3f66ce`
+(host-based targeting) and `7d5f474` (bfcache-safe `window.open` and
+restore-on-back).
 
 ## OpenReview only, cached
 
