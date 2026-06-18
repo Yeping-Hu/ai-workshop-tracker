@@ -398,8 +398,10 @@ const pfExpect = {
       // URL itself.
       const slugOf = (u) => (String(u).match(/\/workshop\/([^/?#]+)/) || [])[1] || null;
       const groups = new Map();
+      let noSlug = 0;
       for (const d of data) {
         const s = slugOf(d.url);
+        if (!s) noSlug++;
         const gkey = s ? `ws:${s}` : d.url.split('#')[0];
         if (!groups.has(gkey)) groups.set(gkey, { ws: null, papers: null, slug: s, url: s ? `${base}/workshop/${s}/` : d.url.split('#')[0] });
         const g = groups.get(gkey);
@@ -409,6 +411,16 @@ const pfExpect = {
         } else if (!g.ws) {
           g.ws = d;
         }
+      }
+      // Malformed-merge guard. Every real result is a /workshop/<slug>/ page, so
+      // slugOf should never miss. When the dual index stacks, the duplicate
+      // copies can resolve to non-/workshop/ URLs that slugOf can't collapse —
+      // each becomes its own bogus group and the workshop count balloons (the
+      // "513 / 757 workshops for llm" inflation). A large share of slug-less
+      // results is that signature, never a normal load: throw so the heal
+      // re-imports a clean, singly-merged worker (and counts come out right).
+      if (data.length > 20 && noSlug > data.length * 0.1) {
+        throw new Error(`merge looks duplicated (${noSlug}/${data.length} results without a workshop slug)`);
       }
       // Headline counts describe exactly what's listed: distinct workshops, and
       // the individual papers matched inside them.
@@ -671,8 +683,33 @@ const pfExpect = {
       Object.fromEntries(FACETS.map((f) => [f, Object.freeze(facetSort(f, Object.keys(initialCounts[f] ?? {})))])),
     );
 
+    // Remember where the user was scrolled on a results page, so returning from
+    // a clicked result lands back at that spot instead of the top. The results
+    // render asynchronously after a (re)load, so the browser's own scroll
+    // restoration fires before they exist and gives up at the top — we restore
+    // explicitly once they're back in the DOM. Keyed by the search querystring
+    // so it only applies to the same search.
+    function saveScroll() {
+      try {
+        if (isSearching()) sessionStorage.setItem('pf:scroll', JSON.stringify({ k: location.search, y: window.scrollY }));
+      } catch {}
+    }
+    function restoreScrollForSearch() {
+      try {
+        const s = JSON.parse(sessionStorage.getItem('pf:scroll') || 'null');
+        if (s && s.k === location.search && typeof s.y === 'number' && s.y > 0) {
+          // Two frames so the freshly-rendered list has been laid out and the
+          // page is tall enough to actually scroll there. Jump instantly —
+          // the page's smooth scroll-behavior would otherwise animate all the
+          // way down from the top on every return.
+          requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo({ top: s.y, left: 0, behavior: 'instant' })));
+        }
+      } catch {}
+    }
+    window.addEventListener('pagehide', saveScroll);
+
     // hydrate from URL, THEN render panels so deep-linked boxes draw checked.
-    function hydrateFromUrl() {
+    async function hydrateFromUrl() {
       const p = new URLSearchParams(location.search);
       keywords = (p.get('q') || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
       for (const f of FACETS) { sel[f].clear(); for (const v of (p.get(f) || '').split(',').filter(Boolean)) sel[f].add(v); }
@@ -680,7 +717,7 @@ const pfExpect = {
       input.value = ''; // committed keywords live in `keywords`; clear any stale partial text
       renderChips();
       renderFacetPanels();
-      if (isSearching()) runSearch(true);
+      if (isSearching()) { await runSearch(true); restoreScrollForSearch(); }
       else setMode(false);
     }
     hydrateFromUrl();
