@@ -323,6 +323,20 @@ details.tba-section > summary { cursor: pointer; color: var(--muted); font-size:
 .pf-result { padding: 0.85rem 0; border-bottom: 1px solid var(--line); }
 .pf-title { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; color: var(--ink); text-decoration: none; }
 .pf-title:hover { color: var(--accent); text-decoration: underline; }
+
+/* Loading skeleton for #results — shown while Pagefind's index loads (most
+   visibly on a full-reload back-navigation, ~1-2s) so results never flash a
+   blank panel. Replaced by the real list the moment the search resolves. */
+.pf-skeleton { padding: 0.85rem 0; border-bottom: 1px solid var(--line); }
+.pf-skeleton .sk-meta { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.45rem; }
+.pf-skeleton .sk-bar { display: block; background: var(--line); border-radius: 6px; animation: sk-pulse 1.4s ease-in-out infinite; }
+.pf-skeleton .sk-badge { width: 4.5rem; height: 0.95rem; }
+.pf-skeleton .sk-pill { width: 3.5rem; height: 0.95rem; }
+.pf-skeleton .sk-title { width: min(60%, 22rem); height: 1.1rem; }
+.pf-skeleton:nth-child(2n) .sk-title { width: min(46%, 17rem); }
+.pf-skeleton:nth-child(3n) .sk-title { width: min(70%, 26rem); }
+@keyframes sk-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) { .pf-skeleton .sk-bar { animation: none; } }
 .pf-excerpt { margin: 0.3rem 0 0; font-size: 0.88rem; color: var(--muted); max-width: 46rem; }
 .pf-excerpt mark { background: var(--accent-soft); color: var(--accent); border-radius: 3px; padding: 0 0.15em; }
 

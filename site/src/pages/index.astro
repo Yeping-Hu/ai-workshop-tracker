@@ -289,6 +289,7 @@ const pfExpect = {
           }
         })().catch((err) => {
           pfReady = null;      // transient failure must not brick search until reload
+          pagefind = null;     // engine no longer ready → a later search shows the skeleton, not a blank
           pfBust = Date.now(); // next import uses a fresh URL → a clean worker, never
                                // the half-initialized one this attempt just failed on
           const st = $('#searchStatus');
@@ -500,6 +501,25 @@ const pfExpect = {
       }
     }
 
+    // Loading skeleton: shown while the Pagefind engine is still loading, so a
+    // search that runs before it's ready — most visibly a full-reload back-
+    // navigation, which otherwise leaves #results blank for a second or two —
+    // paints placeholder rows instead. Injected synchronously *before* the
+    // ensurePagefind() await (the main script is inline, so this lands on screen
+    // at first paint) and replaced by the real list (or a message) as soon as
+    // the search resolves.
+    const SK_ROWS = ('<li class="pf-skeleton" aria-hidden="true">'
+      + '<div class="sk-meta"><span class="sk-bar sk-badge"></span><span class="sk-bar sk-pill"></span></div>'
+      + '<span class="sk-bar sk-title"></span></li>').repeat(6);
+    function showSearchSkeleton() {
+      const r = $('#results');
+      // Only when #results is genuinely empty — never clobber real results, a
+      // message (loading / refreshing / no-matches / error all use .muted), or a
+      // skeleton already on screen.
+      if (r.querySelector('.pf-result, .muted, .pf-skeleton')) return;
+      r.innerHTML = SK_ROWS;
+    }
+
     async function runSearch(immediate = false) {
       setMode(isSearching());
       if (!isSearching()) { $('#results').innerHTML = ''; $('#searchCount').textContent = ''; rState.key = ''; searchGen++; syncUrl(); return; }
@@ -509,6 +529,7 @@ const pfExpect = {
       // half-merged result can paint over the right one (the "typing without
       // Enter shows different results" bug).
       const gen = ++searchGen;
+      if (!pagefind) showSearchSkeleton(); // engine not loaded yet → placeholder, not a blank panel
       const pf = await ensurePagefind();
       if (!pf || gen !== searchGen) return;
       const terms = [...keywords, input.value.trim()].filter(Boolean);

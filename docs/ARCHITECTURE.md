@@ -180,7 +180,13 @@ Search state lives in the URL (`?q=…&conf=…&page=…`), so results are
 reconstructable on any load. `hydrateFromUrl()` (index.astro) rebuilds the
 search from the URL on first paint and runs the search *immediately* (the
 non-debounced `pf.search`, since a lone debounced call on restore can be
-superseded and swallowed). Results are rendered in a **deterministic order**:
+superseded and swallowed). On such a first paint the engine itself still has to
+load (~1-2s on a cold visit, or a full-reload back-navigation where the bfcache
+didn't engage), so until the search resolves `#results` shows a pulsing **loading
+skeleton** rather than a blank panel — injected synchronously before the engine
+import (the main script is inline, so it lands on screen at first paint) and
+replaced by the real list the moment results arrive. Results are rendered in a
+**deterministic order**:
 Pagefind sorts by score, but ties (common) aren't ordered stably and its two
 indexes load in parallel, so the same keyword could render differently each
 run — the page re-sorts by score then by the result's fixed `id`, so identical
