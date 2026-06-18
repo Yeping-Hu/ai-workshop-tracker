@@ -53,9 +53,6 @@ jobs:
           # variables -> Actions -> Variables). Leave unset for no tracking.
           PUBLIC_GOATCOUNTER: ${{ vars.GOATCOUNTER_CODE }}
           PUBLIC_CF_ANALYTICS_TOKEN: ${{ vars.CF_ANALYTICS_TOKEN }}
-          # Unique per deploy → lets a stale bfcache page detect it's outdated
-          # and reload once (see the pageshow guard in Base.astro).
-          BUILD_ID: ${{ github.sha }}
         run: npm run build --prefix site
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5

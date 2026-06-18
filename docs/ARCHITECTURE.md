@@ -29,35 +29,6 @@ are maintained, one for workshop editions and one for the ~20k accepted-paper
 titles, so results can be grouped per workshop with matching papers nested
 beneath.
 
-Both indexes are loaded into one Pagefind engine: `pf.init()` for the primary
-(workshops) index, then `await pf.mergeIndex(papers)` for the papers index, all
-awaited inside a single-flight init promise so no search runs until the dual
-index is ready (`ensurePagefind` in index.astro).
-
-The subtle hazard is that Pagefind's `init()` / `mergeIndex()` are **not
-idempotent — they append.** A dynamic `import()` of the same engine URL returns
-the *same cached module*, backed by the *same Web Worker*, so re-running
-init+merge on it loads the papers index a **second** time as duplicate
-documents. Locally the duplicates share identical URLs and the per-result URL
-de-duplication collapses them, so the counts still look right; on the live CDN
-the two loads can resolve paper URLs under slightly different bases, de-dup
-fails, and the **same query inflates** — e.g. `llm` climbing from 260 workshops
-/ 2325 papers to 513 / 7894 across a warm, repeatedly-loaded or back/forward
-restored session (the cold/first load stays correct). The trigger was the
-failure-retry path: a heal re-imports the engine under a cache-busted URL, but
-the load-failure `.catch` used to reset the engine **without** changing that
-URL, so the next retry re-imported the *same* (now half-loaded) cached worker
-and merged the papers index onto it again; repeated retries kept stacking.
-
-Two guards in `ensurePagefind` prevent it: init+merge run **at most once per
-module instance** (a reused cached module is a no-op), and **every** load
-failure bumps the cache-bust so a retry always imports a fresh URL — hence a
-clean, singly-loaded worker on every code path. A ui_test probes the worker
-directly (total paper documents vs distinct paper pages, plus an engine-level
-check that a second merge stacks while the guard keeps it single) so a
-regression is caught even though the headline's URL de-dup would otherwise
-mask it.
-
 Behavior worth knowing before you touch the search code:
 
 - **Faceting is exact and mutually consistent.** Conference / status / year /
@@ -131,29 +102,6 @@ The board, search, countdowns, and JSON API consume only the single derived
 deadline/status, so they're unchanged; the workshop page additionally renders the
 per-track breakdown. The rules are pinned by `scripts/tracks_test.mjs` (run in the
 validate CI workflow).
-
-## Back/forward navigation & the bfcache guard
-
-Search state lives in the URL (`?q=…&conf=…&page=…`), so results are
-reconstructable on any load. `hydrateFromUrl()` (index.astro) rebuilds the
-search from the URL on first paint and runs the search *immediately* (the
-non-debounced `pf.search`, since a lone debounced call on restore can be
-superseded and swallowed). Results are rendered in a **deterministic order**:
-Pagefind sorts by score, but ties (common) aren't ordered stably and its two
-indexes load in parallel, so the same keyword could render differently each
-run — the page re-sorts by score then by the result's fixed `id`, so identical
-searches always produce identical order (guarded by a ui_test assertion).
-
-Back/forward is handled on `pageshow`. A bfcache restore (`event.persisted`)
-brings the page back fully intact — rendered results, JS state, listeners — so
-re-running the search would be wasteful and can reorder Pagefind's merged
-results; the handler therefore re-hydrates *only* when the restored view no
-longer matches the URL (or results didn't survive). Separately, because
-bfcache can serve a page from a build that predates a deploy (stale markup or
-JS — e.g. an old header, or a pre-fix click handler), every page stamps a
-`<meta name="build-id">` and, on a persisted restore, fetches the no-store
-`/version.json`; if the live build id differs it reloads once. Same-build
-restores stay fast and untouched. `BUILD_ID` is the commit SHA in CI.
 
 ## Favorites without accounts
 
