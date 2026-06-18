@@ -157,9 +157,6 @@ const pfExpect = {
     let pfReady = null, pagefind = null;
     let pfBust = 0; // appended to the engine URL when re-importing after a deploy
     let pfInited = null; // the engine module whose worker has already loaded both indexes
-    let pfStable = false; // false until a keyword search has confirmed the merged
-                          // index's count is steady; a freshly (re)loaded worker
-                          // can briefly over-match while its merge settles
     let healAttempted = false;
     const initialCounts = facetCounts;
     let facetOptions = null;
@@ -286,7 +283,6 @@ const pfExpect = {
                 continue;            // pfInited stays unset so the retry re-inits
               }
               pfInited = pf;
-              pfStable = false; // fresh worker: let the first keyword search settle
             }
             pagefind = pf;
             return pf;
@@ -482,48 +478,47 @@ const pfExpect = {
       return entries.length;
     }
 
-    // First keyword search against a freshly (re)loaded index: the dual-index
-    // merge can briefly over-match, so the count would otherwise pop up high and
-    // visibly tick DOWN over a second or two (with the result list re-rendering
-    // each time — the "flashing / page keeps refreshing" problem). Instead, hold
-    // the render behind a quiet "Searching…", re-query until the count stops
-    // changing, then show the settled result ONCE. Subsequent searches skip this
-    // (pfStable stays true until a reload or a heal) and render immediately.
-    async function settleAndRender(pf, query, opts, filters, terms) {
-      $('#searchCount').textContent = 'Searching…';
-      $('#results').innerHTML = '<li class="muted">Searching…</li>';
-      let prev = -1;
-      for (const ms of [0, 250, 550, 1000, 1700, 2800]) {
-        if (ms) await new Promise((r) => setTimeout(r, ms));
-        if (!isSearching()) return; // user cleared the search
-        const liveTerms = [...keywords, input.value.trim()].filter(Boolean);
-        if ((liveTerms.join(' ') || null) !== query) return; // a newer query supersedes
+    let searchGen = 0; // bumped per search; stale async work checks this and bails
+
+    // A freshly-merged dual index can briefly report a moving count on a slow
+    // network. After the immediate render, re-check the SAME query a couple of
+    // times in the background and re-render only if the count actually changed —
+    // and only while this is still the latest search (searchGen). No blocking
+    // placeholder, no concurrent loops: nothing stale or racing ever paints.
+    async function settleInBackground(gen, pf, query, opts, filters, terms, first) {
+      let prev = first;
+      for (const ms of [350, 800, 1600]) {
+        await new Promise((r) => setTimeout(r, ms));
+        if (gen !== searchGen) return; // a newer search took over
         let res;
-        try { res = await pf.search(query, opts); }
-        catch (err) { return handleSearchFailure(err); }
-        if (res === null) continue;
+        try { res = await pf.search(query, opts); } catch { return; }
+        if (res === null || gen !== searchGen) return;
         const n = await buildState(res, query, filters, terms);
-        if (n === prev) break; // count held still across two reads → settled
-        prev = n;
+        if (gen !== searchGen) return;
+        if (n !== prev) { renderResultsPage(); prev = n; }
+        else break; // count held steady → done
       }
-      pfStable = true;       // settled (or gave up waiting): trust it from here
-      healAttempted = false;
-      renderResultsPage();
     }
 
     async function runSearch(immediate = false) {
       setMode(isSearching());
-      if (!isSearching()) { $('#results').innerHTML = ''; $('#searchCount').textContent = ''; rState.key = ''; syncUrl(); return; }
+      if (!isSearching()) { $('#results').innerHTML = ''; $('#searchCount').textContent = ''; rState.key = ''; searchGen++; syncUrl(); return; }
+      // Mark this as the latest search. Every keystroke calls runSearch, so older
+      // in-flight calls (and their background settles) must bail the moment a
+      // newer one starts — otherwise concurrent searches race and a stale or
+      // half-merged result can paint over the right one (the "typing without
+      // Enter shows different results" bug).
+      const gen = ++searchGen;
       const pf = await ensurePagefind();
-      if (!pf) return;
+      if (!pf || gen !== searchGen) return;
       const terms = [...keywords, input.value.trim()].filter(Boolean);
       const filters = {};
       for (const f of FACETS) if (sel[f].size) filters[f] = { any: [...sel[f]] };
       const query = terms.join(' ') || null;
       // Empty query = browsing: order by the build-time key (open calls first,
       // soonest deadline on top), and filter to Workshops so browsing never
-      // touches the papers index (so it has no settle/over-match to wait on).
-      // With keywords, Pagefind's relevance ranking is what people expect.
+      // touches the papers index. With keywords, Pagefind's relevance ranking is
+      // what people expect.
       const opts = query === null
         ? { filters: { ...filters, type: { any: ['Workshops'] } }, sort: { order: 'asc' } }
         : { filters };
@@ -532,7 +527,7 @@ const pfExpect = {
         // returns null when superseded, and a lone restore-time call can be
         // swallowed, leaving the results empty even though the query is valid.
         const res = immediate ? await pf.search(query, opts) : await pf.debouncedSearch(query, opts, 220);
-        if (res === null) return; // superseded
+        if (res === null || gen !== searchGen) return; // coalesced away or superseded
         // Build-time truth check: in browse mode (no keywords) this page knows
         // exactly how many workshops the current selection matches (FW). Zero
         // results where >0 are expected can only mean the engine's lazily loaded
@@ -544,17 +539,15 @@ const pfExpect = {
           })).length;
           if (expected > 0) throw new Error(`0 results where ${expected} expected`);
         }
-        const key = JSON.stringify([query, filters]);
-        if (!pfStable && query !== null) { await settleAndRender(pf, query, opts, filters, terms); return; }
-        if (key !== rState.key) {
-          if (res.results.length > 150) $('#results').innerHTML = `<li class="muted">Loading ${res.results.length} results…</li>`;
-          await buildState(res, query, filters, terms);
-        }
+        if (res.results.length > 150) $('#results').innerHTML = `<li class="muted">Loading ${res.results.length} results…</li>`;
+        const n = await buildState(res, query, filters, terms);
+        if (gen !== searchGen) return; // a newer search superseded us mid-build
         healAttempted = false; // healthy — a future deploy may heal again
+        renderResultsPage();
+        if (query !== null) settleInBackground(gen, pf, query, opts, filters, terms, n);
       } catch (err) {
         return handleSearchFailure(err);
       }
-      renderResultsPage();
     }
 
     async function handleSearchFailure(err) {
