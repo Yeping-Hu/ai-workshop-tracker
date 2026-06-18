@@ -42,21 +42,63 @@ documents. Locally the duplicates share identical URLs and the per-result URL
 de-duplication collapses them, so the counts still look right; on the live CDN
 the two loads can resolve paper URLs under slightly different bases, de-dup
 fails, and the **same query inflates** — e.g. `llm` climbing from 260 workshops
-/ 2325 papers to 513 / 7894 across a warm, repeatedly-loaded or back/forward
-restored session (the cold/first load stays correct). The trigger was the
-failure-retry path: a heal re-imports the engine under a cache-busted URL, but
-the load-failure `.catch` used to reset the engine **without** changing that
-URL, so the next retry re-imported the *same* (now half-loaded) cached worker
-and merged the papers index onto it again; repeated retries kept stacking.
+/ 2325 papers to 513 / 7894, and in the worst case *every* one of the 757
+workshops appearing to match (with highlights on unrelated words). It is
+intermittent and browser-/edge-dependent, shows up on warm or back/forward-
+restored sessions, and the cold first load usually stays correct.
 
-Two guards in `ensurePagefind` prevent it: init+merge run **at most once per
-module instance** (a reused cached module is a no-op), and **every** load
-failure bumps the cache-bust so a retry always imports a fresh URL — hence a
-clean, singly-loaded worker on every code path. A ui_test probes the worker
-directly (total paper documents vs distinct paper pages, plus an engine-level
-check that a second merge stacks while the guard keeps it single) so a
-regression is caught even though the headline's URL de-dup would otherwise
-mask it.
+Because the precise live trigger was never reproducible (see the caveat at the
+end of this section), this is defended in **layers** rather than trusting any
+single guard:
+
+1. **Merge once per worker.** `init()`+`mergeIndex()` run at most once per module
+   instance (`pfInited` in `ensurePagefind`); a reused cached module is a no-op,
+   so no path stacks a second papers index onto a live worker.
+2. **Re-import a merge that looks wrong.** Immediately after merging,
+   `mergeLooksClean()` reads `pf.filters().type` — query-independent, exact
+   build-time counts — and if the Workshops/Papers totals are grossly off
+   (a stacked double reports ~2×; a wipeout reports far too few) it re-imports
+   the engine under a cache-busted URL, up to `PF_MERGE_TRIES` times, before any
+   query runs.
+3. **Every load failure cache-busts.** The failure/heal path always bumps the
+   cache-bust so a retry imports a *fresh* URL instead of re-merging onto the
+   same half-loaded worker.
+4. **The count is immune to duplication regardless.** This is the load-bearing
+   layer. `buildState` derives the headline only from distinct
+   `/workshop/<slug>/` results: the slug is identical across any duplicate copy
+   so duplicates collapse, any merged result whose URL *isn't* a workshop page
+   (the artifact form that wouldn't collapse) is dropped from the count, and
+   matched papers are de-duped by paper id **and** title. So however the merge
+   misbehaves, "N workshops" equals the real distinct workshops and the paper
+   count can't be inflated by copies.
+5. **Latest-search-wins.** Each search bumps a generation counter (`searchGen`)
+   and every `await` re-checks it, so the instant a newer search starts, older
+   in-flight searches and their background count-refinements abandon themselves
+   and only the most recent one paints. This fixed a bug where typing a keyword
+   *without* pressing Enter could show different results than pressing it: each
+   keystroke had been starting its own settling loop and they raced.
+
+For field diagnosis, `buildState` writes `window.__aiwtSearchDiag`
+(`{query, rawResults, droppedNonWorkshop, distinctWorkshops, ts}`) on every
+search and logs a `[aiwt-search] merge anomaly` console warning whenever it has
+to drop artifacts or the workshop count looks impossibly high. A ui_test also
+probes the worker directly (total paper documents vs distinct paper pages, plus
+an engine-level check that a second merge stacks while the guard keeps it
+single), so a regression is caught even though the slug/URL de-dup would
+otherwise mask it.
+
+> **Caveat — not provably fixed at the root.** The underlying behavior — *why*
+> the live CDN sometimes resolves the two indexes so a query over-matches — was
+> never reproduced in testing (local or live, cold/warm/back-forward all
+> returned correct counts; only real users on certain edges hit it). The layers
+> above make the **displayed** counts immune to it and make every search path
+> agree, and as of this writing the inflation no longer reproduces in the field.
+> But that is a defense against the *symptom*, not proof the merge itself is
+> clean. **If inflated counts or an Enter-vs-no-Enter discrepancy reappear, this
+> is the place to revisit.** The missing diagnostic is the engine state at the
+> moment it happens: capture `window.__aiwtSearchDiag` and the `[aiwt-search]`
+> console warning from the affected browser — they show whether the raw merge
+> over-matched (and by how much) beneath the now-corrected count.
 
 Behavior worth knowing before you touch the search code:
 
