@@ -398,12 +398,19 @@ const pfExpect = {
       // URL itself.
       const slugOf = (u) => (String(u).match(/\/workshop\/([^/?#]+)/) || [])[1] || null;
       const groups = new Map();
-      let noSlug = 0;
+      let dropped = 0;
       for (const d of data) {
         const s = slugOf(d.url);
-        if (!s) noSlug++;
-        const gkey = s ? `ws:${s}` : d.url.split('#')[0];
-        if (!groups.has(gkey)) groups.set(gkey, { ws: null, papers: null, slug: s, url: s ? `${base}/workshop/${s}/` : d.url.split('#')[0] });
+        // Every real result is a /workshop/<slug>/ page (workshop metadata or a
+        // papers section). A result without that slug isn't a real hit — it's a
+        // duplicate the dual-index merge produced under a URL that wouldn't
+        // collapse, which is exactly what inflated the headline counts ("513 /
+        // 757 workshops for llm"). Drop it rather than count it: the workshop
+        // count then equals the distinct real workshops no matter how the merge
+        // behaves, and duplicate papers still collapse by id within each group.
+        if (!s) { dropped++; continue; }
+        const gkey = `ws:${s}`;
+        if (!groups.has(gkey)) groups.set(gkey, { ws: null, papers: null, slug: s, url: `${base}/workshop/${s}/` });
         const g = groups.get(gkey);
         if ((d.filters?.type ?? []).includes('Papers')) {
           if (!g.papers) g.papers = d;
@@ -412,16 +419,15 @@ const pfExpect = {
           g.ws = d;
         }
       }
-      // Malformed-merge guard. Every real result is a /workshop/<slug>/ page, so
-      // slugOf should never miss. When the dual index stacks, the duplicate
-      // copies can resolve to non-/workshop/ URLs that slugOf can't collapse —
-      // each becomes its own bogus group and the workshop count balloons (the
-      // "513 / 757 workshops for llm" inflation). A large share of slug-less
-      // results is that signature, never a normal load: throw so the heal
-      // re-imports a clean, singly-merged worker (and counts come out right).
-      if (data.length > 20 && noSlug > data.length * 0.1) {
-        throw new Error(`merge looks duplicated (${noSlug}/${data.length} results without a workshop slug)`);
-      }
+      // Diagnostic breadcrumb: a non-zero `dropped` (or an unusually large
+      // workshop count) means the merge produced duplicate/garbage results that
+      // we just discarded. Surfaced on window + console so a malformed merge can
+      // be confirmed from the field without it ever reaching the visible count.
+      try {
+        const diag = { query, rawResults: data.length, droppedNonWorkshop: dropped, distinctWorkshops: groups.size, ts: new Date().toISOString() };
+        window.__aiwtSearchDiag = diag;
+        if (dropped > 0 || groups.size > 400) console.warn('[aiwt-search] merge anomaly (artifacts dropped from the count):', diag);
+      } catch {}
       // Headline counts describe exactly what's listed: distinct workshops, and
       // the individual papers matched inside them.
       const hasQuery = query !== null;
@@ -439,15 +445,19 @@ const pfExpect = {
       const entries = [...groups.entries()].map(([gkey, g]) => {
         let subs = [];
         if (hasQuery && g.papers) {
-          // De-dupe by paper id: a duplicated papers doc contributes the same
-          // paper anchors more than once, which would otherwise inflate the
-          // paper count just as duplicate workshop URLs inflated the workshop
-          // count (see the slug grouping above).
-          const seen = new Set();
+          // De-dupe matched papers. A duplicated papers doc contributes the
+          // same paper more than once; id-only de-duping misses it when the
+          // duplicate copy arrives under a different anchor id (which inflated
+          // the paper count). Key on id AND on the paper title — the title is
+          // the stable identity across copies — so either form collapses.
+          const seenId = new Set(), seenTitle = new Set();
           subs = (g.papers.sub_results || []).filter((sr) => {
             if (!sr.url.includes('#p-') || !paperMatchesAll(sr.excerpt)) return false;
             const id = (sr.url.match(/#p-([^#?]+)/) || [])[1];
-            if (id) { if (seen.has(id)) return false; seen.add(id); }
+            const title = String(sr.title || '').replace(/^[\s☆★]+/, '').trim().toLowerCase();
+            if ((id && seenId.has(id)) || (title && seenTitle.has(title))) return false;
+            if (id) seenId.add(id);
+            if (title) seenTitle.add(title);
             return true;
           });
           nPapers += subs.length;
