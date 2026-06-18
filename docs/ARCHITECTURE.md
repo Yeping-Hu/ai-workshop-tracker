@@ -272,3 +272,35 @@ Schema and sanity checks comment on PRs with exactly what to fix, and an issue
 form auto-converts to PRs for non-technical contributors, so reviewing data
 quality isn't a manual burden. See [Automation](../README.md#automation) for the
 full workflow list.
+
+## Known gap: the UI behavior suite (`ui_test.mjs`) is not in CI
+
+`scripts/ui_test.mjs` is a headless-browser suite that locks the homepage's
+runtime behavior — the dual-index search and its merge-immune counts, the
+deterministic result order, the external-vs-internal link rule, and the
+back/forward restore. **It is not run by any CI workflow.** It is a manual,
+local check: build the site, serve `site/dist` with a raw concurrent static
+server, then `node scripts/ui_test.mjs http://localhost:<port>`.
+
+What this does and doesn't leave exposed: data/content changes can't reach the
+code these tests guard and are already validated by `validate.yml`, so adding
+workshops or papers is covered either way. The uncovered case is a **hand-edit
+to the search / link / back-nav code that still compiles** — `deploy.yml` only
+builds, so a behavior regression would build and ship with nothing flagging it.
+Until the suite is wired in, that case relies on someone remembering to run it
+(the tests pass today, so a green run is the baseline to protect).
+
+If wiring it into CI later, two things need fixing first (both learned the hard
+way here):
+
+- The deploy-staleness test physically **moves** the Pagefind index/filter
+  chunk files out of `dist` and only restores them at the very end, so a
+  mid-test timeout leaves the working build corrupted (empty `pagefind/index`
+  and `pagefind/filter`). Wrap the move/restore in `try/finally` so it always
+  restores, regardless of how the test exits.
+- The static server must serve Pagefind's chunks **raw and concurrently**.
+  `astro preview` applies gzip `Content-Encoding` over the already-gzipped
+  chunks, so the browser double-decodes and Pagefind throws "invalid gzip
+  data"; single-threaded `python -m http.server` serves raw bytes but stalls
+  under Pagefind's parallel chunk fetches (intermittent timeouts). A threaded
+  HTTP/1.1 raw static server handles both.
