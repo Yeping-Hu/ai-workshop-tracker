@@ -3,3 +3,6 @@ site/node_modules/
 site/dist/
 .DS_Store
 *.log
+
+# Transient changelog the discovery workflow writes (never committed)
+.deadline-changes.md

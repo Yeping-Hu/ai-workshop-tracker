@@ -1,7 +1,10 @@
 # Weekly: discover newly announced workshop venues on OpenReview for the
-# current and next year, backfill deadlines that organizers published late,
-# and open ONE PR with whatever appeared. This is how new conference cycles
-# (e.g. the NeurIPS list each July) flow in with zero manual work.
+# current and next year, backfill deadlines that organizers published late, and
+# keep already-imported deadlines in sync when OpenReview extends them. Whatever
+# changed is validated and, on success, committed straight to main (and a deploy
+# is dispatched). Per-deadline changes are recorded in the commit message. This
+# is how new conference cycles (e.g. the NeurIPS list each July) and deadline
+# extensions flow in with zero manual work.
 name: Discover new workshop venues
 
 on:
@@ -24,6 +27,8 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Discover venues (current + next year, all conferences)
+        env:
+          DEADLINE_CHANGELOG: ${{ github.workspace }}/.deadline-changes.md
         run: |
           Y=$(date -u +%Y)
           for c in icml iclr neurips icra iros cvpr corl colm eccv; do
@@ -39,6 +44,7 @@ jobs:
       - name: Publish new/updated entries (if any)
         env:
           GH_TOKEN: ${{ github.token }}
+          DEADLINE_CHANGELOG: ${{ github.workspace }}/.deadline-changes.md
         run: |
           if [ -z "$(git status --porcelain data/workshops)" ]; then
             echo "No new or updated workshops this week."
@@ -47,7 +53,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/workshops
-          git commit -m "data: weekly OpenReview discovery (auto-published after validation)"
+          # Commit message: a fixed subject plus, when the bot re-synced any
+          # deadlines, the per-deadline change log (old -> new) — so every
+          # automated edit is recorded in history rather than applied silently.
+          {
+            echo "data: weekly OpenReview discovery (auto-published after validation)"
+            if [ -s "$DEADLINE_CHANGELOG" ]; then
+              echo
+              echo "Deadline changes synced from OpenReview (later-only):"
+              cat "$DEADLINE_CHANGELOG"
+            fi
+          } > "$RUNNER_TEMP/commit-msg.txt"
+          git commit -F "$RUNNER_TEMP/commit-msg.txt"
           git push
           # Pushes made with GITHUB_TOKEN don't trigger on:push workflows,
           # so kick the deploy explicitly.

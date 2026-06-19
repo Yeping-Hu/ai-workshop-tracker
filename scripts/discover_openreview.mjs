@@ -21,6 +21,17 @@
  * weekly backfill's rewrite removes the template the moment a real deadline
  * appears.
  *
+ * Deadline sync (extensions): a deadline the bot imported is kept in step with
+ * OpenReview on subsequent runs. Each write stamps the exact value into
+ * `deadline_notes`; a later run re-syncs only when the stored value still equals
+ * that stamp, so any human edit (to the value or the note) permanently freezes
+ * the entry. Re-syncs are later-only by default (extensions; never earlier or to
+ * null), require a plausible parse, and compare UTC instants. Pre-sync entries
+ * (the legacy import marker) are adopted non-destructively — stamped once,
+ * deadline untouched — and become eligible the next run. Every value change is
+ * logged (stdout, and appended to $DEADLINE_CHANGELOG when set) so the workflow
+ * can record each edit in the commit message rather than editing silently.
+ *
  * Usage:
  *   node scripts/discover_openreview.mjs --conf icml --year 2026
  *   node scripts/discover_openreview.mjs --conf neurips --year 2025 --dry-run
@@ -29,6 +40,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
+import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 
 // Prepended to new entries that lack a deadline, so anyone landing in the
 // GitHub editor via the site's "know the deadline? Add it" link sees exactly
@@ -43,6 +55,56 @@ const DEADLINE_HINT = `# --- Missing: submission deadline ----------------------
 # It is validated automatically and usually merged within a day.
 # ---------------------------------------------------------------------------
 `;
+
+// --- Deadline-sync provenance ------------------------------------------------
+// Every deadline the bot writes is stamped into `deadline_notes` with the exact
+// value written. On later runs the bot only re-syncs a deadline whose stored
+// value STILL equals that stamp — so any human edit to the value (even one that
+// leaves the note untouched) breaks the match and permanently freezes the entry.
+const SYNC_NOTE_PREFIX = 'OpenReview-synced';
+// The pre-sync import marker used historically (≈700 entries). Treated as
+// bot-managed-but-unstamped: adopted non-destructively on first encounter.
+const LEGACY_IMPORT_NOTE = 'imported from OpenReview — check the website for extensions';
+// Later-only by default: the bot moves a deadline LATER (the extension case it
+// exists for) but never earlier or to null, because a transient/garbled read is
+// the dangerous failure mode. Flip to true to also follow earlier corrections
+// (riskier; leans on validate.mjs's sanity checks as the net).
+const ALLOW_EARLIER = false;
+const TWO_YEARS_MS = 2 * 366 * 86_400_000;
+
+/** The note the bot stamps when it sets or updates a deadline. Embeds the exact
+ *  value written (UTC) so a later human value-edit is detectable, plus the sync
+ *  date for human context. Stays well under the schema's 300-char limit. */
+export function syncNote(deadlineValue, today) {
+  return `${SYNC_NOTE_PREFIX} ${deadlineValue} UTC (as of ${today}) — extensions on OpenReview are applied automatically; verify on the website.`;
+}
+
+/** If `notes` is a bot sync-note, return the deadline value the bot last wrote;
+ *  otherwise null (human-written note, legacy marker, SEED estimate, empty…). */
+export function syncedValue(notes) {
+  if (typeof notes !== 'string') return null;
+  const m = notes.match(/^OpenReview-synced (\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2})?) UTC\b/);
+  return m ? m[1] : null;
+}
+
+/**
+ * Decide whether a freshly fetched deadline should replace the stored one.
+ * Pure value judgment over UTC instants (ms): the caller owns the separate
+ * "is this entry bot-managed / human-untouched" gate and the plausibility
+ * check. Comparing instants (not raw strings) means equal-moment/format noise
+ * never counts as a change. Returns { update, reason }.
+ *   null fetched | null stored -> no update
+ *   equal instant              -> no update ("unchanged")
+ *   fetched later than stored  -> update ("later")
+ *   fetched earlier            -> update only if allowEarlier, else no ("earlier-blocked")
+ */
+export function decideDeadlineUpdate(storedMs, fetchedMs, { allowEarlier = false } = {}) {
+  if (fetchedMs == null) return { update: false, reason: 'no-fetched' };
+  if (storedMs == null) return { update: false, reason: 'no-stored' };
+  if (fetchedMs === storedMs) return { update: false, reason: 'unchanged' };
+  if (fetchedMs > storedMs) return { update: true, reason: 'later' };
+  return allowEarlier ? { update: true, reason: 'earlier' } : { update: false, reason: 'earlier-blocked' };
+}
 
 const UA = 'ai-workshop-tracker/1.0 (open-source workshop aggregator; github)';
 const CONF_TEMPLATE = {
@@ -296,34 +358,88 @@ async function main({ conf, year, dryRun }) {
     if (e.raw?.openreview_venue_id) known.set(e.raw.openreview_venue_id, { path: f, raw: e.raw });
   }
   const today = new Date().toISOString().slice(0, 10);
-  let created = 0, skipped = 0, backfilled = 0;
+  let created = 0, skipped = 0, backfilled = 0, updated = 0, adopted = 0;
+  const changes = []; // human-readable "old -> new" lines for the commit log
 
   for (const g of venues) {
     if (known.has(g.id)) {
-      // Backfill: organizers sometimes publish the deadline on OpenReview
-      // after we imported the venue. Fill it in when it appears.
       const { path: fp, raw } = known.get(g.id);
+      let changed = false;
+      // What OpenReview says the deadline is right now (group `date` line, else
+      // the submission invitation's duedate). Shared by backfill and sync below.
+      let freshDl = parseGroupDeadline(val(g.content ?? {}, 'date')) || (await deadlineFromInvitation(g));
+
+      // (A) Backfill missing fields. Organizers sometimes publish the deadline
+      // (or a website / sub-tracks) on OpenReview after we imported the venue.
+      // The deadline is only ever *filled when absent* here — never overwritten.
       if (!raw.submission_deadline || !raw.website || !raw.tracks) {
-        let dl = parseGroupDeadline(val(g.content ?? {}, 'date')) || (await deadlineFromInvitation(g));
+        let dl = freshDl;
         let subWebsite = null, subTracks = [];
         if (!dl || !raw.website || !raw.tracks) {
           const sub = await subTrackInfo(g, fetchGroups);
-          if (!dl && sub.deadline) dl = sub.deadline;
+          if (!dl && sub.deadline) { dl = sub.deadline; freshDl = freshDl || sub.deadline; }
           subWebsite = sub.website;
           subTracks = tracksToYaml(sub.tracks);
         }
-        let changed = false;
         if (!raw.submission_deadline && dl) {
           raw.submission_deadline = dl.submission_deadline;
           raw.timezone = dl.timezone;
-          raw.deadline_notes = 'imported from OpenReview — check the website for extensions';
+          raw.deadline_notes = syncNote(dl.submission_deadline, today);
           changed = true;
           backfilled++;
         }
         if (!raw.website && subWebsite) { raw.website = subWebsite; changed = true; }
         if (!raw.tracks && subTracks.length) { raw.tracks = subTracks; changed = true; }
-        if (changed && !dryRun) fs.writeFileSync(fp, yaml.dump(raw, { lineWidth: 200, quotingType: '"' }));
       }
+
+      // (B) Keep an existing *bot-managed, human-untouched* deadline in sync with
+      // OpenReview. A deadline counts as bot-managed only if its note still holds
+      // the value the bot last wrote (syncedValue) or the pre-sync legacy marker.
+      // The instant a human edits the value or note, that match breaks and the
+      // entry freezes — the bot never touches it again. Updates are later-only by
+      // default, require a plausible non-null parse, and compare UTC instants
+      // (never raw strings), so a transient/garbled read can't clobber a good value.
+      if (raw.submission_deadline) {
+        const lastBot = syncedValue(raw.deadline_notes);
+        const isLegacy = raw.deadline_notes === LEGACY_IMPORT_NOTE;
+        if (lastBot == null && isLegacy) {
+          // First encounter of a legacy-marked entry: adopt it non-destructively
+          // — stamp the current value so future human edits become detectable.
+          // The deadline itself is left exactly as-is on this pass; real syncing
+          // begins next run, once there is a stamp to compare against.
+          raw.deadline_notes = syncNote(raw.submission_deadline, today);
+          changed = true;
+          adopted++;
+        } else if (lastBot != null && lastBot === raw.submission_deadline) {
+          // Stamped and untouched since: safe to compare against OpenReview.
+          const storedMs = resolveDeadlineUtcMs(raw.submission_deadline, raw.timezone || 'UTC');
+          const fetchedMs = freshDl ? resolveDeadlineUtcMs(freshDl.submission_deadline, freshDl.timezone || 'UTC') : null;
+          const fetchedYear = freshDl ? Number(String(freshDl.submission_deadline).slice(0, 4)) : null;
+          // Skip absurd values rather than failing validate for the whole run.
+          const plausible =
+            fetchedMs != null &&
+            fetchedMs - Date.now() <= TWO_YEARS_MS &&
+            fetchedYear != null && Math.abs(fetchedYear - raw.year) <= 1;
+          const decision = plausible
+            ? decideDeadlineUpdate(storedMs, fetchedMs, { allowEarlier: ALLOW_EARLIER })
+            : { update: false, reason: 'implausible' };
+          if (decision.update) {
+            const from = raw.submission_deadline;
+            raw.submission_deadline = freshDl.submission_deadline;
+            raw.timezone = freshDl.timezone;
+            raw.deadline_notes = syncNote(freshDl.submission_deadline, today);
+            changed = true;
+            updated++;
+            changes.push(`${conf} ${raw.year} · ${path.basename(fp)}: ${from} UTC -> ${freshDl.submission_deadline} UTC (${decision.reason})`);
+          } else if (!plausible && freshDl) {
+            console.warn(`  ⚠ ${path.basename(fp)}: OpenReview deadline "${freshDl.submission_deadline}" looks implausible — left unchanged`);
+          }
+        }
+        // else: a non-bot note, or the value no longer matches the stamp => a
+        // human curated this deadline. Frozen: leave it entirely alone.
+      }
+
+      if (changed && !dryRun) fs.writeFileSync(fp, yaml.dump(raw, { lineWidth: 200, quotingType: '"' }));
       skipped++;
       continue;
     }
@@ -352,7 +468,7 @@ async function main({ conf, year, dryRun }) {
     if (deadline) {
       record.submission_deadline = deadline.submission_deadline;
       record.timezone = deadline.timezone;
-      record.deadline_notes = 'imported from OpenReview — check the website for extensions';
+      record.deadline_notes = syncNote(deadline.submission_deadline, today);
     }
     if (tracks.length) record.tracks = tracks;
     record.openreview_venue_id = g.id;
@@ -373,7 +489,16 @@ async function main({ conf, year, dryRun }) {
     }
     created++;
   }
-  console.log(`${conf} ${year}: ${venues.length} venues on OpenReview — ${created} created, ${skipped} already tracked${backfilled ? `, ${backfilled} deadline(s) backfilled` : ''}.`);
+  if (changes.length && process.env.DEADLINE_CHANGELOG) {
+    fs.appendFileSync(process.env.DEADLINE_CHANGELOG, changes.map((c) => `- ${c}`).join('\n') + '\n');
+  }
+  console.log(
+    `${conf} ${year}: ${venues.length} venues on OpenReview — ${created} created, ${skipped} already tracked` +
+    `${backfilled ? `, ${backfilled} deadline(s) backfilled` : ''}` +
+    `${updated ? `, ${updated} deadline(s) re-synced` : ''}` +
+    `${adopted ? `, ${adopted} legacy note(s) adopted` : ''}.`,
+  );
+  for (const c of changes) console.log(`    ↳ ${c}`);
 }
 
 // Only run the CLI when invoked directly, so the exported helpers

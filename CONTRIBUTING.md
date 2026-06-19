@@ -34,7 +34,7 @@ One YAML file per workshop **edition** (same series ⇒ new file each year).
 | `topics` | ✅ | 1–5 ids from `data/topics.yml` |
 | `submission_deadline` |  | `YYYY-MM-DD HH:MM` or `YYYY-MM-DD` (means 23:59) — **wall-clock time in `timezone`** |
 | `timezone` | ⚠️ | **Required whenever `submission_deadline` is set** (CI rejects a deadline without one). `AoE` (Anywhere on Earth, UTC−12 — the ML default for date-only CFPs), `UTC`, or an IANA name like `America/Los_Angeles`. Via the issue form, pick any zone and the bot converts the deadline to UTC for you (keeping the original in `deadline_notes`). |
-| `deadline_notes` |  | e.g. `"extended from Aug 15"` |
+| `deadline_notes` |  | Free text, e.g. `"extended from Aug 15"`. Bot-imported deadlines keep an `OpenReview-synced …` provenance stamp here; editing this note (or the deadline) freezes auto-sync for that entry. |
 | `tracks` |  | For multi-track workshops (e.g. Full + Short): list of `{ name, submission_deadline?, timezone? }`. Omit `submission_deadline` for a track whose date isn't announced yet. See note below. |
 | `notification_date` |  | `YYYY-MM-DD` |
 | `workshop_date` |  | `YYYY-MM-DD` |
@@ -100,6 +100,10 @@ deadline (AoE or any offset) to UTC, so stored deadlines stay consistent.
 deadline to UTC (AoE or any civil timezone, DST-aware), keeping the original in
 `deadline_notes`; a deadline already in UTC is left unchanged.
 
+`node scripts/deadline_sync_test.mjs` — the discovery bot's deadline re-sync is
+later-only by default, treats unchanged/null as no-ops, and (via the
+`deadline_notes` value stamp) freezes any deadline a human has edited.
+
 Validation failures are posted as a PR comment listing every problem at once.
 
 ## Paper lists
@@ -109,6 +113,7 @@ Don't paste papers by hand. Set `openreview_venue_id` and the monthly `openrevie
 ## For maintainers
 
 - **Review queue:** PRs from contributors and from the two bots (`issue-to-pr`, `openreview-refresh`). CI has already validated data PRs — skim and merge.
+- **Auto-synced deadlines:** the weekly `discover` job keeps OpenReview-imported deadlines in step with extensions (later-only by default) and records each change in its commit message — no PR. A deadline (or its `deadline_notes`) you edit by hand is **frozen**: the bot won't re-sync it. Notes beginning `OpenReview-synced …` are bot-stamped; changing the date or replacing the note hands that deadline to manual control. To also follow earlier corrections, flip `ALLOW_EARLIER` in `scripts/discover_openreview.mjs`.
 - **Health issues:** two auto-maintained issues labelled `data-health` (stale entries, broken links). They update in place and close themselves when clean.
 - **Seed data:** entries whose `notes` contain `SEED DATA` are unverified placeholders from the initial build — verify or replace them.
 - Data is licensed CC-BY-4.0; by contributing you agree your additions are too.

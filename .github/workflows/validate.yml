@@ -29,6 +29,8 @@ jobs:
         run: node scripts/tz_normalize_test.mjs
       - name: Test contributor timezone conversion (bot -> UTC)
         run: node scripts/issue_tz_test.mjs
+      - name: Test deadline-sync logic (later-only, freeze-on-touch)
+        run: node scripts/deadline_sync_test.mjs
       - name: Check schema-docs parity
         run: node scripts/docs_sync_test.mjs
       - name: Validate workshop data

@@ -153,6 +153,28 @@ per-track — to carry an explicit `timezone`. Whatever the stored zone, the boa
 and workshop pages convert to the **viewer's local time** at display, so the
 label is only reference.
 
+**Deadline sync (extensions).** A deadline the discovery bot imported is kept in
+step with OpenReview on later weekly runs, so an organizer's extension flows in
+without a hand edit. The mechanism is provenance-by-stamp: when the bot writes a
+deadline it records the exact value in `deadline_notes` (`OpenReview-synced
+<value> UTC …`), and a later run re-syncs **only** when the stored value still
+equals that stamp. The moment a human edits the deadline — or the note — the
+stamp no longer matches and the entry is **frozen**: the bot never touches it
+again (this is how human curation always wins over the bot, by design). Re-syncs
+are **later-only** by default (extensions; never earlier or to null — a
+transient/garbled OpenReview read is the dangerous failure mode), require a
+plausible parse (within ±2 years, year within 1 of the edition), and compare UTC
+instants rather than raw strings. Pre-sync entries (the legacy `imported from
+OpenReview …` marker, ≈700 of them, mostly past years that are never re-scanned)
+are **adopted** non-destructively on first encounter — stamped once with their
+current value, deadline untouched — and become eligible the next run. The toggle
+`ALLOW_EARLIER` in `discover_openreview.mjs` opts into following earlier
+corrections too. Every value change is appended to `$DEADLINE_CHANGELOG` and the
+weekly workflow folds it into the commit message, so each automated edit is
+recorded in history (`git log`) rather than applied silently. Only the discovery
+job syncs deadlines; the monthly `openreview-refresh` still touches only the
+paper cache.
+
 ## Multi-track workshops (per-track deadlines)
 
 Some workshops split submissions into tracks with different deadlines (e.g. ECCV
