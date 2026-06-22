@@ -223,10 +223,6 @@ details.dd .dd-panel {
 .countdown.is-over { color: var(--muted); }
 .countdown.is-over::before, .countdown.is-tba::before { content: ""; }
 .countdown.is-tba { color: var(--muted); }
-@media (prefers-reduced-motion: no-preference) {
-  .countdown.is-critical { animation: tick-pulse 2s ease-in-out infinite; }
-  @keyframes tick-pulse { 50% { opacity: 0.55; } }
-}
 .ws-links { grid-column: 1 / -1; display: flex; gap: 1rem; font-size: 0.82rem; padding-left: 6.5rem; }
 .row-passed { opacity: 0.62; }
 .empty-state {
