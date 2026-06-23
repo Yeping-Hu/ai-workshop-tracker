@@ -349,6 +349,16 @@ into a `YYYY-MM-DD HH:MM` string (defaulting a missing time to 23:59 and
 rejecting impossible dates like Feb 30); the existing timezone→UTC conversion is
 unchanged, so there's still one source of truth for deadline math.
 
+A bot-imported entry has its topics keyword-guessed from the venue title, so it
+carries a short `notes` flag (`AUTO_TOPICS_NOTE` in `discover_openreview.mjs`:
+"topics were auto-suggested — edits welcome"). It's deliberately topic-only (the
+deadline has its own `deadline_notes` provenance) and carries no import date,
+because the edit transform drops it — via `isAutoTopicsNote`, which also matches
+the historical "Auto-imported … (topics are keyword-guessed)" wording — the
+moment a human changes the topics through the picker. So it can't go stale: it's
+shown exactly while the topics are still machine-guessed, and disappears once
+they're curated.
+
 ## Known gap: the UI behavior suite (`ui_test.mjs`) is not in CI
 
 `scripts/ui_test.mjs` is a headless-browser suite that locks the homepage's

@@ -5,7 +5,7 @@
  */
 import { applyWorkshopEdit } from './issue_edit_to_yaml.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
-import { syncNote } from './discover_openreview.mjs';
+import { syncNote, AUTO_TOPICS_NOTE } from './discover_openreview.mjs';
 
 let failed = 0;
 const check = (name, cond) => { if (!cond) { failed++; console.log(`FAIL: ${name}`); } };
@@ -132,6 +132,38 @@ throws('topics: unchanged set throws (order-insensitive)',
   const { record, changes } = applyWorkshopEdit(base(), { topics: ['nlp'], deadline: '2026-06-01 09:00', timezone: 'UTC' });
   check('topics+deadline: topics set', JSON.stringify(record.topics) === JSON.stringify(['nlp']));
   check('topics+deadline: both in changes', changes.includes('topics') && changes.includes('submission_deadline'));
+}
+
+// 18) Editing topics clears the bot's auto-suggested-topics note.
+{
+  const { record, changes } = applyWorkshopEdit({ ...base(), notes: AUTO_TOPICS_NOTE }, { topics: ['llms', 'vision'] });
+  check('auto-note: cleared when topics change', record.notes === undefined);
+  check('auto-note: topics still recorded', changes.includes('topics'));
+}
+
+// 19) The historical "Auto-imported … (topics are keyword-guessed)" wording is recognized and cleared too.
+{
+  const legacy = 'Auto-imported from the OpenReview venue record on 2026-06-11 — please verify and enrich (topics are keyword-guessed).';
+  const { record } = applyWorkshopEdit({ ...base(), notes: legacy }, { topics: ['llms', 'vision'] });
+  check('auto-note: legacy wording cleared on topics change', record.notes === undefined);
+}
+
+// 20) A human-written note is preserved when topics change (not mistaken for the auto note).
+{
+  const { record } = applyWorkshopEdit({ ...base(), notes: 'merged with the co-located workshop' }, { topics: ['llms', 'vision'] });
+  check('auto-note: human note preserved on topics change', record.notes === 'merged with the co-located workshop');
+}
+
+// 21) The auto note is kept when topics are NOT changed (here only the deadline is edited).
+{
+  const { record } = applyWorkshopEdit({ ...base(), notes: AUTO_TOPICS_NOTE }, { deadline: '2026-06-01 09:00', timezone: 'UTC' });
+  check('auto-note: kept when topics unchanged', record.notes === AUTO_TOPICS_NOTE);
+}
+
+// 22) Re-selecting the same topic set is not a change, so the auto note stays.
+{
+  const { record, changes } = applyWorkshopEdit({ ...base(), topics: ['llms', 'vision'], notes: AUTO_TOPICS_NOTE }, { topics: ['vision', 'llms'], website: 'https://new.example.com' });
+  check('auto-note: kept when topic set unchanged', record.notes === AUTO_TOPICS_NOTE && !changes.includes('topics') && changes.includes('website'));
 }
 
 console.log(failed === 0 ? '\nEdit-form transform OK.' : `\n${failed} test(s) failed.`);

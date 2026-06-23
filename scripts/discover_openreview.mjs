@@ -87,6 +87,22 @@ export function syncedValue(notes) {
   return m ? m[1] : null;
 }
 
+// The note the bot leaves on a freshly imported entry: its topics were guessed
+// from the venue title, not curated, so they may be off. It deliberately says
+// nothing about the deadline (deadline_notes covers that) and carries no import
+// date — the edit form drops it the moment a human curates the topics (see
+// isAutoTopicsNote), so it can't go stale.
+export const AUTO_TOPICS_NOTE = 'Topics were auto-suggested and may be imprecise — edits welcome.';
+
+/** True if `notes` is the bot's auto-suggested-topics note — the current wording
+ *  or the historical "Auto-imported … (topics are keyword-guessed)" form — so the
+ *  edit form can drop it once a human curates the topics. */
+export function isAutoTopicsNote(notes) {
+  if (typeof notes !== 'string') return false;
+  if (notes === AUTO_TOPICS_NOTE) return true;
+  return /^Auto-imported from the OpenReview venue record on \d{4}-\d{2}-\d{2} — please verify and enrich \(topics are keyword-guessed\)\.?$/.test(notes.trim());
+}
+
 /**
  * Decide whether a freshly fetched deadline should replace the stored one.
  * Pure value judgment over UTC instants (ms): the caller owns the separate
@@ -487,7 +503,7 @@ async function main({ conf, year, dryRun }) {
     if (tracks.length) record.tracks = tracks;
     record.openreview_venue_id = g.id;
     record.submission_portal = 'openreview';
-    record.notes = `Auto-imported from the OpenReview venue record on ${today} — please verify and enrich (topics are keyword-guessed).`;
+    record.notes = AUTO_TOPICS_NOTE;
     record.added = today;
 
     let base = `${conf}-${year}-${slugify(tail)}`;

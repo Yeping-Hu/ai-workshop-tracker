@@ -17,7 +17,7 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 import { WORKSHOPS_DIR } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs, isValidTimezone, assembleDeadline } from '../lib/dates.mjs';
-import { syncedValue, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
+import { syncedValue, LEGACY_IMPORT_NOTE, isAutoTopicsNote } from './discover_openreview.mjs';
 
 /**
  * Pure transform: apply the filled-in edit fields to an existing record.
@@ -85,7 +85,13 @@ export function applyWorkshopEdit(existing, fields) {
   if (topics.length) {
     const sortedNew = [...topics].sort().join(',');
     const sortedOld = Array.isArray(r.topics) ? [...r.topics].map(String).sort().join(',') : '';
-    if (sortedNew !== sortedOld) { r.topics = topics; changes.push('topics'); }
+    if (sortedNew !== sortedOld) {
+      r.topics = topics;
+      changes.push('topics');
+      // The topics are now human-curated, so the bot's "topics were auto-suggested"
+      // note no longer applies — drop it (a contributor's own note wouldn't match).
+      if (isAutoTopicsNote(r.notes)) delete r.notes;
+    }
   }
 
   if (!changes.length) {

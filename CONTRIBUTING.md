@@ -43,7 +43,7 @@ One YAML file per workshop **edition** (same series ⇒ new file each year).
 | `submission_portal` |  | `openreview` \| `cmt` \| `email` \| `other` \| `unknown` |
 | `organizers` |  | List of names |
 | `previous_editions` |  | List of `{ year, website, proceedings_url }` |
-| `notes` |  | Free text |
+| `notes` |  | Free text. Bot-imported entries carry a short "topics were auto-suggested — edits welcome" note; the edit form drops it automatically once a human changes the topics. |
 | `added` |  | `YYYY-MM-DD` — feeds the "new workshops" RSS |
 
 **Never add a `status` field** — upcoming/passed/past is computed from the dates at build time.
