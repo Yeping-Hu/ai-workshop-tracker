@@ -6,9 +6,9 @@ website: https://lifelongagent.github.io
 topics:
   - agents
   - safety-alignment
-submission_deadline: 2026-07-03 11:59
+submission_deadline: 2026-07-04 11:59
 timezone: UTC
-deadline_notes: OpenReview-synced 2026-07-03 11:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_notes: OpenReview-synced 2026-07-04 11:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.
 openreview_venue_id: colmweb.org/COLM/2026/Workshop/LLA
 submission_portal: openreview
 notes: Auto-imported from the OpenReview venue record on 2026-06-11 — please verify and enrich (topics are keyword-guessed).
