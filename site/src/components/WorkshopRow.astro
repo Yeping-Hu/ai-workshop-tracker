@@ -1,6 +1,6 @@
 ---
 import { conferenceById, topicById } from '../lib/data';
-import { href, REPO_URL, CALENDAR_ENABLED } from '../lib/site';
+import { href, CALENDAR_ENABLED } from '../lib/site';
 
 interface Props {
   w: Record<string, any>;
@@ -9,11 +9,6 @@ const { w } = Astro.props;
 const conf = conferenceById.get(w.conference) ?? { name: w.conference, color: '#888' };
 const search = [w.name, w.acronym, conf.name, w.year].filter(Boolean).join(' ').toLowerCase();
 const hasDeadline = w.deadlineUtcMs != null;
-// Structured, timezone-safe edit form (replaces the raw-YAML editor link). The
-// deadline is intentionally not pre-filled so it's entered consciously with a
-// timezone; the bot converts to UTC. Advanced fields stay editable via the
-// raw YAML, linked from the form's intro.
-const editUrl = `${REPO_URL}/issues/new?template=edit-workshop.yml&slug=${encodeURIComponent(w.slug)}&website=${encodeURIComponent(w.website ?? '')}&title=${encodeURIComponent('Edit: ' + w.slug)}`;
 ---
 
 <div
@@ -64,13 +59,9 @@ const editUrl = `${REPO_URL}/issues/new?template=edit-workshop.yml&slug=${encode
     <span class="countdown is-tba">TBA</span>
   )}
 
-  <div class="ws-links small">
-    {w.website ? (
-      <a href={w.website} rel="noopener">Website ↗</a>
-    ) : (
-      <a class="link-tba" href={editUrl} rel="noopener">Website TBA — add it</a>
-    )}
-    {CALENDAR_ENABLED && hasDeadline && <a href={href(`/feeds/ws-${w.slug}.ics`)}>.ics</a>}
-    <a href={editUrl} rel="noopener">✎ Edit</a>
-  </div>
+  {CALENDAR_ENABLED && hasDeadline && (
+    <div class="ws-links small">
+      <a href={href(`/feeds/ws-${w.slug}.ics`)}>.ics</a>
+    </div>
+  )}
 </div>
