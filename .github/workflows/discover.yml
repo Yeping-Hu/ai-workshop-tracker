@@ -69,3 +69,11 @@ jobs:
           # Pushes made with GITHUB_TOKEN don't trigger on:push workflows,
           # so kick the deploy explicitly.
           gh workflow run deploy.yml --ref main
+      # Non-blocking safety net: warn (in the run log) about any current/next-year
+      # deadline that differs from OpenReview's live duedate by a tz-shaped offset
+      # — the signature of a wrong-timezone manual edit the bot can't auto-fix
+      # because a human edit freezes auto-sync. Never fails the job.
+      - name: Cross-check deadlines vs OpenReview (warn only)
+        if: always()
+        continue-on-error: true
+        run: node scripts/deadline_crosscheck.mjs --recent

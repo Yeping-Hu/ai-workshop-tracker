@@ -1,0 +1,51 @@
+# On demand: re-pull a single workshop's submission deadline from OpenReview's
+# live invitation duedate and publish it — for fixing a stale, extended, or
+# mistyped deadline immediately instead of waiting for the weekly discovery run
+# (and without hand-editing the time / guessing a timezone). Run it from the
+# Actions tab: "Run workflow" → enter the workshop slug.
+name: Re-sync deadline from OpenReview
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: 'Workshop slug (the data/workshops filename without .yml), e.g. colm-2026-daih'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  resync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Re-sync the deadline from OpenReview
+        run: node scripts/resync_deadline.mjs --slug "${{ inputs.slug }}"
+      - name: Validate
+        run: node scripts/validate.mjs
+      # Validation passed — publish directly. A failed validation fails the job
+      # before anything is committed.
+      - name: Publish if changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$(git status --porcelain data/workshops)" ]; then
+            echo "No change — the deadline was already in sync with OpenReview."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/workshops
+          git commit -m "data: re-sync ${{ inputs.slug }} deadline from OpenReview (manual dispatch)"
+          git push
+          # Pushes made with GITHUB_TOKEN don't trigger on:push workflows,
+          # so kick the deploy explicitly.
+          gh workflow run deploy.yml --ref main

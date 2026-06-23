@@ -104,6 +104,10 @@ deadline to UTC (AoE or any civil timezone, DST-aware), keeping the original in
 later-only by default, treats unchanged/null as no-ops, and (via the
 `deadline_notes` value stamp) freezes any deadline a human has edited.
 
+`node scripts/deadline_crosscheck_test.mjs` — the cross-check classifier labels a
+stored-vs-OpenReview gap as match / tz-suspect / changed (a near-whole-hour gap
+is a likely timezone slip; a ~day gap is a real extension).
+
 Validation failures are posted as a PR comment listing every problem at once.
 
 ## Paper lists
@@ -114,6 +118,8 @@ Don't paste papers by hand. Set `openreview_venue_id` and the monthly `openrevie
 
 - **Review queue:** PRs from contributors and from the two bots (`issue-to-pr`, `openreview-refresh`). CI has already validated data PRs — skim and merge.
 - **Auto-synced deadlines:** the weekly `discover` job keeps OpenReview-imported deadlines in step with extensions (later-only by default) and records each change in its commit message — no PR. A deadline (or its `deadline_notes`) you edit by hand is **frozen**: the bot won't re-sync it. Notes beginning `OpenReview-synced …` are bot-stamped; changing the date or replacing the note hands that deadline to manual control. To also follow earlier corrections, flip `ALLOW_EARLIER` in `scripts/discover_openreview.mjs`.
+- **Fixing a stale/extended deadline now:** rather than hand-editing the time (easy to get the timezone wrong), re-pull it from OpenReview — Actions → **Re-sync deadline from OpenReview** → enter the slug (or locally `node scripts/resync_deadline.mjs --slug <slug>`). It sets the deadline to OpenReview's current duedate, in either direction, and re-stamps it for future auto-sync.
+- **Timezone-mistake warnings:** the weekly `discover` run ends with a non-blocking cross-check (`scripts/deadline_crosscheck.mjs`) that flags any deadline differing from OpenReview's live duedate by a tz-shaped offset — the signature of a wrong-timezone manual edit. Hits are soft "please verify" notices in the run log, not auto-edits; fix one with the re-sync workflow above.
 - **Health issues:** two auto-maintained issues labelled `data-health` (stale entries, broken links). They update in place and close themselves when clean.
 - **Seed data:** entries whose `notes` contain `SEED DATA` are unverified placeholders from the initial build — verify or replace them.
 - Data is licensed CC-BY-4.0; by contributing you agree your additions are too.

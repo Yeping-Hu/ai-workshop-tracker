@@ -175,6 +175,18 @@ recorded in history (`git log`) rather than applied silently. Only the discovery
 job syncs deadlines; the monthly `openreview-refresh` still touches only the
 paper cache.
 
+Because a human edit freezes auto-sync, two tools cover the manual case. A
+non-blocking **cross-check** (`scripts/deadline_crosscheck.mjs`, run at the end
+of the weekly discovery job) compares every current/next-year deadline against
+OpenReview's live invitation `duedate` and warns when they differ by a
+tz-shaped offset (a near whole/half/quarter hour, ≤14h, and not ~a day) — the
+signature of a wrong-timezone manual edit; a ~day gap is reported as a likely
+real extension instead. And an **on-demand re-sync**
+(`scripts/resync_deadline.mjs --slug <slug>`, also a `workflow_dispatch`) lets a
+maintainer re-pull one workshop's deadline straight from OpenReview's duedate in
+either direction, re-stamping it for future auto-sync — so fixing a stale or
+mistyped deadline never requires hand-typing a UTC time.
+
 ## Multi-track workshops (per-track deadlines)
 
 Some workshops split submissions into tracks with different deadlines (e.g. ECCV
