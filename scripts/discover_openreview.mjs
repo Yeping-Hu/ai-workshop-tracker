@@ -228,10 +228,10 @@ export async function deadlineFromInvitation(g) {
   // identical to "no deadline exists", which is how ECCV's WICV and ~20
   // siblings imported as "Deadline unknown" despite having a visible duedate.
   // Retry 429/5xx with backoff so throttling no longer masquerades as absence.
-  const MAX = 4;
+  const MAX = 5;
   for (let attempt = 0; attempt < MAX; attempt++) {
     try {
-      await new Promise((r) => setTimeout(r, 150 + attempt * attempt * 600)); // 150ms, then backoff
+      await new Promise((r) => setTimeout(r, 350 + attempt * attempt * 1000)); // pace, then escalating backoff to clear rate-limit penalties
       const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
       if (res.status === 429 || res.status >= 500) {
         if (attempt < MAX - 1) continue; // retry
@@ -256,19 +256,20 @@ export async function deadlineFromInvitation(g) {
  *  "no sub-tracks" instead of crashing the whole import. */
 export async function fetchGroups(prefix) {
   const url = `https://api2.openreview.net/groups?prefix=${encodeURIComponent(prefix)}&limit=1000`;
-  for (let attempt = 0; attempt < 4; attempt++) {
+  const MAX = 5;
+  for (let attempt = 0; attempt < MAX; attempt++) {
     try {
-      await new Promise((r) => setTimeout(r, attempt === 0 ? 0 : attempt * attempt * 600));
+      await new Promise((r) => setTimeout(r, attempt === 0 ? 0 : attempt * attempt * 1000));
       const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
       if (res.status === 429 || res.status >= 500) {
-        if (attempt < 3) continue;
+        if (attempt < MAX - 1) continue;
         throw new Error(`HTTP ${res.status} after retries`);
       }
       if (!res.ok) return [];
       const { groups = [] } = await res.json();
       return groups;
     } catch (err) {
-      if (attempt < 3) continue;
+      if (attempt < MAX - 1) continue;
       console.warn(`  ⚠ group lookup failed for ${prefix}: ${err.message}`);
       return [];
     }
@@ -365,15 +366,26 @@ async function main({ conf, year, dryRun }) {
     if (known.has(g.id)) {
       const { path: fp, raw } = known.get(g.id);
       let changed = false;
-      // What OpenReview says the deadline is right now (group `date` line, else
-      // the submission invitation's duedate). Shared by backfill and sync below.
-      let freshDl = parseGroupDeadline(val(g.content ?? {}, 'date')) || (await deadlineFromInvitation(g));
+      // OpenReview's current deadline: the group's `date` line is free (already
+      // in hand), but the submission invitation's duedate costs a network call,
+      // so it is fetched LAZILY — only when a branch actually needs the value.
+      // Adopting a legacy entry and skipping a human-frozen one need no value at
+      // all, so those paths make ZERO invitation calls. That is what keeps the
+      // weekly run (overwhelmingly adoptions right now) inside OpenReview's rate
+      // limit, instead of burning one wasted call per venue and getting throttled
+      // partway through the conference list.
+      let freshDl = parseGroupDeadline(val(g.content ?? {}, 'date'));
+      let invTried = false;
+      const ensureDl = async () => {
+        if (!freshDl && !invTried) { invTried = true; freshDl = await deadlineFromInvitation(g); }
+        return freshDl;
+      };
 
       // (A) Backfill missing fields. Organizers sometimes publish the deadline
       // (or a website / sub-tracks) on OpenReview after we imported the venue.
       // The deadline is only ever *filled when absent* here — never overwritten.
       if (!raw.submission_deadline || !raw.website || !raw.tracks) {
-        let dl = freshDl;
+        let dl = !raw.submission_deadline ? await ensureDl() : null;
         let subWebsite = null, subTracks = [];
         if (!dl || !raw.website || !raw.tracks) {
           const sub = await subTrackInfo(g, fetchGroups);
@@ -406,15 +418,17 @@ async function main({ conf, year, dryRun }) {
           // First encounter of a legacy-marked entry: adopt it non-destructively
           // — stamp the current value so future human edits become detectable.
           // The deadline itself is left exactly as-is on this pass; real syncing
-          // begins next run, once there is a stamp to compare against.
+          // begins next run, once there is a stamp to compare against. No
+          // invitation fetch happens here — adoption never uses OpenReview's value.
           raw.deadline_notes = syncNote(raw.submission_deadline, today);
           changed = true;
           adopted++;
         } else if (lastBot != null && lastBot === raw.submission_deadline) {
           // Stamped and untouched since: safe to compare against OpenReview.
+          const fetched = await ensureDl();
           const storedMs = resolveDeadlineUtcMs(raw.submission_deadline, raw.timezone || 'UTC');
-          const fetchedMs = freshDl ? resolveDeadlineUtcMs(freshDl.submission_deadline, freshDl.timezone || 'UTC') : null;
-          const fetchedYear = freshDl ? Number(String(freshDl.submission_deadline).slice(0, 4)) : null;
+          const fetchedMs = fetched ? resolveDeadlineUtcMs(fetched.submission_deadline, fetched.timezone || 'UTC') : null;
+          const fetchedYear = fetched ? Number(String(fetched.submission_deadline).slice(0, 4)) : null;
           // Skip absurd values rather than failing validate for the whole run.
           const plausible =
             fetchedMs != null &&
@@ -425,18 +439,18 @@ async function main({ conf, year, dryRun }) {
             : { update: false, reason: 'implausible' };
           if (decision.update) {
             const from = raw.submission_deadline;
-            raw.submission_deadline = freshDl.submission_deadline;
-            raw.timezone = freshDl.timezone;
-            raw.deadline_notes = syncNote(freshDl.submission_deadline, today);
+            raw.submission_deadline = fetched.submission_deadline;
+            raw.timezone = fetched.timezone;
+            raw.deadline_notes = syncNote(fetched.submission_deadline, today);
             changed = true;
             updated++;
-            changes.push(`${conf} ${raw.year} · ${path.basename(fp)}: ${from} UTC -> ${freshDl.submission_deadline} UTC (${decision.reason})`);
-          } else if (!plausible && freshDl) {
-            console.warn(`  ⚠ ${path.basename(fp)}: OpenReview deadline "${freshDl.submission_deadline}" looks implausible — left unchanged`);
+            changes.push(`${conf} ${raw.year} · ${path.basename(fp)}: ${from} UTC -> ${fetched.submission_deadline} UTC (${decision.reason})`);
+          } else if (!plausible && fetched) {
+            console.warn(`  ⚠ ${path.basename(fp)}: OpenReview deadline "${fetched.submission_deadline}" looks implausible — left unchanged`);
           }
         }
         // else: a non-bot note, or the value no longer matches the stamp => a
-        // human curated this deadline. Frozen: leave it entirely alone.
+        // human curated this deadline. Frozen: leave it alone, no network call.
       }
 
       if (changed && !dryRun) fs.writeFileSync(fp, yaml.dump(raw, { lineWidth: 200, quotingType: '"' }));

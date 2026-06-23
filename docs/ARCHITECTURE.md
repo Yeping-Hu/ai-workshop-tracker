@@ -187,6 +187,14 @@ maintainer re-pull one workshop's deadline straight from OpenReview's duedate in
 either direction, re-stamping it for future auto-sync — so fixing a stale or
 mistyped deadline never requires hand-typing a UTC time.
 
+OpenReview rate-limits bulk callers (HTTP 429), so the weekly run is tuned to
+stay under the limit: the submission-invitation duedate (a network call) is
+fetched only when a venue actually needs it — never for the common adopt/frozen
+paths — both the group and invitation lookups retry 429/5xx with escalating
+backoff, and the workflow spaces conferences apart so each starts with a
+recovered budget. Without this the burst from the first conference throttles the
+rest, and only it gets processed.
+
 ## Multi-track workshops (per-track deadlines)
 
 Some workshops split submissions into tracks with different deadlines (e.g. ECCV
