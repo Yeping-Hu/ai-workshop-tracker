@@ -1,15 +1,15 @@
-name: 'Generative AI in Genomics (Gen²): Barriers and Frontiers'
+name: "Generative AI in Genomics (Gen²): Barriers and Frontiers"
 acronym: Gen² 2026
 conference: iclr
 year: 2026
 website: http://genai-in-genomics.github.io/
 topics:
-- genomics
-- generative-models
+  - genomics
+  - generative-models
 openreview_venue_id: ICLR.cc/2026/Workshop/Gen2
 submission_portal: openreview
 notes: Auto-imported from the OpenReview venue record on 2026-06-10 — please verify and enrich (topics are keyword-guessed).
-added: '2026-06-10'
+added: "2026-06-10"
 submission_deadline: 2026-02-12 11:59
 timezone: UTC
-deadline_notes: imported from OpenReview — check the website for extensions
+deadline_notes: OpenReview-synced 2026-02-12 11:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.

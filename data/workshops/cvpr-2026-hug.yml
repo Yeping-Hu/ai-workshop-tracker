@@ -1,10 +1,3 @@
-# --- Missing: submission deadline -----------------------------------------
-# Know it? Add two lines anywhere below, for example:
-#   submission_deadline: 2026-09-15 23:59    # or just a date: 2026-09-15
-#   timezone: AoE                            # AoE / UTC / America/Los_Angeles
-# Then click "Commit changes..." -> "Propose changes" to open a pull request.
-# It is validated automatically and usually merged within a day.
-# ---------------------------------------------------------------------------
 name: The First Workshop on Humans of Generative AI
 acronym: CVPR HuG
 conference: cvpr
@@ -16,3 +9,6 @@ openreview_venue_id: thecvf.com/CVPR/2026/Workshop/HuG
 submission_portal: openreview
 notes: Auto-imported from the OpenReview venue record on 2026-06-10 — please verify and enrich (topics are keyword-guessed).
 added: "2026-06-10"
+submission_deadline: 2026-04-18 12:59
+timezone: UTC
+deadline_notes: OpenReview-synced 2026-04-18 12:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.

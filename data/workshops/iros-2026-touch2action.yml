@@ -1,0 +1,14 @@
+name: "Touch-to-Action: Enhancing Robot Manipulation through Tactile Perception"
+acronym: Touch2Action
+conference: iros
+year: 2026
+website: http://iros-touch2action.github.io/
+topics:
+  - robotics
+submission_deadline: 2026-08-31 11:59
+timezone: UTC
+deadline_notes: OpenReview-synced 2026-08-31 11:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.
+openreview_venue_id: IEEE.org/IROS/2026/Workshop/Touch2Action
+submission_portal: openreview
+notes: Auto-imported from the OpenReview venue record on 2026-06-23 — please verify and enrich (topics are keyword-guessed).
+added: "2026-06-23"
