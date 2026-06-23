@@ -175,6 +175,12 @@ recorded in history (`git log`) rather than applied silently. Only the discovery
 job syncs deadlines; the monthly `openreview-refresh` still touches only the
 paper cache.
 
+The `OpenReview-synced …` stamp lives in `deadline_notes` and is shown on a
+workshop's **detail page** (with a "verify on the website" caveat), but **not on
+the deadline board**: once the backlog was adopted nearly every entry carried
+one, which crowded the list, so the board shows only the deadline and countdown
+and the full note stays one click away.
+
 Because a human edit freezes auto-sync, two tools cover the manual case. A
 weekly **cross-check** (`scripts/deadline_crosscheck.mjs`, the `deadline-review`
 workflow) compares current/next-year deadlines against OpenReview's live
