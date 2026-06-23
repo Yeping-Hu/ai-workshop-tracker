@@ -4,12 +4,12 @@ conference: icml
 year: 2026
 website: https://agentic-uncertainty-icml2026.github.io/
 topics:
-- systems
-- agents
+  - systems
+  - agents
 openreview_venue_id: ICML.cc/2026/Workshop/AgenticUQ
 submission_portal: openreview
 notes: Auto-imported from the OpenReview venue record on 2026-06-10 — please verify and enrich (topics are keyword-guessed).
-added: '2026-06-10'
+added: "2026-06-10"
 submission_deadline: 2026-05-02 11:59
 timezone: UTC
-deadline_notes: imported from OpenReview — check the website for extensions
+deadline_notes: OpenReview-synced 2026-05-02 11:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.
