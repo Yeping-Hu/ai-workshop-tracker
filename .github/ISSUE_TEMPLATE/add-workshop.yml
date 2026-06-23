@@ -42,25 +42,88 @@ body:
       placeholder: "https://example.org/interpml2026"
     validations:
       required: true
-  - type: input
+  - type: dropdown
     id: topics
     attributes:
       label: Topics
-      description: 1–5 comma-separated topic ids from [data/topics.yml](../blob/main/data/topics.yml), e.g. `interpretability, safety-alignment`.
-      placeholder: "interpretability, llms"
+      multiple: true
+      description: "Pick 1–5 topics that best fit. This is the full controlled vocabulary (from data/topics.yml); choosing from the list keeps topic ids consistent — no typos, no unknown ids."
+      options:
+        # topic-options:start — generated from data/topics.yml by scripts/gen_topic_options.mjs (do not edit by hand)
+        - agents
+        - causality
+        - climate
+        - datasets
+        - diffusion
+        - education
+        - efficiency
+        - evaluation-benchmarks
+        - fairness
+        - federated-learning
+        - generative-models
+        - genomics
+        - graphs
+        - healthcare-bio
+        - interpretability
+        - llms
+        - math-reasoning
+        - multimodal
+        - neuroscience
+        - nlp
+        - optimization
+        - physics
+        - privacy
+        - reinforcement-learning
+        - robotics
+        - robustness
+        - safety-alignment
+        - science-applications
+        - speech-audio
+        - systems
+        - tabular
+        - theory
+        - time-series
+        - vision
+        - other
+        # topic-options:end
     validations:
       required: true
-  - type: input
-    id: deadline
+  - type: markdown
     attributes:
-      label: Submission deadline
-      description: "`YYYY-MM-DD HH:MM` or just `YYYY-MM-DD` (= 23:59)."
-      placeholder: "2026-08-22 23:59"
+      value: |
+        ### Submission deadline
+        Pick year, month, and day together. Leave the time blank for end-of-day (23:59). Leave all four blank if there's no deadline yet.
+  - type: dropdown
+    id: deadline_year
+    attributes:
+      label: Deadline year
+      options: ["2025", "2026", "2027", "2028", "2029"]
+  - type: dropdown
+    id: deadline_month
+    attributes:
+      label: Deadline month
+      options: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]
+  - type: dropdown
+    id: deadline_day
+    attributes:
+      label: Deadline day
+      options: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31"]
+  - type: dropdown
+    id: deadline_hour
+    attributes:
+      label: Deadline hour
+      description: 24-hour clock. Leave blank with a date for 23:59.
+      options: ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"]
+  - type: dropdown
+    id: deadline_minute
+    attributes:
+      label: Deadline minute
+      options: ["00", "15", "30", "45", "59"]
   - type: dropdown
     id: timezone
     attributes:
       label: Timezone
-      description: "Required if you entered a deadline above. Pick whatever timezone the CFP uses — we convert it to UTC for you. AoE (Anywhere on Earth, UTC−12) is the ML default; pick it if the CFP just says a date with no zone."
+      description: "Required if you picked a deadline above. Choose whatever timezone the CFP uses — we convert it to UTC for you. AoE (Anywhere on Earth, UTC−12) is the ML default; pick it if the CFP just says a date with no zone."
       options:
         - AoE
         - UTC

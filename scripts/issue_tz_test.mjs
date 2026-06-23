@@ -13,11 +13,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { assembleDeadline } from '../lib/dates.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BOT = path.join(ROOT, 'scripts', 'issue_to_yaml.mjs');
 
 function body({ tz, deadline = '2026-08-22 17:00' }) {
+  // The add form now collects the deadline as year/month/day/hour/minute
+  // dropdowns; split the convenience string into those sections.
+  const [datePart, timePart = ''] = deadline.split(' ');
+  const [y, mo, d] = datePart.split('-');
+  const [hh = '', mm = ''] = timePart ? timePart.split(':') : ['', ''];
   return `### Workshop name
 
 TZ Conv Test
@@ -38,9 +44,25 @@ https://example.com/ws
 
 other
 
-### Submission deadline
+### Deadline year
 
-${deadline}
+${y}
+
+### Deadline month
+
+${mo}
+
+### Deadline day
+
+${d}
+
+### Deadline hour
+
+${hh}
+
+### Deadline minute
+
+${mm}
 
 ### Timezone
 
@@ -72,6 +94,15 @@ function check(label, cond, detail = '') {
   if (!cond) failed++;
   console.log(`${cond ? '✓' : '✗'} ${label}${cond ? '' : `  ${detail}`}`);
 }
+
+// --- assembleDeadline unit checks: the deadline dropdowns feed this helper ---
+const threw = (fn) => { try { fn(); return false; } catch { return true; } };
+check('assembleDeadline: all blank -> ""', assembleDeadline({}) === '');
+check('assembleDeadline: date only -> 23:59', assembleDeadline({ year: '2026', month: '08', day: '22' }) === '2026-08-22 23:59');
+check('assembleDeadline: hour only -> :00 minute', assembleDeadline({ year: '2026', month: '08', day: '22', hour: '09' }) === '2026-08-22 09:00');
+check('assembleDeadline: full value', assembleDeadline({ year: '2026', month: '08', day: '22', hour: '17', minute: '30' }) === '2026-08-22 17:30');
+check('assembleDeadline: partial date throws', threw(() => assembleDeadline({ year: '2026', month: '08' })));
+check('assembleDeadline: impossible date throws', threw(() => assembleDeadline({ year: '2026', month: '02', day: '30' })));
 
 // 1. Summer LA (PDT = UTC-7): Aug 22 17:00 -> Aug 23 00:00 UTC, with note.
 let r = run(body({ tz: 'America/Los_Angeles' }));

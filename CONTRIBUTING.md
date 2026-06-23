@@ -8,7 +8,7 @@ Open the **["Add a workshop" issue form](../../issues/new?template=add-workshop.
 
 ## 2. Edit an entry (no Git needed)
 
-Every workshop page and board row has a **✎ Edit** link that opens a short, timezone-safe form pre-filled with that entry. Change the deadline, website, or notes — and when you set a deadline you pick the timezone it's written in and the bot converts it to UTC for you, so there's no silent offset to get wrong. It opens a pull request and replies on the issue, just like the add form. Need a field the form doesn't cover (topics, organizers, dates, paper links)? The form links straight to the raw YAML for advanced edits.
+Every workshop page and board row has a **✎ Edit** link that opens a short, timezone-safe form pre-filled with that entry. Change the deadline, website, topics, or notes — you pick the deadline date and time from dropdowns (no format to get wrong) and choose the timezone it's written in, and the bot converts it to UTC for you, so there's no silent offset. Topics are a multi-select dropdown of the controlled vocabulary; because a GitHub form can't show an entry's current topics, selecting any **replaces** the whole list, so pick the full set you want (old plus new). It opens a pull request and replies on the issue, just like the add form. Need a field the form doesn't cover (organizers, dates, paper links)? The form links straight to the raw YAML for advanced edits.
 
 ## 3. Full pull request
 
@@ -31,8 +31,8 @@ One YAML file per workshop **edition** (same series ⇒ new file each year).
 | `conference` | ✅ | An id from `data/conferences.yml` (`icml`, `iclr`, `neurips`) |
 | `year` | ✅ | Integer |
 | `website` | ✅ | Full `http(s)` URL |
-| `topics` | ✅ | 1–5 ids from `data/topics.yml` |
-| `submission_deadline` |  | `YYYY-MM-DD HH:MM` or `YYYY-MM-DD` (means 23:59) — **wall-clock time in `timezone`** |
+| `topics` | ✅ | 1–5 ids from `data/topics.yml` (the add/edit issue forms offer these as a multi-select picker, so there are no typos or unknown ids) |
+| `submission_deadline` |  | `YYYY-MM-DD HH:MM` or `YYYY-MM-DD` (means 23:59) — **wall-clock time in `timezone`**. The add/edit issue forms collect this via year/month/day/hour/minute dropdowns. |
 | `timezone` | ⚠️ | **Required whenever `submission_deadline` is set** (CI rejects a deadline without one). `AoE` (Anywhere on Earth, UTC−12 — the ML default for date-only CFPs), `UTC`, or an IANA name like `America/Los_Angeles`. Via the issue form, pick any zone and the bot converts the deadline to UTC for you (keeping the original in `deadline_notes`). |
 | `deadline_notes` |  | Free text, e.g. `"extended from Aug 15"`. Bot-imported deadlines keep an `OpenReview-synced …` provenance stamp here; editing this note (or the deadline) freezes auto-sync for that entry. |
 | `tracks` |  | For multi-track workshops (e.g. Full + Short): list of `{ name, submission_deadline?, timezone? }`. Omit `submission_deadline` for a track whose date isn't announced yet. See note below. |
@@ -91,6 +91,11 @@ The `validate` workflow runs on every PR and enforces three things:
 this file's Field reference table and in `_template.yml` (so new fields can't
 ship undocumented).
 
+`node scripts/topic_options_sync_test.mjs` — the "Topics" multi-select dropdowns
+in both issue forms match `data/topics.yml`. The options are generated into the
+templates by `node scripts/gen_topic_options.mjs`; run that after editing
+`data/topics.yml` so the picker can never offer a stale or misspelled set.
+
 `node scripts/tracks_test.mjs` — the multi-track deadline/status rules behave
 correctly.
 
@@ -113,7 +118,8 @@ one OpenReview moved earlier (later moves auto-sync; legacy entries are skipped)
 `node scripts/issue_edit_to_yaml_test.mjs` — the "Edit a workshop" form transform
 applies only the filled-in fields to an existing entry, converts a new deadline
 from its timezone to UTC (verified by round-trip), requires a timezone when a
-deadline is given, and leaves identity and unrelated fields untouched.
+deadline is given, replaces an entry's topic list when topics are selected, and
+leaves identity and unrelated fields untouched.
 
 Validation failures are posted as a PR comment listing every problem at once.
 

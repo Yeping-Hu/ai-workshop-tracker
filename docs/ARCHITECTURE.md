@@ -330,6 +330,19 @@ forms (add and edit) auto-convert to PRs for non-technical contributors, so revi
 quality isn't a manual burden. See [Automation](../README.md#automation) for the
 full workflow list.
 
+The add/edit issue forms collect topics as a **multi-select dropdown** and the
+deadline as **year/month/day/hour/minute dropdowns**, so a contributor can't
+mistype a topic id or a date format — the previous free-text fields put that
+burden on CI to reject. GitHub issue templates are static YAML and can't read
+`data/topics.yml` at render time, so the topic options are generated into both
+templates (between `topic-options` marker comments) by
+`scripts/gen_topic_options.mjs`; `scripts/topic_options_sync_test.mjs` fails CI
+if a template drifts from the vocabulary. The deadline dropdowns feed
+`assembleDeadline()` in `lib/dates.mjs`, the single place that turns the parts
+into a `YYYY-MM-DD HH:MM` string (defaulting a missing time to 23:59 and
+rejecting impossible dates like Feb 30); the existing timezone→UTC conversion is
+unchanged, so there's still one source of truth for deadline math.
+
 ## Known gap: the UI behavior suite (`ui_test.mjs`) is not in CI
 
 `scripts/ui_test.mjs` is a headless-browser suite that locks the homepage's

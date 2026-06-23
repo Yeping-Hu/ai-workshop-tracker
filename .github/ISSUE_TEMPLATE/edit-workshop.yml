@@ -1,5 +1,5 @@
 name: Edit a workshop
-description: Fix the deadline (timezone-safe), website, or notes of an existing entry.
+description: Fix the deadline (timezone-safe), website, topics, or notes of an existing entry.
 title: 'Edit: '
 labels: [edit-workshop]
 body:
@@ -10,9 +10,11 @@ body:
 
         Fill in **only the fields you want to change**; leave the rest blank to keep the current value.
 
-        **Changing the deadline?** Type the date and time exactly as the call for papers states it, then pick the matching timezone — the bot converts it to UTC for you, so you never have to do the math (and there's no risk of a silent timezone offset).
+        > The box at the very top of this page (labelled "Add a title") is just a label for your request — it is **not** the workshop's name, and it's already filled in for you. You can submit as-is; editing it changes nothing about the workshop.
 
-        _Need to edit something not listed here (topics, organizers, dates, paper links)? You can still [edit the YAML file directly](../edit/main)._
+        **Changing the deadline?** Pick the date and time from the dropdowns, then choose the matching timezone — the bot converts it to UTC for you, so there's never a silent timezone offset. Leave the deadline dropdowns blank to keep the current deadline.
+
+        _Need to edit organizers, dates, or paper links? Those aren't on this form yet — you can still [edit the YAML file directly](../edit/main)._
   - type: input
     id: slug
     attributes:
@@ -20,17 +22,42 @@ body:
       description: Pre-filled from the page — do not change this.
     validations:
       required: true
-  - type: input
-    id: deadline
+  - type: markdown
     attributes:
-      label: New submission deadline
-      description: 'Date and time as written in the CFP, e.g. 2026-05-10 23:59. Leave blank to keep the current deadline.'
-      placeholder: leave blank to keep the current deadline
+      value: |
+        ### New submission deadline
+        Pick year, month, and day together. Leave the time blank for end-of-day (23:59). Leave all four blank to keep the current deadline.
+  - type: dropdown
+    id: deadline_year
+    attributes:
+      label: Deadline year
+      options: ["2025", "2026", "2027", "2028", "2029"]
+  - type: dropdown
+    id: deadline_month
+    attributes:
+      label: Deadline month
+      options: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]
+  - type: dropdown
+    id: deadline_day
+    attributes:
+      label: Deadline day
+      options: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31"]
+  - type: dropdown
+    id: deadline_hour
+    attributes:
+      label: Deadline hour
+      description: 24-hour clock. Leave blank with a date for 23:59.
+      options: ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"]
+  - type: dropdown
+    id: deadline_minute
+    attributes:
+      label: Deadline minute
+      options: ["00", "15", "30", "45", "59"]
   - type: dropdown
     id: timezone
     attributes:
       label: Timezone of the deadline
-      description: Required only if you entered a new deadline above. Pick the timezone the CFP uses (AoE = Anywhere on Earth).
+      description: Required only if you picked a new deadline above. Choose the timezone the CFP uses (AoE = Anywhere on Earth).
       options:
         - AoE
         - UTC
@@ -42,6 +69,50 @@ body:
         - Asia/Shanghai
         - Asia/Seoul
         - Asia/Singapore
+  - type: dropdown
+    id: topics
+    attributes:
+      label: Topics
+      multiple: true
+      description: "Optional. Selecting topics REPLACES the entry's current topic list (this form can't show what's already set), so pick the full set you want — old plus new. Leave empty to keep the current topics. Pick 1–5."
+      options:
+        # topic-options:start — generated from data/topics.yml by scripts/gen_topic_options.mjs (do not edit by hand)
+        - agents
+        - causality
+        - climate
+        - datasets
+        - diffusion
+        - education
+        - efficiency
+        - evaluation-benchmarks
+        - fairness
+        - federated-learning
+        - generative-models
+        - genomics
+        - graphs
+        - healthcare-bio
+        - interpretability
+        - llms
+        - math-reasoning
+        - multimodal
+        - neuroscience
+        - nlp
+        - optimization
+        - physics
+        - privacy
+        - reinforcement-learning
+        - robotics
+        - robustness
+        - safety-alignment
+        - science-applications
+        - speech-audio
+        - systems
+        - tabular
+        - theory
+        - time-series
+        - vision
+        - other
+        # topic-options:end
   - type: input
     id: website
     attributes:

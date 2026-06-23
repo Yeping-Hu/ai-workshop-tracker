@@ -13,7 +13,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { WORKSHOPS_DIR } from '../lib/workshops.mjs';
-import { resolveDeadlineUtcMs, isValidTimezone } from '../lib/dates.mjs';
+import { resolveDeadlineUtcMs, isValidTimezone, assembleDeadline } from '../lib/dates.mjs';
 
 const body = process.env.ISSUE_BODY;
 if (!body) {
@@ -48,6 +48,21 @@ const topics = topicsStr
   .map((t) => t.trim().toLowerCase())
   .filter(Boolean);
 if (topics.length === 0) errors.push('At least one topic id is required (see data/topics.yml).');
+// Deadline is picked from year/month/day/hour/minute dropdowns and reassembled
+// here, so there's no free-text date to mis-format. assembleDeadline returns ''
+// when nothing was picked and throws on a partial or impossible date.
+let submissionDeadline = '';
+try {
+  submissionDeadline = assembleDeadline({
+    year: get('Deadline year'),
+    month: get('Deadline month'),
+    day: get('Deadline day'),
+    hour: get('Deadline hour'),
+    minute: get('Deadline minute'),
+  });
+} catch (e) {
+  errors.push(e.message);
+}
 if (errors.length) {
   console.error('Could not create a workshop entry from this issue:\n- ' + errors.join('\n- '));
   process.exit(1);
@@ -65,7 +80,7 @@ while (fs.existsSync(path.join(WORKSHOPS_DIR, filename))) {
 
 const record = { name, acronym: acronym || '', conference, year: Number(yearStr), website, topics };
 const optional = {
-  submission_deadline: get('Submission deadline'),
+  submission_deadline: submissionDeadline,
   timezone: get('Timezone'),
   deadline_notes: get('Deadline notes'),
   notification_date: get('Notification date'),

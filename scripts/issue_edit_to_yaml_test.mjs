@@ -102,5 +102,37 @@ throws('invalid website throws', () => applyWorkshopEdit(base(), { website: 'new
 throws('no fields throws', () => applyWorkshopEdit(base(), {}), /No changes/i);
 throws('unchanged website throws', () => applyWorkshopEdit(base(), { website: 'https://old.example.com' }), /No changes/i);
 
+// 13) Topics: a selection replaces the whole list.
+{
+  const { record, changes } = applyWorkshopEdit(base(), { topics: ['llms', 'interpretability'] });
+  check('topics: list replaced', JSON.stringify(record.topics) === JSON.stringify(['llms', 'interpretability']));
+  check('topics: changes lists topics', changes.includes('topics'));
+  check('topics: identity + deadline preserved', record.name === 'My Workshop' && record.submission_deadline === '2026-05-01 12:00');
+}
+
+// 14) Topics: the same set (order-insensitive) is a no-op -> nothing to do.
+throws('topics: unchanged set throws (order-insensitive)',
+  () => applyWorkshopEdit({ ...base(), topics: ['llms', 'vision'] }, { topics: ['vision', 'llms'] }), /No changes/i);
+
+// 15) Topics: duplicate selections are de-duplicated.
+{
+  const { record } = applyWorkshopEdit(base(), { topics: ['llms', 'llms', 'vision'] });
+  check('topics: de-duplicated', JSON.stringify(record.topics) === JSON.stringify(['llms', 'vision']));
+}
+
+// 16) Topics: an empty selection keeps the current topics (here alongside a website edit).
+{
+  const { record, changes } = applyWorkshopEdit(base(), { topics: [], website: 'https://new.example.com' });
+  check('topics: empty keeps current', JSON.stringify(record.topics) === JSON.stringify(['ml']));
+  check('topics: empty adds no topics change', !changes.includes('topics') && changes.includes('website'));
+}
+
+// 17) Topics + a deadline in the same edit: both are recorded.
+{
+  const { record, changes } = applyWorkshopEdit(base(), { topics: ['nlp'], deadline: '2026-06-01 09:00', timezone: 'UTC' });
+  check('topics+deadline: topics set', JSON.stringify(record.topics) === JSON.stringify(['nlp']));
+  check('topics+deadline: both in changes', changes.includes('topics') && changes.includes('submission_deadline'));
+}
+
 console.log(failed === 0 ? '\nEdit-form transform OK.' : `\n${failed} test(s) failed.`);
 process.exit(failed === 0 ? 0 : 1);

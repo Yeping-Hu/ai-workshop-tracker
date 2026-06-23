@@ -16,7 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { WORKSHOPS_DIR } from '../lib/workshops.mjs';
-import { resolveDeadlineUtcMs, isValidTimezone } from '../lib/dates.mjs';
+import { resolveDeadlineUtcMs, isValidTimezone, assembleDeadline } from '../lib/dates.mjs';
 import { syncedValue, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
 
 /**
@@ -32,6 +32,12 @@ export function applyWorkshopEdit(existing, fields) {
   const website = (fields.website || '').trim();
   const deadlineNotes = (fields.deadlineNotes || '').trim();
   const anything = (fields.anything || '').trim();
+  // Topics arrive as the multi-select dropdown's chosen ids. Because a GitHub
+  // issue form can't pre-check the entry's current topics, a selection here
+  // *replaces* the whole list (it can't merge) — the form copy says so.
+  const topics = Array.isArray(fields.topics)
+    ? [...new Set(fields.topics.map((t) => String(t).trim().toLowerCase()).filter(Boolean))]
+    : [];
 
   if (website) {
     if (!/^https?:\/\//.test(website)) throw new Error('Workshop website must be a full http(s) URL.');
@@ -76,6 +82,12 @@ export function applyWorkshopEdit(existing, fields) {
 
   if (anything && anything !== r.notes) { r.notes = anything; changes.push('notes'); }
 
+  if (topics.length) {
+    const sortedNew = [...topics].sort().join(',');
+    const sortedOld = Array.isArray(r.topics) ? [...r.topics].map(String).sort().join(',') : '';
+    if (sortedNew !== sortedOld) { r.topics = topics; changes.push('topics'); }
+  }
+
   if (!changes.length) {
     throw new Error('No changes detected — every field was blank or already matched the current value.');
   }
@@ -106,12 +118,21 @@ function main() {
   const existing = yaml.load(fs.readFileSync(filePath, 'utf8')) || {};
   let result;
   try {
+    const deadline = assembleDeadline({
+      year: get('Deadline year'),
+      month: get('Deadline month'),
+      day: get('Deadline day'),
+      hour: get('Deadline hour'),
+      minute: get('Deadline minute'),
+    });
+    const topics = get('Topics').split(/[,\n]/).map((t) => t.trim().toLowerCase()).filter(Boolean);
     result = applyWorkshopEdit(existing, {
-      deadline: get('New submission deadline'),
+      deadline,
       timezone: get('Timezone of the deadline'),
       website: get('Workshop website'),
       deadlineNotes: get('Deadline notes'),
       anything: get('Anything else'),
+      topics,
     });
   } catch (e) {
     console.error(`Could not apply this edit: ${e.message}`);

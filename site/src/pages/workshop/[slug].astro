@@ -14,7 +14,7 @@ const statusLabel = w.statusLabel;
 // Structured, timezone-safe edit form (replaces the raw-YAML editor link). See
 // the note in WorkshopRow.astro; advanced fields stay editable via raw YAML
 // from the form's intro.
-const editUrl = `${REPO_URL}/issues/new?template=edit-workshop.yml&slug=${encodeURIComponent(w.slug)}&website=${encodeURIComponent(w.website ?? '')}`;
+const editUrl = `${REPO_URL}/issues/new?template=edit-workshop.yml&slug=${encodeURIComponent(w.slug)}&website=${encodeURIComponent(w.website ?? '')}&title=${encodeURIComponent('Edit: ' + w.slug)}`;
 const isSeed = (w.notes || '').includes('SEED DATA');
 const portalLabel: Record<string, string> = {
   openreview: 'OpenReview',
