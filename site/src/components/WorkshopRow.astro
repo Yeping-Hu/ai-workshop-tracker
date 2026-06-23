@@ -52,7 +52,6 @@ const editUrl = `${REPO_URL}/issues/new?template=edit-workshop.yml&slug=${encode
       <>
         <div class="wall">{w.deadlineWallClock}</div>
         <div class="local js-local" data-iso={w.deadlineIso}>resolving your local time…</div>
-        {w.deadline_notes && <div class="note">{w.deadline_notes}</div>}
       </>
     ) : (
       <div class="muted">Deadline TBA</div>
