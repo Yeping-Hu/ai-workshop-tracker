@@ -176,15 +176,24 @@ job syncs deadlines; the monthly `openreview-refresh` still touches only the
 paper cache.
 
 Because a human edit freezes auto-sync, two tools cover the manual case. A
-non-blocking **cross-check** (`scripts/deadline_crosscheck.mjs`, run at the end
-of the weekly discovery job) compares every current/next-year deadline against
-OpenReview's live invitation `duedate` and warns when they differ by a
-tz-shaped offset (a near whole/half/quarter hour, ≤14h, and not ~a day) — the
-signature of a wrong-timezone manual edit; a ~day gap is reported as a likely
-real extension instead. And an **on-demand re-sync**
-(`scripts/resync_deadline.mjs --slug <slug>`, also a `workflow_dispatch`) lets a
-maintainer re-pull one workshop's deadline straight from OpenReview's duedate in
-either direction, re-stamping it for future auto-sync — so fixing a stale or
+weekly **cross-check** (`scripts/deadline_crosscheck.mjs`, the `deadline-review`
+workflow) compares current/next-year deadlines against OpenReview's live
+invitation `duedate` and keeps ONE self-maintaining issue ("Data health:
+deadlines to review", `data-health` label) listing only the cases the auto-sync
+will *not* fix on its own: (1) **human-edited** deadlines that now disagree with
+OpenReview (frozen, so the maintainer decides which to trust), and (2)
+**bot-managed deadlines OpenReview moved earlier** (declined by the later-only
+rule, so the maintainer confirms whether it's a real correction). Bot-managed
+*later* moves aren't listed — they auto-sync — and legacy entries are skipped
+(they adopt then sync), which also keeps the check from fetching their duedates.
+The issue updates in place and closes itself when nothing's outstanding; each
+item links the re-sync command to accept OpenReview's value. The classifier also
+labels a divergence as a likely *timezone slip* (a near whole/half/quarter-hour
+offset, ≤14h, not ~a day) vs. a real change, as a hint. And an **on-demand
+re-sync** (`scripts/resync_deadline.mjs --slug <slug>`, also a
+`workflow_dispatch`) lets a maintainer re-pull one workshop's deadline straight
+from OpenReview's duedate in either direction, re-stamping it for future
+auto-sync — so fixing a stale or
 mistyped deadline never requires hand-typing a UTC time.
 
 OpenReview rate-limits bulk callers (HTTP 429), so the weekly run is tuned to

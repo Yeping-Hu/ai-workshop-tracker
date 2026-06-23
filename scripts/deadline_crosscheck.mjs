@@ -1,38 +1,37 @@
 #!/usr/bin/env node
 /**
- * Cross-checks each OpenReview-backed deadline against the live submission
- * invitation `duedate` and flags likely *timezone-entry mistakes*.
+ * Cross-checks OpenReview-backed deadlines against the live submission
+ * invitation `duedate` and surfaces the ones a human should look at — the cases
+ * the weekly auto-sync deliberately will NOT fix on its own:
  *
- * Why: deadlines are stored in UTC, but someone editing the YAML by hand may
- * paste a time as they saw it locally (OpenReview shows times in the viewer's
- * own zone) while leaving `timezone: UTC` — silently shifting the deadline by
- * their UTC offset. That makes the stored value differ from OpenReview's real
- * duedate by a near-whole-hour amount, which is the signature this check looks
- * for. It also catches deadlines the bot can no longer touch because a human
- * froze them (a human-edited value is never auto-re-synced).
+ *   1. human-conflict — a deadline a human curated (its note is no longer the
+ *      bot's stamp) that now disagrees with OpenReview. The bot freezes such
+ *      entries, so without this they diverge silently. Maintainer decides which
+ *      to trust.
+ *   2. bot-earlier   — a bot-managed deadline where OpenReview moved EARLIER.
+ *      The sync is later-only (an earlier move is the dangerous direction, e.g.
+ *      a transient bad read), so it's declined and never applied automatically.
+ *      Maintainer confirms whether it's a real correction.
  *
- * Classification is heuristic (see classifyDeadlineDiff) and intentionally
- * over-inclusive — it errs toward flagging, since every hit is a soft "please
- * verify", never an automatic edit:
- *   - match      : within ~a minute of OpenReview — fine.
- *   - tz-suspect : differs by ~a whole/half/quarter-hour offset (<=14h) and is
- *                  NOT ~a multiple of 24h — looks like a timezone slip. WARN.
- *   - changed    : differs by something else (e.g. ~a day) — most likely a real
- *                  extension/correction; reported for info, not warned.
+ * Bot-managed later moves are applied automatically by the sync (not flagged),
+ * and legacy "imported from OpenReview…" entries are skipped (discovery adopts
+ * then syncs them) — so neither is fetched here, keeping call volume down.
  *
- * Network-tolerant: a venue whose duedate can't be fetched (404 / 429 / down)
- * is skipped, never failing the run. Exit code is 0 unless --strict is given and
- * at least one tz-suspect entry is found.
+ * `--report <file>` writes a markdown summary for the weekly `deadline-review`
+ * workflow to keep ONE self-maintaining issue up to date (empty report => the
+ * workflow closes the issue). Network-tolerant: a venue whose duedate can't be
+ * fetched (404 / 429 / down) is skipped, never failing the run.
  *
  * Usage:
- *   node scripts/deadline_crosscheck.mjs                 # all venues, report only
- *   node scripts/deadline_crosscheck.mjs --recent        # current + next year only
- *   node scripts/deadline_crosscheck.mjs --slug <slug>   # one workshop
- *   node scripts/deadline_crosscheck.mjs --strict        # exit 1 on tz-suspect
+ *   node scripts/deadline_crosscheck.mjs --recent                      # current+next year
+ *   node scripts/deadline_crosscheck.mjs --recent --report review.md   # + write the issue body
+ *   node scripts/deadline_crosscheck.mjs --slug colm-2026-daih         # one workshop
+ *   node scripts/deadline_crosscheck.mjs --strict                      # exit 1 if anything to review
  */
+import fs from 'node:fs';
 import { listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
-import { deadlineFromInvitation } from './discover_openreview.mjs';
+import { deadlineFromInvitation, syncedValue, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
 
 const HOUR = 3_600_000;
 const DAY = 86_400_000;
@@ -40,6 +39,9 @@ const DAY = 86_400_000;
 const OFFSET_STEPS_MIN = [60, 30, 15]; // whole, half, quarter hour
 const NEAR_MS = 90_000;                // 90s tolerance for "lands on" an offset
 const MAX_OFFSET_H = 14;               // largest real-world tz magnitude
+const PACE_MS = 400;                   // gentle spacing between venue fetches
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Classify the gap between a stored deadline and OpenReview's duedate (both UTC
@@ -68,11 +70,58 @@ export function classifyDeadlineDiff(storedMs, fetchedMs) {
   return { kind: 'changed', diffMs: diff, label: `differs by ${(diff / DAY).toFixed(2)}d (likely a real change)` };
 }
 
+/**
+ * Decide whether a divergence needs human review, using the same provenance
+ * rule the bot uses. Pure + exported for tests. Returns null (no review) or
+ * { kind: 'human-conflict' | 'bot-earlier', diff }.
+ */
+export function reviewCategory({ notes, storedValue, storedMs, fetchedMs }) {
+  if (storedMs == null || fetchedMs == null) return null;
+  const diff = classifyDeadlineDiff(storedMs, fetchedMs);
+  if (diff.kind === 'match') return null;
+  if (notes === LEGACY_IMPORT_NOTE) return null;          // in transition: discovery adopts, then syncs
+  const botManaged = syncedValue(notes) === storedValue;  // stamp still equals the stored value
+  if (botManaged) {
+    // Later moves are auto-applied by the weekly sync — not a review item.
+    // Only an earlier move is declined (later-only) and needs a human eye.
+    return fetchedMs < storedMs ? { kind: 'bot-earlier', diff } : null;
+  }
+  // Not legacy and not a matching bot stamp => a human curated this deadline.
+  return { kind: 'human-conflict', diff };
+}
+
+function buildReport(items) {
+  if (!items.length) return '';
+  const human = items.filter((i) => i.kind === 'human-conflict');
+  const earlier = items.filter((i) => i.kind === 'bot-earlier');
+  const line = (i) =>
+    `- [ ] \`${i.file}\` — **${i.name}** (${i.conf} ${i.year}) — stored \`${i.stored} UTC\`, OpenReview \`${i.fetched} UTC\` — ${i.label}. ` +
+    `Accept OpenReview: \`node scripts/resync_deadline.mjs --slug ${i.slug}\``;
+  const out = [
+    'These deadlines disagree with OpenReview and the bot will **not** change them on its own — they need your call.',
+    'To accept OpenReview\'s value, run the **Re-sync deadline from OpenReview** workflow with the slug (or the command shown). To keep the stored value, just leave it.',
+    '',
+  ];
+  if (human.length) {
+    out.push('### Human-edited, now disagrees with OpenReview', '_You edited these, so auto-sync is frozen. Decide which to trust._', '');
+    for (const i of human) out.push(line(i));
+    out.push('');
+  }
+  if (earlier.length) {
+    out.push('### OpenReview moved these *earlier*', '_The bot only moves deadlines later automatically (an earlier move can be a transient bad read). Confirm whether it\'s a real correction._', '');
+    for (const i of earlier) out.push(line(i));
+    out.push('');
+  }
+  out.push('_This issue is updated automatically by the weekly `deadline-review` workflow._');
+  return out.join('\n') + '\n';
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const recent = args.includes('--recent');
   const strict = args.includes('--strict');
   const slug = args.includes('--slug') ? args[args.indexOf('--slug') + 1] : null;
+  const reportPath = args.includes('--report') ? args[args.indexOf('--report') + 1] : null;
   const nowYear = new Date().getUTCFullYear();
 
   let entries = listWorkshopFiles()
@@ -80,37 +129,54 @@ async function main() {
     .filter(({ raw }) => raw?.openreview_venue_id && raw?.submission_deadline);
   if (slug) entries = entries.filter((e) => e.slug === slug);
   else if (recent) entries = entries.filter(({ raw }) => raw.year >= nowYear);
+  // Legacy entries are in transition (discovery adopts then syncs them) and are
+  // never review items — skip them so they cost no network call.
+  const toCheck = entries.filter((e) => slug || e.raw.deadline_notes !== LEGACY_IMPORT_NOTE);
 
-  console.log(`Cross-checking ${entries.length} OpenReview-backed deadline(s) against live duedates…\n`);
+  console.log(`Cross-checking ${toCheck.length} deadline(s) against live OpenReview duedates (skipping ${entries.length - toCheck.length} legacy)…\n`);
 
-  let matched = 0, suspect = 0, changed = 0, skipped = 0;
-  for (const { slug: s, raw } of entries) {
+  const items = [];
+  let checked = 0, skipped = 0;
+  for (const { slug: s, file, raw } of toCheck) {
     let dl = null;
     try {
       dl = await deadlineFromInvitation({ id: raw.openreview_venue_id, content: {} });
     } catch {
       dl = null; // network / rate-limit / no invitation: skip, never fail
     }
+    await sleep(PACE_MS);
     if (!dl) { skipped++; continue; }
+    checked++;
     const storedMs = resolveDeadlineUtcMs(raw.submission_deadline, raw.timezone || 'UTC');
     const fetchedMs = resolveDeadlineUtcMs(dl.submission_deadline, 'UTC');
-    const { kind, label } = classifyDeadlineDiff(storedMs, fetchedMs);
-    if (kind === 'match') { matched++; continue; }
-    if (kind === 'tz-suspect') {
-      suspect++;
-      console.log(`⚠ TZ-SUSPECT  ${s}: stored ${raw.submission_deadline} ${raw.timezone || 'UTC'}  vs  OpenReview ${dl.submission_deadline} UTC — ${label}`);
-      console.log(`              → likely a wrong timezone on a manual edit. Re-pull the real value: node scripts/resync_deadline.mjs --slug ${s}`);
-    } else if (kind === 'changed') {
-      changed++;
-      console.log(`•  changed     ${s}: stored ${raw.submission_deadline}  vs  OpenReview ${dl.submission_deadline} UTC — ${label}`);
-    }
+    const cat = reviewCategory({
+      notes: raw.deadline_notes,
+      storedValue: raw.submission_deadline,
+      storedMs,
+      fetchedMs,
+    });
+    if (!cat) continue;
+    const item = {
+      kind: cat.kind, slug: s, file,
+      name: raw.name, conf: String(raw.conference || '').toUpperCase(), year: raw.year,
+      stored: raw.submission_deadline, fetched: dl.submission_deadline, label: cat.diff.label,
+    };
+    items.push(item);
+    const tag = cat.kind === 'human-conflict' ? '⚠ CONFLICT  ' : '•  EARLIER   ';
+    console.log(`${tag} ${s}: stored ${item.stored} vs OpenReview ${item.fetched} UTC — ${item.label}`);
   }
-  console.log(`\nDone. ${matched} match, ${suspect} tz-suspect, ${changed} changed, ${skipped} unfetchable.`);
-  if (strict && suspect > 0) process.exit(1);
+
+  const report = buildReport(items);
+  if (reportPath) {
+    fs.writeFileSync(reportPath, report);
+    console.log(`\nWrote ${items.length ? items.length + ' item(s)' : 'empty report'} to ${reportPath}.`);
+  }
+  console.log(`\nDone. ${checked} checked, ${items.length} to review, ${skipped} unfetchable.`);
+  if (strict && items.length > 0) process.exit(1);
 }
 
-// Only run the CLI when invoked directly, so classifyDeadlineDiff can be
-// imported in tests without the module hitting the network.
+// Only run the CLI when invoked directly, so the pure helpers can be imported in
+// tests without the module hitting the network.
 if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch((e) => { console.error(e.message); process.exit(1); });
 }

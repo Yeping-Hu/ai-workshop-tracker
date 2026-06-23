@@ -64,7 +64,7 @@ const DEADLINE_HINT = `# --- Missing: submission deadline ----------------------
 const SYNC_NOTE_PREFIX = 'OpenReview-synced';
 // The pre-sync import marker used historically (≈700 entries). Treated as
 // bot-managed-but-unstamped: adopted non-destructively on first encounter.
-const LEGACY_IMPORT_NOTE = 'imported from OpenReview — check the website for extensions';
+export const LEGACY_IMPORT_NOTE = 'imported from OpenReview — check the website for extensions';
 // Later-only by default: the bot moves a deadline LATER (the extension case it
 // exists for) but never earlier or to null, because a transient/garbled read is
 // the dangerous failure mode. Flip to true to also follow earlier corrections

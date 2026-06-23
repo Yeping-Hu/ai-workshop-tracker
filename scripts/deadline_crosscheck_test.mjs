@@ -8,7 +8,8 @@
  *
  * Run: node scripts/deadline_crosscheck_test.mjs
  */
-import { classifyDeadlineDiff } from './deadline_crosscheck.mjs';
+import { classifyDeadlineDiff, reviewCategory } from './deadline_crosscheck.mjs';
+import { syncNote, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
 
 let failed = 0;
 function check(label, got, expect) {
@@ -51,6 +52,26 @@ check('null fetched -> unknown', kind(T, null), 'unknown');
 // Spot-check a label carries the offset magnitude and direction.
 const lbl = classifyDeadlineDiff(T, T + 7 * H).label;
 check('7h label mentions ~7h and direction', /~7h/.test(lbl) && /EARLIER/.test(lbl), true);
+
+// --- reviewCategory: which divergences need a human, by provenance -----------
+const V = '2026-05-10 12:00';
+const Vms = Date.UTC(2026, 4, 10, 12, 0);
+const stamp = syncNote(V, '2026-06-01'); // bot's stamp for value V
+const rc = (o) => { const r = reviewCategory(o); return r ? r.kind : null; };
+
+// Legacy entries are in transition — never a review item, regardless of diff.
+check('legacy note -> no review', rc({ notes: LEGACY_IMPORT_NOTE, storedValue: V, storedMs: Vms, fetchedMs: Vms + 24 * H }), null);
+// Bot-managed (stamp matches value): later move auto-syncs (skip), earlier is flagged.
+check('bot-managed + later -> no review (auto-syncs)', rc({ notes: stamp, storedValue: V, storedMs: Vms, fetchedMs: Vms + 24 * H }), null);
+check('bot-managed + earlier -> bot-earlier', rc({ notes: stamp, storedValue: V, storedMs: Vms, fetchedMs: Vms - 7 * H }), 'bot-earlier');
+check('bot-managed + match -> no review', rc({ notes: stamp, storedValue: V, storedMs: Vms, fetchedMs: Vms + 30_000 }), null);
+// Human-curated note (not a bot stamp): any real divergence is a conflict.
+check('human note + later -> human-conflict', rc({ notes: 'from the workshop website', storedValue: V, storedMs: Vms, fetchedMs: Vms + 24 * H }), 'human-conflict');
+check('human note + match -> no review', rc({ notes: 'from the workshop website', storedValue: V, storedMs: Vms, fetchedMs: Vms }), null);
+// Stamp present but value no longer matches (human changed the deadline, left the old note) -> conflict.
+check('stamp value != stored (human edited value) -> human-conflict', rc({ notes: syncNote('2026-04-27 12:00', '2026-06-01'), storedValue: V, storedMs: Vms, fetchedMs: Vms - 7 * H }), 'human-conflict');
+// Missing fetched value -> no review.
+check('null fetched -> no review', rc({ notes: stamp, storedValue: V, storedMs: Vms, fetchedMs: null }), null);
 
 console.log(failed === 0 ? '\nDeadline cross-check logic OK.' : `\n${failed} test(s) failed.`);
 process.exit(failed === 0 ? 0 : 1);

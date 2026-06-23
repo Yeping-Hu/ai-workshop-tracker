@@ -1,0 +1,73 @@
+# Weekly: cross-checks OpenReview-backed deadlines against their live duedates
+# and keeps exactly ONE consolidated issue up to date with the cases the
+# auto-sync will NOT fix on its own — deadlines a human edited that now disagree
+# with OpenReview, and bot-managed deadlines OpenReview moved *earlier* (declined
+# by the later-only rule). The maintainer resolves each by re-syncing (trust
+# OpenReview) or leaving it (keep the stored value). Runs after the Tuesday
+# discovery so it reflects the freshly-synced state.
+name: Deadline review
+
+on:
+  schedule:
+    - cron: '23 5 * * 3' # Wednesdays 05:23 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/deadline_crosscheck.mjs --recent --report deadline-review.md
+      - name: Create/update the consolidated issue
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.existsSync('deadline-review.md')
+              ? fs.readFileSync('deadline-review.md', 'utf8').trim()
+              : '';
+            const title = 'Data health: deadlines to review';
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'data-health',
+              per_page: 100,
+            });
+            const existing = open.find((i) => i.title === title);
+            if (!report) {
+              if (existing) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  state: 'closed',
+                });
+              }
+              return;
+            }
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: report,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body: report,
+                labels: ['data-health'],
+              });
+            }
