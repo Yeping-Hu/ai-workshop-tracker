@@ -8,7 +8,7 @@ Open the **["Add a workshop" issue form](../../issues/new?template=add-workshop.
 
 ## 2. Edit an entry (no Git needed)
 
-Every workshop page and board row has a **✎ Edit** link that opens a short, timezone-safe form pre-filled with that entry. Change the deadline, website, topics, or notes — you pick the deadline date and time from dropdowns (no format to get wrong) and choose the timezone it's written in, and the bot converts it to UTC for you, so there's no silent offset. Topics are a multi-select dropdown of the controlled vocabulary; because a GitHub form can't show an entry's current topics, selecting any **replaces** the whole list, so pick the full set you want (old plus new). It opens a pull request and replies on the issue, just like the add form. Need a field the form doesn't cover (organizers, dates, paper links)? The form links straight to the raw YAML for advanced edits.
+Every workshop page has a **✎ Edit** link that opens a short, timezone-safe form pre-filled with that entry. Change the deadline, website, topics, or notes — you pick the deadline date and time from dropdowns (no format to get wrong) and choose the timezone it's written in, and the bot converts it to UTC for you, so there's no silent offset. Topics are a multi-select dropdown of the controlled vocabulary; because a GitHub form can't show an entry's current topics, selecting any **replaces** the whole list, so pick the full set you want (old plus new). It opens a pull request and replies on the issue, just like the add form. Need a field the form doesn't cover (organizers, dates, paper links)? The form links straight to the raw YAML for advanced edits.
 
 ## 3. Full pull request
 

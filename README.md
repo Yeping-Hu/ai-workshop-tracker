@@ -115,7 +115,7 @@ The maintainer's whole job: review PRs and skim a few auto-updated "Data health"
 
 ## Adding / fixing workshops
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Short version: use the **"Add a workshop" issue form** (no Git needed — a bot opens the PR), or copy `data/workshops/_template.yml` and open a PR yourself. Every page on the site has a ✎ Edit link that opens a short, timezone-safe form.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Short version: use the **"Add a workshop" issue form** (no Git needed — a bot opens the PR), or copy `data/workshops/_template.yml` and open a PR yourself. Every workshop page has a ✎ Edit link that opens a short, timezone-safe form.
 
 ### Bulk-importing real workshop lists
 
