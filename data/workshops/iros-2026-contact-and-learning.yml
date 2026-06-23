@@ -4,10 +4,9 @@ conference: iros
 year: 2026
 website: https://sites.google.com/view/contact-and-learning/home
 topics:
-  - other
+  - robotics
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/Contact_and_Learning
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
 added: "2026-06-23"
 submission_deadline: 2026-07-24 11:59
 timezone: UTC
