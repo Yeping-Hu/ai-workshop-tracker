@@ -6,9 +6,9 @@ Thanks for helping keep workshop data accurate! There are three ways to contribu
 
 Open the **["Add a workshop" issue form](../../issues/new?template=add-workshop.yml)** and fill in what you know. A bot converts your answers into a data file, validates it, opens a pull request, and replies on the issue with the result. If validation fails, just edit the issue — the bot retries automatically.
 
-## 2. Edit on GitHub
+## 2. Edit an entry (no Git needed)
 
-Every workshop page and board row on the site has a **✎ Edit** link straight to its YAML file. Fix the field, propose the change, done — CI validates it and a maintainer merges.
+Every workshop page and board row has a **✎ Edit** link that opens a short, timezone-safe form pre-filled with that entry. Change the deadline, website, or notes — and when you set a deadline you pick the timezone it's written in and the bot converts it to UTC for you, so there's no silent offset to get wrong. It opens a pull request and replies on the issue, just like the add form. Need a field the form doesn't cover (topics, organizers, dates, paper links)? The form links straight to the raw YAML for advanced edits.
 
 ## 3. Full pull request
 
@@ -67,13 +67,14 @@ track. Don't bother with `tracks` when every track shares one deadline — just 
 
 ### Adding a missing deadline
 
-Entries without a `submission_deadline` start with a comment template showing
-exactly which two lines to add — `submission_deadline` **and** `timezone`
-(always include it; CI rejects a deadline without one, and `AoE` is the right
-choice when the CFP just gives a date). Every "Deadline TBA" workshop page
-links straight to that file in the GitHub editor. Add the lines, propose the
-change, done. You can delete the comment block or leave it: the weekly bot
-removes it automatically the next time it touches the file.
+Every "Deadline TBA" workshop page has a link that opens the timezone-safe edit
+form: type the date and time exactly as the CFP gives it, pick the matching
+timezone (`AoE` is the right choice when the CFP just gives a date), and the bot
+converts it to UTC and opens a PR — no YAML to touch and no timezone math to get
+wrong. (Editing the YAML directly still works too, via the link in the form's
+intro; an entry without a deadline carries a short comment template showing the
+two lines to add. The weekly bot removes that comment the next time it touches
+the file.)
 
 ## What CI checks
 
@@ -108,6 +109,11 @@ later-only by default, treats unchanged/null as no-ops, and (via the
 stored-vs-OpenReview gap (tz-suspect vs. real change) and, by provenance, decides
 what needs human review: a human-edited deadline that disagrees, or a bot-managed
 one OpenReview moved earlier (later moves auto-sync; legacy entries are skipped).
+
+`node scripts/issue_edit_to_yaml_test.mjs` — the "Edit a workshop" form transform
+applies only the filled-in fields to an existing entry, converts a new deadline
+from its timezone to UTC (verified by round-trip), requires a timezone when a
+deadline is given, and leaves identity and unrelated fields untouched.
 
 Validation failures are posted as a PR comment listing every problem at once.
 

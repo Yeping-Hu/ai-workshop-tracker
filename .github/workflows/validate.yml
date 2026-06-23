@@ -33,6 +33,8 @@ jobs:
         run: node scripts/deadline_sync_test.mjs
       - name: Test deadline cross-check classifier
         run: node scripts/deadline_crosscheck_test.mjs
+      - name: Test edit-form transform (timezone-safe updates)
+        run: node scripts/issue_edit_to_yaml_test.mjs
       - name: Check schema-docs parity
         run: node scripts/docs_sync_test.mjs
       - name: Validate workshop data

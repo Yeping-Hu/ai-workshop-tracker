@@ -1,0 +1,88 @@
+# Turns a submitted "Edit a workshop" issue form into an update to the existing
+# YAML + a pull request, validates it, and reports the result back on the issue.
+# The maintainer only reviews and merges. (Editing the issue retries.)
+# Kept separate from issue-to-pr.yml so the create path stays untouched; the two
+# are mutually exclusive by label (add-workshop vs edit-workshop).
+name: Edit form -> workshop PR
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  apply:
+    if: contains(github.event.issue.labels.*.name, 'edit-workshop')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply the edit to the existing YAML
+        id: gen
+        continue-on-error: true
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: node scripts/issue_edit_to_yaml.mjs 2> gen-error.txt
+      - name: Validate (including the edited file)
+        id: validate
+        if: steps.gen.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/validate.mjs --report validation-report.md
+      - name: Open the pull request
+        id: cpr
+        if: steps.gen.outcome == 'success'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          add-paths: data/workshops/*.yml
+          branch: edit-workshop/issue-${{ github.event.issue.number }}
+          delete-branch: true
+          commit-message: 'Edit workshop from issue #${{ github.event.issue.number }}'
+          title: 'Edit workshop: ${{ github.event.issue.title }}'
+          body: |
+            Auto-generated from #${{ github.event.issue.number }} — closes #${{ github.event.issue.number }}.
+            Updates an existing entry. The validation result is posted on the issue.
+          labels: edit-workshop, automated
+      - name: Report back on the issue
+        if: always()
+        uses: actions/github-script@v9
+        env:
+          GEN_OUTCOME: ${{ steps.gen.outcome }}
+          PR_URL: ${{ steps.cpr.outputs.pull-request-url }}
+        with:
+          script: |
+            const fs = require('fs');
+            const read = (f) => (fs.existsSync(f) ? fs.readFileSync(f, 'utf8').trim() : '');
+            let body;
+            if (process.env.GEN_OUTCOME !== 'success') {
+              body = [
+                '❌ I could not apply this edit:',
+                '',
+                '```',
+                read('gen-error.txt') || 'Unknown error — see the workflow logs.',
+                '```',
+                'Please **edit the issue** to fix the fields above — I will retry automatically.',
+              ].join('\n');
+            } else {
+              const pr = process.env.PR_URL;
+              body = [
+                `🤖 I opened a pull request with this edit${pr ? `: ${pr}` : ''}.`,
+                '',
+                read('validation-report.md'),
+                '',
+                '_If validation failed, edit this issue to fix the fields and I will update the PR._',
+              ].join('\n');
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body.slice(0, 60000),
+            });

@@ -143,8 +143,8 @@ becomes "Past" on its own without anyone editing data.
 Deadlines are stored in **UTC**. The importer converts any timezone OpenReview
 reports — including AoE (UTC−12) — to the equivalent UTC instant before writing
 (`parseGroupDeadline`/`msToDeadline` in `scripts/discover_openreview.mjs`), and
-the issue-to-PR bot does the same for contributor submissions (AoE or any civil
-timezone → UTC, DST-aware, original kept in `deadline_notes`), so every deadline
+the issue-to-PR and edit-to-PR bots do the same for contributor submissions
+(AoE or any civil timezone → UTC, DST-aware, original kept in `deadline_notes`), so every deadline
 that reaches the dataset through either automated path is UTC; the data was also
 migrated off a former UTC/AoE mix in one pass. AoE is still an *accepted* value
 in the schema, so a hand-written YAML edit may use it (it's the ML convention for
@@ -325,8 +325,8 @@ so earlier subscribers' calendars self-clean.
 
 ## Contributors are validated by CI, not by a human
 
-Schema and sanity checks comment on PRs with exactly what to fix, and an issue
-form auto-converts to PRs for non-technical contributors, so reviewing data
+Schema and sanity checks comment on PRs with exactly what to fix, and issue
+forms (add and edit) auto-convert to PRs for non-technical contributors, so reviewing data
 quality isn't a manual burden. See [Automation](../README.md#automation) for the
 full workflow list.
 

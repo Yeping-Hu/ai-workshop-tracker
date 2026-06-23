@@ -1,0 +1,59 @@
+name: Edit a workshop
+description: Fix the deadline (timezone-safe), website, or notes of an existing entry.
+title: 'Edit: '
+labels: [edit-workshop]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Correcting an existing workshop. The **Entry to edit** below is pre-filled from the page — please don't change it.
+
+        Fill in **only the fields you want to change**; leave the rest blank to keep the current value.
+
+        **Changing the deadline?** Type the date and time exactly as the call for papers states it, then pick the matching timezone — the bot converts it to UTC for you, so you never have to do the math (and there's no risk of a silent timezone offset).
+
+        _Need to edit something not listed here (topics, organizers, dates, paper links)? You can still [edit the YAML file directly](../edit/main)._
+  - type: input
+    id: slug
+    attributes:
+      label: Entry to edit
+      description: Pre-filled from the page — do not change this.
+    validations:
+      required: true
+  - type: input
+    id: deadline
+    attributes:
+      label: New submission deadline
+      description: 'Date and time as written in the CFP, e.g. 2026-05-10 23:59. Leave blank to keep the current deadline.'
+      placeholder: leave blank to keep the current deadline
+  - type: dropdown
+    id: timezone
+    attributes:
+      label: Timezone of the deadline
+      description: Required only if you entered a new deadline above. Pick the timezone the CFP uses (AoE = Anywhere on Earth).
+      options:
+        - AoE
+        - UTC
+        - America/Los_Angeles
+        - America/New_York
+        - Europe/London
+        - Europe/Berlin
+        - Asia/Tokyo
+        - Asia/Shanghai
+        - Asia/Seoul
+        - Asia/Singapore
+  - type: input
+    id: website
+    attributes:
+      label: Workshop website
+      description: Leave blank to keep the current website.
+  - type: input
+    id: deadline_notes
+    attributes:
+      label: Deadline notes
+      description: 'A short note shown under the deadline (e.g. "abstracts due earlier"). Leave blank to keep the current note.'
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Extra context for this entry, or a note to the maintainer about what changed. Leave blank to keep the current note.

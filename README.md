@@ -102,16 +102,20 @@ still arrive as pull requests for human review, as do dependency updates. refere
 |---|---|---|
 | `validate.yml` | PRs & pushes touching data | Schema + sanity checks; comments fixes on the PR |
 | `deploy.yml` | push to `main`, weekly, manual | Build & deploy (weekly run refreshes derived statuses) |
+| `discover.yml` | weekly | Discovers new workshops/venues/deadlines from OpenReview and syncs extensions (later-only) → commits to `main` |
 | `openreview-refresh.yml` | monthly | Re-fetch paper caches for recent years → auto-PR on diff |
 | `issue-to-pr.yml` | "Add a workshop" issue form | Converts the form to a YAML file + PR, validates, reports back |
+| `edit-to-pr.yml` | "Edit a workshop" issue form | Applies the edit to the existing YAML + PR (timezone-safe), validates, reports back |
+| `resync-deadline.yml` | manual | Re-pull one workshop's deadline from OpenReview's duedate (either direction) |
+| `deadline-review.yml` | weekly | One consolidated issue listing deadlines that need a human decision |
 | `stale-check.yml` | weekly | One consolidated issue listing entries needing follow-up |
 | `link-check.yml` | monthly | One consolidated issue listing broken URLs |
 
-The maintainer's whole job: review PRs and skim two auto-updated "Data health" issues. (~1–2 h/week in deadline season, ~0 otherwise.)
+The maintainer's whole job: review PRs and skim a few auto-updated "Data health" issues. (~1–2 h/week in deadline season, ~0 otherwise.)
 
 ## Adding / fixing workshops
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Short version: use the **"Add a workshop" issue form** (no Git needed — a bot opens the PR), or copy `data/workshops/_template.yml` and open a PR yourself. Every page on the site has a ✎ Edit link.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Short version: use the **"Add a workshop" issue form** (no Git needed — a bot opens the PR), or copy `data/workshops/_template.yml` and open a PR yourself. Every page on the site has a ✎ Edit link that opens a short, timezone-safe form.
 
 ### Bulk-importing real workshop lists
 

@@ -11,6 +11,10 @@ const { w } = Astro.props;
 const conf = conferenceById.get(w.conference) ?? { name: w.conference, color: '#888' };
 const cache = loadPaperCache(w.slug);
 const statusLabel = w.statusLabel;
+// Structured, timezone-safe edit form (replaces the raw-YAML editor link). See
+// the note in WorkshopRow.astro; advanced fields stay editable via raw YAML
+// from the form's intro.
+const editUrl = `${REPO_URL}/issues/new?template=edit-workshop.yml&slug=${encodeURIComponent(w.slug)}&website=${encodeURIComponent(w.website ?? '')}`;
 const isSeed = (w.notes || '').includes('SEED DATA');
 const portalLabel: Record<string, string> = {
   openreview: 'OpenReview',
@@ -78,14 +82,14 @@ const searchOrder = (() => {
         {w.website ? (
           <a href={w.website} rel="noopener">Official website ↗</a>
         ) : (
-          <a class="link-tba" href={`${REPO_URL}/edit/main/data/workshops/${w.slug}.yml`} rel="noopener">Website unknown — help us add it</a>
+          <a class="link-tba" href={editUrl} rel="noopener">Website unknown — help us add it</a>
         )}
         {w.openreview_venue_id && (
           <a href={`https://openreview.net/group?id=${w.openreview_venue_id}`} rel="noopener">OpenReview venue ↗</a>
         )}
         {w.proceedings_url && <a href={w.proceedings_url} rel="noopener">Accepted papers ↗</a>}
         {CALENDAR_ENABLED && w.deadlineUtcMs && <a href={href(`/feeds/ws-${w.slug}.ics`)}>Add deadline to calendar (.ics)</a>}
-        <a href={`${REPO_URL}/edit/main/data/workshops/${w.slug}.yml`} rel="noopener">✎ Edit this entry</a>
+        <a href={editUrl} rel="noopener">✎ Edit this entry</a>
       </div>
       {isSeed && (
         <p class="seednote">
@@ -111,9 +115,9 @@ const searchOrder = (() => {
           </>
         ) : (
           <>
-            TBA — <a class="link-tba" href={`${REPO_URL}/edit/main/data/workshops/${w.slug}.yml`} rel="noopener">know
+            TBA — <a class="link-tba" href={editUrl} rel="noopener">know
             the deadline? Add it in one line</a>
-            <div class="muted small">The file opens with a ready-to-fill template — takes about a minute.</div>
+            <div class="muted small">Opens a short form — enter the date and pick its timezone, and we'll handle the conversion.</div>
           </>
         )}
       </dd>
