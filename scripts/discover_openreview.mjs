@@ -16,10 +16,10 @@
  * and splits submissions into sub-track children (e.g. MARINE/Full +
  * MARINE/Short), discovery descends one level and uses the earliest child
  * deadline plus an inherited website. Entries that still lack a deadline are
- * written with a comment template inviting contributors to add it — the
- * site's "know the deadline? Add it in one line" link lands there — and the
- * weekly backfill's rewrite removes the template the moment a real deadline
- * appears.
+ * written with a comment template inviting contributors to add it (a fallback
+ * for anyone editing the raw YAML; the site's "know the deadline? Add it" link
+ * opens the edit form), and the weekly backfill's rewrite removes the template
+ * the moment a real deadline appears.
  *
  * Deadline sync (extensions): a deadline the bot imported is kept in step with
  * OpenReview on subsequent runs. Each write stamps the exact value into
@@ -42,8 +42,8 @@ import yaml from 'js-yaml';
 import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 
-// Prepended to new entries that lack a deadline, so anyone landing in the
-// GitHub editor via the site's "know the deadline? Add it" link sees exactly
+// Prepended to new entries that lack a deadline, so anyone editing the raw YAML
+// directly (e.g. via the raw-YAML link in the edit form's intro) sees exactly
 // what to type. The weekly backfill rewrites the file (yaml.dump) when it
 // finds the real deadline, which removes this hint exactly when it becomes
 // obsolete.
