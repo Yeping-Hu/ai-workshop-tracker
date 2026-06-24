@@ -91,18 +91,20 @@ documents the full procedure (feasibility probe → `node scripts/add_conference
 to wire all touchpoints → import → verify → ship), with a bundled OpenReview
 probe script. The same folder zips into a Claude skill for use in fresh sessions.
 
-**Publishing is zero-touch for OpenReview data.** The weekly discovery job and the
-monthly paper refresh validate their changes and, on success, commit straight to
-`main` and trigger a deploy — newly announced workshops appear on the site with no
-human action. If validation fails, nothing is committed and GitHub emails the repo
-owner (that email is the alert channel). Community submissions via the issue form
-still arrive as pull requests for human review, as do dependency updates. reference
+**Publishing is zero-touch for OpenReview data.** The weekly discovery job, the
+daily imminent-deadline re-check, and the monthly paper refresh validate their
+changes and, on success, commit straight to `main` and trigger a deploy — newly
+announced workshops appear on the site with no human action. If validation fails,
+nothing is committed and GitHub emails the repo owner (that email is the alert
+channel). Community submissions via the issue form still arrive as pull requests
+for human review, as do dependency updates.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `validate.yml` | PRs & pushes touching data | Schema + sanity checks; comments fixes on the PR |
 | `deploy.yml` | push to `main`, weekly, manual | Build & deploy (weekly run refreshes derived statuses) |
 | `discover.yml` | weekly | Discovers new workshops/venues/deadlines from OpenReview and syncs extensions (later-only) → commits to `main` |
+| `recheck-imminent.yml` | daily | Re-checks only deadlines within `[−7d, +14d]` for extensions (one lookup each, later-only) → commits to `main` |
 | `openreview-refresh.yml` | monthly | Re-fetch paper caches for recent years → auto-PR on diff |
 | `issue-to-pr.yml` | "Add a workshop" issue form | Converts the form to a YAML file + PR, validates, reports back |
 | `edit-to-pr.yml` | "Edit a workshop" issue form | Applies the edit to the existing YAML + PR (timezone-safe), validates, reports back |

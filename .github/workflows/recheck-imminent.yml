@@ -1,0 +1,67 @@
+# Daily: re-check only the workshops whose deadline is imminent (within the next
+# two weeks) or just passed (within the last week) and apply any OpenReview
+# extension immediately — the time-sensitive slice the weekly `discover` crawl
+# would otherwise catch up to a week later. One direct OpenReview lookup per
+# in-band entry (no enumeration), with the same later-only + freeze-on-touch +
+# plausibility gates as the weekly sync. Whatever changed is validated and, on
+# success, committed straight to main (and a deploy is dispatched), with each
+# change recorded in the commit message. Full venue discovery, multi-track
+# descent, and legacy adoption stay weekly (scripts/discover_openreview.mjs);
+# this job never enumerates and never adopts.
+name: Re-check imminent deadlines
+
+on:
+  schedule:
+    - cron: '41 4 * * *' # daily 04:41 UTC (after Tue discovery, before Wed review)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  recheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Re-check imminent deadlines against OpenReview
+        env:
+          DEADLINE_CHANGELOG: ${{ github.workspace }}/.deadline-changes.md
+        run: node scripts/recheck_imminent.mjs
+      - name: Validate
+        run: node scripts/validate.mjs
+      # Validation passed above — publish directly. A failed validation fails
+      # the job before anything is committed (GitHub emails the owner).
+      - name: Publish updated deadlines (if any)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEADLINE_CHANGELOG: ${{ github.workspace }}/.deadline-changes.md
+        run: |
+          if [ -z "$(git status --porcelain data/workshops)" ]; then
+            echo "No imminent-deadline extensions today."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/workshops
+          # Commit message: a fixed subject plus the per-deadline change log
+          # (old -> new), so every automated edit is recorded in history rather
+          # than applied silently — same convention as the weekly discovery run.
+          {
+            echo "data: daily imminent-deadline re-check (auto-published after validation)"
+            if [ -s "$DEADLINE_CHANGELOG" ]; then
+              echo
+              echo "Deadline changes synced from OpenReview (later-only):"
+              cat "$DEADLINE_CHANGELOG"
+            fi
+          } > "$RUNNER_TEMP/commit-msg.txt"
+          git commit -F "$RUNNER_TEMP/commit-msg.txt"
+          git push
+          # Pushes made with GITHUB_TOKEN don't trigger on:push workflows,
+          # so kick the deploy explicitly.
+          gh workflow run deploy.yml --ref main

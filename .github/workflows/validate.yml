@@ -31,6 +31,8 @@ jobs:
         run: node scripts/issue_tz_test.mjs
       - name: Test deadline-sync logic (later-only, freeze-on-touch)
         run: node scripts/deadline_sync_test.mjs
+      - name: Test imminent-deadline re-check selection (band, freeze-on-touch)
+        run: node scripts/recheck_imminent_test.mjs
       - name: Test deadline cross-check classifier
         run: node scripts/deadline_crosscheck_test.mjs
       - name: Test edit-form transform (timezone-safe updates)

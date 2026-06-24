@@ -171,9 +171,30 @@ current value, deadline untouched — and become eligible the next run. The togg
 `ALLOW_EARLIER` in `discover_openreview.mjs` opts into following earlier
 corrections too. Every value change is appended to `$DEADLINE_CHANGELOG` and the
 weekly workflow folds it into the commit message, so each automated edit is
-recorded in history (`git log`) rather than applied silently. Only the discovery
-job syncs deadlines; the monthly `openreview-refresh` still touches only the
-paper cache.
+recorded in history (`git log`) rather than applied silently. Two jobs sync
+deadlines — the weekly discovery and the daily imminent re-check (next
+paragraph); the monthly `openreview-refresh` still touches only the paper cache.
+
+**Daily imminent re-check (fast extensions).** Extensions are time-sensitive —
+they're announced right around the original date — so a separate daily job
+(`scripts/recheck_imminent.mjs`, the `recheck-imminent` workflow) catches them
+within ~24h instead of up to a week. It re-checks only the bot-managed deadlines
+sitting in a band *around* today — `[now − 7 days, now + 14 days]` — computed
+fresh each run from the data (there is no list to maintain; entries enter and
+leave the window on their own). The forward half catches imminent deadlines; the
+look-back half is the point — a workshop whose deadline passed a day or two ago
+is still in the band, so a *post-deadline* extension (common) is picked up rather
+than missed until the next weekly run. Each in-band entry is re-checked with one
+direct OpenReview lookup by its stored `openreview_venue_id` — no enumeration —
+and the **same gates apply**: later-only, plausibility, and freeze-on-touch via
+the value stamp, so a hand-edited deadline is skipped (left for the cross-check)
+and never overwritten. It only re-syncs entries that already carry a stamp;
+**legacy adoption, multi-track descent, and discovery of new venues stay weekly**
+(`discover_openreview.mjs`), which remains the backstop for anything outside the
+band (e.g. an extension announced more than a week late). Cost is a handful of
+lookups on a busy day, often zero off-season; changes are appended to
+`$DEADLINE_CHANGELOG` and committed exactly like the weekly run. The band +
+freeze selection is covered by `scripts/recheck_imminent_test.mjs`.
 
 The `OpenReview-synced …` stamp lives in `deadline_notes` and is shown on a
 workshop's **detail page** (with a "verify on the website" caveat), but **not on

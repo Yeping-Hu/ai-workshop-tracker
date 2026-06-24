@@ -110,6 +110,11 @@ deadline to UTC (AoE or any civil timezone, DST-aware), keeping the original in
 later-only by default, treats unchanged/null as no-ops, and (via the
 `deadline_notes` value stamp) freezes any deadline a human has edited.
 
+`node scripts/recheck_imminent_test.mjs` — the daily imminent re-check selects
+only bot-managed deadlines within `[−7d, +14d]` (the look-back is what catches a
+post-deadline extension) and skips hand-edited, legacy, multi-track, and
+venue-id-less entries; its apply path reuses the sync helpers above.
+
 `node scripts/deadline_crosscheck_test.mjs` — the cross-check classifies a
 stored-vs-OpenReview gap (tz-suspect vs. real change) and, by provenance, decides
 what needs human review: a human-edited deadline that disagrees, or a bot-managed
@@ -131,6 +136,7 @@ Don't paste papers by hand. Set `openreview_venue_id` and the monthly `openrevie
 
 - **Review queue:** PRs from contributors and from the two bots (`issue-to-pr`, `openreview-refresh`). CI has already validated data PRs — skim and merge.
 - **Auto-synced deadlines:** the weekly `discover` job keeps OpenReview-imported deadlines in step with extensions (later-only by default) and records each change in its commit message — no PR. A deadline (or its `deadline_notes`) you edit by hand is **frozen**: the bot won't re-sync it. Notes beginning `OpenReview-synced …` are bot-stamped; changing the date or replacing the note hands that deadline to manual control. To also follow earlier corrections, flip `ALLOW_EARLIER` in `scripts/discover_openreview.mjs`.
+- **Daily imminent re-check:** a daily `recheck-imminent` job re-checks only deadlines within `[−7d, +14d]` and applies OpenReview extensions within ~24h instead of waiting for the weekly run — so a near-deadline extension, including one announced a day or two *after* the original date (the look-back window), lands fast. Same gates as the weekly sync (later-only, plausibility, frozen-on-hand-edit) and same no-PR commit; it never enumerates or adopts, so new-venue discovery and legacy adoption stay weekly. It's the fast path; the weekly run is the backstop for anything outside the band.
 - **Fixing a stale/extended deadline now:** rather than hand-editing the time (easy to get the timezone wrong), re-pull it from OpenReview — Actions → **Re-sync deadline from OpenReview** → enter the slug (or locally `node scripts/resync_deadline.mjs --slug <slug>`). It sets the deadline to OpenReview's current duedate, in either direction, and re-stamps it for future auto-sync.
 - **Deadline review issue:** a weekly `deadline-review` workflow keeps one self-maintaining issue ("Data health: deadlines to review", `data-health` label) listing only deadlines the auto-sync won't fix itself — ones you hand-edited that now disagree with OpenReview, and bot-managed ones OpenReview moved *earlier* (the bot is later-only). Each item links the re-sync command; resolve by re-syncing (trust OpenReview) or leaving it (keep yours). The issue closes itself when nothing's outstanding. Bot-managed later moves and legacy entries never appear — they sync automatically.
 - **Health issues:** two auto-maintained issues labelled `data-health` (stale entries, broken links). They update in place and close themselves when clean.
