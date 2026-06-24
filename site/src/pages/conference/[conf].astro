@@ -1,7 +1,7 @@
 ---
 import Base from '../../components/Base.astro';
 import { workshops, conferences } from '../../lib/data';
-import { href } from '../../lib/site';
+import { href, REPO_URL } from '../../lib/site';
 
 // One hub page per conference, generated from the same data the rest of the
 // site uses. Intentionally carries NO data-pf-ws / data-pf-papers attributes,
@@ -158,7 +158,7 @@ const statusPill = (w: any) =>
   </section>
 
   <p class="muted small" style="margin-top: 2rem;">
-    Missing a {confName} workshop? <a href={href('/about/')}>Add it →</a>
+    Missing a {confName} workshop? <a href={`${REPO_URL}/issues/new?template=add-workshop.yml&conference=${conf.id}`}>Add it →</a>
   </p>
 
   <style>

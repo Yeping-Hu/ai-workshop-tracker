@@ -150,6 +150,7 @@ const breadcrumbLd = {
         )}
         {w.proceedings_url && <a href={w.proceedings_url} rel="noopener">Accepted papers ↗</a>}
         {CALENDAR_ENABLED && w.deadlineUtcMs && <a href={href(`/feeds/ws-${w.slug}.ics`)}>Add deadline to calendar (.ics)</a>}
+        <a href={href(`/conference/${w.conference}/`)}>See all {conf.name} workshops →</a>
         <a href={editUrl} rel="noopener">✎ Edit this entry</a>
       </div>
       {isSeed && (
