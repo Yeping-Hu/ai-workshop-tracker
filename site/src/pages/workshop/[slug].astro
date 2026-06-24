@@ -31,17 +31,23 @@ const paperId = (p: any, i: number) =>
 const wsLabel = `${w.acronym || w.name} — ${conf.name} ${w.year}`;
 // Browse-mode sort key (used only when the search box is empty — keyword
 // queries keep Pagefind's relevance order). Lexicographic ascending over
-// '<band>-<14-digit ms>': 0 open calls by soonest deadline, 1 upcoming TBA
-// by soonest event, 2 call closed but event upcoming by soonest event,
-// 3 past by most recent first (inverted).
+// '<band>-<14-digit ms>':
+//   0  open calls, by soonest deadline (most urgent first)
+//   1  upcoming with no deadline yet, by soonest event
+//   2  "Past": deadline has passed (both "closed, event still upcoming" and
+//      fully over) — by most recently passed deadline first, so the workshop
+//      whose deadline just passed sits at the top
+//   3  "Past" with no deadline at all — by most recent event, truly undated last
+// Bands 2 and 3 together are everything the UI labels "Past"; ordering by
+// deadline descending is what the deadline-passed list is sorted on.
 const searchOrder = (() => {
   const pad = (ms: number) => String(Math.max(0, Math.min(ms, 99999999999999))).padStart(14, '0');
   const MAX = 99999999999999;
   const ev = w.workshopDateUtcMs ?? w.deadlineUtcMs ?? MAX;
   if (w.status === 'upcoming' && w.deadlineUtcMs != null) return '0-' + pad(w.deadlineUtcMs);
   if (w.status === 'upcoming') return '1-' + pad(ev);
-  if (w.status === 'deadline_passed') return '2-' + pad(ev);
-  return '3-' + pad(MAX - (w.workshopDateUtcMs ?? w.deadlineUtcMs ?? 0));
+  if (w.deadlineUtcMs != null) return '2-' + pad(MAX - w.deadlineUtcMs);
+  return '3-' + pad(MAX - (w.workshopDateUtcMs ?? 0));
 })();
 
 ---
