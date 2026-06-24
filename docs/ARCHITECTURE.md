@@ -365,7 +365,7 @@ so earlier subscribers' calendars self-clean.
 
 Schema and sanity checks comment on PRs with exactly what to fix, and issue
 forms (add and edit) auto-convert to PRs for non-technical contributors, so reviewing data
-quality isn't a manual burden. See [Automation](../README.md#automation) for the
+quality isn't a manual burden. See [AUTOMATION.md](AUTOMATION.md) for the
 full workflow list.
 
 The add/edit issue forms collect topics as a **multi-select dropdown** and the
