@@ -17,7 +17,7 @@
  * MARINE/Short), discovery descends one level and uses the earliest child
  * deadline plus an inherited website. Entries that still lack a deadline are
  * written with a comment template inviting contributors to add it (a fallback
- * for anyone editing the raw YAML; the site's "know the deadline? Add it" link
+ * for anyone editing the raw YAML; the site's "know the deadline? Help add it" link
  * opens the edit form), and the weekly backfill's rewrite removes the template
  * the moment a real deadline appears.
  *

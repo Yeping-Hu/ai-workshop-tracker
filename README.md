@@ -121,7 +121,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Short version: use the **"Add a workshop
 
 ### Bulk-importing real workshop lists
 
-`scripts/discover_openreview.mjs` enumerates every workshop venue for a conference-year straight from OpenReview and creates an entry per venue — official title, acronym, website, and the **real submission deadline**, taken from the venue's date line or, when that is blank, from the submission invitation's machine-readable `duedate` (expired invitations included; nothing is estimated). Venues with no published deadline anywhere get an in-file comment template, and their pages show a "know the deadline? Add it" link to the timezone-safe edit form (that in-file template remains as a raw-YAML fallback):
+`scripts/discover_openreview.mjs` enumerates every workshop venue for a conference-year straight from OpenReview and creates an entry per venue — official title, acronym, website, and the **real submission deadline**, taken from the venue's date line or, when that is blank, from the submission invitation's machine-readable `duedate` (expired invitations included; nothing is estimated). Venues with no published deadline anywhere get an in-file comment template, and their pages show a "know the deadline? Help add it" link to the timezone-safe edit form (that in-file template remains as a raw-YAML fallback):
 
 ```bash
 node scripts/discover_openreview.mjs --conf neurips --year 2026
