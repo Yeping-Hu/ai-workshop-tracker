@@ -9,12 +9,16 @@ import { href, REPO_URL } from '../../lib/site';
 // navigation/overview, not search results). They join the sitemap
 // automatically via @astrojs/sitemap.
 export function getStaticPaths() {
+  // status order for listings: open call -> unknown -> past
+  const rank = (w: any) =>
+    w.statusLabel === 'Open call' ? 0 : w.statusLabel === 'Deadline unknown' ? 1 : 2;
   return conferences.map((c: any) => {
     const list = workshops
       .filter((w: any) => w.conference === c.id)
       .sort(
         (a: any, b: any) =>
           b.year - a.year ||
+          rank(a) - rank(b) ||
           (a.deadlineUtcMs ?? Infinity) - (b.deadlineUtcMs ?? Infinity) ||
           (a.name || '').localeCompare(b.name || ''),
       );
