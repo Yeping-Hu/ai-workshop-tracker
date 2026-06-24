@@ -44,7 +44,7 @@ const FW = workshops.map((w) => ({
 // twice as many. ws = every workshop page (data-pf-ws); papers = pages with a
 // data-pf-papers section, which is rendered only when the workshop has cached
 // papers — the same condition [slug].astro uses, so the numbers track the data
-// across the weekly rebuilds.
+// across the daily rebuilds.
 const pfExpect = {
   ws: workshops.length,
   papers: workshops.filter((w) => {
@@ -62,16 +62,17 @@ const datasetUrl = SITE ? new URL(href('/api/workshops.json'), SITE).href : href
 const _years = workshops.map((w) => w.year).filter((y) => typeof y === 'number');
 const yearMin = _years.length ? Math.min(..._years) : null;
 const yearMax = _years.length ? Math.max(..._years) : null;
+const _confNames = [...conferences].map((c) => c.name).sort();
 const datasetLd: Record<string, any> = {
   '@context': 'https://schema.org',
   '@type': 'Dataset',
   name: 'AI Workshop Tracker — workshop deadlines & accepted papers',
-  description: `Submission deadlines, dates, and accepted-paper lists for ${workshops.length} workshop editions across major AI/ML/Robotics conferences (COLM, CVPR, CoRL, ECCV, ICLR, ICML, ICRA, IROS, NeurIPS), including ${paperCount.toLocaleString('en-US')} accepted papers. Community-maintained and refreshed weekly.`,
+  description: `Submission deadlines, dates, and accepted-paper lists for ${workshops.length} workshop editions across major AI/ML/Robotics conferences (${_confNames.join(', ')}), including ${paperCount.toLocaleString('en-US')} accepted papers. Community-maintained and rebuilt daily.`,
   url: SITE ? SITE.href : 'https://aiworkshoptracker.com/',
   license: 'https://creativecommons.org/licenses/by/4.0/',
   isAccessibleForFree: true,
   creator: { '@type': 'Person', name: 'Yeping Hu', url: 'https://yeping-hu.github.io/' },
-  keywords: ['machine learning workshops', 'AI conference deadlines', 'call for papers', 'NeurIPS', 'ICML', 'ICLR', 'CVPR', 'ECCV', 'accepted papers'],
+  keywords: ['machine learning workshops', 'AI conference deadlines', 'call for papers', 'accepted papers', ..._confNames],
   ...(yearMin && yearMax ? { temporalCoverage: `${yearMin}/${yearMax}` } : {}),
   distribution: {
     '@type': 'DataDownload',
@@ -602,7 +603,7 @@ const datasetLd: Record<string, any> = {
     }
 
     async function handleSearchFailure(err) {
-      // The site redeploys often (weekly auto-rebuild + content pushes), and
+      // The site redeploys often (daily auto-rebuild + content pushes), and
       // every deploy replaces the hashed search-data files the engine loads
       // lazily — so a tab opened before a deploy gets zero results for every
       // filter. The engine's manifest fetch is timestamp-busted, so a fresh
