@@ -1,17 +1,17 @@
-name: '2nd Workshop on Compositional Learning: Safety, Interpretability, and Agents'
+name: "2nd Workshop on Compositional Learning: Safety, Interpretability, and Agents"
 acronym: CompLearn 2026
 conference: icml
 year: 2026
 website: https://compositional-learning.github.io
-submission_deadline: 2026-05-08 11:59
+submission_deadline: 2026-05-09 08:30
 timezone: UTC
-deadline_notes: from the workshop website
-notification_date: '2026-05-22'
+deadline_notes: OpenReview-synced 2026-05-09 08:30 UTC (as of 2026-06-24) — extensions on OpenReview are applied automatically; verify on the website.
+notification_date: "2026-05-22"
 topics:
-- agents
-- safety-alignment
-- interpretability
+  - agents
+  - safety-alignment
+  - interpretability
 openreview_venue_id: ICML.cc/2026/Workshop/CompLearn
 submission_portal: openreview
 notes: Deadline added from the workshop website.
-added: '2026-06-10'
+added: "2026-06-10"

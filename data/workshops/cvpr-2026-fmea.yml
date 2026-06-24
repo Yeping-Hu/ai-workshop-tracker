@@ -7,9 +7,9 @@ topics:
   - llms
   - agents
   - robotics
-submission_deadline: 2026-05-11 23:59
+submission_deadline: 2026-05-11 11:59
 timezone: UTC
-deadline_notes: OpenReview-synced 2026-05-11 23:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_notes: OpenReview-synced 2026-05-11 11:59 UTC (as of 2026-06-24) — extensions on OpenReview are applied automatically; verify on the website.
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/FMEA
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
