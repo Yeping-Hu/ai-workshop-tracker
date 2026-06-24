@@ -126,7 +126,7 @@ Behavior worth knowing before you touch the search code:
 ### Surviving deploys
 
 Pagefind loads its hashed index/filter data files lazily on first search, and
-every deploy replaces them (and the site redeploys often: weekly rebuild plus
+every deploy replaces them (and the site redeploys often: daily rebuild plus
 content pushes). A tab opened before a deploy would otherwise get zero results
 for every filter. The client guards against this: in browse mode it knows the
 exact expected count from build-time data, so zero results where >0 are expected
@@ -137,8 +137,8 @@ if that also fails does it show an honest message with a reload button.
 ## Statuses are derived, never stored
 
 `upcoming` / `deadline_passed` / `past` are computed from dates at build time. A
-weekly scheduled rebuild keeps them current with zero commits, so an "Open call"
-becomes "Past" on its own without anyone editing data.
+daily scheduled rebuild keeps them current with zero commits, so an "Open call"
+becomes "Past" on its own (within a day) without anyone editing data.
 
 When a workshop has no explicit `workshop_date`, its event date is **inferred** —
 from its conference edition's end date (`data/editions.yml`), or, failing that,

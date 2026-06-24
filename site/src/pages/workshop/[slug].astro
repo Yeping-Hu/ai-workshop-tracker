@@ -50,9 +50,64 @@ const searchOrder = (() => {
   return '3-' + pad(MAX - (w.workshopDateUtcMs ?? 0));
 })();
 
+// --- Structured data (JSON-LD), derived from the same resolved workshop
+// fields this page already renders, so no new data and no validation/schema
+// changes are needed. ---
+const SITE = Astro.site;
+const abs = (p: string) => (SITE ? new URL(href(p), SITE).href : href(p));
+const pageUrl = SITE ? new URL(Astro.url.pathname, SITE).href : href(`/workshop/${w.slug}/`);
+const confLabel = `${conf.name} ${w.year}`;
+const confFull = (conf as any).full_name ? `${(conf as any).full_name} (${conf.name})` : conf.name;
+const keywordList = (w.topics ?? []).map((t: string) => topicById.get(t)?.label ?? t);
+
+// schema.org/Event has no native "submission deadline" field, so the deadline
+// lives in the description (and prominently on-page, where AI search weights it
+// most). Venue isn't in the dataset, so `location` is omitted: the markup stays
+// valid and useful for AI extraction, though Google "Event" rich-result
+// eligibility specifically wants both a location and a startDate.
+const eventLd: Record<string, any> = {
+  '@context': 'https://schema.org',
+  '@type': 'Event',
+  name: w.acronym ? `${w.name} (${w.acronym})` : w.name,
+  url: pageUrl,
+  description: [
+    w.deadlineWallClock
+      ? `Paper submission deadline: ${w.deadlineWallClock}.`
+      : 'Paper submission deadline to be announced.',
+    `A workshop at ${confFull} ${w.year}.`,
+    w.paperCount > 0 ? `${w.paperCount} accepted papers listed.` : '',
+  ].filter(Boolean).join(' '),
+  ...(w.workshopDateLabel ? { startDate: w.workshopDateLabel } : {}),
+  ...(w.website ? { sameAs: w.website } : {}),
+  superEvent: {
+    '@type': 'Event',
+    name: confLabel,
+    ...((conf as any).full_name ? { alternateName: (conf as any).full_name } : {}),
+    ...((conf as any).website ? { url: (conf as any).website } : {}),
+  },
+  ...(Array.isArray(w.organizers) && w.organizers.length
+    ? { organizer: w.organizers.map((n: string) => ({ '@type': 'Person', name: n })) }
+    : {}),
+  ...(keywordList.length ? { keywords: keywordList.join(', ') } : {}),
+};
+
+const breadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: abs('/') },
+    { '@type': 'ListItem', position: 2, name: `${confLabel} workshops`, item: abs(`/conference/${w.conference}/`) },
+    { '@type': 'ListItem', position: 3, name: w.acronym || w.name },
+  ],
+};
+
 ---
 
 <Base title={`${w.acronym || w.name} (${conf.name} ${w.year})`} description={`${w.name} — ${conf.name} ${w.year}: deadline, dates, and accepted papers.`}>
+  <Fragment slot="head">
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(eventLd)} />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbLd)} />
+  </Fragment>
   <article>
    <div
     data-pf-ws

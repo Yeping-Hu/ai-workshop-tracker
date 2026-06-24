@@ -15,7 +15,7 @@ for human review, as do dependency updates.
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `validate.yml` | PRs & pushes touching data | Schema + sanity checks; comments fixes on the PR |
-| `deploy.yml` | push to `main`, weekly, manual | Build & deploy (weekly run refreshes derived statuses) |
+| `deploy.yml` | push to `main`, daily, manual | Build & deploy (daily run refreshes derived statuses) |
 | `discover.yml` | weekly | Discovers new workshops/venues/deadlines from OpenReview and syncs extensions (later-only) → commits to `main` |
 | `recheck-imminent.yml` | daily | Re-checks only deadlines within `[−7d, +14d]` for extensions (one lookup each, later-only) → commits to `main` |
 | `openreview-refresh.yml` | monthly | Re-fetch paper caches for recent years → auto-PR on diff |

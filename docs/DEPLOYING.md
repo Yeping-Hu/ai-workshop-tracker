@@ -8,7 +8,7 @@ static files. For local development and the build command, see the
 
 1. Push this repo to GitHub.
 2. Repo **Settings → Pages → Source: "GitHub Actions"**.
-3. Done. `.github/workflows/deploy.yml` builds on every push to `main`, weekly, and on demand. This repo serves at the custom domain `aiworkshoptracker.com` (configured in Settings → Pages → Custom domain; DNS A records point the apex at GitHub Pages). The `<owner>.github.io/<repo>` URL redirects there automatically.
+3. Done. `.github/workflows/deploy.yml` builds on every push to `main`, daily, and on demand. This repo serves at the custom domain `aiworkshoptracker.com` (configured in Settings → Pages → Custom domain; DNS A records point the apex at GitHub Pages). The `<owner>.github.io/<repo>` URL redirects there automatically.
 
 Forking without the custom domain? In `deploy.yml`, set `SITE_URL` to `https://<owner>.github.io` and `SITE_BASE` to `/<repo-name>`.
 
@@ -19,7 +19,7 @@ Forking without the custom domain? In `deploy.yml`, set `SITE_URL` to `https://<
    - **Build command:** `npm ci && npm ci --prefix site && npm run build --prefix site`
    - **Build output directory:** `site/dist`
    - **Environment variables:** `SITE_URL=https://<your-project>.pages.dev` (and `PUBLIC_REPO_URL=https://github.com/<you>/<repo>`)
-3. Optionally delete `deploy.yml` (Cloudflare builds on push by itself) — but keep the weekly rebuild by leaving it and pointing it at Cloudflare's [deploy hook](https://developers.cloudflare.com/pages/configuration/deploy-hooks/), or simply keep GitHub Pages as a mirror.
+3. Optionally delete `deploy.yml` (Cloudflare builds on push by itself) — but keep the daily rebuild by leaving it and pointing it at Cloudflare's [deploy hook](https://developers.cloudflare.com/pages/configuration/deploy-hooks/), or simply keep GitHub Pages as a mirror.
 
 ## Environment variables
 

@@ -1,0 +1,22 @@
+# AI Workshop Tracker
+
+> Submission deadlines, past editions, and accepted papers for the workshops of major AI / ML / Robotics conferences (COLM, CVPR, CoRL, ECCV, ICLR, ICML, ICRA, IROS, NeurIPS). Community-maintained and open-source; deadlines should always be confirmed on each workshop's official page.
+
+The site tracks one entry per workshop *edition* (a workshop at a specific conference and year). Each entry records the call-for-papers submission deadline (normalized to a single timezone), key dates, the official website, organizers, topics, and — where the workshop uses OpenReview — its list of accepted papers. Data is refreshed by an automated weekly rebuild. As of the latest build there are roughly 766 workshop editions and 20,600 accepted papers across 9 conferences.
+
+## Data
+- [Workshops JSON API](https://aiworkshoptracker.com/api/workshops.json): Machine-readable list of every tracked workshop edition with resolved deadlines, dates, status, topics, and paper counts. This is the canonical structured source — prefer it over scraping the HTML.
+- [New-workshops RSS feed](https://aiworkshoptracker.com/rss.xml): Workshop editions as they are added.
+
+## Key pages
+- [Home / deadline board](https://aiworkshoptracker.com/): Upcoming workshop submission deadlines with countdowns, plus full-text search across all workshops and papers.
+- [About](https://aiworkshoptracker.com/about/): What the project is, how the data is sourced, and how to contribute.
+- Per-conference pages: `https://aiworkshoptracker.com/conference/<id>/` — all tracked workshops for one conference (ids: colm, cvpr, corl, eccv, iclr, icml, icra, iros, neurips).
+- Workshop detail pages: `https://aiworkshoptracker.com/workshop/<slug>/` — one per workshop edition, listing its deadline, dates, organizers, and accepted papers.
+
+## Conferences covered
+COLM (Conference on Language Modeling), CVPR (Computer Vision and Pattern Recognition), CoRL (Conference on Robot Learning), ECCV (European Conference on Computer Vision), ICLR (International Conference on Learning Representations), ICML (International Conference on Machine Learning), ICRA (International Conference on Robotics and Automation), IROS (Intelligent Robots and Systems), NeurIPS (Neural Information Processing Systems).
+
+## About the data
+- [Source repository (GitHub)](https://github.com/Yeping-Hu/ai-workshop-tracker): Open-source. Workshop data is one YAML file per edition; accepted-paper lists are cached from the OpenReview API; deadlines are normalized to a consistent timezone at build time.
+- License: site code is MIT; the workshop dataset is CC-BY-4.0. Suggested attribution: "AI Workshop Tracker" by Yeping Hu. Deadlines are community-maintained and may contain errors — always confirm on the official workshop page before submitting.

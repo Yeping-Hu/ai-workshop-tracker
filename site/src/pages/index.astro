@@ -52,9 +52,39 @@ const pfExpect = {
     return c && Array.isArray(c.papers) && c.papers.length > 0;
   }).length,
 };
+
+// Dataset (JSON-LD): the tracker's corpus is a genuine, unique, machine-readable
+// dataset — exposing it as schema.org/Dataset makes it eligible for Google
+// Dataset Search and gives AI engines a citable, structured source. Points at
+// the static JSON API the site already emits.
+const SITE = Astro.site;
+const datasetUrl = SITE ? new URL(href('/api/workshops.json'), SITE).href : href('/api/workshops.json');
+const _years = workshops.map((w) => w.year).filter((y) => typeof y === 'number');
+const yearMin = _years.length ? Math.min(..._years) : null;
+const yearMax = _years.length ? Math.max(..._years) : null;
+const datasetLd: Record<string, any> = {
+  '@context': 'https://schema.org',
+  '@type': 'Dataset',
+  name: 'AI Workshop Tracker — workshop deadlines & accepted papers',
+  description: `Submission deadlines, dates, and accepted-paper lists for ${workshops.length} workshop editions across major AI/ML/Robotics conferences (COLM, CVPR, CoRL, ECCV, ICLR, ICML, ICRA, IROS, NeurIPS), including ${paperCount.toLocaleString('en-US')} accepted papers. Community-maintained and refreshed weekly.`,
+  url: SITE ? SITE.href : 'https://aiworkshoptracker.com/',
+  license: 'https://creativecommons.org/licenses/by/4.0/',
+  isAccessibleForFree: true,
+  creator: { '@type': 'Person', name: 'Yeping Hu', url: 'https://yeping-hu.github.io/' },
+  keywords: ['machine learning workshops', 'AI conference deadlines', 'call for papers', 'NeurIPS', 'ICML', 'ICLR', 'CVPR', 'ECCV', 'accepted papers'],
+  ...(yearMin && yearMax ? { temporalCoverage: `${yearMin}/${yearMax}` } : {}),
+  distribution: {
+    '@type': 'DataDownload',
+    encodingFormat: 'application/json',
+    contentUrl: datasetUrl,
+  },
+};
 ---
 
 <Base>
+  <Fragment slot="head">
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(datasetLd)} />
+  </Fragment>
   <section class="hero">
     <p class="eyebrow">{[...conferences].map((c) => c.name).sort().join(' · ')}</p>
     <h1>Every workshop. Every paper. One search.</h1>

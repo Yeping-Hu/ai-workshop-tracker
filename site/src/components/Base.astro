@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { SITE_NAME, SITE_TAGLINE, REPO_URL, CALENDAR_ENABLED, SUPPORT_URL, href } from '../lib/site';
+import { conferences } from '../lib/data';
 
 interface Props {
   title?: string;
@@ -69,6 +70,8 @@ const current = (p: string) =>
       } catch {}
     </script>
     {canonical && <meta property="og:url" content={canonical} />}
+    {/* Per-page structured data (JSON-LD) and any extra <head> tags. */}
+    <slot name="head" />
   </head>
   <body>
     <header class="site-header">
@@ -93,7 +96,15 @@ const current = (p: string) =>
       <div class="wrap">
         <div>
           <strong>{SITE_NAME}</strong> — {SITE_TAGLINE} Always confirm details on the official workshop page.
-          <span class="mono"> Data refreshed {buildDate}; the site rebuilds automatically every week.</span>
+          <span class="mono"> Data refreshed {buildDate}; the site rebuilds automatically every day.</span>
+        </div>
+        <div class="footer-confs">
+          Browse by conference:{' '}
+          {[...conferences]
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((c, i) => (
+              <Fragment>{i > 0 ? ' · ' : ''}<a href={href(`/conference/${c.id}/`)}>{c.name}</a></Fragment>
+            ))}
         </div>
         <div>
           Built by <a href="https://yeping-hu.github.io/" rel="author">Yeping Hu</a> — a personal open-source project ·

@@ -1,0 +1,173 @@
+---
+import Base from '../../components/Base.astro';
+import { workshops, conferences } from '../../lib/data';
+import { href } from '../../lib/site';
+
+// One hub page per conference, generated from the same data the rest of the
+// site uses. Intentionally carries NO data-pf-ws / data-pf-papers attributes,
+// so these pages stay out of the workshop/paper search index (they're
+// navigation/overview, not search results). They join the sitemap
+// automatically via @astrojs/sitemap.
+export function getStaticPaths() {
+  return conferences.map((c: any) => {
+    const list = workshops
+      .filter((w: any) => w.conference === c.id)
+      .sort(
+        (a: any, b: any) =>
+          b.year - a.year ||
+          (a.deadlineUtcMs ?? Infinity) - (b.deadlineUtcMs ?? Infinity) ||
+          (a.name || '').localeCompare(b.name || ''),
+      );
+    return { params: { conf: c.id }, props: { conf: c, list } };
+  });
+}
+
+const { conf, list } = Astro.props as { conf: any; list: any[] };
+const confName: string = conf.name;
+const confFull: string = conf.full_name || conf.name;
+
+const years = list.map((w) => w.year).filter((y) => typeof y === 'number');
+const yearMin = years.length ? Math.min(...years) : null;
+const yearMax = years.length ? Math.max(...years) : null;
+const openCalls = list.filter((w) => w.statusLabel === 'Open call');
+const nextOpen =
+  [...openCalls]
+    .filter((w) => w.deadlineUtcMs != null)
+    .sort((a, b) => a.deadlineUtcMs - b.deadlineUtcMs)[0] ?? null;
+const paperTotal = list.reduce((n, w) => n + (w.paperCount ?? 0), 0);
+
+const byYear = new Map<number, any[]>();
+for (const w of list) {
+  if (!byYear.has(w.year)) byYear.set(w.year, []);
+  byYear.get(w.year)!.push(w);
+}
+const yearGroups = [...byYear.entries()].sort((a, b) => b[0] - a[0]);
+
+const SITE = Astro.site;
+const abs = (p: string) => (SITE ? new URL(href(p), SITE).href : href(p));
+const pageUrl = SITE ? new URL(Astro.url.pathname, SITE).href : href(`/conference/${conf.id}/`);
+
+const span =
+  yearMin && yearMax ? (yearMin === yearMax ? ` from ${yearMin}` : ` from ${yearMin} to ${yearMax}`) : '';
+const intro =
+  `This page tracks ${list.length} ${confName} workshop edition${list.length === 1 ? '' : 's'}${span}, ` +
+  `with ${paperTotal.toLocaleString('en-US')} accepted papers. ` +
+  (openCalls.length
+    ? `${openCalls.length} ${confName} workshop${openCalls.length === 1 ? ' has' : 's have'} an open call for papers right now` +
+      (nextOpen ? `; the next deadline is ${nextOpen.deadlineWallClock}.` : '.')
+    : `There are no open ${confName} workshop calls right now — new cycles are imported automatically as they're announced.`);
+
+// FAQ rendered visibly below AND mirrored as FAQPage JSON-LD (Google requires
+// the answer text to be present on the page). Answers are data-driven.
+const faqs = [
+  {
+    q: `When are ${confName} workshop paper submission deadlines?`,
+    a: openCalls.length
+      ? `Deadlines vary by workshop. ${openCalls.length} ${confName} workshop${openCalls.length === 1 ? ' has' : 's have'} an open call right now` +
+        (nextOpen ? `, the soonest closing on ${nextOpen.deadlineWallClock}. ` : '. ') +
+        `The full list, each with its own deadline, is below.`
+      : `There are no open ${confName} workshop calls at the moment. Upcoming deadlines are added automatically as workshops announce them; past editions and their deadlines are listed below.`,
+  },
+  {
+    q: `How many ${confName} workshops are tracked here?`,
+    a:
+      `${list.length} ${confName} workshop edition${list.length === 1 ? '' : 's'}` +
+      (yearMin && yearMax && yearMin !== yearMax ? ` spanning ${yearMin}–${yearMax}` : '') +
+      `, together listing ${paperTotal.toLocaleString('en-US')} accepted papers.`,
+  },
+  {
+    q: `Where can I find accepted papers from ${confName} workshops?`,
+    a: `Each workshop's page lists its accepted papers, sourced from OpenReview where available. Across ${confName} workshops, ${paperTotal.toLocaleString('en-US')} papers are currently listed and searchable.`,
+  },
+  {
+    q: `Are these ${confName} workshop deadlines official?`,
+    a: `These deadlines are drawn from each workshop's official call for papers and its OpenReview page where available, so they're generally reliable — but the data is community-maintained, and a workshop may update its own page without updating OpenReview. Always confirm the exact deadline on the official workshop page before submitting.`,
+  },
+];
+
+const faqLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map((f) => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+};
+const breadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: abs('/') },
+    { '@type': 'ListItem', position: 2, name: `${confName} workshops`, item: pageUrl },
+  ],
+};
+
+const statusPill = (w: any) =>
+  w.statusLabel === 'Open call' ? 'upcoming' : w.statusLabel === 'Deadline unknown' ? 'unknown' : 'past';
+---
+
+<Base
+  title={`${confName} Workshops — deadlines & papers`}
+  description={`Submission deadlines, dates, and accepted papers for ${confFull} (${confName}) workshops. ${list.length} editions tracked.`}
+>
+  <Fragment slot="head">
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(faqLd)} />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbLd)} />
+  </Fragment>
+
+  <section class="detail-head">
+    <p class="eyebrow">{confFull}</p>
+    <h1>{confName} workshops</h1>
+    <p class="conf-intro">{intro}</p>
+    <div class="statline">
+      <span><strong>{list.length}</strong> workshop editions</span>
+      <span><strong>{paperTotal.toLocaleString('en-US')}</strong> papers</span>
+      <span><strong>{openCalls.length}</strong> open calls</span>
+    </div>
+  </section>
+
+  {yearGroups.map(([year, ws]) => (
+    <section class="conf-year">
+      <h2>{confName} {year}</h2>
+      <ul class="conf-ws-list">
+        {ws.map((w) => (
+          <li>
+            <span class={`pill ${statusPill(w)}`}>{w.statusLabel}</span>
+            <a href={href(`/workshop/${w.slug}/`)}>{w.acronym || w.name}</a>
+            {w.deadlineWallClock && (
+              <span class="muted mono small">{w.statusLabel === 'Open call' ? 'due ' : ''}{w.deadlineWallClock}</span>
+            )}
+            {w.paperCount > 0 && <span class="muted small">· {w.paperCount} papers</span>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+
+  <section class="conf-faq">
+    <h2>Frequently asked questions</h2>
+    <dl>
+      {faqs.map((f) => (
+        <Fragment>
+          <dt>{f.q}</dt>
+          <dd>{f.a}</dd>
+        </Fragment>
+      ))}
+    </dl>
+  </section>
+
+  <p class="muted small" style="margin-top: 2rem;">
+    Missing a {confName} workshop? <a href={href('/about/')}>Add it →</a>
+  </p>
+
+  <style>
+    .conf-intro { font-size: 1.04rem; line-height: 1.55; color: var(--muted); max-width: 48rem; margin: 0.4rem 0 1rem; }
+    .conf-year { margin: 1.6rem 0; }
+    .conf-ws-list { list-style: none; padding: 0; margin: 0.6rem 0; display: grid; gap: 0.5rem; }
+    .conf-ws-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
+    .conf-faq { margin: 2.4rem 0; max-width: 48rem; }
+    .conf-faq dt { font-weight: 600; margin-top: 1rem; }
+    .conf-faq dd { margin: 0.3rem 0 0; color: var(--muted); }
+  </style>
+</Base>
