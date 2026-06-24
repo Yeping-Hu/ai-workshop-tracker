@@ -51,6 +51,9 @@ A workshop with no deadline and no `workshop_date` becomes **Past** automaticall
 conference edition ends — edition dates live in `data/editions.yml` (one row per
 conference-year, `end` required; `node scripts/validate.mjs` notes any tracked year missing
 a row). When a year has no row, the coarser `typical_month` from `data/conferences.yml` is used.
+An **open (future) deadline always keeps a workshop an Open call**, even past its conference's
+end date — so a challenge whose deadline runs after the conference (common for competitions)
+isn't wrongly marked Past; it flips to Past only once the deadline itself passes.
 
 ### Multi-track workshops (`tracks`)
 

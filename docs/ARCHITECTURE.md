@@ -140,6 +140,17 @@ if that also fails does it show an honest message with a reload button.
 weekly scheduled rebuild keeps them current with zero commits, so an "Open call"
 becomes "Past" on its own without anyone editing data.
 
+When a workshop has no explicit `workshop_date`, its event date is **inferred** —
+from its conference edition's end date (`data/editions.yml`), or, failing that,
+the conference's typical month. That inference must never override a real
+deadline: an **open (future) submission deadline always means "Open call", even
+past the inferred event date** (`computeStatus` checks the deadline first). Without
+this, a challenge/competition whose deadline runs past the main conference — e.g.
+a CVPR Codabench competition due after the conference ends — would flip to "Past"
+the moment the conference ended, despite still accepting submissions. Once the
+deadline itself passes, the inferred date takes over and it becomes "Past" as
+expected. Covered by `scripts/status_test.mjs`.
+
 Deadlines are stored in **UTC**. The importer converts any timezone OpenReview
 reports — including AoE (UTC−12) — to the equivalent UTC instant before writing
 (`parseGroupDeadline`/`msToDeadline` in `scripts/discover_openreview.mjs`), and

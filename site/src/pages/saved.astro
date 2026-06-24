@@ -63,12 +63,14 @@ const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.
     }
 
     function sortKey(w: any) {
-      // Open calls by soonest deadline → upcoming TBA → everything past
-      // (most recent year first). Mirrors the board's browse order.
+      // Open calls by soonest deadline → upcoming TBA → past by most recently
+      // passed deadline → past with no deadline (most recent year first).
+      // Mirrors the board's browse order.
       const ms = w.deadline_utc ? Date.parse(w.deadline_utc) : null;
       if (w.status === 'upcoming' && ms != null) return [0, ms];
       if (w.status === 'upcoming') return [1, 0];
-      return [2, -(w.year ?? 0)];
+      if (ms != null) return [2, -ms];
+      return [3, -(w.year ?? 0)];
     }
 
     function wsRow(w: any) {

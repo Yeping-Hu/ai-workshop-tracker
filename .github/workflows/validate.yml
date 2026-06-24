@@ -35,6 +35,8 @@ jobs:
         run: node scripts/recheck_imminent_test.mjs
       - name: Test deadline cross-check classifier
         run: node scripts/deadline_crosscheck_test.mjs
+      - name: Test status logic (open deadline beats inferred event date)
+        run: node scripts/status_test.mjs
       - name: Test edit-form transform (timezone-safe updates)
         run: node scripts/issue_edit_to_yaml_test.mjs
       - name: Check schema-docs parity
