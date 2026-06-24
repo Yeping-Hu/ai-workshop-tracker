@@ -99,9 +99,11 @@ node scripts/add_conference.mjs \
 `--month` is the month the conference itself usually runs (drives the
 status fallback for entries without dates). `--website` defaults to the
 prefix's domain; pass it explicitly for bare prefixes like `EMNLP/...`.
-Everything downstream — eyebrow line, facet dropdown, counts, colors,
-tests — is data-driven and picks the conference up with **zero further
-edits**. Never hardcode the conference count anywhere, especially in tests.
+Everything downstream — eyebrow line, facet dropdown, counts, colors, the
+per-conference hub page (`/conference/<id>/`), the "Browse by conference"
+footer link, the homepage `Dataset` keywords, `llms.txt`, and tests — is
+data-driven and picks the conference up with **zero further edits**. Never
+hardcode the conference count anywhere, especially in tests.
 
 ## 3. Import
 

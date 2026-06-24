@@ -8,6 +8,7 @@ A static website that aggregates **AI/ML/Robotics conference workshop** informat
 - 🔎 **One unified, faceted search** across every workshop edition and 20k+ accepted-paper titles, filterable by conference, status, year, and topic — fully static (Pagefind), so it runs entirely in the browser with no search server
 - ⭐ **Save workshops and papers** to a personal list, stored in your own browser (no account, no sign-in)
 - 📄 **Auto-generated accepted-paper listings** for OpenReview-hosted workshops on each workshop's page
+- 🗂️ **A page for each conference** (e.g. `/conference/neurips/`) listing its workshops by year — with schema.org structured data and an `/llms.txt` summary that make the dataset easy for search engines and AI assistants to cite
 
 Conference deadline trackers exist; *workshop* deadlines never had one. This fills that gap. Ships with 750+ real workshop editions (2024–2026, across all nine conferences) and 20,000+ accepted-paper titles imported from OpenReview venue records.
 
@@ -73,6 +74,7 @@ list, the "add a conference" procedure, and bulk-importing workshop lists are in
 - Machine-readable dump: `/api/workshops.json` (regenerated on every deploy)
 - Forum ids of papers with no PDF (supports saved-paper PDF links): `/api/papers-without-pdf.json`
 - New-workshop announcements: `/rss.xml`
+- LLM-friendly site summary ([llms.txt](https://llmstxt.org/)): `/llms.txt`
 - Calendar feeds (paused — see `CALENDAR_ENABLED`): `/feeds/all.ics`, `/feeds/<conference>.ics`, `/feeds/topic-<id>.ics`, `/feeds/ws-<slug>.ics`
 
 ## Licensing & contributor terms

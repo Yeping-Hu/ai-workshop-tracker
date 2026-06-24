@@ -16,10 +16,11 @@ Workshop data lives in per-edition YAML files under `data/`; accepted-paper
 lists are committed JSON caches under `cache/openreview/`. Builds read these at
 build time and never touch a live API or a database.
 
-The UI is deliberately three pages: a search-first homepage (a large search box
-over the deadline board; searching swaps the board for faceted results), a
-device-local **Saved** list, and **About**. Legacy `/archive`, `/search`,
-`/contribute`, and `/calendar` URLs redirect into these.
+The core UI is a small, fixed set of pages: a search-first homepage (a large
+search box over the deadline board; searching swaps the board for faceted
+results), a device-local **Saved** list, and **About**, plus a static
+per-conference hub at `/conference/<id>/` (see *Discoverability* below). Legacy
+`/archive`, `/search`, `/contribute`, and `/calendar` URLs redirect into these.
 
 ## Search (Pagefind, static, dual-index)
 
@@ -402,6 +403,48 @@ the tricky cases. The patterns can be re-run over already-imported entries with
 `['other']` with the auto-suggested note — so a human-curated topic set is never
 overwritten — and rewrites just the topics. That's how a one-off matcher
 improvement reclassifies the back catalogue without disturbing curated entries.
+
+## Discoverability: structured data, conference hubs, and llms.txt
+
+The dataset is the point of the site, so several build-time outputs exist purely
+to make it findable and citable — by search engines and by AI assistants — with
+no added runtime cost.
+
+**Conference hub pages.** `/conference/<id>/`
+(`site/src/pages/conference/[conf].astro`) is a static page per conference: every
+tracked edition for that conference, grouped by year and, within each year,
+ordered by status — open calls first, then deadline-unknown, then past, with the
+soonest deadline breaking ties. It gives each conference one stable, crawlable
+URL listing its workshops, plus a data-driven FAQ. `getStaticPaths` iterates
+`conferences`, so a new conference gets a hub with no further edits. (Astro quirk:
+`getStaticPaths` runs in an isolated scope and can't see module-level helpers, so
+the status-rank comparator is defined inside it.)
+
+**Structured data (JSON-LD).** Pages emit schema.org metadata through a named
+`head` slot in `Base.astro`: each workshop page carries an `Event` (with its
+conference as `superEvent`) plus a `BreadcrumbList`; each hub carries a `FAQPage`
+plus a `BreadcrumbList`; the homepage carries a `Dataset` pointing at the
+`/api/workshops.json` download. This targets machine extraction and Google
+Dataset Search, not visual rich results — Google retired FAQ rich results in 2026
+and `Event` rich results need a venue the dataset doesn't store, so the markup
+earns its keep through AI extraction and Dataset eligibility. The visible HTML
+stays the source of truth for what a reader (or model) actually sees.
+
+**`llms.txt`.** `/llms.txt` (`site/src/pages/llms.txt.ts`, a static endpoint like
+`rss.xml.ts`) is the [llms.txt](https://llmstxt.org/) summary: what the site is,
+where the machine-readable JSON API and RSS feed live, the URL patterns for hubs
+and workshop pages, and the conferences covered. Its conference list, full names,
+ids, and counts are all derived from the data at build time, so it never drifts.
+
+**"Browse by conference" footer.** `Base.astro` links to every hub from the
+sitewide footer (iterating `conferences`), giving the hubs an internal link from
+every page — the cheapest form of crawl discovery — and readers a quick switcher.
+
+All of this is data-driven from `data/conferences.yml` plus the workshop data, so
+a conference added per `skills/add-conference/` automatically gets its hub page,
+footer link, breadcrumbs, and entries in the `Dataset` keywords and `llms.txt` on
+the next build. Because statuses are derived at build time (above), the daily
+rebuild keeps every derived value current.
 
 ## Known gap: the UI behavior suite (`ui_test.mjs`) is not in CI
 
