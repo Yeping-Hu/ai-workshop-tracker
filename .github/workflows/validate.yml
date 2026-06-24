@@ -43,6 +43,8 @@ jobs:
         run: node scripts/docs_sync_test.mjs
       - name: Check issue-form topic options match data/topics.yml
         run: node scripts/topic_options_sync_test.mjs
+      - name: Test topic keyword matcher (title -> topics)
+        run: node scripts/topics_guess_test.mjs
       - name: Validate workshop data
         id: validate
         run: node scripts/validate.mjs --report validation-report.md

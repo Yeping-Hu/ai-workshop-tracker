@@ -391,6 +391,18 @@ moment a human changes the topics through the picker. So it can't go stale: it's
 shown exactly while the topics are still machine-guessed, and disappears once
 they're curated.
 
+The guesser (`guessTopics`) is purely keyword-based: OpenReview exposes no venue
+description, so it regex-matches the title + acronym against a broad pattern table
+(mapping only to `data/topics.yml` ids) and keeps up to three hits, falling back
+to `['other']` when nothing matches. Because the title is the only signal, the
+patterns are intentionally generous (e.g. "manipulation"/"humanoid" → robotics,
+"visual"/"camera"/"perception" → vision); `scripts/topics_guess_test.mjs` locks in
+the tricky cases. The patterns can be re-run over already-imported entries with
+`scripts/retag_topics.mjs`, which re-guesses **only** entries still tagged
+`['other']` with the auto-suggested note — so a human-curated topic set is never
+overwritten — and rewrites just the topics. That's how a one-off matcher
+improvement reclassifies the back catalogue without disturbing curated entries.
+
 ## Known gap: the UI behavior suite (`ui_test.mjs`) is not in CI
 
 `scripts/ui_test.mjs` is a headless-browser suite that locks the homepage's

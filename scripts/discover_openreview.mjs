@@ -140,43 +140,56 @@ const val = (c, k) => {
   return x && typeof x === 'object' && 'value' in x ? x.value : x;
 };
 
-/** Map a venue title/subtitle to topic ids via keywords (fallback: other). */
+/** Map a venue title/subtitle to topic ids via keywords (fallback: other).
+ *  OpenReview exposes no venue description, so the title + acronym is the only
+ *  signal — hence the patterns are deliberately broad (e.g. "manipulation" and
+ *  "humanoid" -> robotics, "visual"/"camera"/"perception" -> vision). Ordered
+ *  so distinctive domains win the 3-slot budget over generic tags like
+ *  evaluation/datasets. Maps only to ids in data/topics.yml. */
 const TOPIC_KEYWORDS = [
-  [/math|reason/i, 'math-reasoning'],
-  [/language model|\bllm|foundation model/i, 'llms'],
-  [/\bnlp\b|natural language/i, 'nlp'],
-  [/efficien|compress|quantiz|sparsi|small/i, 'efficiency'],
-  [/system/i, 'systems'],
-  [/agent/i, 'agents'],
-  [/safe|align|trustworth|red.?team/i, 'safety-alignment'],
-  [/interpret|explain|mechanis/i, 'interpretability'],
-  [/health|medic|clinic|biomed/i, 'healthcare-bio'],
-  [/genom|protein|molecul|drug/i, 'genomics'],
-  [/scien/i, 'science-applications'],
-  [/physic|astro|cosmo|quantum/i, 'physics'],
-  [/climate|sustain|earth|weather/i, 'climate'],
-  [/robot|embodied/i, 'robotics'],
-  [/graph/i, 'graphs'],
-  [/time.?series|temporal|forecast/i, 'time-series'],
-  [/vision|video|image/i, 'vision'],
-  [/speech|audio|music/i, 'speech-audio'],
-  [/reinforcement|\brl\b/i, 'reinforcement-learning'],
-  [/diffusion/i, 'diffusion'],
-  [/generat/i, 'generative-models'],
-  [/optimi/i, 'optimization'],
-  [/theor/i, 'theory'],
-  [/causal/i, 'causality'],
-  [/privacy|secur/i, 'privacy'],
-  [/federat/i, 'federated-learning'],
-  [/fair|ethic|societ|responsib|govern/i, 'fairness'],
-  [/benchmark|evaluat/i, 'evaluation-benchmarks'],
-  [/dataset|data.?centric|data problem/i, 'datasets'],
-  [/multi.?modal/i, 'multimodal'],
-  [/tabular|table/i, 'tabular'],
-  [/neuro|brain|cogniti/i, 'neuroscience'],
-  [/educat|teach/i, 'education'],
+  // Distinctive domains first.
+  [/language model|\bllms?\b|foundation model|\bgpt\b|in.?context learning|instruction.?tun|prompt(ing|s)?\b/i, 'llms'],
+  [/\bnlp\b|natural language|tokeniz|multilingual|machine translation|summariz|dialogue|linguistic|named entity|sentiment/i, 'nlp'],
+  [/\bvision\b|\bvisual\b|\bimages?\b|\bvideos?\b|camera|perception|\b3d\b|reconstruct|segmentation|object detection|scene understand|rendering|neural field|\bnerf\b|gaussian splat|\bpose\b|point cloud|optical flow|structure.?from.?motion|\bsfm\b|super.?resolution|(pattern|object|action|face|image|gesture) recognition/i, 'vision'],
+  [/\brobot|embodied|manipulat|humanoid|locomot|dexter|grasp|legged|quadruped|teleop|sim.?to.?real|sim2real|\bslam\b|autonomous (driv|vehicle|grand challenge|system)|self.?driv|\bdriving\b|autopilot|\buav\b|\bdrone|whole.?body|motion planning|bimanual|tactile|navigation|aerial/i, 'robotics'],
+  [/multi.?modal|vision.?language|\bvlm\b|cross.?modal|image.?text/i, 'multimodal'],
+  [/speech|\baudio\b|\bmusic\b|\bvoice\b|acoustic|\basr\b|\bsound\b/i, 'speech-audio'],
+  [/genom|protein|molecul|\brna\b|\bdna\b|drug discov|bioinformatic|cell biology/i, 'genomics'],
+  [/health|medic|clinic|biomed|radiolog|patholog|\behr\b|diagnos|surger|\bdisease\b|healthcare/i, 'healthcare-bio'],
+  [/neuro|\bbrain\b|cogniti|\beeg\b|\bfmri\b/i, 'neuroscience'],
+  [/\bphysic|astro|cosmo|quantum|particle physics|high.?energy/i, 'physics'],
+  [/climate|sustainab|\bearth\b|weather|carbon|renewable|ecolog/i, 'climate'],
+  [/\bgraphs?\b|\bgnn\b|geometric deep|knowledge graph|node classif|non.?euclidean|topolog/i, 'graphs'],
+  [/time.?series|temporal|forecast|anomaly detection/i, 'time-series'],
+  [/tabular|\btables?\b|structured data/i, 'tabular'],
+  // Methods.
+  [/\bmath|reasoning|theorem|\bproof|formal (verif|method)|\blogic\b/i, 'math-reasoning'],
+  [/diffusion|score.?based|denoising/i, 'diffusion'],
+  [/generat|\bgans?\b|\bvae\b|synthesis|content creation|text.?to.?image|creativ|flow.?based/i, 'generative-models'],
+  [/reinforcement|\brl\b|policy (gradient|optimization|learning)|reward (model|shaping|design)|bandit|q.?learning|actor.?critic|markov decision/i, 'reinforcement-learning'],
+  [/optimi|gradient descent|\bconvex|\bsgd\b|second.?order method|minimax/i, 'optimization'],
+  [/theor(y|etical)|generalization bound|pac.?learning|learning theory|statistical learning/i, 'theory'],
+  [/causal|treatment effect|counterfactual|confound/i, 'causality'],
+  [/federat|decentralized learning/i, 'federated-learning'],
+  // Cross-cutting concerns.
+  [/\bagent|agentic|multi.?agent|tool.?use|\bplanning\b|decision.?making/i, 'agents'],
+  [/efficien|compress|quantiz|sparsi|distillation|pruning|low.?rank|on.?device|edge (computing|device)|small (model|language)|low.?resource|limited resource|scarce/i, 'efficiency'],
+  [/\bsystems?\b|mlsys|(ml|ai|model|serving|training|compute|data)[- ]?infrastructure|\bserving\b|inference (engine|system)|distributed (training|system)|compiler|mlops/i, 'systems'],
+  [/interpret|explain|mechanis|model internal|probing|transparen|attribution|saliency|model behavior/i, 'interpretability'],
+  [/\bsafe|alignment|trustworth|red.?team|jailbreak|guardrail|harmful|misuse/i, 'safety-alignment'],
+  [/privacy|\bsecur|differential privacy|membership inference|adversarial attack|cryptograph|encrypt/i, 'privacy'],
+  [/robust|distribution shift|out.?of.?distribution|\bood\b|domain (shift|adaptation|generaliz)|test.?time (adaptation|training)|corruption|covariate shift|reliab/i, 'robustness'],
+  [/\bfair|ethic|societ|responsib|govern|\bbias\b|discrimination|accountab|human.?centered|\bhci\b/i, 'fairness'],
+  // Generic / application tags last so they don't crowd out a domain tag.
+  [/\bai for science|scientific (discovery|machine|comput)|physics.?inform|materials (science|discovery)|chemistr|astronom|aerospace|remote sensing|earth observ|geospatial|satellite|scientific/i, 'science-applications'],
+  [/benchmark|evaluat|leaderboard|\bchallenge\b|competition|\bmetrics?\b/i, 'evaluation-benchmarks'],
+  [/dataset|data.?centric|data quality|data curation|corpus|data problem/i, 'datasets'],
+  [/educat|teach|tutoring|\bk.?12\b/i, 'education'],
 ];
-function guessTopics(text) {
+/** Up to 3 topic ids whose keywords appear in `text`, in priority order; falls
+ *  back to ['other'] when nothing matches. Exported so the re-tag pass and tests
+ *  share the exact logic. */
+export function guessTopics(text) {
   const hits = [];
   for (const [re, id] of TOPIC_KEYWORDS) {
     if (re.test(text) && !hits.includes(id)) hits.push(id);
