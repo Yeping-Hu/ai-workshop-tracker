@@ -4,7 +4,7 @@ conference: eccv
 year: 2026
 website: https://emerging-ad.github.io/
 topics:
-  - other
+  - robustness
 submission_deadline: 2026-07-20 21:00
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-07-20 21:00 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.

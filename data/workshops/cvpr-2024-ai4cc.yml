@@ -4,7 +4,7 @@ conference: cvpr
 year: 2024
 website: https://ai4cc.net/
 topics:
-  - other
+  - generative-models
 submission_deadline: 2024-03-22 06:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

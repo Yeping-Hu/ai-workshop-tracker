@@ -4,7 +4,9 @@ conference: iros
 year: 2025
 website: https://iros25-ppniv.github.io/
 topics:
-  - other
+  - vision
+  - robotics
+  - agents
 submission_deadline: 2025-10-01 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

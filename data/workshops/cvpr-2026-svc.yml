@@ -4,7 +4,8 @@ conference: cvpr
 year: 2026
 website: https://sites.google.com/view/svc-cvpr26
 topics:
-  - other
+  - vision
+  - evaluation-benchmarks
 submission_deadline: 2026-03-24 00:00
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-03-24 00:00 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.

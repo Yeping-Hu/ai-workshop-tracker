@@ -4,7 +4,7 @@ conference: icra
 year: 2026
 website: https://icra2026.aerialmaritimeinspection.com/
 topics:
-  - other
+  - robotics
 openreview_venue_id: IEEE.org/ICRA/2026/Workshop/AIMI
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

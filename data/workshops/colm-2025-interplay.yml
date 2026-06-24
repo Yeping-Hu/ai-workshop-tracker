@@ -4,7 +4,7 @@ conference: colm
 year: 2025
 website: https://interplay-workshop.github.io
 topics:
-  - other
+  - interpretability
 submission_deadline: 2025-07-11 07:55
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

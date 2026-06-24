@@ -4,7 +4,8 @@ conference: icra
 year: 2026
 website: https://manipulation-robustness.github.io/icra2026/
 topics:
-  - other
+  - robotics
+  - robustness
 submission_deadline: 2026-04-24 11:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-04-24 11:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.

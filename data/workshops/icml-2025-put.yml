@@ -4,7 +4,7 @@ conference: icml
 year: 2025
 website: https://tta-icml2025.github.io/
 topics:
-  - other
+  - robustness
 submission_deadline: 2025-05-24 12:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

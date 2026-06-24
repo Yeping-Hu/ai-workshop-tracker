@@ -4,7 +4,7 @@ conference: neurips
 year: 2024
 website: https://attrib-workshop.cc/
 topics:
-  - other
+  - interpretability
 submission_deadline: 2024-10-05 12:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

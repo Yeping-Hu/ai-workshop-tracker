@@ -4,7 +4,7 @@ conference: iros
 year: 2025
 website: https://www.iit.it/web/hrii/iros2025-workshop-multi-arm
 topics:
-  - other
+  - robotics
 submission_deadline: 2025-10-04 10:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

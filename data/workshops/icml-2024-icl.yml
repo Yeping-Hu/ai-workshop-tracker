@@ -4,7 +4,7 @@ conference: icml
 year: 2024
 website: https://iclworkshop.github.io/
 topics:
-  - other
+  - llms
 submission_deadline: 2024-05-28 12:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

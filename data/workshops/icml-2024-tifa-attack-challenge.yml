@@ -4,7 +4,7 @@ conference: icml
 year: 2024
 website: https://icml-tifa.github.io/challenges/track1/
 topics:
-  - other
+  - evaluation-benchmarks
 submission_deadline: 2024-07-10 00:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

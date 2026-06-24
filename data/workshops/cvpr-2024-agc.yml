@@ -4,7 +4,8 @@ conference: cvpr
 year: 2024
 website: https://opendrivelab.com/challenge2024/
 topics:
-  - other
+  - robotics
+  - evaluation-benchmarks
 submission_deadline: 2024-06-03 01:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

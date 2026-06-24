@@ -4,7 +4,7 @@ conference: eccv
 year: 2024
 website: https://neural-fields-beyond-cams.github.io
 topics:
-  - other
+  - vision
 submission_deadline: 2024-08-17 07:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

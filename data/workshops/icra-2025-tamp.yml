@@ -4,7 +4,8 @@ conference: icra
 year: 2025
 website: https://dyalab.mines.edu/2025/icra-workshop/
 topics:
-  - other
+  - robotics
+  - agents
 submission_deadline: 2025-04-12 12:01
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

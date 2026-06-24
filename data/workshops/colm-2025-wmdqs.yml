@@ -4,7 +4,8 @@ conference: colm
 year: 2025
 website: https://wmdqs.org
 topics:
-  - other
+  - nlp
+  - datasets
 submission_deadline: 2025-10-06 12:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

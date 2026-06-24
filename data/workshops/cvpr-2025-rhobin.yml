@@ -4,7 +4,7 @@ conference: cvpr
 year: 2025
 website: https://rhobin-challenge.github.io/index.html
 topics:
-  - other
+  - vision
 submission_deadline: 2025-03-18 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

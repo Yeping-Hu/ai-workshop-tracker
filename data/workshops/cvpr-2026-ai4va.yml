@@ -4,7 +4,7 @@ conference: cvpr
 year: 2026
 website: https://ai4va-cvpr.github.io/
 topics:
-  - other
+  - vision
 submission_deadline: 2026-04-26 11:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-04-26 11:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.

@@ -4,7 +4,7 @@ conference: icml
 year: 2025
 website: https://dataworldicml2025.github.io/
 topics:
-  - other
+  - datasets
 submission_deadline: 2025-06-01 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

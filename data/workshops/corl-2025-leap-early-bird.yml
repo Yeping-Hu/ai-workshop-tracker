@@ -4,7 +4,7 @@ conference: corl
 year: 2025
 website: https://leap-workshop.github.io/
 topics:
-  - other
+  - agents
 submission_deadline: 2025-08-21 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

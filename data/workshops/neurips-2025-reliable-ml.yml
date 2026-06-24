@@ -4,7 +4,7 @@ conference: neurips
 year: 2025
 website: https://reliablemlworkshop.github.io/
 topics:
-  - other
+  - robustness
 submission_deadline: 2025-08-30 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

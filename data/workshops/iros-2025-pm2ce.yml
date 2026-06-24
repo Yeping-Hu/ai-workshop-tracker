@@ -4,7 +4,9 @@ conference: iros
 year: 2025
 website: https://autonomousrobots.nl/workshops/2025-iros
 topics:
-  - other
+  - vision
+  - robotics
+  - agents
 submission_deadline: 2025-09-07 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
