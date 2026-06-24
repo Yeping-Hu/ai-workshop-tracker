@@ -160,7 +160,7 @@ print('open calls:', [(w['slug'], w['submission_deadline']) for w in ws
 headline of every conference addition.** Sanity: a venue with cached papers
 must never be "Open call"; venues without deadline metadata read
 "Deadline unknown" — their YAML opens with a fill-in comment template and the
-page shows a "know the deadline? Add it in one line" link; the weekly
+page shows a "know the deadline? Help add it" link; the weekly
 discovery job backfills them from venue date lines or submission-invitation
 `duedate`s (expired included) whenever those appear. Workshops that split
 submissions into sub-track child groups (e.g. `…/Full` + `…/Short`) are
