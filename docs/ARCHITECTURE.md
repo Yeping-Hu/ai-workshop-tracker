@@ -79,6 +79,19 @@ single guard:
    *without* pressing Enter could show different results than pressing it: each
    keystroke had been starting its own settling loop and they raced.
 
+6. **A stalled fetch can't hang the search.** `buildState` pulls every result's
+   data fragment in one `Promise.all`; if a single fetch stalls and never settles
+   (a flaky CDN, or chunks being swapped mid-deploy), that `Promise.all` would
+   hang and the render would never run — the "Loading N results…" / blank stick.
+   `fetchAllData` bounds it with a 20s timeout (well above any legitimate fetch,
+   so it only fires on a genuine stall) that throws into the existing failure
+   path: a fresh engine import + one retry, then the reload-the-page message if
+   that also fails. Typing is also debounced — the `input` listener calls
+   `runSearch()` (the 220ms `debouncedSearch`) rather than firing an immediate,
+   uncoalesced `pf.search` per keystroke — so a multi-letter keyword no longer
+   launches several heavy searches, each fanning out hundreds of fragment
+   fetches, at once.
+
 For field diagnosis, `buildState` writes `window.__aiwtSearchDiag`
 (`{query, rawResults, droppedNonWorkshop, distinctWorkshops, ts}`) on every
 search and logs a `[aiwt-search] merge anomaly` console warning whenever it has

@@ -397,6 +397,25 @@ const datasetLd: Record<string, any> = {
     let pendingPage = 1; // from a deep link, consumed once
     const PAGE_SIZE = 50;
 
+    // Bound the per-search fragment fetch so a single stalled request can't hang
+    // the whole search forever (the "Loading N results…" / blank stick: one
+    // r.data() never settling leaves Promise.all pending and the render never
+    // runs). 20s is well above any legitimate fetch — even the heaviest keyword
+    // on a slow link resolved in a few seconds in testing — so this fires only on
+    // a genuine stall, never on a slow-but-working search. On timeout we throw,
+    // which drops into the existing failure path (handleSearchFailure): a fresh
+    // engine import + one retry, then the existing reload-the-page message if that
+    // also fails. The timer is cleared the moment the fetch settles normally.
+    const DATA_FETCH_TIMEOUT_MS = 20000;
+    function fetchAllData(rows) {
+      let timer;
+      const guard = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('search data fetch timed out')), DATA_FETCH_TIMEOUT_MS);
+      });
+      const all = Promise.all(rows.map((r) => r.data())).finally(() => clearTimeout(timer));
+      return Promise.race([all, guard]);
+    }
+
     // Build rState (the model renderResultsPage draws) from a search result.
     // Pure compute, no DOM — called once per search, and repeatedly by the
     // settle gate while a freshly-merged index's count is still moving. Returns
@@ -412,7 +431,7 @@ const datasetLd: Record<string, any> = {
       // the result's fixed id, so identical searches always produce identical
       // order.
       const ordered = [...res.results].sort((a, b) => (b.score - a.score) || String(a.id).localeCompare(String(b.id)));
-      const data = await Promise.all(ordered.map((r) => r.data()));
+      const data = await fetchAllData(ordered);
       // Group by a STABLE workshop identity, not the raw result URL. Pagefind
       // can hand back the same workshop page under more than one URL — e.g.
       // when the papers index resolves its base differently from the workshops
@@ -525,7 +544,8 @@ const datasetLd: Record<string, any> = {
         let res;
         try { res = await pf.search(query, opts); } catch { return; }
         if (res === null || gen !== searchGen) return;
-        const n = await buildState(res, query, filters, terms);
+        let n;
+        try { n = await buildState(res, query, filters, terms); } catch { return; } // a stalled fetch in this background re-check just ends it; the shown result stands
         if (gen !== searchGen) return;
         if (n !== prev) { renderResultsPage(); prev = n; }
         else break; // count held steady → done
@@ -683,7 +703,7 @@ const datasetLd: Record<string, any> = {
     }
 
     // events
-    input.addEventListener('input', runSearch);
+    input.addEventListener('input', () => runSearch());
     input.addEventListener('focus', ensurePagefind, { once: true });
     (window.requestIdleCallback || ((fn) => setTimeout(fn, 300)))(() => ensurePagefind());
     input.addEventListener('keydown', (e) => {
