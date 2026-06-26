@@ -79,18 +79,27 @@ single guard:
    *without* pressing Enter could show different results than pressing it: each
    keystroke had been starting its own settling loop and they raced.
 
-6. **A stalled fetch can't hang the search.** `buildState` pulls every result's
-   data fragment in one `Promise.all`; if a single fetch stalls and never settles
-   (a flaky CDN, or chunks being swapped mid-deploy), that `Promise.all` would
-   hang and the render would never run — the "Loading N results…" / blank stick.
-   `fetchAllData` bounds it with a 20s timeout (well above any legitimate fetch,
-   so it only fires on a genuine stall) that throws into the existing failure
-   path: a fresh engine import + one retry, then the reload-the-page message if
-   that also fails. Typing is also debounced — the `input` listener calls
+6. **Big result sets render the first page fast, and a stalled fetch can't hang
+   the search.** `buildState` pulls every matched result's data fragment to group
+   them by workshop and compute the exact "N workshops · M papers" headline.
+   For a large result set that whole fetch+group pass is what the user waits on
+   (it can be 5-18s of "Loading N…" over a slow CDN). So when a result set is big
+   (more than `PAGE_SIZE * 2`), `runSearch` runs `buildState` **twice**: first
+   over a capped slice — enough to fill page one, which is the same top workshops
+   either way since results are score-sorted and each workshop's papers ride in
+   its own result — and renders immediately (the count line reads "Counting…" and
+   the pager is held back); then again over the whole set to finalize the exact
+   count and pager. The second pass is resilient: if it stalls or fails, the
+   already-shown first page stays. Restoring a deep-linked page (`pendingPage`)
+   skips the two-phase split so it lands on the exact page at once. Separately,
+   `fetchAllData` wraps the fetch in a 45s timeout — pure insurance against a
+   request that truly never returns (a real search can legitimately take well
+   over ten seconds, so the bar is high), throwing into the existing failure path
+   (fresh engine import + one retry, then reload-the-page) only for the
+   first-paint pass. Typing is also debounced — the `input` listener calls
    `runSearch()` (the 220ms `debouncedSearch`) rather than firing an immediate,
    uncoalesced `pf.search` per keystroke — so a multi-letter keyword no longer
-   launches several heavy searches, each fanning out hundreds of fragment
-   fetches, at once.
+   launches several heavy searches at once.
 
 For field diagnosis, `buildState` writes `window.__aiwtSearchDiag`
 (`{query, rawResults, droppedNonWorkshop, distinctWorkshops, ts}`) on every

@@ -84,6 +84,7 @@ check('nested papers sublist rendered', (await page.$$('.pf-papers')).length > 0
 check('paper rows have attribution anchors', (await page.$$eval('.pf-papers .pf-ptitle', (els) => els.length)) > 0);
 const hrefs = await page.$$eval('#results .pf-title', (els) => els.map((e) => e.getAttribute('href')));
 check('no duplicate workshop entries (single merge)', new Set(hrefs).size === hrefs.length, `dupes in ${hrefs.length}`);
+await page.waitForFunction(() => /workshop/.test(document.querySelector('#searchCount')?.textContent || ''), null, { timeout: 15000 });
 const count = await page.$eval('#searchCount', (el) => el.textContent);
 check('combined count format', /^\d+ workshops? · \d+ matching papers? · by relevance( · page \d+\/\d+)?$/.test(count), count);
 {
@@ -144,6 +145,7 @@ console.log('— facet-only browse: clean headline, no paper sublists —');
 await page.click('summary[data-facet-summary="status"]');
 await page.check('[data-facet="status"] input[value="Open call"]');
 await page.waitForFunction(() => document.querySelectorAll('#results .pf-result').length > 0);
+await page.waitForFunction(() => /workshop/.test(document.querySelector('#searchCount')?.textContent || ''), null, { timeout: 15000 });
 const browseCount = await page.$eval('#searchCount', (el) => el.textContent);
 check('browse headline omits papers segment', /^\d+ workshops? · open calls first( · page \d+\/\d+)?$/.test(browseCount), browseCount);
 check('browse entries have no paper sublists', (await page.$$('.pf-papers')).length === 0);
@@ -252,6 +254,7 @@ await page.waitForFunction(() => document.querySelector('[data-facet="conference
 await page.click('summary[data-facet-summary="conference"]');
 await page.check('[data-facet="conference"] input[value="IROS"]');
 await page.waitForFunction(() => document.querySelectorAll('#results .pf-result').length > 0, null, { timeout: 8000 });
+await page.waitForFunction(() => /workshop/.test(document.querySelector('#searchCount')?.textContent || ''), null, { timeout: 15000 });
 const ordBrowseCount = await page.$eval('#searchCount', (el) => el.textContent);
 check('browse count line says "open calls first"', /open calls first/.test(ordBrowseCount), ordBrowseCount);
 const ordPills = await page.$$eval('#results .pf-result .pill', (els) => els.map((e) => e.textContent.trim()));
@@ -268,6 +271,7 @@ await page.uncheck('[data-facet="conference"] input[value="IROS"]');
 // Keywords = relevance: count line says so; ordering is Pagefind's, not the bands.
 await page.fill('#q', 'surgical robotics');
 await page.waitForFunction(() => document.querySelectorAll('#results .pf-result').length > 0, null, { timeout: 8000 });
+await page.waitForFunction(() => /workshop/.test(document.querySelector('#searchCount')?.textContent || ''), null, { timeout: 15000 });
 const ordKwCount = await page.$eval('#searchCount', (el) => el.textContent);
 check('keyword count line says "by relevance"', /by relevance/.test(ordKwCount), ordKwCount);
 const ordKwTitle = await page.$eval('#results .pf-result .pf-title', (el) => el.textContent);

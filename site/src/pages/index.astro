@@ -397,16 +397,15 @@ const datasetLd: Record<string, any> = {
     let pendingPage = 1; // from a deep link, consumed once
     const PAGE_SIZE = 50;
 
-    // Bound the per-search fragment fetch so a single stalled request can't hang
-    // the whole search forever (the "Loading N results…" / blank stick: one
-    // r.data() never settling leaves Promise.all pending and the render never
-    // runs). 20s is well above any legitimate fetch — even the heaviest keyword
-    // on a slow link resolved in a few seconds in testing — so this fires only on
-    // a genuine stall, never on a slow-but-working search. On timeout we throw,
-    // which drops into the existing failure path (handleSearchFailure): a fresh
-    // engine import + one retry, then the existing reload-the-page message if that
-    // also fails. The timer is cleared the moment the fetch settles normally.
-    const DATA_FETCH_TIMEOUT_MS = 20000;
+    // Bound the per-search fragment fetch so a request that never returns can't
+    // hang the search forever. A real search can legitimately take well over ten
+    // seconds (a large result set over a slow CDN), so this is set high — it's
+    // pure insurance against a genuinely stuck request, never a trip-wire on a
+    // slow-but-working search. On timeout it throws; the first-paint caller drops
+    // into handleSearchFailure (fresh engine + one retry, then reload-the-page),
+    // while the background completion pass below keeps whatever first page is
+    // already shown. The timer is cleared the moment the fetch settles.
+    const DATA_FETCH_TIMEOUT_MS = 45000;
     function fetchAllData(rows) {
       let timer;
       const guard = new Promise((_, reject) => {
@@ -420,7 +419,7 @@ const datasetLd: Record<string, any> = {
     // Pure compute, no DOM — called once per search, and repeatedly by the
     // settle gate while a freshly-merged index's count is still moving. Returns
     // the workshop count so the gate can tell when it has stopped changing.
-    async function buildState(res, query, filters, terms) {
+    async function buildState(res, query, filters, terms, limit) {
       const key = JSON.stringify([query, filters]);
       // Pagefind returns results sorted by score, but ties (equal-score
       // matches, which are common) aren't ordered deterministically — and the
@@ -431,7 +430,15 @@ const datasetLd: Record<string, any> = {
       // the result's fixed id, so identical searches always produce identical
       // order.
       const ordered = [...res.results].sort((a, b) => (b.score - a.score) || String(a.id).localeCompare(String(b.id)));
-      const data = await fetchAllData(ordered);
+      // For a big result set the caller renders the first page from a capped
+      // slice first (fast), then calls again with no limit to finalize the exact
+      // counts — see runSearch. The grouping below is identical either way; a
+      // slice just yields the top workshops (results are score-sorted, and each
+      // workshop's matching papers travel in its own result) with a partial
+      // count, flagged so the count line reads "counting…" until the full pass.
+      const slice = (limit && limit < ordered.length) ? ordered.slice(0, limit) : ordered;
+      const partial = slice.length < ordered.length;
+      const data = await fetchAllData(slice);
       // Group by a STABLE workshop identity, not the raw result URL. Pagefind
       // can hand back the same workshop page under more than one URL — e.g.
       // when the papers index resolves its base differently from the workshops
@@ -470,7 +477,8 @@ const datasetLd: Record<string, any> = {
       // workshop count) means the merge produced duplicate/garbage results that
       // we just discarded. Surfaced on window + console so a malformed merge can
       // be confirmed from the field without it ever reaching the visible count.
-      try {
+      // Only on the full pass — a partial slice would report misleading totals.
+      if (!partial) try {
         const diag = { query, rawResults: data.length, droppedNonWorkshop: dropped, distinctWorkshops: groups.size, ts: new Date().toISOString() };
         window.__aiwtSearchDiag = diag;
         if (dropped > 0 || groups.size > 400) console.warn('[aiwt-search] merge anomaly (artifacts dropped from the count):', diag);
@@ -524,6 +532,7 @@ const datasetLd: Record<string, any> = {
         page: Math.min(Math.max(1, pendingPage), Math.max(1, Math.ceil(entries.length / PAGE_SIZE))),
         nPapers,
         hasQuery,
+        partial,
       };
       pendingPage = 1;
       return entries.length;
@@ -612,10 +621,31 @@ const datasetLd: Record<string, any> = {
           if (expected > 0) throw new Error(`0 results where ${expected} expected`);
         }
         if (res.results.length > 150) $('#results').innerHTML = `<li class="muted">Loading ${res.results.length} results…</li>`;
-        const n = await buildState(res, query, filters, terms);
+        // Render the first page fast from a capped slice, then complete the exact
+        // counts. A big result set otherwise shows nothing until every match is
+        // fetched + grouped (the 5-18s "Loading N…" wait); the top workshops are
+        // identical whether computed from the first slice or the whole set
+        // (results are score-sorted, each workshop's papers ride in its own
+        // result), so the first page paints right away and the headline count
+        // settles a beat later. Skipped when restoring a deep-linked page
+        // (pendingPage > 1), which wants the exact page immediately.
+        const FAST = PAGE_SIZE * 2;
+        const twoPhase = res.results.length > FAST && pendingPage <= 1;
+        let n = await buildState(res, query, filters, terms, twoPhase ? FAST : undefined);
         if (gen !== searchGen) return; // a newer search superseded us mid-build
         healAttempted = false; // healthy — a future deploy may heal again
         renderResultsPage();
+        if (twoPhase) {
+          // Phase 2: full grouping + exact count. Resilient — if this fetch
+          // stalls or fails, keep the first page already on screen rather than
+          // dropping into the heal path and wiping it.
+          try {
+            const full = await buildState(res, query, filters, terms);
+            if (gen !== searchGen) return;
+            n = full;
+            renderResultsPage();
+          } catch {}
+        }
         if (query !== null) settleInBackground(gen, pf, query, opts, filters, terms, n);
       } catch (err) {
         return handleSearchFailure(err);
@@ -682,7 +712,7 @@ const datasetLd: Record<string, any> = {
           ${papersHtml}
         </li>`);
       }
-      if (nPages > 1) {
+      if (nPages > 1 && !rState.partial) {
         rows.push(
           '<li class="pager-row"><nav class="pager" aria-label="Result pages">' +
             Array.from({ length: nPages }, (_, i) => i + 1)
@@ -692,9 +722,11 @@ const datasetLd: Record<string, any> = {
         );
       }
       const n = groups.length;
-      $('#searchCount').textContent = n
-        ? `${n} workshop${n === 1 ? '' : 's'}${hasQuery && nPapers ? ` · ${nPapers} matching paper${nPapers === 1 ? '' : 's'}` : ''}${!hasQuery ? ' · open calls first' : ' · by relevance'}${nPages > 1 ? ` · page ${page}/${nPages}` : ''}`
-        : '';
+      $('#searchCount').textContent = rState.partial
+        ? 'Counting…'
+        : (n
+          ? `${n} workshop${n === 1 ? '' : 's'}${hasQuery && nPapers ? ` · ${nPapers} matching paper${nPapers === 1 ? '' : 's'}` : ''}${!hasQuery ? ' · open calls first' : ' · by relevance'}${nPages > 1 ? ` · page ${page}/${nPages}` : ''}`
+          : '');
       $('#results').innerHTML =
         rows.join('') ||
         '<li class="muted">No matches — remove a keyword or filter, or <a href="' + esc(`${base}/about/`) + '">add the workshop</a>.</li>';
