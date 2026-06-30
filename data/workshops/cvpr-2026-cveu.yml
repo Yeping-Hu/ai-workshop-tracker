@@ -5,9 +5,9 @@ year: 2026
 website: https://cveu.github.io
 topics:
   - generative-models
-submission_deadline: 2026-03-16 23:58
+submission_deadline: 2026-03-17 23:58
 timezone: UTC
-deadline_notes: OpenReview-synced 2026-03-16 23:58 UTC (as of 2026-06-24) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_notes: OpenReview-synced 2026-03-17 23:58 UTC (as of 2026-06-30) — extensions on OpenReview are applied automatically; verify on the website.
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/CVEU
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
