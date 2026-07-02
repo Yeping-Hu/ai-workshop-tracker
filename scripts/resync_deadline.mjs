@@ -16,7 +16,7 @@
  *   node scripts/resync_deadline.mjs --slug colm-2026-daih --dry-run
  */
 import fs from 'node:fs';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
 import { deadlineFromInvitation, syncNote } from './discover_openreview.mjs';
 
