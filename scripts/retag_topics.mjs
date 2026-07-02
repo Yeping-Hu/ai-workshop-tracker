@@ -16,7 +16,7 @@
  *   node scripts/retag_topics.mjs             # apply
  */
 import fs from 'node:fs';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
 import { guessTopics, isAutoTopicsNote } from './discover_openreview.mjs';
 
