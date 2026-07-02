@@ -1,0 +1,72 @@
+# Daily: backfill workshops that have an OpenReview venue but no deadline yet —
+# fill each `submission_deadline` the moment OpenReview publishes it, instead of
+# the blank sitting on the board until the next weekly `discover` crawl. One
+# direct OpenReview lookup per blank entry (no enumeration), fill-only (never
+# overwrites), with the same plausibility guard as the weekly sync, and each
+# filled deadline stamped bot-managed so later extensions are then caught by the
+# daily imminent re-check. This is the blank-filling half of the daily upkeep;
+# `recheck-imminent.yml` is the extension-catching half. Whatever is filled is
+# validated and, on success, committed straight to main (and a deploy is
+# dispatched), with each fill recorded in the commit message. Full venue
+# discovery, multi-track descent, and legacy adoption stay weekly
+# (scripts/discover_openreview.mjs); this job never enumerates and never adopts.
+name: Backfill blank deadlines
+
+on:
+  schedule:
+    - cron: '11 5 * * *' # daily 05:11 UTC (staggered ~30m after the imminent re-check)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Backfill blank deadlines from OpenReview
+        env:
+          DEADLINE_CHANGELOG: ${{ github.workspace }}/.deadline-changes.md
+        run: node scripts/backfill_deadlines.mjs
+      - name: Validate
+        run: node scripts/validate.mjs
+      # Validation passed above — publish directly. A failed validation fails
+      # the job before anything is committed (GitHub emails the owner).
+      - name: Publish backfilled deadlines (if any)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEADLINE_CHANGELOG: ${{ github.workspace }}/.deadline-changes.md
+        run: |
+          if [ -z "$(git status --porcelain data/workshops)" ]; then
+            echo "No blank deadlines backfilled today."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/workshops
+          # Commit message: a fixed subject plus the per-deadline fill log
+          # ((blank) -> new), so every automated edit is recorded in history
+          # rather than applied silently — same convention as the weekly run.
+          {
+            echo "data: daily blank-deadline backfill (auto-published after validation)"
+            if [ -s "$DEADLINE_CHANGELOG" ]; then
+              echo
+              echo "Deadlines backfilled from OpenReview:"
+              cat "$DEADLINE_CHANGELOG"
+            fi
+          } > "$RUNNER_TEMP/commit-msg.txt"
+          git commit -F "$RUNNER_TEMP/commit-msg.txt"
+          # Two daily jobs now push to main (imminent re-check ~30m earlier); if
+          # its push landed after this job checked out, rebase onto it and retry
+          # so a race can never drop a fill.
+          git push || (git pull --rebase --autostash && git push)
+          # Pushes made with GITHUB_TOKEN don't trigger on:push workflows,
+          # so kick the deploy explicitly.
+          gh workflow run deploy.yml --ref main
