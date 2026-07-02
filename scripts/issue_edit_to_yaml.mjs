@@ -14,7 +14,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { WORKSHOPS_DIR } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs, isValidTimezone, assembleDeadline } from '../lib/dates.mjs';
 import { syncedValue, LEGACY_IMPORT_NOTE, isAutoTopicsNote } from './discover_openreview.mjs';
