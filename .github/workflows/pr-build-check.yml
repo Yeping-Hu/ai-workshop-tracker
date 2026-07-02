@@ -1,0 +1,41 @@
+# Runs the same install / validate / build steps as the deploy workflow, but on
+# every pull request — without deploying. This catches breakages (dependency
+# bumps, build errors) before they reach main, which the deploy-only build can't
+# do since it never runs on PRs. See validate.yml for the data-focused checks
+# that run on data/** PRs; this one specifically guards the site build.
+name: PR build check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            site/package-lock.json
+      - run: npm ci
+      - name: Validate data
+        run: node scripts/validate.mjs
+      - run: npm ci --prefix site
+      - name: Build site
+        env:
+          SITE_URL: https://aiworkshoptracker.com
+          SITE_BASE: /
+          PUBLIC_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+          BUILD_ID: ${{ github.sha }}
+        run: npm run build --prefix site
