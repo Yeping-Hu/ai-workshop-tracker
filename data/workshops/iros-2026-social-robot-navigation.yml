@@ -1,0 +1,14 @@
+name: '5th Workshop on Social Robot Navigation: From Humans, to Robots, and to the World'
+acronym: 5th Workshop on Social Robot Navigation
+conference: iros
+year: 2026
+website: https://socialnav2026.pages.dev/
+topics:
+  - robotics
+submission_deadline: 2026-09-06 07:59
+timezone: UTC
+deadline_notes: OpenReview-synced 2026-09-06 07:59 UTC (as of 2026-07-07) — extensions on OpenReview are applied automatically; verify on the website.
+openreview_venue_id: IEEE.org/IROS/2026/Workshop/Social_Robot_Navigation
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-07-07'
