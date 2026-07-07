@@ -1,0 +1,5 @@
+# Template URLs use a {year} placeholder that is filled in per-year at render
+# time (see workshop_list_url_pattern in data/conferences.yml). The literal
+# template is not a real link, so exclude both raw and %-encoded forms.
+%7[Bb]year%7[Dd]
+\{year\}
