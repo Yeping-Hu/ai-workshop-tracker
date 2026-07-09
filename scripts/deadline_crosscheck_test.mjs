@@ -8,7 +8,7 @@
  *
  * Run: node scripts/deadline_crosscheck_test.mjs
  */
-import { classifyDeadlineDiff, reviewCategory } from './deadline_crosscheck.mjs';
+import { classifyDeadlineDiff, reviewCategory, isWithinReviewWindow } from './deadline_crosscheck.mjs';
 import { syncNote, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
 
 let failed = 0;
@@ -72,6 +72,21 @@ check('human note + match -> no review', rc({ notes: 'from the workshop website'
 check('stamp value != stored (human edited value) -> human-conflict', rc({ notes: syncNote('2026-04-27 12:00', '2026-06-01'), storedValue: V, storedMs: Vms, fetchedMs: Vms - 7 * H }), 'human-conflict');
 // Missing fetched value -> no review.
 check('null fetched -> no review', rc({ notes: stamp, storedValue: V, storedMs: Vms, fetchedMs: null }), null);
+
+// --- isWithinReviewWindow: deadline-relevance scope (the review-noise fix) ----
+// A deadline still upcoming or only recently passed is worth reviewing; one
+// comfortably behind us (> grace) is dropped from scope entirely. Reference
+// instant mirrors issue #16's context (2026-07-08).
+const NOW = Date.UTC(2026, 6, 8, 0, 0);
+const win = (ms) => isWithinReviewWindow(ms, NOW, 14 * D);
+check('future deadline -> in window', win(NOW + 20 * D), true);
+check('5 days past -> in window (within grace)', win(NOW - 5 * D), true);
+check('exactly at grace edge -> in window', win(NOW - 14 * D), true);
+check('just past grace edge -> out of window', win(NOW - 14 * D - 60_000), false);
+check('20 days past -> out of window', win(NOW - 20 * D), false);
+check('4 months past -> out of window (the CVPR/ICML noise)', win(NOW - 120 * D), false);
+check('null deadline -> out of window', win(null), false);
+check('default grace applies -> in window', isWithinReviewWindow(NOW + D, NOW), true);
 
 console.log(failed === 0 ? '\nDeadline cross-check logic OK.' : `\n${failed} test(s) failed.`);
 process.exit(failed === 0 ? 0 : 1);

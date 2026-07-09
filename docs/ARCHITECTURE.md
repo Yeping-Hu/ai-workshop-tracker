@@ -238,7 +238,7 @@ and the full note stays one click away.
 
 Because a human edit freezes auto-sync, two tools cover the manual case. A
 weekly **cross-check** (`scripts/deadline_crosscheck.mjs`, the `deadline-review`
-workflow) compares current/next-year deadlines against OpenReview's live
+workflow) compares upcoming and recently-passed deadlines against OpenReview's live
 invitation `duedate` and keeps ONE self-maintaining issue ("Data health:
 deadlines to review", `data-health` label) listing only the cases the auto-sync
 will *not* fix on its own: (1) **human-edited** deadlines that now disagree with

@@ -23,7 +23,7 @@
  * fetched (404 / 429 / down) is skipped, never failing the run.
  *
  * Usage:
- *   node scripts/deadline_crosscheck.mjs --recent                      # current+next year
+ *   node scripts/deadline_crosscheck.mjs --recent                      # upcoming + recently-passed only
  *   node scripts/deadline_crosscheck.mjs --recent --report review.md   # + write the issue body
  *   node scripts/deadline_crosscheck.mjs --slug colm-2026-daih         # one workshop
  *   node scripts/deadline_crosscheck.mjs --strict                      # exit 1 if anything to review
@@ -40,6 +40,7 @@ const OFFSET_STEPS_MIN = [60, 30, 15]; // whole, half, quarter hour
 const NEAR_MS = 90_000;                // 90s tolerance for "lands on" an offset
 const MAX_OFFSET_H = 14;               // largest real-world tz magnitude
 const PACE_MS = 400;                   // gentle spacing between venue fetches
+const REVIEW_PAST_GRACE_MS = 14 * DAY; // keep reviewing a deadline until ~2 weeks past it
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -90,6 +91,17 @@ export function reviewCategory({ notes, storedValue, storedMs, fetchedMs }) {
   return { kind: 'human-conflict', diff };
 }
 
+/**
+ * Is a deadline still worth a human's review — i.e. upcoming, or only recently
+ * passed (within `graceMs`)? Once a deadline is comfortably behind us, a
+ * disagreement with OpenReview is unactionable noise — nobody re-syncs a
+ * workshop whose submission window closed months ago — so it's dropped from the
+ * review scope (neither fetched nor listed). Pure + exported for tests.
+ */
+export function isWithinReviewWindow(deadlineMs, nowMs, graceMs = REVIEW_PAST_GRACE_MS) {
+  return deadlineMs != null && deadlineMs >= nowMs - graceMs;
+}
+
 function buildReport(items) {
   if (!items.length) return '';
   const human = items.filter((i) => i.kind === 'human-conflict');
@@ -122,13 +134,21 @@ async function main() {
   const strict = args.includes('--strict');
   const slug = args.includes('--slug') ? args[args.indexOf('--slug') + 1] : null;
   const reportPath = args.includes('--report') ? args[args.indexOf('--report') + 1] : null;
-  const nowYear = new Date().getUTCFullYear();
+  const nowMs = Date.now();
 
   let entries = listWorkshopFiles()
     .map(readWorkshopFile)
     .filter(({ raw }) => raw?.openreview_venue_id && raw?.submission_deadline);
   if (slug) entries = entries.filter((e) => e.slug === slug);
-  else if (recent) entries = entries.filter(({ raw }) => raw.year >= nowYear);
+  // --recent scopes by *deadline relevance*, not conference year: a workshop
+  // whose deadline is comfortably past (even if its year is the current one) is
+  // not a review item, so it's neither fetched nor listed. Fixes the review
+  // issue filling up with long-closed deadlines (e.g. CVPR/ICML deadlines that
+  // passed months ago) and spares the weekly job a lookup per stale entry.
+  else if (recent) {
+    entries = entries.filter(({ raw }) =>
+      isWithinReviewWindow(resolveDeadlineUtcMs(raw.submission_deadline, raw.timezone || 'UTC'), nowMs));
+  }
   // Legacy entries are in transition (discovery adopts then syncs them) and are
   // never review items — skip them so they cost no network call.
   const toCheck = entries.filter((e) => slug || e.raw.deadline_notes !== LEGACY_IMPORT_NOTE);
