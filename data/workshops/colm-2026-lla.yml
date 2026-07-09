@@ -1,4 +1,4 @@
-name: "COLM 2026 The 2nd Workshop on Lifelong Agents: Learning, Aligning, and Evolving"
+name: 'COLM 2026 The 2nd Workshop on Lifelong Agents: Learning, Aligning, and Evolving'
 acronym: LLA 2026
 conference: colm
 year: 2026
@@ -6,10 +6,10 @@ website: https://lifelongagent.github.io
 topics:
   - agents
   - safety-alignment
-submission_deadline: 2026-07-04 11:59
+submission_deadline: 2026-07-11 11:59
 timezone: UTC
-deadline_notes: OpenReview-synced 2026-07-04 11:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_notes: OpenReview-synced 2026-07-11 11:59 UTC (as of 2026-07-09) — extensions on OpenReview are applied automatically; verify on the website.
 openreview_venue_id: colmweb.org/COLM/2026/Workshop/LLA
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-11"
+added: '2026-06-11'
