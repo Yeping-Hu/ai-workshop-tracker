@@ -6,9 +6,9 @@ website: https://iplab.dmi.unict.it/acvr2026/index.html
 topics:
   - robotics
   - vision
-submission_deadline: 2026-07-10 21:59
+submission_deadline: 2026-07-11 21:59
 timezone: UTC
-deadline_notes: OpenReview-synced 2026-07-10 21:59 UTC (as of 2026-07-08) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_notes: OpenReview-synced 2026-07-11 21:59 UTC (as of 2026-07-12) — extensions on OpenReview are applied automatically; verify on the website.
 openreview_venue_id: thecvf.com/ECCV/2026/Workshop/ACVR
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
