@@ -349,12 +349,64 @@ export async function subTrackInfo(g, fetchGroups) {
 
 /** Convert subTrackInfo's track list into the stored `tracks` YAML shape:
  *  [{name, submission_deadline?, timezone?}]. TBA tracks keep just a name. */
-function tracksToYaml(tracks) {
+export function tracksToYaml(tracks) {
   return (tracks || []).map((t) =>
     t.deadline
       ? { name: t.name, submission_deadline: t.deadline.submission_deadline, timezone: t.deadline.timezone }
       : { name: t.name },
   );
+}
+
+/**
+ * Merge OpenReview's current per-track deadlines (as produced by
+ * subTrackInfo -> tracksToYaml) into the stored `tracks` array, matched by
+ * track name. This is the multi-track counterpart of decideDeadlineUpdate: it
+ * applies the same human-safe, later-only policy PER TRACK —
+ *   - stored track blank              -> fill with OpenReview's value
+ *   - dated, OpenReview later          -> update (the extension case)      [later-only unless allowEarlier]
+ *   - dated, OpenReview earlier         -> keep (earlier-blocked)
+ *   - dated, equal instant              -> keep (unchanged)
+ *   - OpenReview lists a track we don't  -> add it
+ *   - a stored track OpenReview omits     -> keep as-is (never dropped, so a
+ *                                            throttled/partial read can't erase a good value)
+ * Pure — no network. The caller supplies the fetched OpenReview tracks and owns
+ * both the entry-level "is this bot-managed / human-untouched" gate and any
+ * plausibility filtering (mirroring how the single-deadline sync is structured).
+ * Returns { tracks, changes }; changes is a human-readable "<name>: from -> to"
+ * list, empty when nothing moved (so the caller can skip a no-op write).
+ */
+export function mergeTracks(storedTracks, openreviewTracks, { allowEarlier = false } = {}) {
+  const changes = [];
+  const byName = new Map();
+  const order = [];
+  for (const t of storedTracks || []) {
+    if (!byName.has(t.name)) order.push(t.name);
+    byName.set(t.name, { ...t });
+  }
+  for (const ot of openreviewTracks || []) {
+    if (!ot || !ot.submission_deadline) continue; // still TBA on OpenReview -> nothing to apply
+    const cur = byName.get(ot.name);
+    if (!cur) {
+      byName.set(ot.name, { name: ot.name, submission_deadline: ot.submission_deadline, timezone: ot.timezone || 'UTC' });
+      order.push(ot.name);
+      changes.push(`${ot.name}: (new track) -> ${ot.submission_deadline} UTC`);
+    } else if (!cur.submission_deadline) {
+      cur.submission_deadline = ot.submission_deadline;
+      cur.timezone = ot.timezone || 'UTC';
+      changes.push(`${ot.name}: (blank) -> ${ot.submission_deadline} UTC`);
+    } else {
+      const storedMs = resolveDeadlineUtcMs(cur.submission_deadline, cur.timezone || 'UTC');
+      const fetchedMs = resolveDeadlineUtcMs(ot.submission_deadline, ot.timezone || 'UTC');
+      const decision = decideDeadlineUpdate(storedMs, fetchedMs, { allowEarlier });
+      if (decision.update) {
+        const from = cur.submission_deadline;
+        cur.submission_deadline = ot.submission_deadline;
+        cur.timezone = ot.timezone || 'UTC';
+        changes.push(`${ot.name}: ${from} -> ${ot.submission_deadline} UTC (${decision.reason})`);
+      }
+    }
+  }
+  return { tracks: order.map((n) => byName.get(n)), changes };
 }
 
 async function main({ conf, year, dryRun }) {
