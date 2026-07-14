@@ -1,0 +1,20 @@
+# --- Missing: submission deadline -----------------------------------------
+# Know it? Add two lines anywhere below, for example:
+#   submission_deadline: 2026-09-15 23:59    # or just a date: 2026-09-15
+#   timezone: AoE                            # AoE / UTC / America/Los_Angeles
+# Then click "Commit changes..." -> "Propose changes" to open a pull request.
+# It is validated automatically and usually merged within a day.
+# ---------------------------------------------------------------------------
+name: The Workshop and Competition on Intelligent Information Gathering for Single and Multi-Robot Systems
+acronym: IIG-Workshop-2026
+conference: iros
+year: 2026
+website: https://frostlab.byu.edu/IIG-workshop/
+topics:
+  - robotics
+  - systems
+  - evaluation-benchmarks
+openreview_venue_id: IEEE.org/IROS/2026/Workshop/IIG
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-07-14'

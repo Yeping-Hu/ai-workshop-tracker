@@ -1,0 +1,16 @@
+name: Grounded and Faithful Vision-Language Models for Real-World Deployment 2026
+acronym: VLM4RWD2026
+conference: neurips
+year: 2026
+website: https://vlm4rwd.github.io
+topics:
+  - llms
+  - vision
+  - multimodal
+submission_deadline: 2026-08-31 04:00
+timezone: UTC
+deadline_notes: OpenReview-synced 2026-08-31 04:00 UTC (as of 2026-07-14) — extensions on OpenReview are applied automatically; verify on the website.
+openreview_venue_id: NeurIPS.cc/2026/Workshop/VLM4RWD
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-07-14'
