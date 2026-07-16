@@ -12,3 +12,9 @@
   timezone: "AoE"
   url: "https://icml.cc/Conferences/2026/CallForWorkshops"
   notes: "Notification Mar 20, 2026; workshops Jul 10-11, 2026 (Seoul); suggested contribution deadline Apr 24, 2026 AoE. 44 workshops + 4 affinity workshops accepted."
+- conference: icra
+  year: 2027
+  proposal_deadline: "2026-09-02 07:59"
+  timezone: "UTC"
+  url: "https://openreview.net/group?id=IEEE.org/ICRA/2027/WT-Pre-Proposals"
+  notes: "Call for workshop & tutorial pre-proposals, submitted via OpenReview. ICRA 2027 is held at Coex, Seoul, South Korea, beginning May 23, 2027 (2027.ieee-icra.org). Deadline read from the OpenReview pre-proposals submission invitation."
