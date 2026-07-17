@@ -1,0 +1,15 @@
+name: NeurIPS 2026 Workshop - Self-Evolving Diversity-Driven Search for Robust AI Systems
+acronym: EvoRobust@NeurIPS 2026
+conference: neurips
+year: 2026
+website: https://neurips.cc/Conferences/2026
+topics:
+  - systems
+  - robustness
+submission_deadline: 2026-08-30 12:29
+timezone: UTC
+deadline_notes: OpenReview-synced 2026-08-30 12:29 UTC (as of 2026-07-17) — extensions on OpenReview are applied automatically; verify on the website.
+openreview_venue_id: NeurIPS.cc/2026/Workshop/EvoRobust
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-07-17'
