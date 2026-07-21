@@ -1,0 +1,15 @@
+name: 'RoboPAD: Post-Training Adaptation of Robot Foundation Models'
+acronym: NeurIPS 2026 RoboPAD
+conference: neurips
+year: 2026
+website: https://robotpad2026.github.io/
+topics:
+  - llms
+  - robotics
+submission_deadline: 2026-08-30 11:59
+timezone: UTC
+deadline_notes: OpenReview-synced 2026-08-30 11:59 UTC (as of 2026-07-21) — extensions on OpenReview are applied automatically; verify on the website.
+openreview_venue_id: NeurIPS.cc/2026/Workshop/RoboPAD
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-07-21'
