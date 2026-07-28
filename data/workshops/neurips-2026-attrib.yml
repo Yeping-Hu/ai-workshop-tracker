@@ -1,0 +1,18 @@
+# --- Missing: submission deadline -----------------------------------------
+# Know it? Add two lines anywhere below, for example:
+#   submission_deadline: 2026-09-15 23:59    # or just a date: 2026-09-15
+#   timezone: AoE                            # AoE / UTC / America/Los_Angeles
+# Then click "Commit changes..." -> "Propose changes" to open a pull request.
+# It is validated automatically and usually merged within a day.
+# ---------------------------------------------------------------------------
+name: 'Third NeurIPS Workshop on Attributing Model Behavior at Scale: Data Attribution and Provenance'
+acronym: ATTRIB 2026
+conference: neurips
+year: 2026
+website: https://attrib-workshop.cc/
+topics:
+  - interpretability
+openreview_venue_id: NeurIPS.cc/2026/Workshop/ATTRIB
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-07-28'

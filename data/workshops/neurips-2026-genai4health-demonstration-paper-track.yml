@@ -1,0 +1,20 @@
+# --- Missing: submission deadline -----------------------------------------
+# Know it? Add two lines anywhere below, for example:
+#   submission_deadline: 2026-09-15 23:59    # or just a date: 2026-09-15
+#   timezone: AoE                            # AoE / UTC / America/Los_Angeles
+# Then click "Commit changes..." -> "Propose changes" to open a pull request.
+# It is validated automatically and usually merged within a day.
+# ---------------------------------------------------------------------------
+name: 'The Third Workshop on GenAI for Health: Agentic Systems, Clinical Trust, and Future Potential - Demonstration Paper Track'
+acronym: GenAI4Health_Demonstration_Paper_Track
+conference: neurips
+year: 2026
+website: https://genai4health.github.io/
+topics:
+  - healthcare-bio
+  - agents
+  - systems
+openreview_venue_id: NeurIPS.cc/2026/Workshop/GenAI4Health_Demonstration_Paper_Track
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-07-28'

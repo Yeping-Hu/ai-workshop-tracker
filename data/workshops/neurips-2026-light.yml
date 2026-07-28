@@ -1,0 +1,14 @@
+name: 'Neurips 2026 Workshop - LIGHT: Deployable Small Foundation Models'
+acronym: LIGHT
+conference: neurips
+year: 2026
+website: https://almaai-disi-unibo.github.io/neurips2026-light-smallModels/
+topics:
+  - llms
+submission_deadline: 2026-08-29 22:00
+timezone: UTC
+deadline_notes: OpenReview-synced 2026-08-29 22:00 UTC (as of 2026-07-28) — extensions on OpenReview are applied automatically; verify on the website.
+openreview_venue_id: NeurIPS.cc/2026/Workshop/LIGHT
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-07-28'
