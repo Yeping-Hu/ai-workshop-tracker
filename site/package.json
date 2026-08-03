@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && pagefind --site dist --root-selector '[data-pf-ws]' && pagefind --site dist --output-subdir pagefind-papers --root-selector '[data-pf-papers]'",
+    "build": "astro build && pagefind --site dist --root-selector \"[data-pf-ws]\" && pagefind --site dist --output-subdir pagefind-papers --root-selector \"[data-pf-papers]\" && node -e \"fs.cpSync('dist/pagefind', 'public/pagefind', {recursive: true}); fs.cpSync('dist/pagefind-papers', 'public/pagefind-papers', {recursive: true})\"",
     "preview": "astro preview"
   },
   "dependencies": {

@@ -1,0 +1,141 @@
+---
+export interface Props {
+  content: string;
+  filename?: string;
+  variant?: 'button' | 'link';
+}
+
+const { content, filename, variant = 'button' } = Astro.props;
+// We encode the content so we can safely embed it in data attributes
+const encodedContent = encodeURIComponent(content);
+---
+
+{variant === 'link' ? (
+  <button type="button" class="btn-copy as-link markdown-export-btn" data-md={encodedContent}>
+    <span class="btn-text">📋 Copy as Markdown</span>
+  </button>
+) : (
+  <div class="markdown-export">
+    <button type="button" class="btn-copy markdown-export-btn" data-md={encodedContent}>
+      <span class="btn-text">📋 Copy as Markdown</span>
+    </button>
+    
+    {filename && (
+      <button type="button" class="btn-download markdown-export-btn" data-filename={filename} data-md={encodedContent}>
+        ⬇ Download .md
+      </button>
+    )}
+  </div>
+)}
+
+<script>
+  // Global event delegation to handle clicks on copy and download buttons
+  // even across Astro view transition page navigations.
+  document.addEventListener('click', async (e) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+
+    const copyBtn = target.closest('.btn-copy');
+    if (copyBtn) {
+      try {
+        const md = decodeURIComponent(copyBtn.getAttribute('data-md') || '');
+        await navigator.clipboard.writeText(md);
+        
+        const textSpan = copyBtn.querySelector('.btn-text') || copyBtn;
+        const originalText = textSpan.textContent;
+        textSpan.textContent = '✓ Copied!';
+        (textSpan as HTMLElement).style.color = '#10b981'; // Success green
+        setTimeout(() => {
+          textSpan.textContent = originalText;
+          (textSpan as HTMLElement).style.color = '';
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to copy: ', err);
+      }
+      return;
+    }
+
+    const dlBtn = target.closest('.btn-download');
+    if (dlBtn) {
+      const md = decodeURIComponent(dlBtn.getAttribute('data-md') || '');
+      const filename = dlBtn.getAttribute('data-filename') || 'export.md';
+      
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      
+      // Dispatch a non-bubbling click event. This prevents client-side routers
+      // (like Astro View Transitions) from intercepting the click.
+      const clickEvent = new MouseEvent('click', {
+        bubbles: false,
+        cancelable: true,
+        view: window
+      });
+      a.dispatchEvent(clickEvent);
+      
+      setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 1000);
+    }
+  });
+</script>
+
+<style>
+  .markdown-export {
+    display: flex;
+    gap: 0.5rem;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+  }
+  .markdown-export button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    font-family: var(--font-sans, inherit);
+    color: var(--text, inherit);
+    background: transparent;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+  }
+  .markdown-export button:hover {
+    opacity: 1;
+  }
+
+  /* Link variant styles */
+  button.as-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+    font-family: inherit;
+    color: var(--link, #2563eb);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  button.as-link:hover {
+    color: var(--link-hover, #1d4ed8);
+  }
+  
+  /* Fallbacks in case vars aren't defined */
+  @media (prefers-color-scheme: dark) {
+    button.as-link {
+      color: var(--link, #60a5fa);
+    }
+    button.as-link:hover {
+      color: var(--link-hover, #93c5fd);
+    }
+  }
+</style>
