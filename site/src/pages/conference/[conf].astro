@@ -200,6 +200,14 @@ const statusLines = (w: any): string[] =>
     .conf-ws-list li > .pill { grid-row: 1; grid-column: 1; justify-self: start; }
     /* Two-line label: centre it and tighten the leading so the pill stays compact. */
     .conf-ws-list li > .pill.unknown { text-align: center; line-height: 1.2; }
+    /* Make it exactly as wide as the "Open call" pill without hard-coding a
+       measurement: an invisible zero-height copy of that label sets the pill's
+       intrinsic width, so it is rendered in the same font, size and
+       letter-spacing and matches at any zoom or font fallback. */
+    .conf-ws-list li > .pill.unknown::after {
+      content: "Open call";
+      display: block; height: 0; overflow: hidden; visibility: hidden;
+    }
     .conf-ws-list .ws-head { grid-row: 1; grid-column: 2; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
     .conf-ws-list .ws-full { grid-row: 2; grid-column: 2; color: var(--muted); font-size: 0.83rem; line-height: 1.4; max-width: 60rem; }
     .conf-ws-list .abs-open { color: var(--warn); }
