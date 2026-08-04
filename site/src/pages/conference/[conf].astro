@@ -113,6 +113,12 @@ const breadcrumbLd = {
 
 const statusPill = (w: any) =>
   w.statusLabel === 'Open call' ? 'upcoming' : w.statusLabel === 'Deadline unknown' ? 'unknown' : 'past';
+// "Deadline unknown" is nearly twice the width of the other labels, which made
+// its pill dominate the row. Break it across two lines at its existing space.
+// Done by splitting the words rather than with a max-width, so the wrap point is
+// exact and can't shift with font metrics.
+const statusLines = (w: any): string[] =>
+  statusPill(w) === 'unknown' ? String(w.statusLabel).split(' ') : [String(w.statusLabel)];
 ---
 
 <Base
@@ -141,7 +147,7 @@ const statusPill = (w: any) =>
       <ul class="conf-ws-list">
         {ws.map((w) => (
           <li>
-            <span class={`pill ${statusPill(w)}`}>{w.statusLabel}</span>
+            <span class={`pill ${statusPill(w)}`}>{statusLines(w).map((line, i) => <Fragment>{i > 0 && <br />}{line}</Fragment>)}</span>
             <div class="ws-head">
               <a href={href(`/workshop/${w.slug}/`)}>{w.acronym || w.name}</a>
               {w.deadlineWallClock && (
@@ -192,6 +198,8 @@ const statusPill = (w: any) =>
       column-gap: 0.5rem; row-gap: 0.15rem; align-items: baseline;
     }
     .conf-ws-list li > .pill { grid-row: 1; grid-column: 1; justify-self: start; }
+    /* Two-line label: centre it and tighten the leading so the pill stays compact. */
+    .conf-ws-list li > .pill.unknown { text-align: center; line-height: 1.2; }
     .conf-ws-list .ws-head { grid-row: 1; grid-column: 2; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
     .conf-ws-list .ws-full { grid-row: 2; grid-column: 2; color: var(--muted); font-size: 0.83rem; line-height: 1.4; max-width: 60rem; }
     .conf-ws-list .abs-open { color: var(--warn); }
