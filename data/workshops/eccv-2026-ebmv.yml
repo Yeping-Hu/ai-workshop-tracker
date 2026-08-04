@@ -1,4 +1,4 @@
-name: "ECCV 2026 Workshop - Event-Based Multimodal Vision: From Imaging to Perception and Understanding"
+name: 'ECCV 2026 Workshop - Event-Based Multimodal Vision: From Imaging to Perception and Understanding'
 acronym: ECCV 2026 Workshop EBMV
 conference: eccv
 year: 2026
@@ -8,8 +8,11 @@ topics:
   - multimodal
 submission_deadline: 2026-07-20 23:59
 timezone: UTC
-deadline_notes: Full paper submission deadline. A mandatory abstract must be registered on OpenReview by 2026-07-15 23:59 UTC; the full paper is then due 2026-07-20 23:59 UTC. Verify on the website.
+deadline_notes: OpenReview-synced 2026-07-20 23:59 UTC (as of 2026-08-04) — extensions on OpenReview are applied automatically; verify on the website.
 openreview_venue_id: thecvf.com/ECCV/2026/Workshop/EBMV
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-16"
+notes: >-
+  Topics were auto-suggested and may be imprecise — edits welcome. Abstract registration was mandatory here: a full paper could only be submitted if its abstract had been registered by the earlier
+  abstract deadline.
+added: '2026-06-16'
+abstract_deadline: 2026-07-15 23:59
