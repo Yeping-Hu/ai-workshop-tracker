@@ -147,8 +147,15 @@ const val = (c, k) => {
  *  missing, blank, or non-URL value (organizers do occasionally type a bare
  *  hostname or an email address in there). */
 export function websiteFromContent(content) {
-  const w = String(val(content ?? {}, 'website') || '').trim();
-  return /^https?:\/\//.test(w) ? w.slice(0, 500) : null;
+  const raw = String(val(content ?? {}, 'website') || '').trim();
+  // Organizers occasionally put SEVERAL links in this one field (seen in the
+  // wild: "http://competition.example; https://workshop.example"). Stored
+  // verbatim that becomes a single broken href, so take the first well-formed
+  // URL and leave any refinement to a human edit. Split on ';' and whitespace
+  // only — commas occur inside legitimate URLs — then drop trailing punctuation
+  // left behind by a comma- or period-separated list.
+  const first = (raw.split(/[;\s]+/).find((t) => /^https?:\/\/\S+$/.test(t)) || '').replace(/[.,;]+$/, '');
+  return /^https?:\/\/\S/.test(first) ? first.slice(0, 500) : null;
 }
 
 /** Map a venue title/subtitle to topic ids via keywords (fallback: other).

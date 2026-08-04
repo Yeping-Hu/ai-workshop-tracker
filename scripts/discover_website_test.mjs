@@ -36,6 +36,18 @@ check('missing field -> null', websiteFromContent({ title: 'A workshop' }), null
 check('empty content -> null', websiteFromContent({}), null);
 check('null/undefined content -> null', websiteFromContent(null), null);
 
+// Several links crammed into the one field (real case: NeurIPS 2026 IAB
+// competition paper track). Take the first well-formed URL rather than storing
+// a value that renders as a single broken href.
+check('semicolon-separated -> first', websiteFromContent({ website: 'http://glee-competition.com; https://iab-agents.github.io/' }), 'http://glee-competition.com');
+check('semicolon, no space -> first', websiteFromContent({ website: 'https://a.example;https://b.example' }), 'https://a.example');
+check('space-separated -> first', websiteFromContent({ website: 'https://a.example https://b.example' }), 'https://a.example');
+check('comma-separated -> first, comma stripped', websiteFromContent({ website: 'https://a.example, https://b.example' }), 'https://a.example');
+check('leading prose -> the URL', websiteFromContent({ website: 'TBA https://a.example' }), 'https://a.example');
+check('prose only -> null', websiteFromContent({ website: 'to be announced' }), null);
+check('comma inside a single URL preserved', websiteFromContent({ website: 'https://example.org/a,b?x=1,2' }), 'https://example.org/a,b?x=1,2');
+check('scheme with no host -> null', websiteFromContent({ website: 'https://' }), null);
+
 // Length cap (the schema stores a bounded string).
 {
   const long = 'https://example.org/' + 'a'.repeat(600);
