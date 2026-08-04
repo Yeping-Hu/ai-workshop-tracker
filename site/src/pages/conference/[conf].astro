@@ -182,27 +182,19 @@ const statusPill = (w: any) =>
     .conf-intro { font-size: 1.04rem; line-height: 1.55; color: var(--muted); max-width: 48rem; margin: 0.4rem 0 1rem; }
     .conf-year { margin: 1.6rem 0; }
     .conf-ws-list { list-style: none; padding: 0; margin: 0.6rem 0; display: grid; row-gap: 0.75rem; }
-    /* Two columns: the status pill, then the workshop. The full title sits in the
-       second column on its own row, so it starts exactly where the acronym link
-       starts instead of under the pill. */
+    /* Per-row two-column grid: the row's own pill, then the workshop. The pill
+       column is sized to that row's pill, so the acronym sits directly beside it
+       (0.5rem, as in the original flex row) — rows with different status labels
+       deliberately do NOT share a column. The title caption goes in the second
+       column's second row, so it starts exactly where its own acronym starts. */
     .conf-ws-list li {
       display: grid; grid-template-columns: max-content 1fr;
       column-gap: 0.5rem; row-gap: 0.15rem; align-items: baseline;
     }
-    /* justify-self keeps each pill at its natural width: as a grid item it would
-       otherwise stretch to fill the column, which is as wide as the longest label
-       ("DEADLINE UNKNOWN") and left "OPEN CALL" padded with dead space. */
     .conf-ws-list li > .pill { grid-row: 1; grid-column: 1; justify-self: start; }
     .conf-ws-list .ws-head { grid-row: 1; grid-column: 2; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
     .conf-ws-list .ws-full { grid-row: 2; grid-column: 2; color: var(--muted); font-size: 0.83rem; line-height: 1.4; max-width: 60rem; }
     .conf-ws-list .abs-open { color: var(--warn); }
-    /* Where subgrid is available, every row shares ONE pill column, so the
-       acronyms (and their titles) line up down the whole page, not just within
-       each row. Without it the per-row alignment above still holds. */
-    @supports (grid-template-columns: subgrid) {
-      .conf-ws-list { grid-template-columns: max-content 1fr; column-gap: 0.5rem; }
-      .conf-ws-list li { grid-column: 1 / -1; grid-template-columns: subgrid; }
-    }
     .conf-faq { margin: 2.4rem 0; max-width: 48rem; }
     .conf-faq dt { font-weight: 600; margin-top: 1rem; }
     .conf-faq dd { margin: 0.3rem 0 0; color: var(--muted); }
