@@ -109,6 +109,14 @@ h3 { font-size: 1.12rem; margin: 1.6rem 0 0.4rem; }
 /* ---------- masthead ---------- */
 .masthead { padding: 2.6rem 0 1.4rem; }
 .eyebrow { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin: 0 0 0.6rem; }
+/* Conference strip in the hero: a shortcut to each conference page, so browsing
+   by conference doesn't mean scrolling to the footer. Kept visually identical to
+   the plain text it replaced — the underline appears on hover/focus rather than
+   putting nine underlines across the top of the page. */
+.conf-nav a { color: inherit; text-decoration: none; }
+.conf-nav a:hover,
+.conf-nav a:focus-visible { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.conf-nav .sep { opacity: 0.5; }
 .masthead p.lede { font-size: 1.06rem; color: var(--muted); max-width: 46rem; margin: 0.4rem 0 0; }
 .statline { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; margin-top: 1.1rem; font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); }
 .statline strong { color: var(--ink); font-weight: 600; }

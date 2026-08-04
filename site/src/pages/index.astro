@@ -87,7 +87,16 @@ const datasetLd: Record<string, any> = {
     <script is:inline type="application/ld+json" set:html={JSON.stringify(datasetLd)} />
   </Fragment>
   <section class="hero">
-    <p class="eyebrow">{[...conferences].map((c) => c.name).sort().join(' · ')}</p>
+    <nav class="eyebrow conf-nav" aria-label="Browse workshops by conference">
+      {[...conferences]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((c, i) => (
+          <>
+            {i > 0 && <span class="sep" aria-hidden="true"> · </span>}
+            <a href={href(`/conference/${c.id}/`)} title={`${c.full_name} workshops`}>{c.name}</a>
+          </>
+        ))}
+    </nav>
     <h1>Every workshop. Every paper. One search.</h1>
     <p class="lede">
       Deadlines, past editions, and accepted papers for AI/ML/Robotics conference
