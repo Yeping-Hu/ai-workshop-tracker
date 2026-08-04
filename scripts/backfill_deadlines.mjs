@@ -55,7 +55,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
+import { listWorkshopFiles, readWorkshopFile, recordDeadlineObservation } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 import {
   syncNote,
@@ -132,6 +132,9 @@ async function main({ dryRun }) {
       continue;
     }
 
+    // First observation for this entry: records a single "announced" point, which
+    // is what the UI reports when a workshop goes from no date to a date.
+    recordDeadlineObservation(raw, fetched.submission_deadline, today);
     raw.submission_deadline = fetched.submission_deadline;
     raw.timezone = fetched.timezone;
     // Stamp bot-managed so future *extensions* are thereafter caught by the

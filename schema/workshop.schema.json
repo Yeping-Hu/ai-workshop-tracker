@@ -36,7 +36,7 @@
       "type": "string",
       "pattern": "^https?://",
       "maxLength": 500,
-      "description": "Official workshop website. Leave unset if unknown \u2014 the site shows a \"help us add it\" prompt."
+      "description": "Official workshop website. Leave unset if unknown — the site shows a \"help us add it\" prompt."
     },
     "topics": {
       "type": "array",

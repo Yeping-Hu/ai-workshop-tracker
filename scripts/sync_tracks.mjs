@@ -40,7 +40,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
+import { listWorkshopFiles, readWorkshopFile, recordDeadlineObservation } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 import {
   subTrackInfo,
@@ -129,6 +129,9 @@ async function main({ slug, dryRun }) {
     // stays on the top-level note and the next run recognises the entry as its own.
     const head = earliestTrack(newTracks);
     if (head) {
+      // The headline is derived from the tracks, so a track move shows up here as
+      // a headline change and belongs in the log like any other observation.
+      recordDeadlineObservation(raw, head.submission_deadline, today);
       raw.submission_deadline = head.submission_deadline;
       raw.timezone = head.timezone || 'UTC';
       raw.deadline_notes = syncNote(head.submission_deadline, today);

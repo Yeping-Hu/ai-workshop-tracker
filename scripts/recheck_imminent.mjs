@@ -49,7 +49,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
+import { listWorkshopFiles, readWorkshopFile, recordDeadlineObservation } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 import {
   syncNote,
@@ -176,6 +176,10 @@ async function main({ dryRun }) {
     if (decision.update || abstractChanged) {
       const from = raw.submission_deadline;
       if (decision.update) {
+        // Log the observation before overwriting, so the outgoing value is still
+        // readable for seeding. This is the busiest deadline-write path in the
+        // repo — most extensions land here, not in the weekly sync.
+        recordDeadlineObservation(raw, fetched.submission_deadline, today);
         raw.submission_deadline = fetched.submission_deadline;
         raw.timezone = fetched.timezone;
         raw.deadline_notes = syncNote(fetched.submission_deadline, today);
