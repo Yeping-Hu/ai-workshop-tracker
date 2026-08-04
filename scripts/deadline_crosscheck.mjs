@@ -31,7 +31,14 @@
 import fs from 'node:fs';
 import { listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
-import { deadlineFromInvitation, syncedValue, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
+import { deadlineFromInvitation, parseGroupDeadline, syncedValue, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
+import { fetchGroupById } from './recheck_imminent.mjs';
+
+// OpenReview wraps some content values as { value: … }; unwrap if so.
+const val = (c, k) => {
+  const x = c?.[k];
+  return x && typeof x === 'object' && 'value' in x ? x.value : x;
+};
 
 const HOUR = 3_600_000;
 const DAY = 86_400_000;
@@ -39,7 +46,12 @@ const DAY = 86_400_000;
 const OFFSET_STEPS_MIN = [60, 30, 15]; // whole, half, quarter hour
 const NEAR_MS = 90_000;                // 90s tolerance for "lands on" an offset
 const MAX_OFFSET_H = 14;               // largest real-world tz magnitude
-const PACE_MS = 400;                   // gentle spacing between venue fetches
+// Gentle spacing between venue fetches. Each entry now costs a group lookup
+// (for the authoritative `date` line) plus, only when that line has no
+// deadline, an invitation lookup — so pacing is a little wider than when this
+// job read invitations alone, to stay inside OpenReview's rate budget across
+// ~200 entries. A throttled entry is warned about and skipped, never fatal.
+const PACE_MS = 600;
 const REVIEW_PAST_GRACE_MS = 14 * DAY; // keep reviewing a deadline until ~2 weeks past it
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -160,7 +172,20 @@ async function main() {
   for (const { slug: s, file, raw } of toCheck) {
     let dl = null;
     try {
-      dl = await deadlineFromInvitation({ id: raw.openreview_venue_id, content: {} });
+      // Use the SAME value precedence as every write path (discovery, recheck,
+      // backfill): the group's free `date` line first, the submission
+      // invitation's duedate only as a fallback. Reading the invitation alone
+      // silently disagreed with what the syncs actually store on two-stage
+      // venues, whose date line carries both
+      //   "Abstract Registration: <early>, Submission Deadline: <later>"
+      // while the invitation's duedate is the ABSTRACT date. That reported a
+      // phantom "OpenReview moved this earlier" for every such workshop (ASCI,
+      // AutoMLR, VERICODEGEN, EBMV) even though the stored paper deadline was
+      // correct and in sync — pure review noise, and dangerous noise, since
+      // "accept OpenReview" would have replaced a paper deadline with an
+      // abstract-registration date.
+      const g = await fetchGroupById(raw.openreview_venue_id);
+      dl = g ? parseGroupDeadline(val(g.content ?? {}, 'date')) || (await deadlineFromInvitation(g)) : null;
     } catch {
       dl = null; // network / rate-limit / no invitation: skip, never fail
     }
