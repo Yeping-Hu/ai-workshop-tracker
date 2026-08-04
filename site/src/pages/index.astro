@@ -62,7 +62,7 @@ const datasetUrl = SITE ? new URL(href('/api/workshops.json'), SITE).href : href
 const _years = workshops.map((w) => w.year).filter((y) => typeof y === 'number');
 const yearMin = _years.length ? Math.min(..._years) : null;
 const yearMax = _years.length ? Math.max(..._years) : null;
-const _confNames = [...conferences].map((c) => c.name).sort();
+const _confNames = [...conferences].map((c) => c.name).sort((a, b) => a.localeCompare(b));
 const datasetLd: Record<string, any> = {
   '@context': 'https://schema.org',
   '@type': 'Dataset',

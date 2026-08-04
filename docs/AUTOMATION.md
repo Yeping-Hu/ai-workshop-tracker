@@ -31,10 +31,13 @@ for human review, as do dependency updates.
 
 ## Every deadline write is logged
 
-All seven places that write a `submission_deadline` — the three in the weekly
-importer, the daily re-check, the daily blank-fill, the daily multi-track sync, and
-the manual re-sync — first append to that entry's `deadline_history` via
-`recordDeadlineObservation()`. The log is what powers the "Extended by N days"
+All nine places that write a `submission_deadline` — the three in the weekly
+importer, the daily re-check, the daily blank-fill, the daily multi-track sync, the
+manual re-sync, and both issue forms (add and edit) — record to that entry's
+`deadline_history`. Eight of them call `recordDeadlineObservation()`; the two that
+*create* an entry (the importer's new-venue path and the add form) set the first
+log entry directly, because the helper seeds from the value being replaced and so
+correctly reports "no change" when nothing is being replaced. The log is what powers the "Extended by N days"
 note on the board and the history on each workshop page. Two consequences worth
 knowing:
 
@@ -45,6 +48,28 @@ knowing:
 
 A job that only writes on change (the re-check) therefore logs only real moves; a
 no-op re-observation is discarded, so the log doesn't grow on unchanged entries.
+
+
+## What a new entry inherits automatically
+
+Nothing in this cycle's work needs hand-maintaining per workshop or per
+conference:
+
+- **A new conference** in `data/conferences.yml` immediately gets its own
+  `/conference/<id>/` page, a link in the homepage hero strip, and a link in the
+  footer — all three iterate the conference list, so there is no second place to
+  update.
+- **A new workshop** gets `deadline_history` from the moment it is created,
+  whichever route it arrives by: the importer seeds it for a discovered venue, and
+  the add form seeds it for a contributed one (so the board's "Deadline just
+  announced" note appears either way). Editing a deadline through the edit form
+  logs the move too, so a human change is as traceable as a bot one.
+- **A two-stage venue** gets `abstract_deadline` filled at import and kept current
+  by the daily re-check; the countdown labelling and ordering follow from the field
+  with no per-entry configuration.
+
+Contributors adding a workshop by hand should leave `deadline_history` out
+entirely — `_template.yml` says so, and the automation fills it in.
 
 
 ## Adding a conference

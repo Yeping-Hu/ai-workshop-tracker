@@ -15,7 +15,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { WORKSHOPS_DIR } from '../lib/workshops.mjs';
+import { WORKSHOPS_DIR, recordDeadlineObservation } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs, isValidTimezone, assembleDeadline } from '../lib/dates.mjs';
 import { syncedValue, LEGACY_IMPORT_NOTE, isAutoTopicsNote } from './discover_openreview.mjs';
 
@@ -59,6 +59,9 @@ export function applyWorkshopEdit(existing, fields) {
       value = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
       provenance = `submitted as ${deadline} ${timezone}`;
     }
+    // A human moving a deadline is an observation like any other: log it before
+    // overwriting, so the history shows the move rather than silently jumping.
+    recordDeadlineObservation(r, value, new Date().toISOString().slice(0, 10), 'UTC');
     r.submission_deadline = value;
     r.timezone = 'UTC';
     changes.push('submission_deadline');

@@ -12,7 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { WORKSHOPS_DIR } from '../lib/workshops.mjs';
+import { WORKSHOPS_DIR, recordDeadlineObservation } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs, isValidTimezone, assembleDeadline } from '../lib/dates.mjs';
 
 const body = process.env.ISSUE_BODY;
@@ -119,7 +119,21 @@ const organizers = get('Organizers').split('\n').map((s) => s.trim()).filter(Boo
 if (organizers.length) record.organizers = organizers;
 const notes = get('Anything else');
 if (notes) record.notes = notes;
+// Seed the observation log so a contributed workshop starts with the same
+// provenance a bot-discovered one gets: one entry for the value as submitted, in
+// the zone it is stored in. Without this the log would only begin at the first
+// later bot observation, and the board's "just announced" note would appear for
+// discovered workshops but not contributed ones.
 record.added = new Date().toISOString().slice(0, 10);
+// Set directly rather than via recordDeadlineObservation(): that helper seeds
+// from the value being replaced, so on a brand-new entry — where the value is
+// already in place and nothing is changing — it correctly reports "no change" and
+// writes nothing. This mirrors the importer's creation path.
+if (record.submission_deadline) {
+  record.deadline_history = [
+    { value: record.submission_deadline, recorded: record.added, timezone: record.timezone || 'UTC' },
+  ];
+}
 
 const outPath = path.join(WORKSHOPS_DIR, filename);
 fs.writeFileSync(outPath, yaml.dump(record, { lineWidth: 120, quotingType: '"' }));
