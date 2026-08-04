@@ -15,9 +15,12 @@ for human review, as do dependency updates.
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `validate.yml` | PRs & pushes touching data | Schema + sanity checks; comments fixes on the PR |
+| `pr-build-check.yml` | PRs | Builds the site as a visible (non-required) check, so a PR that breaks the build is obvious before merge |
 | `deploy.yml` | push to `main`, daily, manual | Build & deploy (daily run refreshes derived statuses) |
 | `discover.yml` | weekly | Discovers new workshops/venues/deadlines from OpenReview, backfills a `website`/deadline/tracks that organizers published after the venue was imported, and syncs extensions (later-only) → commits to `main` |
 | `recheck-imminent.yml` | daily | Re-checks only deadlines within `[−7d, +14d]` for extensions (one lookup each, later-only) → commits to `main` |
+| `backfill-deadlines.yml` | daily | `scripts/backfill_deadlines.mjs` — fills a **blank** `submission_deadline` for OpenReview-linked, single-deadline entries (fill-only, never overwrites) → commits to `main` |
+| `sync-tracks.yml` | daily | `scripts/sync_tracks.mjs` — refreshes the per-track deadlines of **multi-track** venues from their sub-track child groups (fill blanks, later-only per track), re-deriving the headline → commits to `main` |
 | `openreview-refresh.yml` | monthly | Re-fetch paper caches for recent years → auto-PR on diff |
 | `issue-to-pr.yml` | "Add a workshop" issue form | Converts the form to a YAML file + PR, validates, reports back |
 | `edit-to-pr.yml` | "Edit a workshop" issue form | Applies the edit to the existing YAML + PR (timezone-safe), validates, reports back |
@@ -25,6 +28,24 @@ for human review, as do dependency updates.
 | `deadline-review.yml` | weekly | One consolidated issue listing deadlines that need a human decision |
 | `stale-check.yml` | weekly | One consolidated issue listing entries needing follow-up |
 | `link-check.yml` | monthly | One consolidated issue listing broken URLs |
+
+## Every deadline write is logged
+
+All seven places that write a `submission_deadline` — the three in the weekly
+importer, the daily re-check, the daily blank-fill, the daily multi-track sync, and
+the manual re-sync — first append to that entry's `deadline_history` via
+`recordDeadlineObservation()`. The log is what powers the "Extended by N days"
+note on the board and the history on each workshop page. Two consequences worth
+knowing:
+
+- **`recorded` is when *we* observed a value**, never when the organizers changed
+  it — we cannot know the latter, and the UI says so explicitly.
+- **The hook goes immediately before the write**, so the outgoing value is still
+  readable and can be seeded with the date from its own `(as of …)` stamp.
+
+A job that only writes on change (the re-check) therefore logs only real moves; a
+no-op re-observation is discarded, so the log doesn't grow on unchanged entries.
+
 
 ## Adding a conference
 

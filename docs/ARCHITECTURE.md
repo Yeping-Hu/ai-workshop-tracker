@@ -238,8 +238,10 @@ and the full note stays one click away.
 
 Because a human edit freezes auto-sync, two tools cover the manual case. A
 weekly **cross-check** (`scripts/deadline_crosscheck.mjs`, the `deadline-review`
-workflow) compares upcoming and recently-passed deadlines against OpenReview's live
-invitation `duedate` and keeps ONE self-maintaining issue ("Data health:
+workflow) compares upcoming and recently-passed deadlines against OpenReview using
+the *same value precedence as every write path* — the venue group's free `date`
+line first, the submission invitation's `duedate` only as a fallback — and keeps
+ONE self-maintaining issue ("Data health:
 deadlines to review", `data-health` label) listing only the cases the auto-sync
 will *not* fix on its own: (1) **human-edited** deadlines that now disagree with
 OpenReview (frozen, so the maintainer decides which to trust), and (2)
@@ -250,7 +252,17 @@ rule, so the maintainer confirms whether it's a real correction). Bot-managed
 The issue updates in place and closes itself when nothing's outstanding; each
 item links the re-sync command to accept OpenReview's value. The classifier also
 labels a divergence as a likely *timezone slip* (a near whole/half/quarter-hour
-offset, ≤14h, not ~a day) vs. a real change, as a hint. And an **on-demand
+offset, ≤14h, not ~a day) vs. a real change, as a hint. Matching that precedence matters: on a two-stage venue the
+invitation's `duedate` is the *abstract* date while the stored headline is the
+paper deadline, so reading the invitation alone reported a phantom "moved earlier"
+for every such workshop — noise that was also dangerous, since accepting it would
+have replaced a paper deadline with an abstract-registration date. Lookups are
+**batched**: one `/groups?prefix=<conf>/<year>/Workshop/` listing per
+conference-year (each venue comes back with its content), then the venues whose
+date line carries no deadline are fetched 40 invitation ids at a time. That took a
+~190-request run down to ~9 and ended the rate-limit skips that were silently
+dropping ~5% of entries per run — a skipped entry is simply not reviewed that
+week, which is how a real change once went unreported. And an **on-demand
 re-sync** (`scripts/resync_deadline.mjs --slug <slug>`, also a
 `workflow_dispatch`) lets a maintainer re-pull one workshop's deadline straight
 from OpenReview's duedate in either direction, re-stamping it for future
@@ -285,6 +297,61 @@ The board, search, countdowns, and JSON API consume only the single derived
 deadline/status, so they're unchanged; the workshop page additionally renders the
 per-track breakdown. The rules are pinned by `scripts/tracks_test.mjs` (run in the
 validate CI workflow).
+
+## Two-stage venues (abstract registration, then paper)
+
+About 3% of OpenReview venues (6 of 229 sampled) gate paper submission behind an
+earlier **mandatory abstract registration**. Their group `date` line carries both
+components, e.g. `Abstract Registration: Aug 20 …, Submission Deadline: Aug 29 …`,
+and `parseGroupDeadline()` deliberately anchors on *Submission Deadline* so the
+stored headline is always the **paper** deadline — the last moment a submission can
+land. The earlier date is stored separately in `abstract_deadline` (always UTC),
+filled at import and kept current by the daily re-check.
+
+The display rule exists to avoid a specific misreading. If the headline followed
+the abstract date, a workshop would show "closed" while papers were still being
+accepted, and the later switch to the paper date would look like an *extension*.
+So:
+
+- **the shown date never moves** — it is always the paper deadline;
+- **the countdown follows whichever stage is next**, labelled `ABSTRACT T−` while
+  the abstract stage is open (a `::before` override, so the per-second text rewrite
+  can't erase the label), then plain `T−` afterwards;
+- **both dates stay visible** — "Abstract due …" while open, "Abstract closed …"
+  once passed, never hidden, so nothing can be mistaken for a deadline moving;
+- **ordering follows the countdown**, so a row counting down 2 days can't sit below
+  one counting down 5.
+
+Deliberately *not* modelled as a `track`: tracks are parallel and their headline is
+"soonest open track", which would reintroduce exactly the roll-forward this avoids.
+Pinned by `scripts/abstract_deadline_test.mjs`.
+
+## Deadline provenance (append-only observation log)
+
+Every entry whose deadline the automation touches accumulates a
+`deadline_history` of `{ value, recorded, timezone }`, oldest first, appended by
+all seven write sites (see AUTOMATION.md). It answers "did this move, and when did
+we notice?" without a database.
+
+Three deliberate constraints:
+
+- **`recorded` is when *we* observed a value**, not when the organizers changed it.
+  We can't know the latter, so the UI states this outright rather than implying a
+  precision we don't have.
+- **Each entry carries its own `timezone`.** A wall-clock string only fixes an
+  instant together with its zone, so re-reading an old value under a zone the entry
+  has since changed to shifts it by up to 12 hours (AoE is UTC−12) — enough to
+  misreport a delta by a day. It also makes a zone-only move (same wall clock, AoE
+  → UTC) a real change rather than a no-op.
+- **Only the latest transition is described, and only if it's honest.**
+  `deriveDeadlineChange()` reports within a 14-day window and suppresses sub-hour
+  deltas, so a timezone re-read never renders as "extended by 0 days".
+
+The board shows one line (`→ Extended N days` / `△ Moved N days earlier` /
+`Deadline just announced`); the workshop page adds a callout and a collapsed
+history. Everything here is a read-only derivation — status, feeds and the JSON API
+are untouched. Pinned by `scripts/deadline_history_test.mjs`.
+
 
 ## Back/forward navigation & the bfcache guard
 
@@ -383,6 +450,16 @@ built-in 7-day and 1-day alarms stand in for any notification backend. They are
 **currently paused** via the `CALENDAR_ENABLED` flag in `site/src/lib/site.ts`
 until imported dates are human-verified; while paused, feeds publish zero events
 so earlier subscribers' calendars self-clean.
+
+## What the JSON API exposes for deadlines
+
+`/api/workshops.json` is regenerated on every deploy and is the supported surface
+for consumers. Alongside `submission_deadline` / `deadline_utc` (always the
+**paper** deadline, so existing consumers keep their meaning) it carries the
+two-stage fields: `abstract_deadline` and `abstract_deadline_utc` (null for
+single-stage venues), plus `next_stage_utc` and `next_stage_is_abstract` — the
+instant the site's countdown targets and which stage that is. `deadline_history`
+is intentionally *not* published yet; it is a site-internal derivation for now.
 
 ## Contributors are validated by CI, not by a human
 
