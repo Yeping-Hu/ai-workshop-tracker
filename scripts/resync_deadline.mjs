@@ -55,7 +55,7 @@ if (raw.submission_deadline === dl.submission_deadline && (raw.timezone || 'UTC'
   process.exit(0);
 }
 
-recordDeadlineObservation(raw, dl.submission_deadline, today);
+recordDeadlineObservation(raw, dl.submission_deadline, today, dl.timezone);
 raw.submission_deadline = dl.submission_deadline;
 raw.timezone = dl.timezone; // always 'UTC' from msToDeadline
 raw.deadline_notes = syncNote(dl.submission_deadline, today);

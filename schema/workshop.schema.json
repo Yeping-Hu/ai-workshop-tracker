@@ -187,7 +187,11 @@
           "recorded": {
             "type": "string",
             "format": "date",
-            "description": "Date WE observed this value \u2014 not when organizers changed it."
+            "description": "Date WE observed this value — not when organizers changed it."
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Timezone the value was recorded in (e.g. AoE, UTC, or an IANA name). A wall-clock string only fixes an instant together with its zone, so each entry carries its own: re-parsing an old value under a zone the entry has since changed to shifts it by up to 12 hours. Omitted when value is null; when absent on older entries, readers fall back to the entry's current timezone."
           }
         }
       }

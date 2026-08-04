@@ -131,7 +131,7 @@ async function main({ slug, dryRun }) {
     if (head) {
       // The headline is derived from the tracks, so a track move shows up here as
       // a headline change and belongs in the log like any other observation.
-      recordDeadlineObservation(raw, head.submission_deadline, today);
+      recordDeadlineObservation(raw, head.submission_deadline, today, head.timezone || 'UTC');
       raw.submission_deadline = head.submission_deadline;
       raw.timezone = head.timezone || 'UTC';
       raw.deadline_notes = syncNote(head.submission_deadline, today);

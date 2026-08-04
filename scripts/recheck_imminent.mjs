@@ -179,7 +179,7 @@ async function main({ dryRun }) {
         // Log the observation before overwriting, so the outgoing value is still
         // readable for seeding. This is the busiest deadline-write path in the
         // repo — most extensions land here, not in the weekly sync.
-        recordDeadlineObservation(raw, fetched.submission_deadline, today);
+        recordDeadlineObservation(raw, fetched.submission_deadline, today, fetched.timezone);
         raw.submission_deadline = fetched.submission_deadline;
         raw.timezone = fetched.timezone;
         raw.deadline_notes = syncNote(fetched.submission_deadline, today);

@@ -134,7 +134,7 @@ async function main({ dryRun }) {
 
     // First observation for this entry: records a single "announced" point, which
     // is what the UI reports when a workshop goes from no date to a date.
-    recordDeadlineObservation(raw, fetched.submission_deadline, today);
+    recordDeadlineObservation(raw, fetched.submission_deadline, today, fetched.timezone);
     raw.submission_deadline = fetched.submission_deadline;
     raw.timezone = fetched.timezone;
     // Stamp bot-managed so future *extensions* are thereafter caught by the

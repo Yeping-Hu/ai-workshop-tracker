@@ -523,7 +523,7 @@ async function main({ conf, year, dryRun }) {
           subTracks = tracksToYaml(sub.tracks);
         }
         if (!raw.submission_deadline && dl) {
-          recordDeadlineObservation(raw, dl.submission_deadline, today);
+          recordDeadlineObservation(raw, dl.submission_deadline, today, dl.timezone);
           raw.submission_deadline = dl.submission_deadline;
           raw.timezone = dl.timezone;
           raw.deadline_notes = syncNote(dl.submission_deadline, today);
@@ -583,7 +583,7 @@ async function main({ conf, year, dryRun }) {
             : { update: false, reason: 'implausible' };
           if (decision.update) {
             const from = raw.submission_deadline;
-            recordDeadlineObservation(raw, fetched.submission_deadline, today);
+            recordDeadlineObservation(raw, fetched.submission_deadline, today, fetched.timezone);
             raw.submission_deadline = fetched.submission_deadline;
             raw.timezone = fetched.timezone;
             raw.deadline_notes = syncNote(fetched.submission_deadline, today);
@@ -627,7 +627,7 @@ async function main({ conf, year, dryRun }) {
       record.submission_deadline = deadline.submission_deadline;
       record.timezone = deadline.timezone;
       record.deadline_notes = syncNote(deadline.submission_deadline, today);
-      record.deadline_history = [{ value: deadline.submission_deadline, recorded: today }];
+      record.deadline_history = [{ value: deadline.submission_deadline, recorded: today, timezone: deadline.timezone }];
     }
     // Two-stage venue: record the mandatory abstract-registration date too. The
     // headline above stays the PAPER deadline ("Submission Deadline:").
