@@ -178,6 +178,44 @@ const breadcrumbLd = {
                 >—</span>
               </div>
             )}
+            {w.deadlineChange && (
+              <div class={`dl-callout dl-${w.deadlineChange.kind}`}>
+                {w.deadlineChange.kind === 'extended' && (
+                  <>
+                    <strong>Extended by {w.deadlineChange.days} {w.deadlineChange.days === 1 ? 'day' : 'days'}.</strong>{' '}
+                    Previously <span class="mono">{w.deadlineChange.fromWallClock}</span>.
+                  </>
+                )}
+                {w.deadlineChange.kind === 'earlier' && (
+                  <>
+                    <strong>Moved {w.deadlineChange.days} {w.deadlineChange.days === 1 ? 'day' : 'days'} earlier.</strong>{' '}
+                    Previously <span class="mono">{w.deadlineChange.fromWallClock}</span> — check before you plan around it.
+                  </>
+                )}
+                {w.deadlineChange.kind === 'announced' && (
+                  <><strong>Deadline just announced.</strong> This workshop had no published date before now.</>
+                )}
+              </div>
+            )}
+            {w.deadlineHistoryView.length > 1 && (
+              <details class="dl-history small">
+                <summary>Deadline history ({w.deadlineHistoryView.length - 1} {w.deadlineHistoryView.length === 2 ? 'change' : 'changes'})</summary>
+                <ul>
+                  {w.deadlineHistoryView.map((h: any, i: number) => (
+                    <li>
+                      <span class="mono dl-h-when">{h.recordedLabel}</span>
+                      <span class="dl-h-val">{h.wallClock ?? 'no date published'}</span>
+                      <span class="muted dl-h-tag">
+                        {i === w.deadlineHistoryView.length - 1 ? 'first recorded' : 'changed'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p class="muted">
+                  Dates are when this tracker recorded each value, not when the organizers changed it.
+                </p>
+              </details>
+            )}
             {w.abstractDeadlineWallClock && (
               <div class="small" style="margin-top: 0.35rem">
                 {w.abstractDeadlinePassed ? (

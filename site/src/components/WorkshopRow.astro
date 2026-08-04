@@ -67,6 +67,20 @@ const countdownName = isAbstractStage
             <div class="local js-local" data-iso={w.abstractDeadlineIso}></div>
           </div>
         )}
+        {w.deadlineChange && (
+          <div
+            class={`dl-change dl-${w.deadlineChange.kind}`}
+            title={`Recorded ${w.deadlineChange.recorded} — the date we observed this value, not necessarily when the organizers changed it.`}
+          >
+            {w.deadlineChange.kind === 'extended' && (
+              <>→ Extended {w.deadlineChange.days} {w.deadlineChange.days === 1 ? 'day' : 'days'}</>
+            )}
+            {w.deadlineChange.kind === 'earlier' && (
+              <>△ Moved {w.deadlineChange.days} {w.deadlineChange.days === 1 ? 'day' : 'days'} earlier</>
+            )}
+            {w.deadlineChange.kind === 'announced' && <>Deadline just announced</>}
+          </div>
+        )}
       </>
     ) : (
       <div class="muted">Deadline TBA</div>

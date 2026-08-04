@@ -488,3 +488,47 @@ h2 .count { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 400;
 .tracks-list { list-style: none; margin: 0; padding: 0; }
 .tracks-list li { display: flex; gap: 0.6rem; align-items: baseline; padding: 0.15rem 0; flex-wrap: wrap; }
 .tracks-list .track-name { font-weight: 600; min-width: 4rem; }
+
+/* ---- Deadline provenance ------------------------------------------------
+   Extensions read as accent (pine), the dangerous "moved earlier" case as the
+   single urgency colour, and a first announcement stays muted — the palette
+   rule at the top of this file is one accent + one urgency colour, so a third
+   hue would dilute both. */
+.ws-deadline .dl-change { font-size: 0.75rem; margin-top: 0.18rem; cursor: help; }
+.dl-change.dl-extended { color: var(--accent); }
+.dl-change.dl-earlier  { color: var(--urgent); }
+.dl-change.dl-announced { color: var(--muted); }
+
+.dl-callout {
+  margin-top: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-left: 2px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: 0.86rem;
+  border-radius: 0;
+}
+.dl-callout.dl-earlier { border-left-color: var(--urgent); background: var(--urgent-soft); }
+.dl-callout.dl-announced { border-left-color: var(--line); background: transparent; padding-left: 0.6rem; }
+.dl-callout strong { font-weight: 600; }
+
+.dl-history { margin-top: 0.55rem; }
+.dl-history > summary { cursor: pointer; color: var(--muted); }
+.dl-history > summary:hover { color: var(--ink); }
+.dl-history ul { list-style: none; padding: 0; margin: 0.4rem 0 0; }
+.dl-history li {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr auto;
+  gap: 0.6rem;
+  padding: 0.28rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.dl-history li:last-child { border-bottom: none; }
+.dl-h-when { color: var(--muted); font-size: 0.8rem; }
+.dl-h-val { font-family: var(--font-mono); font-size: 0.8rem; }
+.dl-h-tag { font-size: 0.75rem; }
+.dl-history p { margin: 0.45rem 0 0; font-size: 0.75rem; }
+@media (max-width: 40rem) {
+  .dl-history li { grid-template-columns: 1fr auto; }
+  .dl-h-when { grid-column: 1 / -1; }
+}
