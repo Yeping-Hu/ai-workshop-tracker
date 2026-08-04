@@ -19,7 +19,11 @@ export function getStaticPaths() {
         (a: any, b: any) =>
           b.year - a.year ||
           rank(a) - rank(b) ||
-          (a.deadlineUtcMs ?? Infinity) - (b.deadlineUtcMs ?? Infinity) ||
+          // Order by the NEXT actionable date, so a two-stage workshop whose
+          // abstract registration closes sooner is listed where a reader would
+          // expect it (same ordering rule as the board).
+          ((a.nextStageUtcMs ?? a.deadlineUtcMs) ?? Infinity) -
+            ((b.nextStageUtcMs ?? b.deadlineUtcMs) ?? Infinity) ||
           (a.name || '').localeCompare(b.name || ''),
       );
     return { params: { conf: c.id }, props: { conf: c, list } };
@@ -137,12 +141,21 @@ const statusPill = (w: any) =>
       <ul class="conf-ws-list">
         {ws.map((w) => (
           <li>
-            <span class={`pill ${statusPill(w)}`}>{w.statusLabel}</span>
-            <a href={href(`/workshop/${w.slug}/`)}>{w.acronym || w.name}</a>
-            {w.deadlineWallClock && (
-              <span class="muted mono small">{w.statusLabel === 'Open call' ? 'due ' : ''}{w.deadlineWallClock}</span>
+            <div class="ws-head">
+              <span class={`pill ${statusPill(w)}`}>{w.statusLabel}</span>
+              <a href={href(`/workshop/${w.slug}/`)}>{w.acronym || w.name}</a>
+              {w.deadlineWallClock && (
+                <span class="muted mono small">{w.statusLabel === 'Open call' ? 'due ' : ''}{w.deadlineWallClock}</span>
+              )}
+              {w.abstractDeadlineWallClock && (
+                <span class={`mono small ${w.abstractDeadlinePassed ? 'muted' : 'abs-open'}`}
+                >· abstract {w.abstractDeadlinePassed ? 'closed ' : 'by '}{w.abstractDeadlineWallClock}</span>
+              )}
+              {w.paperCount > 0 && <span class="muted small">· {w.paperCount} papers</span>}
+            </div>
+            {w.acronym && w.name && w.name !== w.acronym && (
+              <div class="ws-full">{w.name}</div>
             )}
-            {w.paperCount > 0 && <span class="muted small">· {w.paperCount} papers</span>}
           </li>
         ))}
       </ul>
@@ -168,8 +181,16 @@ const statusPill = (w: any) =>
   <style>
     .conf-intro { font-size: 1.04rem; line-height: 1.55; color: var(--muted); max-width: 48rem; margin: 0.4rem 0 1rem; }
     .conf-year { margin: 1.6rem 0; }
-    .conf-ws-list { list-style: none; padding: 0; margin: 0.6rem 0; display: grid; gap: 0.5rem; }
-    .conf-ws-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
+    .conf-ws-list { list-style: none; padding: 0; margin: 0.6rem 0; display: grid; gap: 0.75rem; }
+    .conf-ws-list li { display: block; }
+    .conf-ws-list .ws-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
+    /* The link shows the acronym (short, scannable); the full title sits under it
+       so the list can be read without opening every workshop. */
+    .conf-ws-list .ws-full {
+      color: var(--muted); font-size: 0.83rem; line-height: 1.4;
+      margin-top: 0.15rem; max-width: 60rem;
+    }
+    .conf-ws-list .abs-open { color: var(--warn); }
     .conf-faq { margin: 2.4rem 0; max-width: 48rem; }
     .conf-faq dt { font-weight: 600; margin-top: 1rem; }
     .conf-faq dd { margin: 0.3rem 0 0; color: var(--muted); }
