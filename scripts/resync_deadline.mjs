@@ -17,7 +17,7 @@
  */
 import fs from 'node:fs';
 import * as yaml from 'js-yaml';
-import { listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
+import { recordDeadlineObservation, listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
 import { deadlineFromInvitation, syncNote } from './discover_openreview.mjs';
 
 const args = process.argv.slice(2);
@@ -55,6 +55,7 @@ if (raw.submission_deadline === dl.submission_deadline && (raw.timezone || 'UTC'
   process.exit(0);
 }
 
+recordDeadlineObservation(raw, dl.submission_deadline, today);
 raw.submission_deadline = dl.submission_deadline;
 raw.timezone = dl.timezone; // always 'UTC' from msToDeadline
 raw.deadline_notes = syncNote(dl.submission_deadline, today);
