@@ -13,6 +13,17 @@ on:
         required: true
         type: string
 
+concurrency:
+  # Serialise every workflow that commits to `main`. Each one checks out main,
+  # computes, commits and pushes; if a sibling pushes in between, the push is
+  # rejected as a non-fast-forward and the job fails with its work computed but
+  # unpublished. The crons are 30 minutes apart, but discovery can run ~35
+  # minutes on a slow OpenReview day, and a manual dispatch ignores the schedule
+  # entirely. `cancel-in-progress: false` queues the second run instead of
+  # dropping it, so no data write is ever silently skipped.
+  group: data-write
+  cancel-in-progress: false
+
 permissions:
   contents: write
   actions: write
@@ -45,7 +56,19 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/workshops
           git commit -m "data: re-sync ${{ inputs.slug }} deadline from OpenReview (manual dispatch)"
-          git push
+          # Push with rebase-retry. The concurrency group above should prevent a
+          # sibling data job from racing us, but a merge, an admin push or a
+          # re-run can still move `main` between checkout and push — so rebase
+          # onto whatever landed and try again rather than failing with the work
+          # already computed.
+          for attempt in 1 2 3; do
+            git push && break
+            if [ "$attempt" = 3 ]; then
+              echo "::error::push failed after 3 attempts (main kept moving)" && exit 1
+            fi
+            git fetch origin main && git rebase origin/main || exit 1
+            sleep $((attempt * 5))
+          done
           # Pushes made with GITHUB_TOKEN don't trigger on:push workflows,
           # so kick the deploy explicitly.
           gh workflow run deploy.yml --ref main
