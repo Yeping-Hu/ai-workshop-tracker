@@ -20,6 +20,11 @@ deadline_notes: ""             # e.g. "extended from Aug 15"
 # deadline above. Always UTC. submission_deadline stays the PAPER deadline, so
 # the countdown never jumps forward and look like an extension.
 # abstract_deadline: "2026-08-20 00:00"
+# Bot-maintained: append-only log of observed deadline values, written by the
+# OpenReview sync. Leave this out when adding a workshop by hand.
+# deadline_history:
+#   - { value: "2026-08-05 00:00", recorded: "2026-07-28" }
+#   - { value: "2026-08-12 00:00", recorded: "2026-08-02" }
 notification_date: ""          # "YYYY-MM-DD"
 workshop_date: ""              # "YYYY-MM-DD"
 # Multi-track workshops only (tracks with DIFFERENT deadlines, e.g. Full + Short).

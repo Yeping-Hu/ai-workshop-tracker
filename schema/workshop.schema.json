@@ -36,7 +36,7 @@
       "type": "string",
       "pattern": "^https?://",
       "maxLength": 500,
-      "description": "Official workshop website. Leave unset if unknown — the site shows a \"help us add it\" prompt."
+      "description": "Official workshop website. Leave unset if unknown \u2014 the site shows a \"help us add it\" prompt."
     },
     "topics": {
       "type": "array",
@@ -165,6 +165,32 @@
       "type": "string",
       "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
       "description": "Date this entry was added (used for the 'new workshops' RSS feed)."
+    },
+    "deadline_history": {
+      "type": "array",
+      "description": "Append-only log of observed submission-deadline values. Newest last. Written by the OpenReview sync; never hand-edited except to remove a false positive.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "value",
+          "recorded"
+        ],
+        "properties": {
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Deadline as recorded (wall clock, same form as submission_deadline). null = announced with no date yet."
+          },
+          "recorded": {
+            "type": "string",
+            "format": "date",
+            "description": "Date WE observed this value \u2014 not when organizers changed it."
+          }
+        }
+      }
     }
   }
 }
