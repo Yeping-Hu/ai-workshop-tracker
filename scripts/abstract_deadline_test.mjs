@@ -12,7 +12,7 @@
  * "accepting" that would have replaced a paper deadline with an abstract date.
  */
 import { parseGroupDeadline, parseGroupAbstractDeadline } from './discover_openreview.mjs';
-import { resolveWorkshop } from '../lib/workshops.mjs';
+import { resolveWorkshop, sortByDeadline } from '../lib/workshops.mjs';
 
 let failed = 0;
 function check(label, got, expect) {
@@ -52,16 +52,38 @@ check('abstract offset normalized (AoE)',
     submission_deadline: '2026-08-29 00:00', timezone: 'UTC', abstract_deadline: '2026-08-20 00:00',
   };
   const before = resolveWorkshop({ slug: 's', file: 'f', raw }, Date.UTC(2026, 7, 10)); // Aug 10
-  check('countdown target stays the paper deadline', before.deadlineUtcMs, Date.UTC(2026, 7, 29, 0, 0));
+  check('headline date is the paper deadline', before.deadlineUtcMs, Date.UTC(2026, 7, 29, 0, 0));
   check('abstract still open before it passes', before.abstractDeadlinePassed, false);
   check('abstract is rendered', typeof before.abstractDeadlineWallClock === 'string', true);
+  // B2: while the abstract stage is open the COUNTDOWN targets it (that is the
+  // date you must act on) and is flagged so the UI can label it "abstract".
+  check('countdown targets the abstract while open', before.nextStageUtcMs, Date.UTC(2026, 7, 20, 0, 0));
+  check('countdown flagged as abstract stage', before.nextStageIsAbstract, true);
 
   const between = resolveWorkshop({ slug: 's', file: 'f', raw }, Date.UTC(2026, 7, 25)); // Aug 25
   check('abstract marked passed after its date', between.abstractDeadlinePassed, true);
-  // The critical anti-confusion property: the headline does NOT move once the
-  // abstract passes, so nothing can look like a deadline extension.
+  // The anti-confusion properties: the HEADLINE date never moves, the abstract
+  // date stays visible (now marked closed), and the countdown only switches to
+  // the paper deadline with the label removed — so nothing reads as an extension.
   check('headline unchanged after abstract passes', between.deadlineUtcMs, before.deadlineUtcMs);
+  check('abstract date still rendered after passing', typeof between.abstractDeadlineWallClock === 'string', true);
+  check('countdown switches to the paper deadline', between.nextStageUtcMs, between.deadlineUtcMs);
+  check('countdown no longer flagged abstract', between.nextStageIsAbstract, false);
   check('status still upcoming (paper open)', between.status, 'upcoming');
+}
+
+// Ordering: a two-stage workshop sorts by the stage its countdown shows, so the
+// list can never display a 2-day countdown below a 5-day one.
+{
+  const mk = (name, deadline, abstract) => ({ slug: name, file: name, raw: {
+    name, conference: 'neurips', year: 2026, topics: ['other'],
+    submission_deadline: deadline, timezone: 'UTC', ...(abstract ? { abstract_deadline: abstract } : {}),
+  } });
+  const now = Date.UTC(2026, 7, 10); // Aug 10
+  const twoStage = resolveWorkshop(mk('two-stage', '2026-08-29 00:00', '2026-08-14 00:00'), now);
+  const single = resolveWorkshop(mk('single', '2026-08-20 00:00', null), now);
+  const order = sortByDeadline([single, twoStage]).map((w) => w.name);
+  check('abstract-imminent workshop sorts first', order.join(','), 'two-stage,single');
 }
 
 // A single-stage entry exposes no abstract fields.

@@ -23,6 +23,13 @@ export const GET: APIRoute = () => {
       submission_deadline: w.submission_deadline ?? null,
       timezone: w.timezone ?? null,
       deadline_utc: w.deadlineIso,
+      // Two-stage venues only: the mandatory abstract registration that gates
+      // the paper deadline above (always UTC). `submission_deadline` remains the
+      // paper deadline; `next_stage_utc` is whichever of the two is next.
+      abstract_deadline: w.abstract_deadline ?? null,
+      abstract_deadline_utc: w.abstractDeadlineUtcMs != null ? new Date(w.abstractDeadlineUtcMs).toISOString() : null,
+      next_stage_utc: w.nextStageIso ?? null,
+      next_stage_is_abstract: w.nextStageIsAbstract ?? false,
       deadline_notes: w.deadline_notes ?? null,
       notification_date: w.notification_date ?? null,
       workshop_date: w.workshop_date ?? null,

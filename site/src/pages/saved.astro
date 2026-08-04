@@ -66,7 +66,11 @@ const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.
       // Open calls by soonest deadline → upcoming TBA → past by most recently
       // passed deadline → past with no deadline (most recent year first).
       // Mirrors the board's browse order.
-      const ms = w.deadline_utc ? Date.parse(w.deadline_utc) : null;
+      // Sort by the NEXT actionable stage so a two-stage workshop with an
+      // imminent abstract deadline sorts where its countdown says it should.
+      const ms = w.next_stage_utc
+        ? Date.parse(w.next_stage_utc)
+        : (w.deadline_utc ? Date.parse(w.deadline_utc) : null);
       if (w.status === 'upcoming' && ms != null) return [0, ms];
       if (w.status === 'upcoming') return [1, 0];
       if (ms != null) return [2, -ms];
@@ -76,6 +80,10 @@ const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.
     function wsRow(w: any) {
       const conf = CONF[w.conference] ?? { name: w.conference, color: '#888' };
       const ms = w.deadline_utc ? Date.parse(w.deadline_utc) : null;
+      // Two-stage venues: the date shown stays the paper deadline, but the
+      // countdown follows the next actionable stage and says which it is.
+      const absOpen = !!w.next_stage_is_abstract;
+      const cdMs = w.next_stage_utc ? Date.parse(w.next_stage_utc) : ms;
       const upcoming = w.status === 'upcoming';
       const name = esc(w.name);
       return `
@@ -96,13 +104,19 @@ const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.
           ${
             ms != null
               ? `<div class="wall">${esc(w.submission_deadline)}${w.timezone ? ' ' + esc(w.timezone) : ''}</div>
-                 <div class="local js-local" data-iso="${esc(w.deadline_utc)}"></div>`
+                 <div class="local js-local" data-iso="${esc(w.deadline_utc)}"></div>${
+                   w.abstract_deadline
+                     ? `<div class="abs-stage small">${absOpen
+                         ? `<span class="abs-open">Abstract due ${esc(w.abstract_deadline)} UTC</span>`
+                         : `<span class="muted">Abstract closed ${esc(w.abstract_deadline)} UTC</span>`}</div>`
+                     : ''
+                 }`
               : `<div class="muted">${upcoming ? 'Deadline TBA' : '—'}</div>`
           }
         </div>
         ${
           upcoming && ms != null
-            ? `<span class="countdown" data-deadline-ms="${ms}" data-name="${esc(w.acronym || w.name)}">—</span>`
+            ? `<span class="countdown" data-deadline-ms="${cdMs}"${absOpen ? ' data-stage="abstract"' : ''} data-name="${esc(w.acronym || w.name)}${absOpen ? ' (abstract)' : ''}">—</span>`
             : upcoming
               ? `<span class="countdown is-tba">TBA</span>`
               : `<span class="countdown is-over">passed</span>`

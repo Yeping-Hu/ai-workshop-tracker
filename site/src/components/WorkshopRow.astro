@@ -9,6 +9,18 @@ const { w } = Astro.props;
 const conf = conferenceById.get(w.conference) ?? { name: w.conference, color: '#888' };
 const search = [w.name, w.acronym, conf.name, w.year].filter(Boolean).join(' ').toLowerCase();
 const hasDeadline = w.deadlineUtcMs != null;
+// The date shown stays the PAPER deadline, but the countdown follows whichever
+// stage you actually have to act on next: the mandatory abstract registration
+// while it is still open, the paper deadline afterwards. It is labelled
+// "abstract" (via .countdown[data-stage] in global.css) and both dates are
+// shown, so the later switch to the paper deadline cannot read as an extension.
+// The ticker name is suffixed too, so the masthead never announces an abstract
+// deadline as if it were the submission deadline.
+const countdownMs = w.nextStageUtcMs ?? w.deadlineUtcMs;
+const isAbstractStage = !!w.nextStageIsAbstract;
+const countdownName = isAbstractStage
+  ? `${w.acronym || w.name} (abstract)`
+  : (w.acronym || w.name);
 ---
 
 <div
@@ -47,6 +59,13 @@ const hasDeadline = w.deadlineUtcMs != null;
       <>
         <div class="wall">{w.deadlineWallClock}</div>
         <div class="local js-local" data-iso={w.deadlineIso}>resolving your local time…</div>
+        {w.abstractDeadlineWallClock && (
+          <div class="abs-stage small">
+            {w.abstractDeadlinePassed
+              ? <span class="muted">Abstract closed {w.abstractDeadlineWallClock}</span>
+              : <span class="abs-open">Abstract due {w.abstractDeadlineWallClock}</span>}
+          </div>
+        )}
       </>
     ) : (
       <div class="muted">Deadline TBA</div>
@@ -54,7 +73,12 @@ const hasDeadline = w.deadlineUtcMs != null;
   </div>
 
   {hasDeadline ? (
-    <span class="countdown" data-deadline-ms={w.deadlineUtcMs} data-name={w.acronym || w.name}>—</span>
+    <span
+      class="countdown"
+      data-deadline-ms={countdownMs}
+      data-stage={isAbstractStage ? 'abstract' : null}
+      data-name={countdownName}
+    >—</span>
   ) : (
     <span class="countdown is-tba">TBA</span>
   )}

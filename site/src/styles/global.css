@@ -218,6 +218,16 @@ details.dd .dd-panel {
   text-align: right; white-space: nowrap;
 }
 .countdown::before { content: "T−"; color: var(--muted); font-size: 0.8em; margin-right: 0.15em; }
+/* Two-stage venues: the countdown follows the next actionable stage, so say
+   which stage it is counting to. Without the label, the switch from the
+   abstract date to the later paper date would read as a deadline extension.
+   Placed before the .is-over/.is-tba rules below so those still clear it. */
+.countdown[data-stage="abstract"]::before {
+  content: "abstract T−";
+  text-transform: uppercase; letter-spacing: 0.03em; font-size: 0.68em;
+}
+.ws-deadline .abs-stage { margin-top: 0.12rem; font-size: 0.75rem; }
+.ws-deadline .abs-stage .abs-open { color: var(--warn); }
 .countdown.is-soon { color: var(--warn); }
 .countdown.is-critical { color: var(--urgent); font-weight: 700; }
 .countdown.is-over { color: var(--muted); }
