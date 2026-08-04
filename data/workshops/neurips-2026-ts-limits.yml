@@ -1,0 +1,16 @@
+name: 'Workshop TS-LIMITS @NeurIPS 2026 -- Generalization for Time Series in Tight Settings: Latency, Inference, Memory, prIvacy and susTainability'
+acronym: NeurIPS 2026 Workshop TS-LIMITS
+conference: neurips
+year: 2026
+website: https://ts-limits.github.io/
+topics:
+  - climate
+  - time-series
+  - privacy
+submission_deadline: 2026-09-06 11:59
+timezone: UTC
+deadline_notes: OpenReview-synced 2026-09-06 11:59 UTC (as of 2026-08-04) — extensions on OpenReview are applied automatically; verify on the website.
+openreview_venue_id: NeurIPS.cc/2026/Workshop/TS-LIMITS
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-08-04'

@@ -1,0 +1,16 @@
+name: 'Diffusion Language Models: Foundations, Efficiency, and Reasoning'
+acronym: DiffuLM
+conference: neurips
+year: 2026
+website: https://7amin.github.io/diffulm-neurips2026/
+topics:
+  - llms
+  - math-reasoning
+  - diffusion
+submission_deadline: 2026-09-01 11:59
+timezone: UTC
+deadline_notes: OpenReview-synced 2026-09-01 11:59 UTC (as of 2026-08-04) — extensions on OpenReview are applied automatically; verify on the website.
+openreview_venue_id: NeurIPS.cc/2026/Workshop/DiffuLM
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-08-04'
