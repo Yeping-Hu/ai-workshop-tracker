@@ -140,6 +140,17 @@ const val = (c, k) => {
   return x && typeof x === 'object' && 'value' in x ? x.value : x;
 };
 
+/** The `website` of an OpenReview group's content, validated: a bare http(s)
+ *  URL, length-capped. Shared by every reader of the field — venue creation,
+ *  the refresh of an existing entry, and the sub-track descent — so all three
+ *  accept exactly the same shapes and can't drift apart. Returns null for a
+ *  missing, blank, or non-URL value (organizers do occasionally type a bare
+ *  hostname or an email address in there). */
+export function websiteFromContent(content) {
+  const w = String(val(content ?? {}, 'website') || '').trim();
+  return /^https?:\/\//.test(w) ? w.slice(0, 500) : null;
+}
+
 /** Map a venue title/subtitle to topic ids via keywords (fallback: other).
  *  OpenReview exposes no venue description, so the title + acronym is the only
  *  signal — hence the patterns are deliberately broad (e.g. "manipulation" and
@@ -328,8 +339,7 @@ export async function subTrackInfo(g, fetchGroups) {
   const tracks = [];
   for (const c of children) {
     if (!website) {
-      const w = String(val(c.content ?? {}, 'website') || '').trim();
-      if (/^https?:\/\//.test(w)) website = w.slice(0, 500);
+      website = websiteFromContent(c.content ?? {});
     }
     const dl = parseGroupDeadline(val(c.content ?? {}, 'date')) || (await deadlineFromInvitation(c));
     // Track name: the segment after the parent (e.g. ".../MARINE/Full" -> "Full").
@@ -466,6 +476,16 @@ async function main({ conf, year, dryRun }) {
       // (or a website / sub-tracks) on OpenReview after we imported the venue.
       // The deadline is only ever *filled when absent* here — never overwritten.
       if (!raw.submission_deadline || !raw.website || !raw.tracks) {
+        // The venue's OWN website, taken first because it is free (already in
+        // hand, like the `date` line) and because it is the common case: the
+        // creation path reads this field, so a venue whose organizers fill it in
+        // AFTER our import would otherwise never pick it up — a child's website
+        // only covers the empty-parent/sub-track shape, so a plain venue stayed
+        // blank forever and needed a human edit. Fill-only: a website already in
+        // the file (human-added or earlier sync) is left alone.
+        const ownWebsite = websiteFromContent(g.content ?? {});
+        if (!raw.website && ownWebsite) { raw.website = ownWebsite; changed = true; }
+
         let dl = !raw.submission_deadline ? await ensureDl() : null;
         let subWebsite = null, subTracks = [];
         if (!dl || !raw.website || !raw.tracks) {
@@ -543,8 +563,7 @@ async function main({ conf, year, dryRun }) {
     const title = String(val(c, 'title') || tail).trim().slice(0, 200);
     let acronym = String(val(c, 'subtitle') || tail).trim();
     if (acronym.length > 40 || acronym === title) acronym = tail.slice(0, 40);
-    const websiteRaw = String(val(c, 'website') || '').trim();
-    let website = /^https?:\/\//.test(websiteRaw) ? websiteRaw.slice(0, 500) : null;
+    let website = websiteFromContent(c);
     let deadline = parseGroupDeadline(val(c, 'date')) || (await deadlineFromInvitation(g));
     let tracks = [];
     // Empty parent with sub-track children (e.g. MARINE/Full + MARINE/Short):
