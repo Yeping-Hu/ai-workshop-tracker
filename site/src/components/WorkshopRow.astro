@@ -64,6 +64,7 @@ const countdownName = isAbstractStage
             {w.abstractDeadlinePassed
               ? <span class="muted">Abstract closed {w.abstractDeadlineWallClock}</span>
               : <span class="abs-open">Abstract due {w.abstractDeadlineWallClock}</span>}
+            <div class="local js-local" data-iso={w.abstractDeadlineIso}></div>
           </div>
         )}
       </>

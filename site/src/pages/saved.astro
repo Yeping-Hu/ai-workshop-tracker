@@ -108,7 +108,7 @@ const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.
                    w.abstract_deadline
                      ? `<div class="abs-stage small">${absOpen
                          ? `<span class="abs-open">Abstract due ${esc(w.abstract_deadline)} UTC</span>`
-                         : `<span class="muted">Abstract closed ${esc(w.abstract_deadline)} UTC</span>`}</div>`
+                         : `<span class="muted">Abstract closed ${esc(w.abstract_deadline)} UTC</span>`}<div class="local js-local" data-iso="${esc(w.abstract_deadline_utc ?? '')}"></div></div>`
                      : ''
                  }`
               : `<div class="muted">${upcoming ? 'Deadline TBA' : '—'}</div>`

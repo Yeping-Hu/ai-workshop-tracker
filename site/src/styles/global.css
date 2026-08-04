@@ -216,23 +216,30 @@ details.dd .dd-panel {
 .countdown {
   font-family: var(--font-mono); font-size: 0.95rem; font-variant-numeric: tabular-nums;
   text-align: right; white-space: nowrap;
+  /* Anchor + reserve space for the two-stage "abstract" caption below. */
+  position: relative; display: inline-block;
 }
 .countdown::before { content: "T−"; color: var(--muted); font-size: 0.8em; margin-right: 0.15em; }
 /* Two-stage venues: the countdown follows the next actionable stage, so say
-   which stage it is counting to. Without the label, the switch from the
-   abstract date to the later paper date would read as a deadline extension.
-   Placed before the .is-over/.is-tba rules below so those still clear it. */
-.countdown[data-stage="abstract"]::before {
-  content: "abstract T−";
-  text-transform: uppercase; letter-spacing: 0.03em; font-size: 0.68em;
+   which stage it is counting to — otherwise a switch from the abstract date to
+   the later paper date would read as a deadline extension. The label sits BELOW
+   the number as a caption rather than inline, so the "T−" prefix stays
+   identical on every row and the digits line up down the column. */
+.countdown[data-stage="abstract"] { padding-bottom: 1em; }
+.countdown[data-stage="abstract"]::after {
+  content: "abstract";
+  position: absolute; right: 0; bottom: 0;
+  font-family: var(--font-sans); font-size: 0.62rem; font-weight: 400;
+  letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted);
 }
-.ws-deadline .abs-stage { margin-top: 0.12rem; font-size: 0.75rem; }
-.ws-deadline .abs-stage .abs-open { color: var(--warn); }
 .countdown.is-soon { color: var(--warn); }
 .countdown.is-critical { color: var(--urgent); font-weight: 700; }
 .countdown.is-over { color: var(--muted); }
 .countdown.is-over::before, .countdown.is-tba::before { content: ""; }
 .countdown.is-tba { color: var(--muted); }
+.ws-deadline .abs-stage { margin-top: 0.12rem; font-size: 0.75rem; }
+.ws-deadline .abs-stage .abs-open { color: var(--warn); }
+.ws-deadline .abs-stage .local { font-size: 0.72rem; margin-top: 0.05rem; }
 .ws-links { grid-column: 1 / -1; display: flex; gap: 1rem; font-size: 0.82rem; padding-left: 6.5rem; }
 .row-passed { opacity: 0.62; }
 .empty-state {

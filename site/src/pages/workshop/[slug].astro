@@ -189,6 +189,7 @@ const breadcrumbLd = {
                     Abstract registration required by <span class="mono">{w.abstractDeadlineWallClock}</span> — you must register an abstract before this to submit the full paper above.
                   </span>
                 )}
+                <div class="muted small js-local" data-iso={w.abstractDeadlineIso}></div>
               </div>
             )}
             {w.deadline_notes && <div class="small" style="color: var(--warn)">{w.deadline_notes}</div>}
