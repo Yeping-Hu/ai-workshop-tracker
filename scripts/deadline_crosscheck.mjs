@@ -31,7 +31,7 @@
 import fs from 'node:fs';
 import { listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
-import { deadlineFromInvitation, parseGroupDeadline, syncedValue, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
+import { deadlineFromInvitation, parseGroupDeadline, msToDeadline, syncedValue, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
 import { fetchGroupById } from './recheck_imminent.mjs';
 
 // OpenReview wraps some content values as { value: … }; unwrap if so.
@@ -55,6 +55,92 @@ const PACE_MS = 600;
 const REVIEW_PAST_GRACE_MS = 14 * DAY; // keep reviewing a deadline until ~2 weeks past it
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const UA = 'ai-workshop-tracker/1.0 (open-source workshop aggregator; github)';
+
+/** Submission-invitation duedates for many venues in a handful of requests.
+ *  The listing above answers any venue whose free `date` line carries a
+ *  "Submission Deadline:", but most venues leave that line empty (136 of 187
+ *  entries on 2026-08-04), and those need their invitation — which is where the
+ *  per-entry requests, and the throttling, actually came from. OpenReview
+ *  accepts a comma-separated `ids=` list, so they go out ~40 at a time.
+ *  Returns { duedates, complete }: when `complete` is true every chunk was
+ *  answered, so an id missing from the map genuinely has no submission
+ *  invitation (or no duedate) and needs no follow-up request. */
+async function fetchSubmissionDuedates(invitationIds) {
+  const duedates = new Map();
+  const CHUNK = 40; // ~2.5 KB of URL per request at this size
+  let complete = true;
+  for (let i = 0; i < invitationIds.length; i += CHUNK) {
+    const chunk = invitationIds.slice(i, i + CHUNK);
+    const url = `https://api2.openreview.net/invitations?ids=${encodeURIComponent(chunk.join(','))}&expired=true`;
+    const MAX = 5;
+    let ok = false;
+    for (let attempt = 0; attempt < MAX; attempt++) {
+      try {
+        await new Promise((r) => setTimeout(r, 250 + attempt * attempt * 1000));
+        const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+        if (res.status === 429 || res.status >= 500) {
+          if (attempt < MAX - 1) continue;
+          throw new Error(`rate-limited (HTTP ${res.status}) after ${MAX} attempts`);
+        }
+        if (!res.ok) break; // genuine miss for this batch; fall through as incomplete
+        const body = await res.json();
+        for (const inv of body.invitations ?? []) {
+          if (inv?.id && inv?.duedate) duedates.set(inv.id, inv.duedate);
+        }
+        ok = true;
+        break;
+      } catch (err) {
+        if (attempt < MAX - 1) continue;
+        console.warn(`  ⚠ duedate batch failed (${chunk.length} venue(s)): ${err.message}`);
+      }
+    }
+    if (!ok) complete = false;
+  }
+  return { duedates, complete };
+}
+/** The conference-year listing a venue belongs to: everything up to its last
+ *  path segment, e.g. "NeurIPS.cc/2026/Workshop/ASCI" -> "NeurIPS.cc/2026/Workshop/". */
+export function venuePrefix(venueId) {
+  const id = String(venueId || '');
+  const i = id.lastIndexOf('/');
+  return i > 0 ? id.slice(0, i + 1) : null;
+}
+
+/** Every venue group under one conference-year prefix, in a SINGLE request.
+ *  OpenReview returns each venue WITH its `content` (including the free `date`
+ *  line this job needs), and only the venues themselves — not their Authors /
+ *  Reviewers / Submission children — so ~100 venues come back per call and the
+ *  1000 limit is never approached. `count` is checked anyway: if the server ever
+ *  does truncate, the caller falls back to single lookups for what is missing
+ *  rather than silently treating those venues as unfetchable. */
+async function fetchVenueGroupsByPrefix(prefix) {
+  const url = `https://api2.openreview.net/groups?prefix=${encodeURIComponent(prefix)}&limit=1000`;
+  const MAX = 5;
+  for (let attempt = 0; attempt < MAX; attempt++) {
+    try {
+      await new Promise((r) => setTimeout(r, 250 + attempt * attempt * 1000)); // pace, then escalating backoff
+      const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+      if (res.status === 429 || res.status >= 500) {
+        if (attempt < MAX - 1) continue;
+        throw new Error(`rate-limited (HTTP ${res.status}) after ${MAX} attempts`);
+      }
+      if (!res.ok) return null;
+      const body = await res.json();
+      const groups = body.groups ?? [];
+      if (typeof body.count === 'number' && body.count > groups.length) {
+        console.warn(`  ⚠ ${prefix}: listing returned ${groups.length} of ${body.count} — remainder falls back to single lookups`);
+      }
+      return groups;
+    } catch (err) {
+      if (attempt < MAX - 1) continue;
+      console.warn(`  ⚠ venue listing failed for ${prefix}: ${err.message}`);
+      return null;
+    }
+  }
+  return null;
+}
 
 /**
  * Classify the gap between a stored deadline and OpenReview's duedate (both UTC
@@ -167,12 +253,46 @@ async function main() {
 
   console.log(`Cross-checking ${toCheck.length} deadline(s) against live OpenReview duedates (skipping ${entries.length - toCheck.length} legacy)…\n`);
 
+  // Prefetch every venue in ONE listing request per conference-year, instead of
+  // a group lookup per workshop. That turned ~190 requests into ~10: with the
+  // per-workshop lookups, OpenReview throttled a slice of the run every week
+  // (9 of 187 entries on 2026-08-04, 4 of 187 the run before), and a throttled
+  // entry is skipped — which silently withheld real disagreements from review
+  // for a week at a time. That is how the NeurReps Findings track went unseen
+  // while its two sibling tracks were reported.
+  const prefixes = [...new Set(toCheck.map((e) => venuePrefix(e.raw.openreview_venue_id)).filter(Boolean))];
+  const groupById = new Map();
+  for (const p of prefixes) {
+    const gs = await fetchVenueGroupsByPrefix(p);
+    for (const g of gs ?? []) groupById.set(g.id, g);
+  }
+  console.log(`Prefetched ${groupById.size} venue group(s) in ${prefixes.length} listing request(s).`);
+
+  // Then the venues the listing can't answer: those whose `date` line carries no
+  // "Submission Deadline:". Their invitation ids go out in batches of 40 rather
+  // than one request each.
+  const invitationIdOf = (g) => val(g.content ?? {}, 'submission_id') || `${g.id}/-/Submission`;
+  const needInvitation = [
+    ...new Set(
+      toCheck
+        .map((e) => groupById.get(e.raw.openreview_venue_id))
+        .filter((g) => g && !parseGroupDeadline(val(g.content ?? {}, 'date')))
+        .map(invitationIdOf),
+    ),
+  ];
+  const { duedates, complete } = await fetchSubmissionDuedates(needInvitation);
+  console.log(
+    `Prefetched ${duedates.size} submission duedate(s) for ${needInvitation.length} venue(s) ` +
+      `in ${Math.ceil(needInvitation.length / 40)} batched request(s).\n`,
+  );
+
   const items = [];
   let checked = 0, skipped = 0;
   for (const { slug: s, file, raw } of toCheck) {
     let dl = null;
+    let hitNetwork = false;
     try {
-      // Use the SAME value precedence as every write path (discovery, recheck,
+      // Same value precedence as every write path (discovery, recheck,
       // backfill): the group's free `date` line first, the submission
       // invitation's duedate only as a fallback. Reading the invitation alone
       // silently disagreed with what the syncs actually store on two-stage
@@ -184,11 +304,35 @@ async function main() {
       // correct and in sync — pure review noise, and dangerous noise, since
       // "accept OpenReview" would have replaced a paper deadline with an
       // abstract-registration date.
-      const g = await fetchGroupById(raw.openreview_venue_id);
-      dl = g ? parseGroupDeadline(val(g.content ?? {}, 'date')) || (await deadlineFromInvitation(g)) : null;
+      let g = groupById.get(raw.openreview_venue_id);
+      if (!g) {
+        // Not in the listing: a renamed/moved venue, or the listing itself was
+        // throttled. One targeted lookup keeps this entry reviewable.
+        g = await fetchGroupById(raw.openreview_venue_id);
+        hitNetwork = true;
+      }
+      if (g) {
+        dl = parseGroupDeadline(val(g.content ?? {}, 'date'));
+        if (!dl) {
+          const due = duedates.get(invitationIdOf(g));
+          if (due) {
+            dl = msToDeadline(due);
+          } else if (!complete) {
+            // A batch was throttled, so absence here is inconclusive — ask
+            // directly rather than reporting this venue as unfetchable.
+            dl = await deadlineFromInvitation(g);
+            hitNetwork = true;
+          }
+          // else: batches all succeeded and this venue has no submission
+          // invitation (or no duedate) — nothing to compare, no request needed.
+        }
+      }
     } catch {
       dl = null; // network / rate-limit / no invitation: skip, never fail
     }
+    // Only pace when this entry actually hit the network; venues answered from
+    // the prefetched listing cost nothing and need no delay.
+    if (hitNetwork) await sleep(PACE_MS);
     await sleep(PACE_MS);
     if (!dl) { skipped++; continue; }
     checked++;
