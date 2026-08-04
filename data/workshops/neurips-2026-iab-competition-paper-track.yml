@@ -9,12 +9,12 @@ name: The 1st Workshop on Interpreting Agent Behavior (IAB) at NeurIPS 2026 - Co
 acronym: IAB_Competition_Paper_Track
 conference: neurips
 year: 2026
-website: http://glee-competition.com; https://iab-agents.github.io/
+website: https://glee-competition.com
 topics:
   - agents
   - interpretability
   - evaluation-benchmarks
 openreview_venue_id: NeurIPS.cc/2026/Workshop/IAB_Competition_Paper_Track
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
+notes: Topics were auto-suggested and may be imprecise — edits welcome. OpenReview lists two links for this venue; this is the competition paper track of the IAB workshop, whose own site is https://iab-agents.github.io/.
 added: '2026-08-04'
