@@ -35,6 +35,8 @@ jobs:
         run: node scripts/sync_tracks_test.mjs
       - name: Test OpenReview website extraction (validated, shared reader)
         run: node scripts/discover_website_test.mjs
+      - name: Test two-stage (abstract + paper) deadline handling
+        run: node scripts/abstract_deadline_test.mjs
       - name: Test imminent-deadline re-check selection (band, freeze-on-touch)
         run: node scripts/recheck_imminent_test.mjs
       - name: Test deadline cross-check classifier

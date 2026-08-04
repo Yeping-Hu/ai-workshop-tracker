@@ -16,6 +16,10 @@ topics: [other]                # (required) 1-5 ids from data/topics.yml
 submission_deadline: ""        # "YYYY-MM-DD HH:MM" or "YYYY-MM-DD" (= 23:59)
 timezone: "AoE"                # "AoE" (default), "UTC", or IANA e.g. "America/Los_Angeles"
 deadline_notes: ""             # e.g. "extended from Aug 15"
+# Two-stage venues only: a MANDATORY abstract registration before the paper
+# deadline above. Always UTC. submission_deadline stays the PAPER deadline, so
+# the countdown never jumps forward and look like an extension.
+# abstract_deadline: "2026-08-20 00:00"
 notification_date: ""          # "YYYY-MM-DD"
 workshop_date: ""              # "YYYY-MM-DD"
 # Multi-track workshops only (tracks with DIFFERENT deadlines, e.g. Full + Short).

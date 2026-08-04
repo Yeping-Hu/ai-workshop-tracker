@@ -173,6 +173,19 @@ const breadcrumbLd = {
                 <span class="countdown" data-deadline-ms={w.deadlineUtcMs} data-name={w.acronym || w.name}>—</span>
               </div>
             )}
+            {w.abstractDeadlineWallClock && (
+              <div class="small" style="margin-top: 0.35rem">
+                {w.abstractDeadlinePassed ? (
+                  <span class="muted">
+                    Abstract registration closed <span class="mono">{w.abstractDeadlineWallClock}</span> — the full paper deadline above is unchanged, not an extension.
+                  </span>
+                ) : (
+                  <span style="color: var(--warn)">
+                    Abstract registration required by <span class="mono">{w.abstractDeadlineWallClock}</span> — you must register an abstract before this to submit the full paper above.
+                  </span>
+                )}
+              </div>
+            )}
             {w.deadline_notes && <div class="small" style="color: var(--warn)">{w.deadline_notes}</div>}
           </>
         ) : (

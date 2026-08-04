@@ -225,11 +225,15 @@ const MONTHS = { Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8,
  * to UTC (any offset, including AoE = UTC-12, is converted — the moment is
  * unchanged, only the representation), or null when absent/unparseable.
  */
-export function parseGroupDeadline(dateStr) {
+// The date grammar OpenReview uses inside a group's free `date` line, e.g.
+//   "Submission Start: Jul 01 2026 11:59PM UTC-0, Abstract Registration: Jul 15
+//    2026 11:59PM UTC-0, Submission Deadline: Jul 20 2026 11:59PM UTC-0"
+// Shared so every labelled component is parsed identically.
+const LABELLED_DATE = String.raw`\s*([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{4})(?:\s+(\d{1,2}):(\d{2})(AM|PM))?\s*UTC\s*([+-]\d+(?:\.5)?)?`;
+
+function parseLabelledDate(dateStr, label) {
   if (typeof dateStr !== 'string') return null;
-  const m = dateStr.match(
-    /Submission Deadline:\s*([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{4})(?:\s+(\d{1,2}):(\d{2})(AM|PM))?\s*UTC\s*([+-]\d+(?:\.5)?)?/,
-  );
+  const m = dateStr.match(new RegExp(label + ':' + LABELLED_DATE));
   if (!m) return null;
   const [, mon, d, y, hh, mm, ap, off] = m;
   const month = MONTHS[mon];
@@ -247,6 +251,23 @@ export function parseGroupDeadline(dateStr) {
     submission_deadline: `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())} ${pad(dt.getUTCHours())}:${pad(dt.getUTCMinutes())}`,
     timezone: 'UTC',
   };
+}
+
+/** The venue's PAPER deadline ("Submission Deadline:"). This is the headline
+ *  deadline for every workshop, including the ~3% of venues that also gate on an
+ *  earlier abstract registration — the last moment a paper can be submitted. */
+export function parseGroupDeadline(dateStr) {
+  return parseLabelledDate(dateStr, 'Submission Deadline');
+}
+
+/** The earlier, mandatory abstract-registration deadline of a two-stage venue
+ *  ("Abstract Registration:"), or null for the ordinary single-stage case.
+ *  Deliberately NOT used as the headline: it is surfaced alongside the paper
+ *  deadline so the countdown never rolls forward and mimic an extension. Note
+ *  this is the same date the `<venue>/-/Submission` invitation's duedate carries
+ *  on such venues, which is exactly why the invitation must not be read alone. */
+export function parseGroupAbstractDeadline(dateStr) {
+  return parseLabelledDate(dateStr, 'Abstract Registration');
 }
 
 const slugify = (s) =>
@@ -512,6 +533,20 @@ async function main({ conf, year, dryRun }) {
         if (!raw.tracks && subTracks.length) { raw.tracks = subTracks; changed = true; }
       }
 
+      // (A2) Two-stage venues: keep the mandatory abstract-registration date in
+      // step with OpenReview. Free (parsed from the group `date` line already in
+      // hand) and informational — the headline stays the paper deadline — so it
+      // is simply mirrored whenever it differs. Never deleted when absent: a
+      // date a human added by hand is not silently dropped.
+      {
+        const abs = parseGroupAbstractDeadline(val(g.content ?? {}, 'date'));
+        if (abs && abs.submission_deadline !== (raw.abstract_deadline ?? null)) {
+          raw.abstract_deadline = abs.submission_deadline;
+          changed = true;
+          changes.push(`${raw.conference} ${raw.year} · ${path.basename(fp)}: abstract registration -> ${abs.submission_deadline} UTC`);
+        }
+      }
+
       // (B) Keep an existing *bot-managed, human-untouched* deadline in sync with
       // OpenReview. A deadline counts as bot-managed only if its note still holds
       // the value the bot last wrote (syncedValue) or the pre-sync legacy marker.
@@ -590,6 +625,12 @@ async function main({ conf, year, dryRun }) {
       record.submission_deadline = deadline.submission_deadline;
       record.timezone = deadline.timezone;
       record.deadline_notes = syncNote(deadline.submission_deadline, today);
+    }
+    // Two-stage venue: record the mandatory abstract-registration date too. The
+    // headline above stays the PAPER deadline ("Submission Deadline:").
+    {
+      const abs = parseGroupAbstractDeadline(val(c, 'date'));
+      if (abs) record.abstract_deadline = abs.submission_deadline;
     }
     if (tracks.length) record.tracks = tracks;
     record.openreview_venue_id = g.id;

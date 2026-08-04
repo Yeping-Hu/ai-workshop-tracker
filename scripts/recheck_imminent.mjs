@@ -57,6 +57,7 @@ import {
   decideDeadlineUpdate,
   deadlineFromInvitation,
   parseGroupDeadline,
+  parseGroupAbstractDeadline,
 } from './discover_openreview.mjs';
 
 const UA = 'ai-workshop-tracker/1.0 (open-source workshop aggregator; github)';
@@ -156,6 +157,12 @@ async function main({ dryRun }) {
     // Same value precedence as the weekly sync: the group's free `date` line
     // first, then the submission invitation's machine-readable duedate.
     const fetched = parseGroupDeadline(val(g.content ?? {}, 'date')) || (await deadlineFromInvitation(g));
+    // Two-stage venues also publish a mandatory abstract-registration date on
+    // the same line. It is informational (never the headline), so it is synced
+    // whenever it moves — independently of whether the paper deadline moved.
+    const fetchedAbstract = parseGroupAbstractDeadline(val(g.content ?? {}, 'date'));
+    const nextAbstract = fetchedAbstract?.submission_deadline ?? null;
+    const abstractChanged = nextAbstract != null && nextAbstract !== (raw.abstract_deadline ?? null);
     const storedMs = resolveDeadlineUtcMs(raw.submission_deadline, raw.timezone || 'UTC');
     const fetchedMs = fetched ? resolveDeadlineUtcMs(fetched.submission_deadline, fetched.timezone || 'UTC') : null;
     const fetchedYear = fetched ? Number(String(fetched.submission_deadline).slice(0, 4)) : null;
@@ -166,14 +173,22 @@ async function main({ dryRun }) {
     const decision = plausible
       ? decideDeadlineUpdate(storedMs, fetchedMs, { allowEarlier: ALLOW_EARLIER })
       : { update: false, reason: 'implausible' };
-    if (decision.update) {
+    if (decision.update || abstractChanged) {
       const from = raw.submission_deadline;
-      raw.submission_deadline = fetched.submission_deadline;
-      raw.timezone = fetched.timezone;
-      raw.deadline_notes = syncNote(fetched.submission_deadline, today);
+      if (decision.update) {
+        raw.submission_deadline = fetched.submission_deadline;
+        raw.timezone = fetched.timezone;
+        raw.deadline_notes = syncNote(fetched.submission_deadline, today);
+      }
+      if (abstractChanged) raw.abstract_deadline = nextAbstract;
       if (!dryRun) fs.writeFileSync(fp, yaml.dump(raw, { lineWidth: 200, quotingType: '"' }));
       updated++;
-      changes.push(`${raw.conference} ${raw.year} · ${path.basename(fp)}: ${from} UTC -> ${fetched.submission_deadline} UTC (${decision.reason})`);
+      if (decision.update) {
+        changes.push(`${raw.conference} ${raw.year} · ${path.basename(fp)}: ${from} UTC -> ${fetched.submission_deadline} UTC (${decision.reason})`);
+      }
+      if (abstractChanged) {
+        changes.push(`${raw.conference} ${raw.year} · ${path.basename(fp)}: abstract registration -> ${nextAbstract} UTC`);
+      }
     } else if (!plausible && fetched) {
       console.warn(`  ⚠ ${path.basename(fp)}: OpenReview deadline "${fetched.submission_deadline}" looks implausible — left unchanged`);
     }
