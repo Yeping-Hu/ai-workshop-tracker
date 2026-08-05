@@ -198,6 +198,13 @@ const statusLines = (w: any): string[] =>
       column-gap: 0.5rem; row-gap: 0.15rem; align-items: baseline;
     }
     .conf-ws-list li > .pill { grid-row: 1; grid-column: 1; justify-self: start; }
+    /* A two-line pill is taller than the acronym beside it, and in row 1 alone that
+       extra height inflated the row and pushed the title caption ~13px further down
+       than on single-line rows. Spanning both rows lets the height be absorbed
+       across them instead, so the caption sits the same distance below the acronym
+       whatever the status label. Only where a caption exists, so rows without one
+       keep their natural height. */
+    .conf-ws-list li:has(.ws-full) > .pill { grid-row: 1 / span 2; align-self: start; }
     /* Two-line label: centre it and tighten the leading so the pill stays compact. */
     .conf-ws-list li > .pill.unknown { text-align: center; line-height: 1.2; }
     /* Make it exactly as wide as the "Open call" pill without hard-coding a
