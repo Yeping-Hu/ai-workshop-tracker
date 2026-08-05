@@ -72,17 +72,6 @@ const current = (p: string) =>
     {canonical && <meta property="og:url" content={canonical} />}
     {/* Per-page structured data (JSON-LD) and any extra <head> tags. */}
     <slot name="head" />
-    {/* DataFast analytics. `is:inline` keeps Astro from processing the tag, so the
-        data-* attributes reach the browser verbatim — the same reason the
-        GoatCounter and Cloudflare tags at the end of <body> use it. `defer` means
-        it never blocks rendering. In the shared layout, so it loads on every page. */}
-    <script
-      is:inline
-      defer
-      data-website-id="dfid_Mr4ENfa68xUOK0QouHHhm"
-      data-domain="aiworkshoptracker.com"
-      src="https://datafa.st/js/script.js"
-    ></script>
   </head>
   <body>
     <header class="site-header">
