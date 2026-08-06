@@ -1,26 +1,30 @@
 ---
 export interface Props {
-  content: string;
+  content?: string;
+  exportUrl?: string;
   filename?: string;
   variant?: 'button' | 'link';
 }
 
-const { content, filename, variant = 'button' } = Astro.props;
-// We encode the content so we can safely embed it in data attributes
-const encodedContent = encodeURIComponent(content);
+const { content, exportUrl, filename, variant = 'button' } = Astro.props;
+const encodedContent = content ? encodeURIComponent(content) : undefined;
 ---
 
 {variant === 'link' ? (
-  <button type="button" class="btn-copy as-link markdown-export-btn" data-md={encodedContent}>
+  <button type="button" class="btn-copy as-link markdown-export-btn" data-md={encodedContent} data-url={exportUrl}>
     <span class="btn-text">📋 Copy as Markdown</span>
   </button>
 ) : (
   <div class="markdown-export">
-    <button type="button" class="btn-copy markdown-export-btn" data-md={encodedContent}>
+    <button type="button" class="btn-copy markdown-export-btn" data-md={encodedContent} data-url={exportUrl}>
       <span class="btn-text">📋 Copy as Markdown</span>
     </button>
-    
-    {filename && (
+
+    {exportUrl && filename ? (
+      <a href={exportUrl} download={filename} class="btn-download markdown-export-btn">
+        ⬇ Download .md
+      </a>
+    ) : filename && (
       <button type="button" class="btn-download markdown-export-btn" data-filename={filename} data-md={encodedContent}>
         ⬇ Download .md
       </button>
@@ -29,8 +33,6 @@ const encodedContent = encodeURIComponent(content);
 )}
 
 <script>
-  // Global event delegation to handle clicks on copy and download buttons
-  // even across Astro view transition page navigations.
   document.addEventListener('click', async (e) => {
     const target = e.target as HTMLElement | null;
     if (!target) return;
@@ -38,13 +40,25 @@ const encodedContent = encodeURIComponent(content);
     const copyBtn = target.closest('.btn-copy');
     if (copyBtn) {
       try {
-        const md = decodeURIComponent(copyBtn.getAttribute('data-md') || '');
+        let md = '';
+        const url = copyBtn.getAttribute('data-url');
+        const inlineData = copyBtn.getAttribute('data-md');
+
+        if (url) {
+          const res = await fetch(url);
+          md = await res.text();
+        } else if (inlineData) {
+          md = decodeURIComponent(inlineData);
+        }
+
+        if (!md) return;
+
         await navigator.clipboard.writeText(md);
-        
+
         const textSpan = copyBtn.querySelector('.btn-text') || copyBtn;
         const originalText = textSpan.textContent;
         textSpan.textContent = '✓ Copied!';
-        (textSpan as HTMLElement).style.color = '#10b981'; // Success green
+        (textSpan as HTMLElement).style.color = 'var(--accent, #10b981)';
         setTimeout(() => {
           textSpan.textContent = originalText;
           (textSpan as HTMLElement).style.color = '';
@@ -55,29 +69,21 @@ const encodedContent = encodeURIComponent(content);
       return;
     }
 
-    const dlBtn = target.closest('.btn-download');
+    const dlBtn = target.closest('button.btn-download');
     if (dlBtn) {
       const md = decodeURIComponent(dlBtn.getAttribute('data-md') || '');
       const filename = dlBtn.getAttribute('data-filename') || 'export.md';
-      
+
       const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
-      
+
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
       a.style.display = 'none';
       document.body.appendChild(a);
-      
-      // Dispatch a non-bubbling click event. This prevents client-side routers
-      // (like Astro View Transitions) from intercepting the click.
-      const clickEvent = new MouseEvent('click', {
-        bubbles: false,
-        cancelable: true,
-        view: window
-      });
-      a.dispatchEvent(clickEvent);
-      
+      a.click();
+
       setTimeout(() => {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
@@ -93,23 +99,25 @@ const encodedContent = encodeURIComponent(content);
     margin: 1rem 0;
     flex-wrap: wrap;
   }
-  .markdown-export button {
+  .markdown-export button,
+  .markdown-export a.btn-download {
     display: inline-flex;
     align-items: center;
     padding: 0.4rem 0.8rem;
     font-size: 0.9rem;
-    font-family: var(--font-sans, inherit);
-    color: var(--text, inherit);
-    background: transparent;
-    border: 1px solid currentColor;
+    font-family: var(--font-body, inherit);
+    color: var(--ink, inherit);
+    background: var(--surface, transparent);
+    border: 1px solid var(--line, currentColor);
     border-radius: 4px;
     cursor: pointer;
     text-decoration: none;
-    opacity: 0.8;
-    transition: opacity 0.2s;
+    transition: border-color 0.2s, background-color 0.2s, color 0.2s;
   }
-  .markdown-export button:hover {
-    opacity: 1;
+  .markdown-export button:hover,
+  .markdown-export a.btn-download:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
   }
 
   /* Link variant styles */
@@ -119,23 +127,13 @@ const encodedContent = encodeURIComponent(content);
     padding: 0;
     font-size: inherit;
     font-family: inherit;
-    color: var(--link, #2563eb);
+    color: var(--accent);
     text-decoration: underline;
     text-underline-offset: 2px;
     cursor: pointer;
-    transition: color 0.2s;
+    transition: opacity 0.2s;
   }
   button.as-link:hover {
-    color: var(--link-hover, #1d4ed8);
-  }
-  
-  /* Fallbacks in case vars aren't defined */
-  @media (prefers-color-scheme: dark) {
-    button.as-link {
-      color: var(--link, #60a5fa);
-    }
-    button.as-link:hover {
-      color: var(--link-hover, #93c5fd);
-    }
+    opacity: 0.8;
   }
 </style>

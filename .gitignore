@@ -1,9 +1,6 @@
 node_modules/
 site/node_modules/
 site/dist/
-site/.astro/
-site/public/pagefind/
-site/public/pagefind-papers/
 .DS_Store
 *.log
 
