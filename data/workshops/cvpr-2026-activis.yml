@@ -1,4 +1,4 @@
-name: "CVPR 2026 Workshop on Bridging Vision, Language, and Action: What’s Missing in Actionable Visual Perception for Robotics"
+name: 'CVPR 2026 Workshop on Bridging Vision, Language, and Action: What’s Missing in Actionable Visual Perception for Robotics'
 acronym: CVPR 2026 Workshop ActiVis
 conference: cvpr
 year: 2026
@@ -12,4 +12,5 @@ deadline_notes: OpenReview-synced 2026-05-15 11:59 UTC (as of 2026-06-23) — ex
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/ActiVis
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'
+abstract_deadline: 2026-05-15 11:59

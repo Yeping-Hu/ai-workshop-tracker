@@ -1,0 +1,20 @@
+name: CoRL 2026 Workshop on Grounded 4D Multimodal World Models for Autonomous Driving Decision Making
+acronym: CoRL 2026 G4DWM-AD Workshop
+conference: corl
+year: 2026
+website: https://arlo0o.github.io/Grounded-Driving-World-Models_Workshop/
+topics:
+  - robotics
+  - multimodal
+  - agents
+submission_deadline: 2026-10-12 11:59
+timezone: UTC
+deadline_notes: OpenReview-synced 2026-10-12 11:59 UTC (as of 2026-08-11) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_history:
+  - value: 2026-10-12 11:59
+    recorded: '2026-08-11'
+    timezone: UTC
+openreview_venue_id: robot-learning.org/CoRL/2026/Workshop/GroundedDrivingWMs
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-08-11'

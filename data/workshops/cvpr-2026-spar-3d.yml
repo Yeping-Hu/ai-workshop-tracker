@@ -1,4 +1,4 @@
-name: "SPAR-3D: First Workshop on Security, Privacy, and Adversarial Robustness in 3D Generative Vision Models"
+name: 'SPAR-3D: First Workshop on Security, Privacy, and Adversarial Robustness in 3D Generative Vision Models'
 acronym: 1st SPAR-3D 2026
 conference: cvpr
 year: 2026
@@ -13,4 +13,5 @@ deadline_notes: OpenReview-synced 2026-03-21 23:59 UTC (as of 2026-06-23) — ex
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/SPAR-3D
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'
+abstract_deadline: 2026-03-21 23:59
