@@ -1,14 +1,16 @@
-name: NeurIPS 2026 Workshop on Memorization, Privacy, and Legal Risk in Foundation Models
-acronym: MPLR-FM
+name: 'Privacy in the Era of Large Opaque Models: Theoretical, Legal, and Practical Perspectives'
+acronym: PriLOM
 conference: neurips
 year: 2026
-website: https://mplr-fm.github.io/
+website: https://neurips-workshop2026.github.io/foundation_model_agentic_privacy/
 topics:
   - llms
   - privacy
 openreview_venue_id: NeurIPS.cc/2026/Workshop/MPLR-FM
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
+notes: >-
+  Topics were auto-suggested and may be imprecise — edits welcome. Renamed by the organizers on OpenReview — previously "NeurIPS 2026 Workshop on Memorization, Privacy, and Legal Risk in Foundation
+  Models" (MPLR-FM). The slug and URL keep the old spelling so existing links keep working.
 added: '2026-07-21'
 submission_deadline: 2026-08-30 12:00
 timezone: UTC

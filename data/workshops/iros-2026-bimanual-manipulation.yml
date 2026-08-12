@@ -2,7 +2,7 @@ name: "Scaling vs Structure: Rethinking Bimanual Manipulation Beyond Single-Arm 
 acronym: IROS 2026 Bimanual Manipulation Workshop
 conference: iros
 year: 2026
-website: https://sites.google.com/view/bimanual-robot-learning
+website: https://bimanual-robot-learning.github.io/
 topics:
   - robotics
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/Bimanual_Manipulation

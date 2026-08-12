@@ -2,7 +2,7 @@ name: 'PTA: From Pretrained Representations to Acting Agents'
 acronym: NeurIPS 2026 Workshop PTA
 conference: neurips
 year: 2026
-website: https://sites.google.com/view/pta-neurips2026/home
+website: https://ptaworkshop.github.io/
 topics:
   - agents
 openreview_venue_id: NeurIPS.cc/2026/Workshop/PTA
