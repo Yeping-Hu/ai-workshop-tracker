@@ -8,7 +8,7 @@
  *
  * Run: node scripts/deadline_crosscheck_test.mjs
  */
-import { classifyDeadlineDiff, reviewCategory, isWithinReviewWindow, websiteDrift, normalizeWebsite } from './deadline_crosscheck.mjs';
+import { classifyDeadlineDiff, reviewCategory, isWithinReviewWindow, websiteDrift, normalizeWebsite, titleDrift, acronymDrift } from './deadline_crosscheck.mjs';
 import { syncNote, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
 
 let failed = 0;
@@ -108,6 +108,37 @@ check('no stored website -> nothing', websiteDrift(null, 'https://b.org'), null)
 check('no OpenReview website -> nothing', websiteDrift('https://a.org', null), null);
 check('neither -> nothing', websiteDrift(null, null), null);
 check('normalize strips scheme/www/slash', normalizeWebsite('HTTPS://WWW.Example.org/a/'), 'example.org/a');
+
+console.log('— name / acronym drift —');
+
+// Decoration differs by convention and must stay quiet, or the weekly report
+// fills with entries nobody needs to act on.
+check('venue suffix is not a rename', titleDrift('The 5th Workshop on Mathematical Reasoning and AI',
+  'The 5th Workshop on Mathematical Reasoning and AI at NeurIPS 2025', 'neurips'), null);
+check("short year suffix is not a rename", titleDrift('The 4th Workshop on Mathematical Reasoning and AI',
+  "The 4th Workshop on Mathematical Reasoning and AI at NeurIPS'24", 'neurips'), null);
+check('conference prefix is not a rename', titleDrift('Workshop on Machine Learning for Genomics Explorations',
+  'ICLR 2025 Workshop on Machine Learning for Genomics Explorations', 'iclr'), null);
+check('punctuation/case is not a rename', titleDrift('AI for Math Workshop', 'AI-for-Math workshop!', 'icml'), null);
+
+// Substance must be reported.
+check('a real retitle is reported', titleDrift(
+  'NeurIPS 2026 Workshop on Memorization, Privacy, and Legal Risk in Foundation Models',
+  'Privacy in the Era of Large Opaque Models: Theoretical, Legal, and Practical Perspectives', 'neurips') !== null, true);
+check('an added scope is reported', titleDrift('Queer in AI workshop at NeurIPS 2026',
+  'Queer in AI and {Dis}Ability in AI Workshop at NeurIPS 2026', 'neurips') !== null, true);
+check('a typo on our side is reported', titleDrift('3th Workshop on Human-inspired Computer Vision',
+  '3rd Workshop on Human-inspired Computer Vision', 'eccv') !== null, true);
+check('missing either side -> nothing', titleDrift('', 'Something', 'eccv'), null);
+
+// OpenReview's subtitle is only sometimes an acronym; comparing against the
+// descriptive ones produced a 4.9% false-positive rate across the dataset.
+check('descriptive subtitle is ignored', acronymDrift('PV', 'CVPR 2024 Workshop Prompting in Vision'), null);
+check('long subtitle is ignored', acronymDrift('X', 'AbcdefghijklmnopqrstuvW'), null);
+check('venue-tagged acronym is not drift', acronymDrift('AI4Math', 'AI4Math@ICML25'), null);
+check('separator/case is not drift', acronymDrift('Dexterous_Manipulation', 'dexterous-manipulation'), null);
+check('a real acronym change is reported', acronymDrift('MPLR-FM', 'PriLOM') !== null, true);
+check('no acronym stored -> nothing', acronymDrift(null, 'PriLOM'), null);
 
 console.log(failed === 0 ? '\nDeadline cross-check logic OK.' : `\n${failed} test(s) failed.`);
 process.exit(failed === 0 ? 0 : 1);

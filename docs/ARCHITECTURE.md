@@ -261,6 +261,19 @@ ignored so the report stays quiet. Like an earlier deadline move, it is reported
 and never applied: ours is sometimes the better link. It costs no extra requests,
 since the venue group is already in hand from the batched listing.
 
+It also reports a **rename**: the importer records `name` and `acronym` once and
+never revisits them, so a workshop that renames itself keeps the old label
+indefinitely — MPLR-FM became "Privacy in the Era of Large Opaque Models"
+(PriLOM) and only came to light because its website moved at the same time.
+Comparison strips what differs by convention (case, punctuation, the conference
+token, year fragments and connectives), which across the whole dataset leaves
+0.3% of titles flagged. Acronyms are only compared when OpenReview's `subtitle` is
+acronym-shaped, because it is often a descriptive phrase and comparing against
+those produced a 4.9% false-positive rate. Identity checks run over EVERY
+OpenReview-linked entry, not just the deadline-review window, since a rename
+matters whenever it happens; the listings are per conference-year, so that costs
+~24 requests rather than one per entry.
+
 Matching that precedence matters: on a two-stage venue the
 invitation's `duedate` is the *abstract* date while the stored headline is the
 paper deadline, so reading the invitation alone reported a phantom "moved earlier"

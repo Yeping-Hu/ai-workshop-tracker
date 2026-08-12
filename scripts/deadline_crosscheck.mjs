@@ -218,6 +218,47 @@ export function normalizeWebsite(url) {
   return n || null;
 }
 
+/** Text of a venue name/title, reduced to what actually identifies it: case,
+ *  punctuation, the conference token and the year are all dropped, because we
+ *  render those separately and they differ by convention rather than substance
+ *  ("2nd AI for Math Workshop" vs "2nd AI for Math Workshop @ ICML 2025"). */
+export function normalizeVenueText(text, conference = '') {
+  let n = String(text ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+  n = n.replace(/\b(neurips|nips|iclr|icml|eccv|cvpr|iccv|iros|icra|corl|colm)\b/g, ' ');
+  if (conference) n = n.replace(new RegExp(`\\b${String(conference).toLowerCase()}\\b`, 'g'), ' ');
+  // Also drop short year fragments ("at NeurIPS'24" -> "24") and the connectors
+  // that survive them, so a title differing only by a venue suffix reads as equal.
+  n = n.replace(/\b(19|20)\d{2}\b/g, ' ').replace(/\b\d{2}\b/g, ' ');
+  n = n.replace(/\b(at|the|of|on|for|and|in|a|an)\b/g, ' ');
+  return n.replace(/\s+/g, ' ').trim();
+}
+
+/** A renamed workshop. Measured across the whole dataset this fires on 0.3% of
+ *  entries, so it is quiet enough to be worth a human's attention every week —
+ *  MPLR-FM was retitled to "Privacy in the Era of Large Opaque Models" and only
+ *  came to light because its website moved at the same time. */
+export function titleDrift(storedName, openreviewTitle, conference = '') {
+  const a = normalizeVenueText(storedName, conference);
+  const b = normalizeVenueText(openreviewTitle, conference);
+  if (!a || !b || a === b) return null;
+  return { stored: storedName, openreview: openreviewTitle };
+}
+
+/** A changed acronym. OpenReview's `subtitle` is only sometimes an acronym — it
+ *  is often a full descriptive phrase ("CVPR 2024 Workshop Prompting in Vision"),
+ *  and comparing against those produced a 4.9% false-positive rate. So this only
+ *  compares when the subtitle is acronym-shaped, which cuts it to zero across the
+ *  dataset while still catching a real rename (MPLR-FM -> PriLOM). */
+export function acronymDrift(storedAcronym, openreviewSubtitle) {
+  const sub = String(openreviewSubtitle ?? '').trim();
+  if (!storedAcronym || !sub || /\s/.test(sub) || sub.length > 15) return null;
+  const norm = (x) => String(x ?? '').split('@')[0].toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const a = norm(storedAcronym);
+  const b = norm(sub);
+  if (!a || !b || a === b) return null;
+  return { stored: storedAcronym, openreview: sub };
+}
+
 /** A website worth reviewing: both sides have one and they genuinely differ.
  *  Reported, never applied — the importer fills a blank `website` and then leaves
  *  it alone, which protects a hand-picked URL but also means one that goes stale
@@ -230,8 +271,8 @@ export function websiteDrift(stored, openreview) {
   return { stored, openreview };
 }
 
-function buildReport(items, drift = []) {
-  if (!items.length && !drift.length) return '';
+function buildReport(items, drift = [], renames = []) {
+  if (!items.length && !drift.length && !renames.length) return '';
   const human = items.filter((i) => i.kind === 'human-conflict');
   const earlier = items.filter((i) => i.kind === 'bot-earlier');
   const line = (i) =>
@@ -267,6 +308,21 @@ function buildReport(items, drift = []) {
     }
     out.push('');
   }
+  if (renames.length) {
+    out.push(
+      '### Renamed on OpenReview',
+      '_The importer records a name and acronym once and never revisits them, so a workshop that renames itself keeps the old label here indefinitely. Update the entry if the new one is right — the slug and URL should stay as they are so existing links keep working._',
+      '',
+    );
+    for (const r of renames) {
+      out.push(
+        `- [ ] \`${r.file}\` — ${r.field} (${r.conf} ${r.year})\n` +
+        `      - ours: ${r.stored}\n` +
+        `      - OpenReview: ${r.openreview}`,
+      );
+    }
+    out.push('');
+  }
   out.push('_This issue is updated automatically by the weekly `deadline-review` workflow._');
   return out.join('\n') + '\n';
 }
@@ -279,9 +335,13 @@ async function main() {
   const reportPath = args.includes('--report') ? args[args.indexOf('--report') + 1] : null;
   const nowMs = Date.now();
 
-  let entries = listWorkshopFiles()
+  // Identity checks (name/acronym/website) apply to every OpenReview-linked entry,
+  // including ones with no deadline yet — a workshop can be renamed long before it
+  // announces a date. The deadline review keeps its own, narrower scope below.
+  const allEntries = listWorkshopFiles()
     .map(readWorkshopFile)
-    .filter(({ raw }) => raw?.openreview_venue_id && raw?.submission_deadline);
+    .filter(({ raw }) => raw?.openreview_venue_id);
+  let entries = allEntries.filter(({ raw }) => raw?.submission_deadline);
   if (slug) entries = entries.filter((e) => e.slug === slug);
   // --recent scopes by *deadline relevance*, not conference year: a workshop
   // whose deadline is comfortably past (even if its year is the current one) is
@@ -305,7 +365,14 @@ async function main() {
   // entry is skipped — which silently withheld real disagreements from review
   // for a week at a time. That is how the NeurReps Findings track went unseen
   // while its two sibling tracks were reported.
-  const prefixes = [...new Set(toCheck.map((e) => venuePrefix(e.raw.openreview_venue_id)).filter(Boolean))];
+  // Deadline review is scoped to the window above, but a rename or a moved site
+  // matters whenever it happens, so identity checks run over EVERY entry with a
+  // venue. Listings are per conference-year, so covering the whole dataset costs
+  // ~24 requests rather than one per entry.
+  const identityEntries = slug ? allEntries.filter((e) => e.slug === slug) : allEntries;
+  const prefixes = [
+    ...new Set(identityEntries.map((e) => venuePrefix(e.raw.openreview_venue_id)).filter(Boolean)),
+  ];
   const groupById = new Map();
   for (const p of prefixes) {
     const gs = await fetchVenueGroupsByPrefix(p);
@@ -333,6 +400,7 @@ async function main() {
 
   const items = [];
   const drift = [];
+  const renames = [];
   let checked = 0, skipped = 0;
   for (const { slug: s, file, raw } of toCheck) {
     let dl = null;
@@ -391,14 +459,6 @@ async function main() {
       storedMs,
       fetchedMs,
     });
-    // Website drift costs nothing extra: the group is already in hand from the
-    // batched listing. Collected before the deadline check below, because an entry
-    // whose deadline agrees can still have moved its site.
-    const wd = websiteDrift(raw.website, websiteFromContent(group?.content ?? {}));
-    if (wd) {
-      drift.push({ slug: s, file, name: raw.name, conf: String(raw.conference || '').toUpperCase(), year: raw.year, ...wd });
-      console.log(`•  WEBSITE    ${s}: ours ${wd.stored} vs OpenReview ${wd.openreview}`);
-    }
     if (!cat) continue;
     const item = {
       kind: cat.kind, slug: s, file,
@@ -410,12 +470,27 @@ async function main() {
     console.log(`${tag} ${s}: stored ${item.stored} vs OpenReview ${item.fetched} UTC — ${item.label}`);
   }
 
-  const report = buildReport(items, drift);
+  // Identity pass: no network at all, every group is already cached above.
+  for (const { raw, slug: s2, file: f2 } of identityEntries) {
+    const g = groupById.get(raw.openreview_venue_id);
+    if (!g) continue;
+    const c = g.content ?? {};
+    const meta = { slug: s2, file: f2, name: raw.name, conf: String(raw.conference || '').toUpperCase(), year: raw.year };
+    const wd = websiteDrift(raw.website, websiteFromContent(c));
+    if (wd) { drift.push({ ...meta, ...wd }); console.log(`•  WEBSITE   ${s2}: ours ${wd.stored} vs OpenReview ${wd.openreview}`); }
+    const td = titleDrift(raw.name, val(c, 'title'), raw.conference);
+    if (td) { renames.push({ ...meta, field: 'name', ...td }); console.log(`•  NAME      ${s2}: ours "${td.stored}" vs OpenReview "${td.openreview}"`); }
+    const ad = acronymDrift(raw.acronym, val(c, 'subtitle'));
+    if (ad) { renames.push({ ...meta, field: 'acronym', ...ad }); console.log(`•  ACRONYM   ${s2}: ours "${ad.stored}" vs OpenReview "${ad.openreview}"`); }
+  }
+
+  const report = buildReport(items, drift, renames);
   if (reportPath) {
     fs.writeFileSync(reportPath, report);
     const parts = [];
     if (items.length) parts.push(`${items.length} deadline item(s)`);
     if (drift.length) parts.push(`${drift.length} website item(s)`);
+    if (renames.length) parts.push(`${renames.length} rename item(s)`);
     console.log(`\nWrote ${parts.length ? parts.join(' + ') : 'empty report'} to ${reportPath}.`);
   }
   console.log(`\nDone. ${checked} checked, ${items.length} to review, ${skipped} unfetchable${drift.length ? `, ${drift.length} website change(s)` : ''}.`);
