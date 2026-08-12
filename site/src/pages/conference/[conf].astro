@@ -2,8 +2,6 @@
 import Base from '../../components/Base.astro';
 import { workshops, conferences } from '../../lib/data';
 import { href, REPO_URL } from '../../lib/site';
-import MarkdownExport from '../../components/MarkdownExport.astro';
-import { formatConferenceYear } from '../../lib/markdown';
 
 // One hub page per conference, generated from the same data the rest of the
 // site uses. Intentionally carries NO data-pf-ws / data-pf-papers attributes,
@@ -146,7 +144,6 @@ const statusLines = (w: any): string[] =>
   {yearGroups.map(([year, ws]) => (
     <section class="conf-year">
       <h2>{confName} {year}</h2>
-      <MarkdownExport content={formatConferenceYear(conf, year, ws)} filename={`${conf.id}-${year}-workshops.md`} />
       <ul class="conf-ws-list">
         {ws.map((w) => (
           <li>
