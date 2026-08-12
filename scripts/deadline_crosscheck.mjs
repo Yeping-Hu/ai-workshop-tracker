@@ -31,7 +31,14 @@
 import fs from 'node:fs';
 import { listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
-import { deadlineFromInvitation, parseGroupDeadline, msToDeadline, syncedValue, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
+import {
+  deadlineFromInvitation,
+  parseGroupDeadline,
+  msToDeadline,
+  websiteFromContent,
+  syncedValue,
+  LEGACY_IMPORT_NOTE,
+} from './discover_openreview.mjs';
 import { fetchGroupById } from './recheck_imminent.mjs';
 
 // OpenReview wraps some content values as { value: … }; unwrap if so.
@@ -200,16 +207,39 @@ export function isWithinReviewWindow(deadlineMs, nowMs, graceMs = REVIEW_PAST_GR
   return deadlineMs != null && deadlineMs >= nowMs - graceMs;
 }
 
-function buildReport(items) {
-  if (!items.length) return '';
+/** Compare two URLs ignoring differences that aren't worth a human's attention:
+ *  scheme, a leading "www.", a trailing slash, and case. */
+export function normalizeWebsite(url) {
+  if (!url) return null;
+  const n = String(url).trim().toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/\/+$/, '');
+  return n || null;
+}
+
+/** A website worth reviewing: both sides have one and they genuinely differ.
+ *  Reported, never applied — the importer fills a blank `website` and then leaves
+ *  it alone, which protects a hand-picked URL but also means one that goes stale
+ *  stays stale (IROS BEMHAT's stored site had been unpublished and redirected to
+ *  a Google sign-in page). A human decides; ours is sometimes the better link. */
+export function websiteDrift(stored, openreview) {
+  const a = normalizeWebsite(stored);
+  const b = normalizeWebsite(openreview);
+  if (!a || !b || a === b) return null;
+  return { stored, openreview };
+}
+
+function buildReport(items, drift = []) {
+  if (!items.length && !drift.length) return '';
   const human = items.filter((i) => i.kind === 'human-conflict');
   const earlier = items.filter((i) => i.kind === 'bot-earlier');
   const line = (i) =>
     `- [ ] \`${i.file}\` — **${i.name}** (${i.conf} ${i.year}) — stored \`${i.stored} UTC\`, OpenReview \`${i.fetched} UTC\` — ${i.label}. ` +
     `Accept OpenReview: \`node scripts/resync_deadline.mjs --slug ${i.slug}\``;
   const out = [
-    'These deadlines disagree with OpenReview and the bot will **not** change them on its own — they need your call.',
-    'To accept OpenReview\'s value, run the **Re-sync deadline from OpenReview** workflow with the slug (or the command shown). To keep the stored value, just leave it.',
+    'These entries disagree with OpenReview and the bot will **not** change them on its own — they need your call.',
+    'To accept OpenReview\'s deadline, run the **Re-sync deadline from OpenReview** workflow with the slug (or the command shown). To keep the stored value, just leave it.',
     '',
   ];
   if (human.length) {
@@ -220,6 +250,21 @@ function buildReport(items) {
   if (earlier.length) {
     out.push('### OpenReview moved these *earlier*', '_The bot only moves deadlines later automatically (an earlier move can be a transient bad read). Confirm whether it\'s a real correction._', '');
     for (const i of earlier) out.push(line(i));
+    out.push('');
+  }
+  if (drift.length) {
+    out.push(
+      '### Website changed on OpenReview',
+      '_The importer only fills a **blank** `website` and never revisits it, so a URL that moves is not picked up. Check which is right — ours is sometimes the better link, but a stored URL can also go dead._',
+      '',
+    );
+    for (const d of drift) {
+      out.push(
+        `- [ ] \`${d.file}\` — **${d.name}** (${d.conf} ${d.year})\n` +
+        `      - ours: ${d.stored}\n` +
+        `      - OpenReview: ${d.openreview}`,
+      );
+    }
     out.push('');
   }
   out.push('_This issue is updated automatically by the weekly `deadline-review` workflow._');
@@ -287,10 +332,12 @@ async function main() {
   );
 
   const items = [];
+  const drift = [];
   let checked = 0, skipped = 0;
   for (const { slug: s, file, raw } of toCheck) {
     let dl = null;
     let hitNetwork = false;
+    let group = null; // hoisted: the website check below needs it after the try
     try {
       // Same value precedence as every write path (discovery, recheck,
       // backfill): the group's free `date` line first, the submission
@@ -311,6 +358,7 @@ async function main() {
         g = await fetchGroupById(raw.openreview_venue_id);
         hitNetwork = true;
       }
+      group = g;
       if (g) {
         dl = parseGroupDeadline(val(g.content ?? {}, 'date'));
         if (!dl) {
@@ -333,7 +381,6 @@ async function main() {
     // Only pace when this entry actually hit the network; venues answered from
     // the prefetched listing cost nothing and need no delay.
     if (hitNetwork) await sleep(PACE_MS);
-    await sleep(PACE_MS);
     if (!dl) { skipped++; continue; }
     checked++;
     const storedMs = resolveDeadlineUtcMs(raw.submission_deadline, raw.timezone || 'UTC');
@@ -344,6 +391,14 @@ async function main() {
       storedMs,
       fetchedMs,
     });
+    // Website drift costs nothing extra: the group is already in hand from the
+    // batched listing. Collected before the deadline check below, because an entry
+    // whose deadline agrees can still have moved its site.
+    const wd = websiteDrift(raw.website, websiteFromContent(group?.content ?? {}));
+    if (wd) {
+      drift.push({ slug: s, file, name: raw.name, conf: String(raw.conference || '').toUpperCase(), year: raw.year, ...wd });
+      console.log(`•  WEBSITE    ${s}: ours ${wd.stored} vs OpenReview ${wd.openreview}`);
+    }
     if (!cat) continue;
     const item = {
       kind: cat.kind, slug: s, file,
@@ -355,12 +410,15 @@ async function main() {
     console.log(`${tag} ${s}: stored ${item.stored} vs OpenReview ${item.fetched} UTC — ${item.label}`);
   }
 
-  const report = buildReport(items);
+  const report = buildReport(items, drift);
   if (reportPath) {
     fs.writeFileSync(reportPath, report);
-    console.log(`\nWrote ${items.length ? items.length + ' item(s)' : 'empty report'} to ${reportPath}.`);
+    const parts = [];
+    if (items.length) parts.push(`${items.length} deadline item(s)`);
+    if (drift.length) parts.push(`${drift.length} website item(s)`);
+    console.log(`\nWrote ${parts.length ? parts.join(' + ') : 'empty report'} to ${reportPath}.`);
   }
-  console.log(`\nDone. ${checked} checked, ${items.length} to review, ${skipped} unfetchable.`);
+  console.log(`\nDone. ${checked} checked, ${items.length} to review, ${skipped} unfetchable${drift.length ? `, ${drift.length} website change(s)` : ''}.`);
   if (strict && items.length > 0) process.exit(1);
 }
 

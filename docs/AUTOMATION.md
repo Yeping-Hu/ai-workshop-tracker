@@ -25,7 +25,7 @@ for human review, as do dependency updates.
 | `issue-to-pr.yml` | "Add a workshop" issue form | Converts the form to a YAML file + PR, validates, reports back |
 | `edit-to-pr.yml` | "Edit a workshop" issue form | Applies the edit to the existing YAML + PR (timezone-safe), validates, reports back |
 | `resync-deadline.yml` | manual | Re-pull one workshop's deadline from OpenReview's duedate (either direction) |
-| `deadline-review.yml` | weekly | One consolidated issue listing deadlines that need a human decision |
+| `deadline-review.yml` | weekly | One consolidated issue listing deadlines that need a human decision Also reports a `website` that changed on OpenReview (reported, never applied). |
 | `stale-check.yml` | weekly | One consolidated issue listing entries needing follow-up |
 | `link-check.yml` | monthly | One consolidated issue listing broken URLs |
 

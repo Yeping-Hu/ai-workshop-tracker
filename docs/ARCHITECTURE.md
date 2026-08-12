@@ -252,7 +252,16 @@ rule, so the maintainer confirms whether it's a real correction). Bot-managed
 The issue updates in place and closes itself when nothing's outstanding; each
 item links the re-sync command to accept OpenReview's value. The classifier also
 labels a divergence as a likely *timezone slip* (a near whole/half/quarter-hour
-offset, ≤14h, not ~a day) vs. a real change, as a hint. Matching that precedence matters: on a two-stage venue the
+offset, ≤14h, not ~a day) vs. a real change, as a hint. The same pass also reports **website drift**: the importer only ever fills a
+*blank* `website` and never revisits it, which protects a hand-picked URL but
+means one that goes stale stays stale — IROS BEMHAT's stored site had been
+unpublished and redirected to a Google sign-in page while OpenReview listed a
+working one. Differences in scheme, a leading `www.`, a trailing slash or case are
+ignored so the report stays quiet. Like an earlier deadline move, it is reported
+and never applied: ours is sometimes the better link. It costs no extra requests,
+since the venue group is already in hand from the batched listing.
+
+Matching that precedence matters: on a two-stage venue the
 invitation's `duedate` is the *abstract* date while the stored headline is the
 paper deadline, so reading the invitation alone reported a phantom "moved earlier"
 for every such workshop — noise that was also dangerous, since accepting it would

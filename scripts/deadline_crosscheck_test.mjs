@@ -8,7 +8,7 @@
  *
  * Run: node scripts/deadline_crosscheck_test.mjs
  */
-import { classifyDeadlineDiff, reviewCategory, isWithinReviewWindow } from './deadline_crosscheck.mjs';
+import { classifyDeadlineDiff, reviewCategory, isWithinReviewWindow, websiteDrift, normalizeWebsite } from './deadline_crosscheck.mjs';
 import { syncNote, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
 
 let failed = 0;
@@ -87,6 +87,27 @@ check('20 days past -> out of window', win(NOW - 20 * D), false);
 check('4 months past -> out of window (the CVPR/ICML noise)', win(NOW - 120 * D), false);
 check('null deadline -> out of window', win(null), false);
 check('default grace applies -> in window', isWithinReviewWindow(NOW + D, NOW), true);
+
+console.log('— website drift —');
+
+// Differences that don't warrant a human's attention.
+check('scheme alone is not drift', websiteDrift('http://a.org', 'https://a.org'), null);
+check('www alone is not drift', websiteDrift('https://www.a.org', 'https://a.org'), null);
+check('trailing slash is not drift', websiteDrift('https://a.org/', 'https://a.org'), null);
+check('case is not drift', websiteDrift('https://A.org/X', 'https://a.org/X'.toLowerCase()), null);
+
+// Real moves.
+check('different host is drift', websiteDrift('https://a.org', 'https://b.org') !== null, true);
+check('different path is drift', websiteDrift('https://a.org/one', 'https://a.org/two') !== null, true);
+check('drift keeps the original strings', JSON.stringify(websiteDrift('https://a.org/', 'https://b.org')),
+  JSON.stringify({ stored: 'https://a.org/', openreview: 'https://b.org' }));
+
+// One side missing is not actionable here: filling a blank is the importer's job,
+// and OpenReview having no website says nothing about ours.
+check('no stored website -> nothing', websiteDrift(null, 'https://b.org'), null);
+check('no OpenReview website -> nothing', websiteDrift('https://a.org', null), null);
+check('neither -> nothing', websiteDrift(null, null), null);
+check('normalize strips scheme/www/slash', normalizeWebsite('HTTPS://WWW.Example.org/a/'), 'example.org/a');
 
 console.log(failed === 0 ? '\nDeadline cross-check logic OK.' : `\n${failed} test(s) failed.`);
 process.exit(failed === 0 ? 0 : 1);
