@@ -18,7 +18,20 @@
 import fs from 'node:fs';
 import * as yaml from 'js-yaml';
 import { recordDeadlineObservation, listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
-import { deadlineFromInvitation, syncNote } from './discover_openreview.mjs';
+import {
+  deadlineFromInvitation,
+  parseGroupDeadline,
+  parseGroupAbstractDeadline,
+  meaningfulAbstractDeadline,
+  syncNote,
+} from './discover_openreview.mjs';
+import { fetchGroupById } from './recheck_imminent.mjs';
+
+// OpenReview wraps some content values as { value: … }; unwrap if so.
+const val = (c, k) => {
+  const x = c?.[k];
+  return x && typeof x === 'object' && 'value' in x ? x.value : x;
+};
 
 const args = process.argv.slice(2);
 const getArg = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : null);
@@ -43,11 +56,29 @@ if (!raw.openreview_venue_id) {
 }
 
 const today = new Date().toISOString().slice(0, 10);
-const dl = await deadlineFromInvitation({ id: raw.openreview_venue_id, content: {} });
-if (!dl) {
-  console.error(`OpenReview returned no duedate for ${raw.openreview_venue_id} (no submission invitation, or rate-limited). Nothing changed.`);
+// Same value precedence as discovery, recheck and the weekly review: the group's
+// free `date` line first, the submission invitation only as a fallback. Reading
+// the invitation alone made this script FAIL on venues that publish their
+// deadline solely on the date line (NeurIPS EconML has no /-/Submission
+// invitation at all) — the very command the review issue tells you to run.
+const g = await fetchGroupById(raw.openreview_venue_id);
+if (!g) {
+  console.error(`OpenReview returned no group for ${raw.openreview_venue_id} (renamed, or rate-limited). Nothing changed.`);
   process.exit(1);
 }
+const dateLine = val(g.content ?? {}, 'date');
+const fromLine = parseGroupDeadline(dateLine);
+const dl = fromLine || (await deadlineFromInvitation(g));
+if (!dl) {
+  console.error(`OpenReview published no deadline for ${raw.openreview_venue_id} (no date line and no submission invitation, or rate-limited). Nothing changed.`);
+  process.exit(1);
+}
+// Two-stage venues carry their abstract registration on the same line. Only sync
+// it when the line is the source we trusted, so a missing line never wipes a
+// value we already hold.
+const nextAbstract = fromLine
+  ? meaningfulAbstractDeadline(parseGroupAbstractDeadline(dateLine)?.submission_deadline ?? null, dl.submission_deadline)
+  : (raw.abstract_deadline ?? null);
 
 const before = raw.submission_deadline ?? '(none)';
 if (raw.submission_deadline === dl.submission_deadline && (raw.timezone || 'UTC') === 'UTC') {
@@ -59,6 +90,10 @@ recordDeadlineObservation(raw, dl.submission_deadline, today, dl.timezone);
 raw.submission_deadline = dl.submission_deadline;
 raw.timezone = dl.timezone; // always 'UTC' from msToDeadline
 raw.deadline_notes = syncNote(dl.submission_deadline, today);
+// Keep the abstract stage consistent with the deadline we just wrote, so an
+// entry can never end up advertising an abstract gate AFTER its paper deadline.
+if (nextAbstract) raw.abstract_deadline = nextAbstract;
+else delete raw.abstract_deadline;
 
 console.log(`${slug}: ${before} -> ${dl.submission_deadline} UTC  (re-synced from OpenReview)`);
 if (dryRun) {

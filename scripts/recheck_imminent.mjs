@@ -58,6 +58,7 @@ import {
   deadlineFromInvitation,
   parseGroupDeadline,
   parseGroupAbstractDeadline,
+  meaningfulAbstractDeadline,
 } from './discover_openreview.mjs';
 
 const UA = 'ai-workshop-tracker/1.0 (open-source workshop aggregator; github)';
@@ -160,9 +161,17 @@ async function main({ dryRun }) {
     // Two-stage venues also publish a mandatory abstract-registration date on
     // the same line. It is informational (never the headline), so it is synced
     // whenever it moves — independently of whether the paper deadline moved.
-    const fetchedAbstract = parseGroupAbstractDeadline(val(g.content ?? {}, 'date'));
-    const nextAbstract = fetchedAbstract?.submission_deadline ?? null;
-    const abstractChanged = nextAbstract != null && nextAbstract !== (raw.abstract_deadline ?? null);
+    // Only trust the date line to set OR clear this: if the line is absent we have
+    // no opinion, and must not wipe a value we already hold.
+    const dateLine = val(g.content ?? {}, 'date');
+    const lineHasDeadline = parseGroupDeadline(dateLine) != null;
+    const nextAbstract = lineHasDeadline
+      ? meaningfulAbstractDeadline(
+          parseGroupAbstractDeadline(dateLine)?.submission_deadline ?? null,
+          (fetched ?? {}).submission_deadline ?? raw.submission_deadline,
+        )
+      : (raw.abstract_deadline ?? null);
+    const abstractChanged = (nextAbstract ?? null) !== (raw.abstract_deadline ?? null);
     const storedMs = resolveDeadlineUtcMs(raw.submission_deadline, raw.timezone || 'UTC');
     const fetchedMs = fetched ? resolveDeadlineUtcMs(fetched.submission_deadline, fetched.timezone || 'UTC') : null;
     const fetchedYear = fetched ? Number(String(fetched.submission_deadline).slice(0, 4)) : null;
@@ -184,7 +193,10 @@ async function main({ dryRun }) {
         raw.timezone = fetched.timezone;
         raw.deadline_notes = syncNote(fetched.submission_deadline, today);
       }
-      if (abstractChanged) raw.abstract_deadline = nextAbstract;
+      if (abstractChanged) {
+        if (nextAbstract) raw.abstract_deadline = nextAbstract;
+        else delete raw.abstract_deadline;
+      }
       if (!dryRun) fs.writeFileSync(fp, yaml.dump(raw, { lineWidth: 200, quotingType: '"' }));
       updated++;
       if (decision.update) {

@@ -266,6 +266,25 @@ export function parseGroupDeadline(dateStr) {
  *  deadline so the countdown never rolls forward and mimic an extension. Note
  *  this is the same date the `<venue>/-/Submission` invitation's duedate carries
  *  on such venues, which is exactly why the invitation must not be read alone. */
+/** Minimum gap for an abstract registration to be a real gate rather than a
+ *  formality. Organizers sometimes fill the field a minute before the paper
+ *  deadline (NeurIPS EconML: abstract 11:59, paper 12:00), which is not a
+ *  two-stage process — surfacing it would put an "ABSTRACT" countdown on the page
+ *  that expires sixty seconds before the real one. */
+export const MIN_ABSTRACT_GAP_MS = 60 * 60 * 1000;
+
+/** The abstract-registration value when it is far enough ahead of the paper
+ *  deadline to matter, otherwise null. Callers store null by REMOVING the field,
+ *  so a venue that collapses its two stages stops advertising one. */
+export function meaningfulAbstractDeadline(abstractValue, paperValue) {
+  if (!abstractValue) return null;
+  if (!paperValue) return abstractValue;
+  const a = resolveDeadlineUtcMs(abstractValue, 'UTC');
+  const p = resolveDeadlineUtcMs(paperValue, 'UTC');
+  if (!Number.isFinite(a) || !Number.isFinite(p)) return null;
+  return p - a >= MIN_ABSTRACT_GAP_MS ? abstractValue : null;
+}
+
 export function parseGroupAbstractDeadline(dateStr) {
   return parseLabelledDate(dateStr, 'Abstract Registration');
 }
