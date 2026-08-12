@@ -66,18 +66,18 @@ export function formatWorkshop(w: any, confName?: string): string {
 
   if (w.deadlineChange) {
     if (w.deadlineChange.kind === 'extended') {
-      parts.push(`**Deadline History:** Extended by ${w.deadlineChange.days} ${w.deadlineChange.days === 1 ? 'day' : 'days'} (previously ${w.deadlineChange.fromWallClock})`);
+      parts.push(`- **Deadline History:** Extended by ${w.deadlineChange.days} ${w.deadlineChange.days === 1 ? 'day' : 'days'} (previously ${w.deadlineChange.fromWallClock})`);
     } else if (w.deadlineChange.kind === 'earlier') {
-      parts.push(`**Deadline History:** Moved ${w.deadlineChange.days} ${w.deadlineChange.days === 1 ? 'day' : 'days'} earlier (previously ${w.deadlineChange.fromWallClock})`);
+      parts.push(`- **Deadline History:** Moved ${w.deadlineChange.days} ${w.deadlineChange.days === 1 ? 'day' : 'days'} earlier (previously ${w.deadlineChange.fromWallClock})`);
     } else if (w.deadlineChange.kind === 'announced') {
-      parts.push(`**Deadline History:** Deadline just announced`);
+      parts.push(`- **Deadline History:** Deadline just announced`);
     }
   } else if (Array.isArray(w.deadlineHistoryView) && w.deadlineHistoryView.length > 1) {
     const historyLines = w.deadlineHistoryView.map((h: any, i: number) => {
       const tag = i === w.deadlineHistoryView.length - 1 ? 'first recorded' : 'changed';
-      return `- ${h.recordedLabel}: ${h.wallClock ?? 'no date published'} (${tag})`;
+      return `  - ${h.recordedLabel}: ${h.wallClock ?? 'no date published'} (${tag})`;
     }).join('\n');
-    parts.push(`**Deadline History:**\n${historyLines}`);
+    parts.push(`- **Deadline History:**\n${historyLines}`);
   }
 
   if (w.notes && !isAutoTopicsNote(w.notes)) {
@@ -97,7 +97,7 @@ export function formatConferenceYear(conf: any, year: number, wsList: any[]): st
     ``,
     `Conference: ${conf.name}`,
     `Edition: ${year}`,
-    `Generated: ${genDate}`,
+    `Data snapshot: ${genDate}`,
     `Total Workshops: ${wsList.length}`,
     ``,
     `---`
@@ -118,7 +118,7 @@ export function formatSingleWorkshopInfo(w: any, conf: any): string {
     ``,
     `Conference: ${confFull}`,
     `Edition: ${w.year}`,
-    `Generated: ${genDate}`,
+    `Data snapshot: ${genDate}`,
     ``,
     `---`
   ].join('\n');

@@ -54,7 +54,7 @@ check('formatWorkshop includes abstract deadline', output, '- **Abstract Deadlin
 check('formatWorkshop formats bold Submission Deadline', output, '- **Submission Deadline:** Aug 29, 2026 23:59 UTC');
 check('formatWorkshop formats bold Website link', output, '- **Website:** [https://example.com/ws](https://example.com/ws)');
 check('formatWorkshop formats bold OpenReview link', output, '- **OpenReview:** [https://openreview.net/group?id=NeurIPS.cc/2026/Workshop/ER](https://openreview.net/group?id=NeurIPS.cc/2026/Workshop/ER)');
-check('formatWorkshop formats Deadline History', output, '**Deadline History:** Extended by 5 days (previously Aug 24, 2026 23:59 UTC)');
+check('formatWorkshop formats Deadline History as a list item', output, '- **Deadline History:** Extended by 5 days (previously Aug 24, 2026 23:59 UTC)');
 check('formatWorkshop excludes auto-suggested maintenance notes from Description', output.includes('Description'), false);
 
 // 3. Test custom notes inclusion
@@ -75,6 +75,8 @@ check('formatConferenceYear contains Total Workshops count', confOutput, 'Total 
 const singleOutput = formatSingleWorkshopInfo(sampleWs, confObj);
 check('formatSingleWorkshopInfo contains single workshop header', singleOutput, '# Efficient Reasoning Workshop');
 check('formatSingleWorkshopInfo contains Conference field', singleOutput, 'Conference: Neural Information Processing Systems');
+check('formatSingleWorkshopInfo labels the build-time date as a data snapshot', singleOutput, `Data snapshot: ${new Date().toISOString().split('T')[0]}`);
+check('formatSingleWorkshopInfo does not call the build-time date Generated', singleOutput.includes('\nGenerated:'), false);
 
 if (failed > 0) {
   console.error(`\nTest suite failed with ${failed} failure(s).`);
