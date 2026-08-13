@@ -208,6 +208,10 @@
         },
         "website": {
           "type": "string"
+        },
+        "submission_deadline": {
+          "type": "string",
+          "description": "An OpenReview deadline value reviewed and deliberately not adopted (typically an earlier move you judged wrong or irrelevant). Compared as an instant, so formatting differences don't matter."
         }
       },
       "description": "Optional. Records an OpenReview value that was reviewed and deliberately NOT adopted, so the weekly review stops reporting it. Stores the rejected VALUE rather than a blanket mute: if OpenReview later changes to something different, it is reported again. Set by a human after a review decision."

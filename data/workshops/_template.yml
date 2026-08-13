@@ -50,3 +50,4 @@ added: ""                      # "YYYY-MM-DD" (date this entry was added)
 # review_ack:
 #   name: "The OpenReview title you declined"
 #   website: "https://the-openreview-url-you-declined.example"
+#   submission_deadline: "2026-08-07 20:59"   # a deadline move you reviewed and declined

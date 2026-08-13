@@ -165,5 +165,15 @@ check('a different later acronym re-flags', acronymDrift('OURS', 'NEWONE', 'THEI
 // An acknowledgement never hides a value we DO match, and never invents drift.
 check('ack is irrelevant when we already agree', titleDrift('Same Title', 'Same Title', 'iros', 'Whatever'), null);
 
+// A declined DEADLINE behaves the same way: quiet while unchanged, reported again
+// if OpenReview moves it somewhere new. (Suppression lives in the run loop, which
+// compares instants, so these assert the contract the loop relies on.)
+{
+  const acked = '2026-08-07 20:59';
+  const asMs = (v) => Date.parse(v.replace(' ', 'T') + 'Z');
+  check('acked deadline matches an equal instant', asMs(acked) === asMs('2026-08-07 20:59'), true);
+  check('a different later deadline does not match', asMs(acked) === asMs('2026-08-05 10:00'), false);
+}
+
 console.log(failed === 0 ? '\nDeadline cross-check logic OK.' : `\n${failed} test(s) failed.`);
 process.exit(failed === 0 ? 0 : 1);

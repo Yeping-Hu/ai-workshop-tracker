@@ -459,6 +459,13 @@ async function main() {
     checked++;
     const storedMs = resolveDeadlineUtcMs(raw.submission_deadline, raw.timezone || 'UTC');
     const fetchedMs = resolveDeadlineUtcMs(dl.submission_deadline, 'UTC');
+    // A deadline reviewed and declined stays quiet while OpenReview still says the
+    // same thing; a later, different value is reported again — same contract as the
+    // identity acknowledgements. Compared as an instant, so 'YYYY-MM-DD HH:mm'
+    // formatting differences never matter.
+    const ackedDeadline = raw.review_ack?.submission_deadline;
+    if (ackedDeadline && resolveDeadlineUtcMs(ackedDeadline, 'UTC') === fetchedMs) continue;
+
     const cat = reviewCategory({
       notes: raw.deadline_notes,
       storedValue: raw.submission_deadline,
