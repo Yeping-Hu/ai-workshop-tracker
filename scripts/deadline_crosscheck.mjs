@@ -237,10 +237,14 @@ export function normalizeVenueText(text, conference = '') {
  *  entries, so it is quiet enough to be worth a human's attention every week —
  *  MPLR-FM was retitled to "Privacy in the Era of Large Opaque Models" and only
  *  came to light because its website moved at the same time. */
-export function titleDrift(storedName, openreviewTitle, conference = '') {
+export function titleDrift(storedName, openreviewTitle, conference = '', acked = null) {
   const a = normalizeVenueText(storedName, conference);
   const b = normalizeVenueText(openreviewTitle, conference);
   if (!a || !b || a === b) return null;
+  // Already reviewed and declined? Stay quiet only while OpenReview still says
+  // the same thing. The acknowledgement records the VALUE that was rejected, not
+  // a blanket "ignore this entry", so a later, different rename is reported again.
+  if (acked && normalizeVenueText(acked, conference) === b) return null;
   return { stored: storedName, openreview: openreviewTitle };
 }
 
@@ -249,13 +253,14 @@ export function titleDrift(storedName, openreviewTitle, conference = '') {
  *  and comparing against those produced a 4.9% false-positive rate. So this only
  *  compares when the subtitle is acronym-shaped, which cuts it to zero across the
  *  dataset while still catching a real rename (MPLR-FM -> PriLOM). */
-export function acronymDrift(storedAcronym, openreviewSubtitle) {
+export function acronymDrift(storedAcronym, openreviewSubtitle, acked = null) {
   const sub = String(openreviewSubtitle ?? '').trim();
   if (!storedAcronym || !sub || /\s/.test(sub) || sub.length > 15) return null;
   const norm = (x) => String(x ?? '').split('@')[0].toLowerCase().replace(/[^a-z0-9]+/g, '');
   const a = norm(storedAcronym);
   const b = norm(sub);
   if (!a || !b || a === b) return null;
+  if (acked && norm(acked) === b) return null; // reviewed and declined, and unchanged since
   return { stored: storedAcronym, openreview: sub };
 }
 
@@ -264,10 +269,11 @@ export function acronymDrift(storedAcronym, openreviewSubtitle) {
  *  it alone, which protects a hand-picked URL but also means one that goes stale
  *  stays stale (IROS BEMHAT's stored site had been unpublished and redirected to
  *  a Google sign-in page). A human decides; ours is sometimes the better link. */
-export function websiteDrift(stored, openreview) {
+export function websiteDrift(stored, openreview, acked = null) {
   const a = normalizeWebsite(stored);
   const b = normalizeWebsite(openreview);
   if (!a || !b || a === b) return null;
+  if (acked && normalizeWebsite(acked) === b) return null; // reviewed and declined, and unchanged since
   return { stored, openreview };
 }
 
@@ -476,11 +482,12 @@ async function main() {
     if (!g) continue;
     const c = g.content ?? {};
     const meta = { slug: s2, file: f2, name: raw.name, conf: String(raw.conference || '').toUpperCase(), year: raw.year };
-    const wd = websiteDrift(raw.website, websiteFromContent(c));
+    const ack = raw.review_ack ?? {};
+    const wd = websiteDrift(raw.website, websiteFromContent(c), ack.website);
     if (wd) { drift.push({ ...meta, ...wd }); console.log(`•  WEBSITE   ${s2}: ours ${wd.stored} vs OpenReview ${wd.openreview}`); }
-    const td = titleDrift(raw.name, val(c, 'title'), raw.conference);
+    const td = titleDrift(raw.name, val(c, 'title'), raw.conference, ack.name);
     if (td) { renames.push({ ...meta, field: 'name', ...td }); console.log(`•  NAME      ${s2}: ours "${td.stored}" vs OpenReview "${td.openreview}"`); }
-    const ad = acronymDrift(raw.acronym, val(c, 'subtitle'));
+    const ad = acronymDrift(raw.acronym, val(c, 'subtitle'), ack.acronym);
     if (ad) { renames.push({ ...meta, field: 'acronym', ...ad }); console.log(`•  ACRONYM   ${s2}: ours "${ad.stored}" vs OpenReview "${ad.openreview}"`); }
   }
 

@@ -140,5 +140,30 @@ check('separator/case is not drift', acronymDrift('Dexterous_Manipulation', 'dex
 check('a real acronym change is reported', acronymDrift('MPLR-FM', 'PriLOM') !== null, true);
 check('no acronym stored -> nothing', acronymDrift(null, 'PriLOM'), null);
 
+console.log('— acknowledgements (review once, stay quiet, re-flag on a NEW change) —');
+
+// A declined rename stays quiet while OpenReview still says the same thing…
+check('acked title stays quiet', titleDrift('Ours: Full Title With Subtitle',
+  'Ours: Full Title', 'iros', 'Ours: Full Title'), null);
+// …but a LATER, different rename is reported again.
+check('a different later title re-flags', titleDrift('Ours: Full Title With Subtitle',
+  'Something Else Entirely', 'iros', 'Ours: Full Title') !== null, true);
+// Cosmetic churn in the acked value does not un-suppress it.
+check('acked title, cosmetic churn stays quiet', titleDrift('Ours: Full Title With Subtitle',
+  'ours:  full   title!', 'iros', 'Ours: Full Title'), null);
+
+check('acked website stays quiet',
+  websiteDrift('https://ours.example/', 'https://theirs.example/x', 'https://theirs.example/x'), null);
+check('a different later website re-flags',
+  websiteDrift('https://ours.example/', 'https://third.example/', 'https://theirs.example/x') !== null, true);
+check('acked website ignores trailing slash',
+  websiteDrift('https://ours.example/', 'https://theirs.example/x', 'https://theirs.example/x/'), null);
+
+check('acked acronym stays quiet', acronymDrift('OURS', 'THEIRS', 'THEIRS'), null);
+check('a different later acronym re-flags', acronymDrift('OURS', 'NEWONE', 'THEIRS') !== null, true);
+
+// An acknowledgement never hides a value we DO match, and never invents drift.
+check('ack is irrelevant when we already agree', titleDrift('Same Title', 'Same Title', 'iros', 'Whatever'), null);
+
 console.log(failed === 0 ? '\nDeadline cross-check logic OK.' : `\n${failed} test(s) failed.`);
 process.exit(failed === 0 ? 0 : 1);

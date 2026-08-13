@@ -44,3 +44,9 @@ organizers: []
 previous_editions: []          # - { year: 2025, website: "https://...", proceedings_url: "https://..." }
 notes: ""
 added: ""                      # "YYYY-MM-DD" (date this entry was added)
+# Records an OpenReview value you reviewed and chose NOT to adopt, so the weekly
+# review stops reporting it. It stores the rejected value, not a blanket mute: if
+# OpenReview changes to something different later, you are told again.
+# review_ack:
+#   name: "The OpenReview title you declined"
+#   website: "https://the-openreview-url-you-declined.example"
