@@ -10,5 +10,7 @@ timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/NPGML
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+notes: Topics were auto-suggested and may be imprecise — edits welcome. Kept our website over OpenReview's on review — The NeurIPS virtual page is stable for a concluded edition.
+added: '2026-06-10'
+review_ack:
+  website: https://newgraphperspectives.com/

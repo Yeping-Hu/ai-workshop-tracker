@@ -7,7 +7,9 @@ topics:
   - robotics
 openreview_venue_id: thecvf.com/ECCV/2026/Workshop/ODEWM
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
+notes: >-
+  Topics were auto-suggested and may be imprecise — edits welcome. Kept our submission deadline over OpenReview's on review — the invitation was edited to 2026-08-07 20:59 UTC 25 minutes after that
+  time had already passed, a retrospective close; our value is the deadline the bot recorded while the call was open.
 added: '2026-06-16'
 submission_deadline: 2026-08-08 21:59
 timezone: UTC
@@ -19,3 +21,5 @@ deadline_history:
   - value: 2026-08-08 21:59
     recorded: '2026-08-04'
     timezone: UTC
+review_ack:
+  submission_deadline: 2026-08-07 20:59

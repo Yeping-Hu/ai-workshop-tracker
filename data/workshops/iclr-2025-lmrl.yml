@@ -10,5 +10,7 @@ timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICLR.cc/2025/Workshop/LMRL
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+notes: Topics were auto-suggested and may be imprecise — edits welcome. Kept our website over OpenReview's on review — The ICLR virtual page is stable; the workshop domain is shared across editions.
+added: '2026-06-10'
+review_ack:
+  website: https://www.lmrl.org/

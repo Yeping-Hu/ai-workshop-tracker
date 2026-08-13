@@ -10,5 +10,7 @@ timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICLR.cc/2025/Workshop/NFAM
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+notes: Topics were auto-suggested and may be imprecise — edits welcome. Kept our website over OpenReview's on review — Kept the edition-specific site we curated over the one OpenReview lists.
+added: '2026-06-10'
+review_ack:
+  website: https://nfam.vizhub.ai/
