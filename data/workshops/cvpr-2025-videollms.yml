@@ -2,7 +2,6 @@ name: Workshop on Video Large Language Models at CVPR 2025
 acronym: VideoLLMs 2025
 conference: cvpr
 year: 2025
-website: https://www.crcv.ucf.edu/cvpr2025-vidllms-workshop/
 topics:
   - llms
   - vision
@@ -11,5 +10,9 @@ timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: thecvf.com/CVPR/2025/Workshop/VideoLLMs
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+notes: >-
+  Topics were auto-suggested and may be imprecise — edits welcome. Website removed on review — host stopped serving the page (https://www.crcv.ucf.edu/cvpr2025-vidllms-workshop/); the page now invites
+  a replacement instead of linking somewhere broken.
+added: '2026-06-10'
+review_ack:
+  website: https://www.crcv.ucf.edu/cvpr2025-vidllms-workshop/

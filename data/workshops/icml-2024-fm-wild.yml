@@ -2,7 +2,6 @@ name: ICML 2024 Workshop on Foundation Models in the Wild
 acronym: ICML 2024 FM-Wild Workshop
 conference: icml
 year: 2024
-website: https://icml-fm-wild.github.io/
 topics:
   - llms
 submission_deadline: 2024-06-08 12:29
@@ -10,5 +9,9 @@ timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICML.cc/2024/Workshop/FM-Wild
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+notes: >-
+  Topics were auto-suggested and may be imprecise — edits welcome. Website removed on review — GitHub Pages site removed (https://icml-fm-wild.github.io/); the page now invites a replacement instead
+  of linking somewhere broken.
+added: '2026-06-10'
+review_ack:
+  website: https://icml-fm-wild.github.io/

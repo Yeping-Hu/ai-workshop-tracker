@@ -2,7 +2,6 @@ name: ICML Workshop on Technical AI Governance (TAIG)
 acronym: ICML 2025 Workshop TAIG
 conference: icml
 year: 2025
-website: https://www.taig-icml.com/
 topics:
   - fairness
 submission_deadline: 2025-05-13 11:59
@@ -10,5 +9,9 @@ timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICML.cc/2025/Workshop/TAIG
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+notes: >-
+  Topics were auto-suggested and may be imprecise — edits welcome. Website removed on review — host stopped serving the page (https://www.taig-icml.com/); the page now invites a replacement instead of
+  linking somewhere broken.
+added: '2026-06-10'
+review_ack:
+  website: https://www.taig-icml.com/

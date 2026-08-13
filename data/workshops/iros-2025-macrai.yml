@@ -2,7 +2,6 @@ name: Multi-Agent Cooperative Systems and Swarm Robotics in the Era of Generativ
 acronym: MACRAI 2025
 conference: iros
 year: 2025
-website: https://macrai2025.github.io/
 topics:
   - systems
   - agents
@@ -12,5 +11,9 @@ timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: IEEE.org/IROS/2025/Workshop/MACRAI
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+notes: >-
+  Topics were auto-suggested and may be imprecise — edits welcome. Website removed on review — GitHub Pages site removed (https://macrai2025.github.io/); the page now invites a replacement instead of
+  linking somewhere broken.
+added: '2026-06-10'
+review_ack:
+  website: https://macrai2025.github.io/

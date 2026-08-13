@@ -2,7 +2,6 @@ name: ICLR 2024 Workshop on Reliable and Responsible Foundation Models
 acronym: ICLR 2024 R2-FM Workshop
 conference: iclr
 year: 2024
-website: https://iclr-r2fm.github.io/
 topics:
   - llms
   - fairness
@@ -11,5 +10,9 @@ timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICLR.cc/2024/Workshop/R2-FM
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+notes: >-
+  Topics were auto-suggested and may be imprecise — edits welcome. Website removed on review — GitHub Pages site removed (https://iclr-r2fm.github.io/); the page now invites a replacement instead of
+  linking somewhere broken.
+added: '2026-06-10'
+review_ack:
+  website: https://iclr-r2fm.github.io/

@@ -2,14 +2,17 @@ name: CVPR 2026 Video LLMs Workshop
 acronym: VidLLMs 2026
 conference: cvpr
 year: 2026
-website: https://www.crcv.ucf.edu/cvpr2026-vidllms-workshop/
 topics:
   - llms
   - vision
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/VidLLMs
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+notes: >-
+  Topics were auto-suggested and may be imprecise — edits welcome. Website removed on review — host stopped serving the page (https://www.crcv.ucf.edu/cvpr2026-vidllms-workshop/); the page now invites
+  a replacement instead of linking somewhere broken.
+added: '2026-06-10'
 submission_deadline: 2026-04-24 08:00
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-04-24 08:00 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.
+review_ack:
+  website: https://www.crcv.ucf.edu/cvpr2026-vidllms-workshop/
