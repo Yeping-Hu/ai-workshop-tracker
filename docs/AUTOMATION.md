@@ -27,7 +27,7 @@ for human review, as do dependency updates.
 | `resync-deadline.yml` | manual | Re-pull one workshop's deadline from OpenReview's duedate (either direction) |
 | `deadline-review.yml` | weekly | One consolidated issue listing deadlines that need a human decision Also reports a `website` that changed on OpenReview (reported, never applied). |
 | `stale-check.yml` | weekly | One consolidated issue listing entries needing follow-up |
-| `link-check.yml` | monthly | One consolidated issue listing broken URLs |
+| `link-check.yml` | monthly | One consolidated issue listing broken URLs Before running, `scripts/lychee_exclusions.mjs` appends every `review_ack.website` to `.lycheeignore`, so a URL deliberately removed as dead is not re-reported each month. |
 
 ## Every deadline write is logged
 

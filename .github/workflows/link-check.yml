@@ -16,6 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Exclude links we have deliberately declined
+        # review_ack.website URLs stay in the data so the importer cannot restore
+        # them; without this the links we just removed are reported broken again.
+        run: node scripts/lychee_exclusions.mjs >> .lycheeignore
       - name: Check links
         id: lychee
         uses: lycheeverse/lychee-action@v2

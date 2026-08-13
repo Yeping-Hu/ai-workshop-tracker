@@ -10,9 +10,7 @@ timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICLR.cc/2024/Workshop/TS4H
 submission_portal: openreview
-notes: >-
-  Topics were auto-suggested and may be imprecise — edits welcome. Website removed on review — GitHub Pages site removed (https://timeseriesforhealth.github.io/); the page now invites a replacement
-  instead of linking somewhere broken.
+notes: Topics were auto-suggested and may be imprecise — edits welcome. Website removed on review — GitHub Pages site removed; the page now invites a replacement instead of linking somewhere broken.
 added: '2026-06-10'
 review_ack:
   website: https://timeseriesforhealth.github.io/

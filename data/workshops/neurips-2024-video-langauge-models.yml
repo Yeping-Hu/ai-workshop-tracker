@@ -10,9 +10,7 @@ timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2024/Workshop/Video-Langauge_Models
 submission_portal: openreview
-notes: >-
-  Topics were auto-suggested and may be imprecise — edits welcome. Website removed on review — site removed (https://video-and-language-workshop-2024.webflow.io/); the page now invites a replacement
-  instead of linking somewhere broken.
+notes: Topics were auto-suggested and may be imprecise — edits welcome. Website removed on review — site removed; the page now invites a replacement instead of linking somewhere broken.
 added: '2026-06-10'
 review_ack:
   website: https://video-and-language-workshop-2024.webflow.io/
