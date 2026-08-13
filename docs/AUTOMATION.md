@@ -50,6 +50,23 @@ A job that only writes on change (the re-check) therefore logs only real moves; 
 no-op re-observation is discarded, so the log doesn't grow on unchanged entries.
 
 
+## The data jobs are serialised
+
+Every workflow that commits to `main` shares
+`concurrency: { group: data-write, cancel-in-progress: false }`, so they queue
+rather than overlap. They each check out `main`, compute, commit and push; if a
+sibling pushes in between, the push is rejected as a non-fast-forward and the job
+fails with its work computed but unpublished — which is exactly what happened when
+the re-check and the blank-fill were dispatched together. Queuing rather than
+cancelling matters: a cancelled run would silently skip a data write.
+
+Every push is also wrapped in a bounded rebase-retry (3 attempts, fetch and rebase
+between, backing off 5s then 10s), because the group can't prevent a move from
+outside it — a merge, an admin push, or a re-run. The crons are 30 minutes apart,
+but discovery can take ~35 minutes on a slow OpenReview day and a manual dispatch
+ignores the schedule entirely.
+
+
 ## What a new entry inherits automatically
 
 Nothing in this cycle's work needs hand-maintaining per workshop or per

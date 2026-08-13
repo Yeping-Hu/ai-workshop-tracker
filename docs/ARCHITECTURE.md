@@ -274,6 +274,17 @@ OpenReview-linked entry, not just the deadline-review window, since a rename
 matters whenever it happens; the listings are per conference-year, so that costs
 ~24 requests rather than one per entry.
 
+Deciding **against** OpenReview needs somewhere to live, or the same difference is
+reported every week forever. `review_ack` records the OpenReview *value* that was
+reviewed and declined — for a `name`, `acronym`, `website` or `submission_deadline`
+— and the check stays quiet only while OpenReview still says that. A later,
+different change is reported again, so this is an acknowledgement of one decision
+rather than a mute on the entry. Cosmetic churn in the declined value doesn't
+un-suppress it, since each check reuses its own normaliser (deadlines compare as
+instants). `notes` is free text nothing reads, so a decision written only there
+changes nothing — the pairing is deliberate: `notes` explains the call to a human,
+`review_ack` silences the report.
+
 Matching that precedence matters: on a two-stage venue the
 invitation's `duedate` is the *abstract* date while the stored headline is the
 paper deadline, so reading the invitation alone reported a phantom "moved earlier"
@@ -286,10 +297,14 @@ date line carries no deadline are fetched 40 invitation ids at a time. That took
 dropping ~5% of entries per run — a skipped entry is simply not reviewed that
 week, which is how a real change once went unreported. And an **on-demand
 re-sync** (`scripts/resync_deadline.mjs --slug <slug>`, also a
-`workflow_dispatch`) lets a maintainer re-pull one workshop's deadline straight
-from OpenReview's duedate in either direction, re-stamping it for future
-auto-sync — so fixing a stale or
-mistyped deadline never requires hand-typing a UTC time.
+`workflow_dispatch`) lets a maintainer re-pull one workshop's deadline from
+OpenReview in either direction, re-stamping it for future auto-sync — so fixing a
+stale or mistyped deadline never requires hand-typing a UTC time. It uses the same
+value precedence as everything else (group `date` line first, invitation as
+fallback) and syncs `abstract_deadline` alongside. Reading the invitation alone
+used to make it *fail* on venues that publish only on the date line — the very
+command the review issue prints — and to leave a two-stage venue advertising an
+abstract gate dated after its own paper deadline.
 
 OpenReview rate-limits bulk callers (HTTP 429), so the weekly run is tuned to
 stay under the limit: the submission-invitation duedate (a network call) is
@@ -329,6 +344,15 @@ and `parseGroupDeadline()` deliberately anchors on *Submission Deadline* so the
 stored headline is always the **paper** deadline — the last moment a submission can
 land. The earlier date is stored separately in `abstract_deadline` (always UTC),
 filled at import and kept current by the daily re-check.
+
+An abstract date only counts as a stage when it is at least an hour before the
+paper deadline. Organizers sometimes fill the field as a formality — NeurIPS
+EconML ended up with abstract 11:59 and paper 12:00 on the same day — and
+surfacing that would put an `ABSTRACT` countdown on the page that expires sixty
+seconds before the real one. Below the threshold the field is removed rather than
+stored, and the daily re-check applies the same rule, so a venue that collapses
+its two stages stops advertising one instead of having it re-added the next
+morning.
 
 The display rule exists to avoid a specific misreading. If the headline followed
 the abstract date, a workshop would show "closed" while papers were still being
