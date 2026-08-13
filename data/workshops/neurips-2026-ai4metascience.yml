@@ -7,8 +7,10 @@ topics:
   - other
 openreview_venue_id: NeurIPS.cc/2026/Workshop/AI4MetaScience
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
+notes: Topics were auto-suggested and may be imprecise — edits welcome. Kept our name over OpenReview's on review — The workshop site says "…Age of AI Scientists"; OpenReview truncates it.
 added: '2026-07-21'
 submission_deadline: 2026-08-30 11:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-08-30 11:59 UTC (as of 2026-07-28) — extensions on OpenReview are applied automatically; verify on the website.
+review_ack:
+  name: 'NeurIPS 2026 Workshop on AI for Meta‑Science: Scaling and Organizing Science in the Age of AI'

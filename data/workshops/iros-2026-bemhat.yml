@@ -8,7 +8,7 @@ topics:
   - theory
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/BEMHAT
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
+notes: Topics were auto-suggested and may be imprecise — edits welcome. Kept our name over OpenReview's on review — The workshop site carries the full subtitle; OpenReview truncates it.
 added: '2026-06-16'
 submission_deadline: 2026-08-25 12:00
 timezone: UTC
@@ -20,3 +20,5 @@ deadline_history:
   - value: 2026-08-25 12:00
     recorded: '2026-08-12'
     timezone: UTC
+review_ack:
+  name: Leveraging Behavioral Models in Human-Autonomy Teams (BEMHAT)
