@@ -31,11 +31,13 @@
 import fs from 'node:fs';
 import { listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
+export { normalizeWebsite } from './discover_openreview.mjs';
 import {
   deadlineFromInvitation,
   parseGroupDeadline,
   msToDeadline,
   websiteFromContent,
+  normalizeWebsite,
   syncedValue,
   LEGACY_IMPORT_NOTE,
 } from './discover_openreview.mjs';
@@ -207,16 +209,6 @@ export function isWithinReviewWindow(deadlineMs, nowMs, graceMs = REVIEW_PAST_GR
   return deadlineMs != null && deadlineMs >= nowMs - graceMs;
 }
 
-/** Compare two URLs ignoring differences that aren't worth a human's attention:
- *  scheme, a leading "www.", a trailing slash, and case. */
-export function normalizeWebsite(url) {
-  if (!url) return null;
-  const n = String(url).trim().toLowerCase()
-    .replace(/^https?:\/\//, '')
-    .replace(/^www\./, '')
-    .replace(/\/+$/, '');
-  return n || null;
-}
 
 /** Text of a venue name/title, reduced to what actually identifies it: case,
  *  punctuation, the conference token and the year are all dropped, because we

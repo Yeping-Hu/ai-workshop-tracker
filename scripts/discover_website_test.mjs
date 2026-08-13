@@ -10,7 +10,7 @@
  * import created the entry), so the refresh must read the venue's own field or
  * the website is never picked up without a human edit.
  */
-import { websiteFromContent } from './discover_openreview.mjs';
+import { websiteFromContent, normalizeWebsite } from './discover_openreview.mjs';
 
 let failed = 0;
 function check(label, got, expect) {
@@ -53,6 +53,18 @@ check('scheme with no host -> null', websiteFromContent({ website: 'https://' })
   const long = 'https://example.org/' + 'a'.repeat(600);
   check('capped at 500 chars', websiteFromContent({ website: long }).length, 500);
 }
+
+// A website deliberately removed must not be filled straight back in. The
+// importer compares OpenReview's value against `review_ack.website` using this
+// normaliser, so the suppression is value-specific: a DIFFERENT url still fills.
+{
+  const declined = 'https://icml-fm-wild.github.io/';
+  const blocks = (or) => normalizeWebsite(declined) === normalizeWebsite(or);
+  check('declined url is not re-added', blocks('https://icml-fm-wild.github.io/'), true);
+  check('declined url, trailing slash differs', blocks('https://icml-fm-wild.github.io'), true);
+  check('a different url is still filled', blocks('https://a-new-site.example/'), false);
+}
+
 
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nAll websiteFromContent checks passed.');
 process.exit(failed ? 1 : 0);

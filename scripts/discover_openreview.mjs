@@ -146,6 +146,17 @@ const val = (c, k) => {
  *  accept exactly the same shapes and can't drift apart. Returns null for a
  *  missing, blank, or non-URL value (organizers do occasionally type a bare
  *  hostname or an email address in there). */
+/** Compare two URLs ignoring differences that aren't worth a human's attention:
+ *  scheme, a leading "www.", a trailing slash, and case. */
+export function normalizeWebsite(url) {
+  if (!url) return null;
+  const n = String(url).trim().toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/\/+$/, '');
+  return n || null;
+}
+
 export function websiteFromContent(content) {
   const raw = String(val(content ?? {}, 'website') || '').trim();
   // Organizers occasionally put SEVERAL links in this one field (seen in the
@@ -531,7 +542,14 @@ async function main({ conf, year, dryRun }) {
         // blank forever and needed a human edit. Fill-only: a website already in
         // the file (human-added or earlier sync) is left alone.
         const ownWebsite = websiteFromContent(g.content ?? {});
-        if (!raw.website && ownWebsite) { raw.website = ownWebsite; changed = true; }
+        // Don't re-add a URL that was deliberately removed. `review_ack.website`
+        // records an OpenReview value reviewed and declined — including a dead
+        // link deleted so the page shows the "help us add it" prompt instead. It
+        // is value-specific: if OpenReview later publishes a DIFFERENT site, that
+        // one is filled in as normal.
+        const declinedWebsite = raw.review_ack?.website;
+        const declined = declinedWebsite && normalizeWebsite(declinedWebsite) === normalizeWebsite(ownWebsite);
+        if (!raw.website && ownWebsite && !declined) { raw.website = ownWebsite; changed = true; }
 
         let dl = !raw.submission_deadline ? await ensureDl() : null;
         let subWebsite = null, subTracks = [];
