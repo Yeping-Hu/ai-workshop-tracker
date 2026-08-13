@@ -2,7 +2,7 @@ name: Mechanistic Interpretability for Vision at CVPR 2025 (Non-proceedings Trac
 acronym: MIV at CVPR 2025 (Non-proceedings Track)
 conference: cvpr
 year: 2025
-website: https://sites.google.com/view/miv-cvpr2025/home
+website: https://sites.google.com/view/miv-cvpr2025
 topics:
   - interpretability
   - vision
