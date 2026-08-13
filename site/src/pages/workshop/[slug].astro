@@ -2,6 +2,8 @@
 import Base from '../../components/Base.astro';
 import { workshops, conferenceById, topicById, loadPaperCache } from '../../lib/data';
 import { href, REPO_URL, CALENDAR_ENABLED } from '../../lib/site';
+import MarkdownExport from '../../components/MarkdownExport.astro';
+import { formatSingleWorkshopInfo } from '../../lib/markdown';
 
 export function getStaticPaths() {
   return workshops.map((w) => ({ params: { slug: w.slug }, props: { w } }));
@@ -152,6 +154,7 @@ const breadcrumbLd = {
         {CALENDAR_ENABLED && w.deadlineUtcMs && <a href={href(`/feeds/ws-${w.slug}.ics`)}>Add deadline to calendar (.ics)</a>}
         <a href={href(`/conference/${w.conference}/`)}>See all {conf.name} workshops →</a>
         <a href={editUrl} rel="noopener">✎ Edit this entry</a>
+        <MarkdownExport content={formatSingleWorkshopInfo(w, conf)} variant="link" />
       </div>
       {isSeed && (
         <p class="seednote">

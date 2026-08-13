@@ -1,0 +1,139 @@
+---
+export interface Props {
+  content?: string;
+  exportUrl?: string;
+  filename?: string;
+  variant?: 'button' | 'link';
+}
+
+const { content, exportUrl, filename, variant = 'button' } = Astro.props;
+const encodedContent = content ? encodeURIComponent(content) : undefined;
+---
+
+{variant === 'link' ? (
+  <button type="button" class="btn-copy as-link markdown-export-btn" data-md={encodedContent} data-url={exportUrl}>
+    <span class="btn-text">📋 Copy as Markdown</span>
+  </button>
+) : (
+  <div class="markdown-export">
+    <button type="button" class="btn-copy markdown-export-btn" data-md={encodedContent} data-url={exportUrl}>
+      <span class="btn-text">📋 Copy as Markdown</span>
+    </button>
+
+    {exportUrl && filename ? (
+      <a href={exportUrl} download={filename} class="btn-download markdown-export-btn">
+        ⬇ Download .md
+      </a>
+    ) : filename && (
+      <button type="button" class="btn-download markdown-export-btn" data-filename={filename} data-md={encodedContent}>
+        ⬇ Download .md
+      </button>
+    )}
+  </div>
+)}
+
+<script>
+  document.addEventListener('click', async (e) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+
+    const copyBtn = target.closest('.btn-copy');
+    if (copyBtn) {
+      try {
+        let md = '';
+        const url = copyBtn.getAttribute('data-url');
+        const inlineData = copyBtn.getAttribute('data-md');
+
+        if (url) {
+          const res = await fetch(url);
+          md = await res.text();
+        } else if (inlineData) {
+          md = decodeURIComponent(inlineData);
+        }
+
+        if (!md) return;
+
+        await navigator.clipboard.writeText(md);
+
+        const textSpan = copyBtn.querySelector('.btn-text') || copyBtn;
+        const originalText = textSpan.textContent;
+        textSpan.textContent = '✓ Copied!';
+        (textSpan as HTMLElement).style.color = 'var(--accent, #10b981)';
+        setTimeout(() => {
+          textSpan.textContent = originalText;
+          (textSpan as HTMLElement).style.color = '';
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to copy: ', err);
+      }
+      return;
+    }
+
+    const dlBtn = target.closest('button.btn-download');
+    if (dlBtn) {
+      const md = decodeURIComponent(dlBtn.getAttribute('data-md') || '');
+      const filename = dlBtn.getAttribute('data-filename') || 'export.md';
+
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+
+      setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 1000);
+    }
+  });
+</script>
+
+<style>
+  .markdown-export {
+    display: flex;
+    gap: 0.5rem;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+  }
+  .markdown-export button,
+  .markdown-export a.btn-download {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    font-family: var(--font-body, inherit);
+    color: var(--ink, inherit);
+    background: var(--surface, transparent);
+    border: 1px solid var(--line, currentColor);
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+  }
+  .markdown-export button:hover,
+  .markdown-export a.btn-download:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  /* Link variant styles */
+  button.as-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+    font-family: inherit;
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  button.as-link:hover {
+    opacity: 0.8;
+  }
+</style>
