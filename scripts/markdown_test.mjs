@@ -4,6 +4,8 @@
  * Run: node scripts/markdown_test.mjs
  */
 import { formatWorkshop, formatConferenceYear, formatSingleWorkshopInfo, isAutoTopicsNote } from '../site/src/lib/markdown.ts';
+import { conferenceById, workshops } from '../site/src/lib/data.ts';
+import { GET as getConferenceExport, getStaticPaths as getConferenceExportPaths } from '../site/src/pages/exports/[export].md.ts';
 
 let failed = 0;
 function check(label, got, expect) {
@@ -77,6 +79,24 @@ check('formatSingleWorkshopInfo contains single workshop header', singleOutput, 
 check('formatSingleWorkshopInfo contains Conference field', singleOutput, 'Conference: Neural Information Processing Systems');
 check('formatSingleWorkshopInfo labels the build-time date as a data snapshot', singleOutput, `Data snapshot: ${new Date().toISOString().split('T')[0]}`);
 check('formatSingleWorkshopInfo does not call the build-time date Generated', singleOutput.includes('\nGenerated:'), false);
+
+// 6. Test build-time conference export route
+const exportPaths = getConferenceExportPaths();
+const expectedExportCount = new Set(workshops.map((w) => `${w.conference}-${w.year}`)).size;
+check('conference export route emits one path per conference-year', exportPaths.length, expectedExportCount);
+
+const neurips2026Path = exportPaths.find((path) => path.params.export === 'neurips-2026-workshops');
+check('conference export route includes NeurIPS 2026', Boolean(neurips2026Path), true);
+
+if (neurips2026Path) {
+  const response = await getConferenceExport({ params: neurips2026Path.params });
+  const markdown = await response.text();
+  const neurips = conferenceById.get('neurips');
+  check('conference export returns 200', response.status, 200);
+  check('conference export uses Markdown content type', response.headers.get('Content-Type'), 'text/markdown; charset=utf-8');
+  check('conference export contains the edition heading', markdown, `# ${neurips.full_name || neurips.name} 2026 Workshops`);
+  check('conference export contains workshop details', markdown, '## ');
+}
 
 if (failed > 0) {
   console.error(`\nTest suite failed with ${failed} failure(s).`);

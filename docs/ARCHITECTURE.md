@@ -507,6 +507,14 @@ single-stage venues), plus `next_stage_utc` and `next_stage_is_abstract` — the
 instant the site's countdown targets and which stage that is. `deadline_history`
 is intentionally *not* published yet; it is a site-internal derivation for now.
 
+## Build-time Markdown exports
+
+`/exports/<conference>-<year>-workshops.md` is regenerated on every deploy by
+`site/src/pages/exports/[export].md.ts`. Like the calendar feeds, the route uses
+`getStaticPaths()` to emit one static file per conference-year. Conference pages
+link directly to the generated file for downloads, and the Copy action fetches
+that same URL on demand; the Markdown payload is never embedded in page HTML.
+
 ## Contributors are validated by CI, not by a human
 
 Schema and sanity checks comment on PRs with exactly what to fix, and issue
