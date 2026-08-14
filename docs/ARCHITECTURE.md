@@ -445,6 +445,65 @@ Paper snapshots store a stable id (OpenReview forum id where available), the
 title, the workshop slug, and the exact PDF url when known. A pre-2026 snapshot
 shape (with a `url` field) still renders, so no migration is needed.
 
+## Email alerts (optional satellite)
+
+The one exception to "no backend" — and it is structured so that it stays an
+exception. A single Cloudflare Worker plus one D1 database (`alerts/`) offers a
+weekly digest, opt-in urgent deadline alerts, and cross-device syncing of the
+saved list. **The site does not depend on any of it.** The Worker *reads* the
+site's public `/api/workshops.json`; nothing flows the other way. Build with
+`PUBLIC_ALERTS_API` empty — every fork and PR preview does — and the signup
+component, the `<meta name="alerts-api">` tag, the sync code path and the
+component's CSS are all absent from the output. Deleting `alerts/` entirely
+leaves a site identical to the one before it existed.
+
+The decisions worth knowing before changing anything here:
+
+- **Actions, not Worker cron.** The daily diff and the Monday digest run in
+  `alerts.yml` alongside the rest of the automation fleet, so rendering hundreds
+  of emails never meets a Worker's CPU limit and a failure emails the maintainer
+  like every other job. The Action is stateless: every read and write goes
+  through the Worker's `/admin/*` endpoints, which means it never holds a
+  database credential, never holds the mail provider's key, and never mints a
+  subscriber token. It renders emails with `{{UNSUB_URL}}`/`{{MANAGE_URL}}`
+  placeholders and the Worker substitutes real per-recipient links at send time
+  — so a token cannot leak through a workflow log.
+- **Filters, not resolved lists.** A subscription stores conference ids and
+  topic ids, never a list of matching workshops, so a workshop announced next
+  month matches an existing subscription with no migration. Starred slugs are
+  stored separately and bypass the filter entirely.
+- **Signed tokens, no passwords.** Identity is an email address plus an
+  HMAC-signed token carrying a purpose and the subscriber's `nonce`. Purpose is
+  signed in, so a leaked unsubscribe link can only unsubscribe — it cannot read
+  or edit preferences. Rotating the nonce revokes every token ever issued for
+  that address at once, which is the entire revocation mechanism (there is no
+  session table). Manage tokens travel in the URL **fragment**, never the query
+  string, so they stay out of server logs and referrers.
+- **The shrink guard.** The daily diff aborts without writing if the live feed
+  is under 70% of the stored snapshot. A truncated fetch would otherwise read as
+  hundreds of workshops disappearing — and, on the next run, reappearing as
+  "newly announced" in everyone's inbox. Same paranoia as the importer's
+  later-only rule. A first run with no snapshot seeds silently for the same
+  reason.
+- **Change classification mirrors the site.** `alerts/diff.mjs` uses the same
+  `MIN_CHANGE_MS` threshold and the same `max(1, round(days))` rounding as
+  `deriveDeadlineChange`, and `alerts_diff_test.mjs` asserts the two agree on
+  concrete cases. Otherwise an email could announce an extension the board
+  suppresses.
+- **Union-merge, and its accepted limitation.** Hydrating the saved list from
+  the server only ever *adds*; removals propagate solely as explicit `remove`
+  operations. So a removal made on device A while offline can be resurrected by
+  device B's next hydrate. That is deliberate for v1: the alternative failure
+  (a hydrate race silently emptying someone's list) is far worse than a star
+  coming back, and tombstones are not worth the complexity here.
+- **No PII in the repo, ever.** Addresses live only in D1. The `events` and
+  `kv` tables hold workshop data only, which is why the Action can log slugs and
+  counts freely — and why it logs nothing else. Unsubscribing is a `DELETE`, not
+  a flag; there is no deactivated state to accumulate.
+
+The full operational picture — setup, secrets, dry runs, manual deletion,
+provider cutover — is in [ALERTS.md](ALERTS.md).
+
 ## External links open a new tab; internal navigation stays in place
 
 A single delegated, click-time handler in the base layout decides link targets

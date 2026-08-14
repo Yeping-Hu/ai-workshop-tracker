@@ -1,6 +1,6 @@
 ---
 import Base from '../components/Base.astro';
-import { REPO_URL, href } from '../lib/site';
+import { REPO_URL, ALERTS_API, href } from '../lib/site';
 ---
 
 <Base title="About" description="What the AI Workshop Tracker is, where the data comes from, and how it's maintained.">
@@ -60,6 +60,27 @@ import { REPO_URL, href } from '../lib/site';
       (localStorage). There's no account, no cookies, and nothing sent to a server, which also means
       the list doesn't follow you across devices and is erased if you clear this site's data.
     </p>
+    {ALERTS_API && (
+      <>
+        <h2>Email alerts &amp; your privacy</h2>
+        <p>
+          <a href={href('/alerts/')}>Email alerts</a> are entirely optional, and the site works the
+          same whether or not you use them. If you subscribe, we store your address, the
+          conferences and topics you picked, your starred items, and how often you want to hear
+          from us — nothing else. No password, no profile, no cookies for it, no third-party
+          sharing, and no tracking pixels or click-redirects in the emails, which means we
+          genuinely don't know whether you opened one.
+        </p>
+        <p>
+          You confirm by clicking a link before anything is ever sent, and
+          <strong> unsubscribing deletes your record</strong> rather than deactivating it — every
+          email has a one-click unsubscribe, and the
+          <a href={href('/alerts/manage/')}> manage page</a> has the same button plus a pause
+          option. Subscribing also lets your saved list follow you to another device; starring by
+          itself still never leaves your browser.
+        </p>
+      </>
+    )}
     {/* "Calendar feeds" — hidden for now. Remove this comment wrapper to restore.
     <h2>Calendar feeds</h2>
     <p>
