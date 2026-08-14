@@ -50,6 +50,24 @@ A job that only writes on change (the re-check) therefore logs only real moves; 
 no-op re-observation is discarded, so the log doesn't grow on unchanged entries.
 
 
+## A partial crawl fails loudly
+
+The discovery crawl runs each conference-year separately so one bad cycle — a
+throttled conference, a renamed venue — doesn't cost the other seventeen. It used
+to do that with `|| true`, which also swallowed real crashes: a missing import
+introduced on 2026-08-04 went unnoticed until 08-11, when the run finished **15 of
+18** cycles and still reported success. Failures are now collected, warned about
+per cycle, and the job fails at the end — *after* validating and publishing
+whatever the crawl did find, so a partial result still ships rather than being
+thrown away.
+
+The class of bug that hid there is also checked directly now:
+`scripts/imports_test.mjs` (run in `validate.yml`) fails if a module calls one of
+our own exported helpers without importing it. That mistake only throws when the
+calling branch runs, which for discovery meant "the first time a workshop's
+deadline appears on OpenReview" — rare enough to stay green for a week.
+
+
 ## The data jobs are serialised
 
 Every workflow that commits to `main` shares

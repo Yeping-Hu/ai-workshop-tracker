@@ -38,19 +38,33 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Discover venues (current + next year, all conferences)
+        id: crawl
         env:
           DEADLINE_CHANGELOG: ${{ github.workspace }}/.deadline-changes.md
         run: |
           Y=$(date -u +%Y)
+          failed=""
           for c in icml iclr neurips icra iros cvpr corl colm eccv; do
             for y in "$Y" "$((Y + 1))"; do
-              node scripts/discover_openreview.mjs --conf "$c" --year "$y" || true
+              # One bad cycle must not abort the crawl — a throttled or renamed
+              # conference shouldn't cost the other seventeen. But it must not be
+              # silent either: `|| true` alone hid a crash from 2026-08-04 to
+              # 08-11, during which the 08-11 run finished 15 of 18 cycles and
+              # still reported green. Collect the failures and fail at the end.
+              if ! node scripts/discover_openreview.mjs --conf "$c" --year "$y"; then
+                echo "::warning::discovery failed for $c $y — remaining venues in that cycle were skipped"
+                failed="$failed $c-$y"
+              fi
               # Space conferences out so OpenReview's rate budget recovers between
               # them — otherwise the burst from the first conference throttles the
               # rest and only it gets processed.
               sleep 20
             done
           done
+          if [ -n "$failed" ]; then
+            echo "failed_cycles=$failed" >> "$GITHUB_OUTPUT"
+            echo "::error::discovery did not complete for:$failed"
+          fi
       - name: Validate
         run: node scripts/validate.mjs
       # Validation passed above — publish directly. A failed validation fails
@@ -95,3 +109,12 @@ jobs:
           # Pushes made with GITHUB_TOKEN don't trigger on:push workflows,
           # so kick the deploy explicitly.
           gh workflow run deploy.yml --ref main
+
+      # Runs last on purpose: whatever the crawl did find is validated and
+      # published above, then the job goes red so a partial crawl is visible
+      # instead of passing as green.
+      - name: Fail if any conference-year did not complete
+        if: steps.crawl.outputs.failed_cycles != ''
+        run: |
+          echo "Discovery skipped venues in:${{ steps.crawl.outputs.failed_cycles }}"
+          exit 1
