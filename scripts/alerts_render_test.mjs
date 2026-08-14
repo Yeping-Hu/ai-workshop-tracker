@@ -1,0 +1,241 @@
+#!/usr/bin/env node
+/**
+ * Tests for alerts/render.mjs — the four email templates.
+ *
+ * What these pin, and why each one matters more than it looks:
+ *
+ *   - **An empty digest renders null.** A weekly "nothing happened this week"
+ *     email is precisely how a useful list turns into a muted one. The renderer
+ *     returning null is what makes "empty weeks send nothing" true; a caller
+ *     can't skip a subscriber it was never told to skip.
+ *   - **Every bulk email carries an unsubscribe link in the body** (Gmail and
+ *     Yahoo's bulk-sender rules require it alongside the RFC 8058 headers), and
+ *     **every message has a plaintext part** — an HTML-only send is a spam
+ *     signal on its own.
+ *   - **The accuracy caveat is present**, because the whole dataset is
+ *     "when we observed a value", never "when organizers changed it", and an
+ *     email is the one surface a reader sees without the site's own framing.
+ *   - **Section caps hold**, so a busy deadline week can't produce a 200-item
+ *     wall of text.
+ *   - **"And N more" links use display labels, not ids** — the site's URL
+ *     facets are label-based (see index.astro), so an id-based link silently
+ *     lands on an empty result page.
+ *
+ * Pure logic — no network. Run: node scripts/alerts_render_test.mjs
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  renderDigest,
+  renderUrgent,
+  renderConfirm,
+  renderMagic,
+  facetUrl,
+  fmtUtc,
+  hoursUntil,
+  UNSUB_PLACEHOLDER,
+  MANAGE_PLACEHOLDER,
+  FOOTER_CAVEAT,
+} from '../alerts/render.mjs';
+import { SECTION_CAP } from '../alerts/config.mjs';
+import { normalizeSubscriber } from '../alerts/match.mjs';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ids = JSON.parse(fs.readFileSync(path.join(ROOT, 'alerts', 'ids.json'), 'utf8'));
+
+let failed = 0;
+function check(label, ok, detail = '') {
+  if (!ok) failed++;
+  console.log(`${ok ? '✓' : '✗'} ${label}${ok || !detail ? '' : `  (${detail})`}`);
+}
+
+const NOW = Date.parse('2026-08-14T00:00:00Z');
+const iso = (days, h = 12) => new Date(NOW + days * 86_400_000 + h * 3_600_000).toISOString();
+
+const ws = (slug, over = {}) => ({
+  slug,
+  name: `The ${slug} Workshop`,
+  acronym: slug.split('-').pop().toUpperCase(),
+  conference: 'neurips',
+  year: 2026,
+  topics: ['llms'],
+  status: 'upcoming',
+  status_label: 'Open call',
+  deadline_utc: null,
+  abstract_deadline_utc: null,
+  next_stage_utc: null,
+  next_stage_is_abstract: false,
+  website: 'https://example.com/ws',
+  ...over,
+});
+
+const sub = (over = {}) =>
+  normalizeSubscriber({ email: 'a@example.com', nonce: 'n', cadence: 'weekly', confirmed_at: 'x', ...over });
+
+/* ------------------------------------------------------------- date helpers */
+{
+  check('fmtUtc renders an unambiguous UTC stamp',
+    fmtUtc('2026-09-01T23:59:00.000Z') === '1 Sep 2026, 23:59 UTC', fmtUtc('2026-09-01T23:59:00.000Z'));
+  check('fmtUtc tolerates garbage', fmtUtc('not-a-date') === '');
+  check('hoursUntil floors', hoursUntil(iso(0, 5.9), NOW) === 5, String(hoursUntil(iso(0, 5.9), NOW)));
+  check('hoursUntil never goes negative', hoursUntil(iso(-3), NOW) === 0);
+}
+
+/* ------------------------------------------------- empty digest -> skip (null) */
+{
+  const out = renderDigest({ sub: sub(), events: [], workshops: {}, nowMs: NOW, ids });
+  check('a digest with nothing in any section renders null', out === null);
+
+  // Events exist, but for a workshop that is no longer in the dataset, and
+  // nothing is closing: still nothing honest to say.
+  const orphan = renderDigest({
+    sub: sub(),
+    events: [{ slug: 'vanished', kind: 'extended', days: 2, new_utc: iso(20) }],
+    workshops: {},
+    nowMs: NOW,
+    ids,
+  });
+  check('events with no matching workshop still render null', orphan === null);
+
+  // A far-future deadline is not "closing this week" and must not resurrect it.
+  const far = renderDigest({
+    sub: sub(),
+    events: [],
+    workshops: { a: ws('a', { deadline_utc: iso(60), next_stage_utc: iso(60) }) },
+    nowMs: NOW,
+    ids,
+  });
+  check('a deadline 60 days out does not make a digest', far === null);
+}
+
+/* -------------------------------------------------------------- full digest */
+{
+  const workshops = {
+    'neurips-2026-alpha': ws('neurips-2026-alpha', { deadline_utc: iso(30), next_stage_utc: iso(30) }),
+    'neurips-2026-beta': ws('neurips-2026-beta', { deadline_utc: iso(3), next_stage_utc: iso(3) }),
+    'neurips-2026-gamma': ws('neurips-2026-gamma', { deadline_utc: iso(2), next_stage_utc: iso(1), next_stage_is_abstract: true }),
+    'cvpr-2026-old': ws('cvpr-2026-old', { conference: 'cvpr', status: 'past', deadline_utc: iso(-40) }),
+  };
+  const events = [
+    { slug: 'neurips-2026-alpha', kind: 'extended', days: 5, old_utc: iso(25), new_utc: iso(30) },
+    { slug: 'neurips-2026-beta', kind: 'deadline_announced', days: null, old_utc: null, new_utc: iso(3) },
+    { slug: 'cvpr-2026-old', kind: 'announced', days: null, old_utc: null, new_utc: iso(-40) },
+  ];
+  const s = sub({ starred_ws: '["neurips-2026-gamma"]' });
+  const out = renderDigest({ sub: s, events, workshops, nowMs: NOW, ids });
+
+  check('a populated digest renders', !!out);
+  // Two change events (an extension and a first-published deadline), and zero
+  // *new* workshops that aren't already Past — so the "new workshops" clause is
+  // dropped entirely rather than rendered as "0 new workshops".
+  check('the subject counts changes and drops zero clauses',
+    /^2 deadline changes in your areas — AI Workshop Tracker$/.test(out.subject), out.subject);
+  check('an extension is described with its day count', /Extended 5 days/.test(out.html));
+  check('a newly published deadline is described', /Deadline just announced/.test(out.html));
+  check('a workshop announced but already Past is not listed as new',
+    !/Newly announced/.test(out.html));
+  check('items link to the workshop page',
+    out.html.includes('https://aiworkshoptracker.com/workshop/neurips-2026-alpha/'));
+  check('the starred section is present', /Your starred/.test(out.html));
+  check('a starred item is marked with a star', out.html.includes('★'));
+  check('an abstract stage is labelled', /\(abstract\)/.test(out.html));
+  check('the closing-soon section lists the imminent workshops',
+    /Closing in the next 7 days/.test(out.html));
+
+  // Required on every bulk message. Under the placeholder design the renderer
+  // cannot emit a real URL — it holds no HMAC secret — so what it guarantees is
+  // the *placeholder*, and alerts/send.mjs guarantees the substitution. Both
+  // halves are pinned: here, and in scripts/alerts_send_test.mjs.
+  check('the HTML body contains the unsubscribe placeholder', out.html.includes(UNSUB_PLACEHOLDER));
+  check('the HTML body contains the manage placeholder', out.html.includes(MANAGE_PLACEHOLDER));
+  check('the plaintext part exists and is not HTML', out.text.length > 50 && !/<html/i.test(out.text));
+  check('the plaintext part also carries the unsubscribe link', out.text.includes(UNSUB_PLACEHOLDER));
+  check('the accuracy caveat is in the HTML', out.html.includes('Always confirm on the official workshop page'));
+  check('the accuracy caveat is in the plaintext', out.text.includes(FOOTER_CAVEAT));
+  check('no tracking pixel or remote image is embedded', !/<img/i.test(out.html));
+
+  // Real links can be substituted (what the Worker does at send time).
+  const real = renderDigest({
+    sub: s, events, workshops, nowMs: NOW, ids,
+    manageUrl: 'https://aiworkshoptracker.com/alerts/manage/#t=abc',
+    unsubUrl: 'https://api.example.com/unsubscribe?token=abc',
+  });
+  check('explicit links replace the placeholders',
+    real.html.includes('https://api.example.com/unsubscribe?token=abc') &&
+    !real.html.includes(UNSUB_PLACEHOLDER));
+}
+
+/* --------------------------------------------------------------- section cap */
+{
+  const workshops = {};
+  const events = [];
+  for (let i = 0; i < SECTION_CAP + 7; i++) {
+    const slug = `neurips-2026-w${i}`;
+    workshops[slug] = ws(slug, { deadline_utc: iso(30 + i), next_stage_utc: iso(30 + i) });
+    events.push({ slug, kind: 'extended', days: 2, old_utc: iso(28 + i), new_utc: iso(30 + i) });
+  }
+  const out = renderDigest({ sub: sub(), events, workshops, nowMs: NOW, ids });
+  const listed = (out.html.match(/<li /g) || []).length;
+  check(`at most SECTION_CAP (${SECTION_CAP}) items are listed`, listed === SECTION_CAP, String(listed));
+  check('the overflow is linked as "and N more"', /and 7 more →/.test(out.html));
+  check('the plaintext overflow line is present too', /and 7 more:/.test(out.text));
+}
+
+/* ---------------------------------------------- "and N more" uses labels, not ids */
+{
+  const s = sub({ conferences: '["neurips","cvpr"]', topics: '["llms"]' });
+  const url = facetUrl(s, ids);
+  check('facet links use conference display labels', url.includes('conference=NeurIPS%2CCVPR'), url);
+  check('facet links use topic display labels', url.includes('topic=Large+language+models'), url);
+  check('an unfiltered subscriber links to the plain homepage',
+    facetUrl(sub(), ids) === 'https://aiworkshoptracker.com/', facetUrl(sub(), ids));
+}
+
+/* -------------------------------------------------------------------- urgent */
+{
+  const items = [
+    ws('neurips-2026-soon', { deadline_utc: iso(2, 6), next_stage_utc: iso(2, 6) }),
+    ws('neurips-2026-sooner', { deadline_utc: iso(0, 20), next_stage_utc: iso(0, 20), acronym: 'SOON' }),
+  ];
+  const out = renderUrgent({ sub: sub(), items, nowMs: NOW, ids });
+  check('an urgent alert renders', !!out);
+  check('the subject leads with the soonest workshop and its hours',
+    /^⏰ SOON deadline in 20h — 14 Aug 2026 \(\+1 more\)$/.test(out.subject), out.subject);
+  check('all imminent workshops are in ONE message', out.html.includes('neurips-2026-soon') && out.html.includes('neurips-2026-sooner'));
+  check('the urgent email carries an unsubscribe placeholder', out.html.includes(UNSUB_PLACEHOLDER));
+  check('the urgent email carries a manage placeholder', out.html.includes(MANAGE_PLACEHOLDER));
+  check('the urgent plaintext carries both placeholders',
+    out.text.includes(UNSUB_PLACEHOLDER) && out.text.includes(MANAGE_PLACEHOLDER));
+  check('the urgent email has a plaintext part', out.text.includes('A starred deadline is close'));
+  check('the urgent email carries the accuracy caveat', out.text.includes(FOOTER_CAVEAT));
+  check('the urgent email links the official page', out.html.includes('https://example.com/ws'));
+  check('no items -> null', renderUrgent({ sub: sub(), items: [], nowMs: NOW, ids }) === null);
+
+  const single = renderUrgent({ sub: sub(), items: [items[0]], nowMs: NOW, ids });
+  check('a single-workshop subject has no "+N more" suffix', !/\+\d+ more/.test(single.subject), single.subject);
+}
+
+/* ------------------------------------------------------------- transactional */
+{
+  const confirm = renderConfirm({ confirmUrl: 'https://api.example.com/confirm?token=abc' });
+  check('the confirm email states the 48-hour expiry', /48 hours/.test(confirm.html));
+  check('the confirm email contains the link', confirm.html.includes('https://api.example.com/confirm?token=abc'));
+  check('the confirm email repeats the URL as text (clients that strip buttons)',
+    (confirm.html.match(/api\.example\.com\/confirm/g) || []).length >= 2);
+  check('the confirm email has a plaintext part', confirm.text.includes('https://api.example.com/confirm?token=abc'));
+  // Transactional: there is nothing to unsubscribe from until it is clicked,
+  // and offering one would let a scanner "unsubscribe" a pending signup.
+  check('the confirm email has no unsubscribe link', !confirm.text.includes('Unsubscribe:'));
+  check('the confirm email tells you what happens if you ignore it', /ignore this email/.test(confirm.text));
+
+  const magic = renderMagic({ magicUrl: 'https://aiworkshoptracker.com/alerts/manage/#t=xyz' });
+  check('the magic email states the 15-minute expiry', /15 minutes/.test(magic.html));
+  check('the magic email warns about unrequested links', /didn't request this/.test(magic.text));
+  check('the magic email has a plaintext part', magic.text.includes('#t=xyz'));
+  check('every template sets a subject',
+    [confirm, magic].every((m) => typeof m.subject === 'string' && m.subject.length > 5));
+}
+
+console.log(failed === 0 ? '\nRendering OK.' : `\n${failed} test(s) failed.`);
+process.exit(failed === 0 ? 0 : 1);
