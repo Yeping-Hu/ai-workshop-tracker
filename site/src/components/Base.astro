@@ -1,6 +1,6 @@
 ---
 import '../styles/global.css';
-import { SITE_NAME, SITE_TAGLINE, REPO_URL, CALENDAR_ENABLED, SUPPORT_URL, href } from '../lib/site';
+import { SITE_NAME, SITE_TAGLINE, REPO_URL, CALENDAR_ENABLED, SUPPORT_URL, ALERTS_API, href } from '../lib/site';
 import { conferences } from '../lib/data';
 
 interface Props {
@@ -32,6 +32,10 @@ const current = (p: string) =>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="build-id" content={BUILD_ID} />
+    {/* How the plain-JS favorites module reaches the alerts Worker's base URL
+        without importing Astro's env into a shared script. Absent (not empty)
+        when the feature is off, so `querySelector(...)` simply finds nothing. */}
+    {ALERTS_API && <meta name="alerts-api" content={ALERTS_API} />}
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
     {canonical && <link rel="canonical" href={canonical} />}

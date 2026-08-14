@@ -1,7 +1,8 @@
 ---
 import Base from '../components/Base.astro';
+import AlertsSignup from '../components/AlertsSignup.astro';
 import { conferences } from '../lib/data';
-import { href } from '../lib/site';
+import { ALERTS_API, href } from '../lib/site';
 
 // Conference id -> {name, color} so saved rows get the same badges as the
 // board. Tiny (~10 entries), embedded at build time.
@@ -18,7 +19,23 @@ const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.
     <p class="lede">
       Everything you've starred, with live deadlines — open calls first, soonest on top.
     </p>
+    {ALERTS_API && (
+      <p class="muted small saved-sync-line" id="savedSyncLine" hidden>
+        Synced as <strong id="savedSyncEmail"></strong> ·
+        <a href={href('/alerts/manage/')}>manage</a>
+      </p>
+    )}
   </section>
+
+  {/* Hidden once this device is linked — the sync line above replaces it. */}
+  {ALERTS_API && (
+    <div id="savedSignup">
+      <AlertsSignup
+        heading="Back up this list &amp; get deadline alerts"
+        blurb="Subscribing makes this list follow you to another device, and emails you when a starred deadline moves or approaches."
+      />
+    </div>
+  )}
 
   <section aria-labelledby="savedWsHead">
     <h2 id="savedWsHead">Workshops <span class="muted count" id="savedWsCount"></span></h2>
@@ -337,6 +354,29 @@ const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.
         if (n === 0) renderPapers();
       }
     });
+
+    /* ---------------- alerts sync banner ---------------- */
+    // favorites.js does the actual hydrate (union-merge from /me) on load and
+    // fires `awt:favs-changed {type:'sync'}` when it changes anything, which the
+    // handler above already re-renders on. All this does is say which account
+    // the list belongs to, and hide the signup box once it is redundant.
+    (() => {
+      let email = null;
+      let token = null;
+      try {
+        token = localStorage.getItem('awt-alerts-token');
+        email = localStorage.getItem('awt-alerts-email');
+      } catch {}
+      if (!token) return;
+      const signup = document.getElementById('savedSignup');
+      if (signup) signup.hidden = true;
+      const line = document.getElementById('savedSyncLine');
+      const who = document.getElementById('savedSyncEmail');
+      if (line && who) {
+        who.textContent = email || 'your subscription';
+        line.hidden = false;
+      }
+    })();
 
     renderWorkshops();
     renderPapers();
