@@ -1,0 +1,17 @@
+name: '1st NeurIPS Workshop on Agentic Web: Decentralized, Continually-Adapting Agent Ecosystems'
+acronym: NeurIPS Workshop on Agentic Web 2026
+conference: neurips
+year: 2026
+topics:
+  - agents
+submission_deadline: 2026-09-06 11:59
+timezone: UTC
+deadline_notes: OpenReview-synced 2026-09-06 11:59 UTC (as of 2026-08-14) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_history:
+  - value: 2026-09-06 11:59
+    recorded: '2026-08-14'
+    timezone: UTC
+openreview_venue_id: NeurIPS.cc/2026/Workshop/AgenticWeb
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-08-14'

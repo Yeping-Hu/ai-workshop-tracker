@@ -1,0 +1,19 @@
+name: ECCV 2026 Workshop on Privacy-Preserving Visual Localization and Mapping
+acronym: PPVLM
+conference: eccv
+year: 2026
+website: https://sites.google.com/view/ppvlm2026/home
+topics:
+  - vision
+  - privacy
+submission_deadline: 2026-08-13 18:00
+timezone: UTC
+deadline_notes: OpenReview-synced 2026-08-13 18:00 UTC (as of 2026-08-14) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_history:
+  - value: 2026-08-13 18:00
+    recorded: '2026-08-14'
+    timezone: UTC
+openreview_venue_id: thecvf.com/ECCV/2026/Workshop/PPVLM
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-08-14'

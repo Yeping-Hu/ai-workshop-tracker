@@ -1,0 +1,20 @@
+name: 'NeurIPS 2026 Workshop: Foundation Models for Temporal Systems  From Forecasting to World Modeling'
+acronym: FMTS 2026
+conference: neurips
+year: 2026
+website: https://fmts-workshop.github.io/
+topics:
+  - llms
+  - time-series
+  - systems
+submission_deadline: 2026-08-30 11:59
+timezone: UTC
+deadline_notes: OpenReview-synced 2026-08-30 11:59 UTC (as of 2026-08-14) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_history:
+  - value: 2026-08-30 11:59
+    recorded: '2026-08-14'
+    timezone: UTC
+openreview_venue_id: NeurIPS.cc/2026/Workshop/FMTS
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-08-14'
