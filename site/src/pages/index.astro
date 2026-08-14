@@ -1,6 +1,7 @@
 ---
 import Base from '../components/Base.astro';
 import WorkshopRow from '../components/WorkshopRow.astro';
+import AlertsSignup from '../components/AlertsSignup.astro';
 import {
   topics,
   workshops,
@@ -181,6 +182,10 @@ const datasetLd: Record<string, any> = {
         <a class="btn" href={`${REPO_URL}/issues/new?template=add-workshop.yml`}>Add a workshop</a>
       </span>
     </aside>
+
+    {/* Renders nothing unless PUBLIC_ALERTS_API is set at build time. */}
+    <AlertsSignup />
+
   </div>
 
   <script src="../scripts/board.js"></script>

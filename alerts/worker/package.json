@@ -1,0 +1,17 @@
+{
+  "name": "aiwt-alerts-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker backing the optional email-alerts satellite",
+  "scripts": {
+    "dev": "wrangler dev --env dev",
+    "deploy": "wrangler deploy",
+    "schema": "wrangler d1 execute aiwt-alerts --remote --file=./schema.sql",
+    "schema:local": "wrangler d1 execute aiwt-alerts --local --file=./schema.sql",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

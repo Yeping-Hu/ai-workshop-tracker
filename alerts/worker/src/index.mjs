@@ -1,0 +1,853 @@
+/**
+ * aiwt-alerts — the entire backend for email alerts.
+ *
+ * One Worker, one D1 database, no other infrastructure (decision D1). It is a
+ * strictly optional satellite: it *reads* the site's public
+ * /api/workshops.json and never writes to the repo. Delete it and the static
+ * site is unchanged.
+ *
+ * Three groups of endpoints:
+ *
+ *   browser  /subscribe /confirm /magic-link /me /update /sync /unsubscribe
+ *            CORS-locked to SITE_ORIGIN, Turnstile-gated where they can send
+ *            mail, and deliberately **neutral** in their responses — no
+ *            endpoint ever reveals whether an address is on the list.
+ *   webhook  /webhooks/resend — bounces and complaints suppress or delete.
+ *   admin    /admin/* — bearer ADMIN_TOKEN, called only by the GitHub Action.
+ *
+ * Why the Action talks to D1 only through /admin/*: the Resend key and the
+ * HMAC secret then live in exactly one place. The Action renders emails with
+ * placeholder links, and /admin/send mints each recipient's tokens as it
+ * hands the message to the provider — so a subscriber token never transits a
+ * workflow run or a log.
+ */
+
+import ids from '../../ids.json';
+import {
+  MAX_SUBSCRIBERS,
+  CONFIRM_TTL_S,
+  MAGIC_TTL_S,
+  RL_SUBSCRIBE_PER_IP_HOUR,
+  RL_MAGIC_PER_EMAIL_HOUR,
+  RL_NEW_SUBS_PER_DAY,
+  SEND_CHUNK,
+  EVENT_RETENTION_DAYS,
+} from '../../config.mjs';
+import {
+  mintToken,
+  verifyToken,
+  normalizeEmail,
+  isPlausibleEmail,
+  randomNonce,
+  sha256Hex,
+  constantTimeEqual,
+} from '../../tokens.mjs';
+import { renderConfirm, renderMagic } from '../../render.mjs';
+import { personalize, recipientState } from '../../send.mjs';
+import { consume, magicUsedBucket, MAGIC_USED_WINDOW_S } from '../../ratelimit.mjs';
+import { sendEmail, sendBatch } from './mail.mjs';
+
+const CONF_IDS = new Set(ids.conferences.map((c) => c.id));
+const TOPIC_IDS = new Set(ids.topics.map((t) => t.id));
+const CADENCES = new Set(['weekly', 'weekly_urgent', 'off']);
+
+/* --------------------------------------------------------------------- CORS */
+
+function allowedOrigins(env) {
+  const list = [env.SITE_ORIGIN];
+  // The Astro dev server, so the signup form can be exercised locally.
+  if (env.DEV) list.push('http://localhost:4321', 'http://127.0.0.1:4321');
+  return list;
+}
+
+function corsHeaders(request, env) {
+  const origin = request.headers.get('Origin');
+  if (!origin || !allowedOrigins(env).includes(origin)) return {};
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
+  };
+}
+
+const json = (body, { status = 200, request, env, extra = {} } = {}) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      ...(request ? corsHeaders(request, env) : {}),
+      ...extra,
+    },
+  });
+
+/** Errors are generic on purpose: never leak whether an address exists. */
+const fail = (request, env, status, code) => json({ ok: false, error: code }, { status, request, env });
+
+/* ------------------------------------------------------------- rate limiting */
+
+/**
+ * Increment a bucket and report whether the caller is still under the limit.
+ * Buckets expire by wall clock (`reset`), and the daily maintenance call sweeps
+ * the dead rows — so nothing accumulates and no IP is retained beyond an hour.
+ */
+async function rateLimit(env, bucket, limit, windowS) {
+  const nowS = Math.floor(Date.now() / 1000);
+  const row = await env.DB.prepare('SELECT count, reset FROM rl WHERE bucket = ?').bind(bucket).first();
+  const verdict = consume(row, { limit, windowS, nowS });
+
+  if (verdict.action === 'insert') {
+    await env.DB.prepare(
+      'INSERT INTO rl (bucket, count, reset) VALUES (?, 1, ?) ' +
+        'ON CONFLICT(bucket) DO UPDATE SET count = 1, reset = excluded.reset',
+    )
+      .bind(bucket, verdict.next.reset)
+      .run();
+  } else if (verdict.action === 'bump') {
+    await env.DB.prepare('UPDATE rl SET count = count + 1 WHERE bucket = ?').bind(bucket).run();
+  }
+  return verdict.allowed;
+}
+
+/** IPs are only ever stored hashed, salted with the HMAC secret, for an hour. */
+async function ipBucket(request, env, prefix) {
+  const ip = request.headers.get('CF-Connecting-IP') || '0.0.0.0';
+  const hash = (await sha256Hex(`${ip}|${env.HMAC_SECRET}`)).slice(0, 32);
+  return `${prefix}:${hash}:${Math.floor(Date.now() / 3_600_000)}`;
+}
+
+/* ---------------------------------------------------------------- Turnstile */
+
+/**
+ * Verify the Turnstile token server-side. Fails **closed**: a Worker deployed
+ * without TURNSTILE_SECRET refuses signups rather than becoming an open relay
+ * for confirmation emails to arbitrary addresses.
+ */
+async function verifyTurnstile(env, token, ip) {
+  if (!env.TURNSTILE_SECRET) return false;
+  if (!token) return false;
+  try {
+    const form = new FormData();
+    form.append('secret', env.TURNSTILE_SECRET);
+    form.append('response', token);
+    if (ip) form.append('remoteip', ip);
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body: form,
+    });
+    const body = await res.json();
+    return !!body.success;
+  } catch {
+    return false;
+  }
+}
+
+/* -------------------------------------------------------------------- utils */
+
+const nowIso = () => new Date().toISOString();
+const today = () => nowIso().slice(0, 10);
+
+/** Keep only ids that exist in the shipped vocabulary; dedupe; cap the length. */
+function cleanIds(list, allowed) {
+  if (!Array.isArray(list)) return [];
+  return [...new Set(list.filter((v) => typeof v === 'string' && allowed.has(v)))].slice(0, 100);
+}
+
+/** Slugs arrive from the browser, so they are shape-checked, not trusted. */
+function cleanSlugs(list) {
+  if (!Array.isArray(list)) return [];
+  return [...new Set(list.filter((s) => typeof s === 'string' && /^[a-z0-9][a-z0-9-]{2,120}$/.test(s)))].slice(0, 500);
+}
+
+/** Paper snapshots mirror favorites.js's localStorage shape, field for field. */
+function cleanPapers(list) {
+  if (!Array.isArray(list)) return [];
+  const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
+  const out = [];
+  const seen = new Set();
+  for (const p of list.slice(0, 1000)) {
+    if (!p || typeof p !== 'object') continue;
+    const id = str(p.id, 120);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const snap = { id, title: str(p.title, 500), ws: str(p.ws, 120), wsName: str(p.wsName, 300) };
+    if (typeof p.pdf === 'string') snap.pdf = p.pdf.slice(0, 500);
+    out.push(snap);
+  }
+  return out;
+}
+
+async function readJson(request) {
+  try {
+    const body = await request.json();
+    return body && typeof body === 'object' ? body : null;
+  } catch {
+    return null;
+  }
+}
+
+const getSubscriber = (env, email) =>
+  env.DB.prepare('SELECT * FROM subscribers WHERE email = ?').bind(email).first();
+
+/**
+ * Resolve a bearer token to a live subscriber row. Returns null for every
+ * failure mode — expired, wrong purpose, revoked nonce, deleted row — because
+ * the caller's response is identical in all of them.
+ */
+async function authSubscriber(request, env, purpose) {
+  const auth = request.headers.get('Authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  if (!token) return null;
+
+  let payload;
+  try {
+    payload = await verifyToken(token, env.HMAC_SECRET, { purpose });
+  } catch {
+    return null;
+  }
+  const row = await getSubscriber(env, payload.e);
+  if (!row || row.nonce !== payload.n) return null;
+  return { row, payload, token };
+}
+
+/** Delete a subscriber and everything keyed to them. The GDPR erasure path. */
+async function deleteSubscriber(env, email) {
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM subscribers WHERE email = ?').bind(email),
+    env.DB.prepare('DELETE FROM urgent_log WHERE email = ?').bind(email),
+  ]);
+}
+
+const redirect = (url) => new Response(null, { status: 302, headers: { Location: url, 'Cache-Control': 'no-store' } });
+
+/* ------------------------------------------------------- browser: /subscribe */
+
+async function handleSubscribe(request, env) {
+  const body = await readJson(request);
+  if (!body) return fail(request, env, 400, 'bad_request');
+
+  const ip = request.headers.get('CF-Connecting-IP') || '';
+  if (!(await verifyTurnstile(env, body.turnstile_token, ip))) {
+    return fail(request, env, 403, 'captcha_failed');
+  }
+
+  const email = normalizeEmail(body.email);
+  if (!isPlausibleEmail(email)) return fail(request, env, 400, 'invalid_email');
+
+  if (!(await rateLimit(env, await ipBucket(request, env, 'sub'), RL_SUBSCRIBE_PER_IP_HOUR, 3600))) {
+    return fail(request, env, 429, 'rate_limited');
+  }
+
+  const conferences = cleanIds(body.conferences, CONF_IDS);
+  const topics = cleanIds(body.topics, TOPIC_IDS);
+  const starred_ws = cleanSlugs(body.starred_ws);
+  const starred_papers = cleanPapers(body.starred_papers);
+  const cadence = CADENCES.has(body.cadence) && body.cadence !== 'off' ? body.cadence : 'weekly';
+
+  const existing = await getSubscriber(env, email);
+  const ts = nowIso();
+
+  // Every path from here answers with exactly this sentence. Any variation is
+  // an account-enumeration oracle: a prober who could tell "already subscribed"
+  // from "not subscribed" learns whether an address is on the list.
+  const NEUTRAL = json(
+    { ok: true, message: 'Check your inbox to confirm your subscription.' },
+    { request, env },
+  );
+
+  // Already confirmed. Two deliberate refusals here, both departing from
+  // plan §4.4's "update prefs only":
+  //
+  //   1. **No unauthenticated write.** /subscribe carries no token, so honoring
+  //      it would let anyone who knows an address silently reset that person's
+  //      conferences, topics and cadence. Preference changes require a manage
+  //      token; that is what /update is for.
+  //   2. **No distinguishable response**, per the enumeration rule above.
+  //
+  // The legitimate case — someone re-submitting the form to change what they
+  // get — is served by mailing a sign-in link instead, throttled on the same
+  // per-address bucket as /magic-link so this cannot become a mail amplifier.
+  if (existing && existing.confirmed_at) {
+    if (!existing.suppressed_at &&
+        (await rateLimit(env, `magic:${email}:${Math.floor(Date.now() / 3_600_000)}`, RL_MAGIC_PER_EMAIL_HOUR, 3600))) {
+      const token = await mintToken(
+        { email, nonce: existing.nonce, purpose: 'magic', ttlSeconds: MAGIC_TTL_S },
+        env.HMAC_SECRET,
+      );
+      const magicUrl = `${env.SITE_ORIGIN}/alerts/manage/#t=${encodeURIComponent(token)}`;
+      const mail = renderMagic({ magicUrl });
+      await sendEmail(env, { to: email, subject: mail.subject, html: mail.html, text: mail.text });
+    }
+    return NEUTRAL;
+  }
+
+  if (!existing) {
+    // Global daily brake, checked only on genuinely new addresses so a flood of
+    // repeat signups can't lock out real ones.
+    if (!(await rateLimit(env, `newsubs:${today()}`, RL_NEW_SUBS_PER_DAY, 86_400))) {
+      return fail(request, env, 429, 'rate_limited');
+    }
+    const { total } = (await env.DB.prepare('SELECT COUNT(*) AS total FROM subscribers').first()) ?? { total: 0 };
+    if (total >= MAX_SUBSCRIBERS) {
+      return json(
+        { ok: false, error: 'list_full', message: "The alert list is full right now — please try again in a while." },
+        { status: 200, request, env },
+      );
+    }
+    await env.DB.prepare(
+      'INSERT INTO subscribers (email, nonce, conferences, topics, starred_ws, starred_papers, cadence, created, updated) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    )
+      .bind(
+        email,
+        randomNonce(),
+        JSON.stringify(conferences),
+        JSON.stringify(topics),
+        JSON.stringify(starred_ws),
+        JSON.stringify(starred_papers),
+        cadence,
+        ts,
+        ts,
+      )
+      .run();
+  } else {
+    // Unconfirmed row: refresh the preferences and re-send the confirmation,
+    // rate-limited exactly like a magic link.
+    if (!(await rateLimit(env, `confirm:${email}:${Math.floor(Date.now() / 3_600_000)}`, RL_MAGIC_PER_EMAIL_HOUR, 3600))) {
+      return NEUTRAL;
+    }
+    await env.DB.prepare(
+      'UPDATE subscribers SET conferences = ?, topics = ?, starred_ws = ?, starred_papers = ?, cadence = ?, updated = ? WHERE email = ?',
+    )
+      .bind(
+        JSON.stringify(conferences),
+        JSON.stringify(topics),
+        JSON.stringify(starred_ws),
+        JSON.stringify(starred_papers),
+        cadence,
+        ts,
+        email,
+      )
+      .run();
+  }
+
+  const row = await getSubscriber(env, email);
+  const token = await mintToken(
+    { email, nonce: row.nonce, purpose: 'confirm', ttlSeconds: CONFIRM_TTL_S },
+    env.HMAC_SECRET,
+  );
+  const confirmUrl = `${new URL(request.url).origin}/confirm?token=${encodeURIComponent(token)}`;
+  const mail = renderConfirm({ confirmUrl });
+  await sendEmail(env, { to: email, subject: mail.subject, html: mail.html, text: mail.text });
+
+  // Neutral either way: a send failure must not tell a prober anything, and the
+  // subscriber can simply sign up again.
+  return NEUTRAL;
+}
+
+/* --------------------------------------------------------- browser: /confirm */
+
+async function handleConfirm(request, env) {
+  const token = new URL(request.url).searchParams.get('token') || '';
+  let payload;
+  try {
+    payload = await verifyToken(token, env.HMAC_SECRET, { purpose: 'confirm' });
+  } catch {
+    return redirect(`${env.SITE_ORIGIN}/alerts/error/?e=link`);
+  }
+  const row = await getSubscriber(env, payload.e);
+  if (!row || row.nonce !== payload.n) return redirect(`${env.SITE_ORIGIN}/alerts/error/?e=link`);
+
+  if (!row.confirmed_at) {
+    await env.DB.prepare('UPDATE subscribers SET confirmed_at = ?, updated = ? WHERE email = ?')
+      .bind(nowIso(), nowIso(), payload.e)
+      .run();
+  }
+
+  // The manage token rides in the URL **fragment**: fragments are never sent to
+  // a server, so it stays out of access logs, referrers and analytics. The
+  // static page reads it and stores it — that is what links this device.
+  const manage = await mintToken({ email: payload.e, nonce: row.nonce, purpose: 'manage' }, env.HMAC_SECRET);
+  return redirect(
+    `${env.SITE_ORIGIN}/alerts/confirmed/#t=${encodeURIComponent(manage)}&e=${encodeURIComponent(payload.e)}`,
+  );
+}
+
+/* ------------------------------------------------------ browser: /magic-link */
+
+async function handleMagicLink(request, env) {
+  const body = await readJson(request);
+  if (!body) return fail(request, env, 400, 'bad_request');
+
+  const ip = request.headers.get('CF-Connecting-IP') || '';
+  if (!(await verifyTurnstile(env, body.turnstile_token, ip))) {
+    return fail(request, env, 403, 'captcha_failed');
+  }
+
+  const email = normalizeEmail(body.email);
+  // Neutral response for every outcome below — invalid address, unknown
+  // address, rate-limited — so this endpoint cannot enumerate subscribers.
+  const neutral = json(
+    { ok: true, message: 'If that address is subscribed, a sign-in link is on its way.' },
+    { request, env },
+  );
+  if (!isPlausibleEmail(email)) return neutral;
+  if (!(await rateLimit(env, `magic:${email}:${Math.floor(Date.now() / 3_600_000)}`, RL_MAGIC_PER_EMAIL_HOUR, 3600))) {
+    return neutral;
+  }
+
+  const row = await getSubscriber(env, email);
+  if (row && row.confirmed_at && !row.suppressed_at) {
+    const token = await mintToken(
+      { email, nonce: row.nonce, purpose: 'magic', ttlSeconds: MAGIC_TTL_S },
+      env.HMAC_SECRET,
+    );
+    const magicUrl = `${env.SITE_ORIGIN}/alerts/manage/#t=${encodeURIComponent(token)}`;
+    const mail = renderMagic({ magicUrl });
+    await sendEmail(env, { to: email, subject: mail.subject, html: mail.html, text: mail.text });
+  }
+  return neutral;
+}
+
+/* -------------------------------------------------------------- browser: /me */
+
+/**
+ * A `magic` token is accepted here exactly once and exchanged for a `manage`
+ * token. Single use is enforced with a short-lived row in `rl` keyed by the
+ * token's hash — deliberately not by rotating the nonce, which would also
+ * unlink every other device the subscriber has already linked.
+ */
+async function handleMe(request, env) {
+  const auth = await authSubscriber(request, env, ['manage', 'magic']);
+  if (!auth) return fail(request, env, 401, 'unauthorized');
+  const { row, payload, token } = auth;
+
+  if (payload.p === 'magic') {
+    // Limit 1 = single use. The row expires with the token itself and is
+    // reclaimed by /admin/maintenance's sweep of expired `rl` rows.
+    const key = magicUsedBucket((await sha256Hex(token)).slice(0, 40));
+    const fresh = await rateLimit(env, key, 1, MAGIC_USED_WINDOW_S);
+    if (!fresh) return fail(request, env, 401, 'unauthorized');
+  }
+
+  const manage =
+    payload.p === 'magic'
+      ? await mintToken({ email: row.email, nonce: row.nonce, purpose: 'manage' }, env.HMAC_SECRET)
+      : null;
+  const unsub = await mintToken({ email: row.email, nonce: row.nonce, purpose: 'unsub' }, env.HMAC_SECRET);
+
+  return json(
+    {
+      ok: true,
+      email: row.email,
+      conferences: JSON.parse(row.conferences || '[]'),
+      topics: JSON.parse(row.topics || '[]'),
+      starred_ws: JSON.parse(row.starred_ws || '[]'),
+      starred_papers: JSON.parse(row.starred_papers || '[]'),
+      cadence: row.cadence,
+      confirmed: !!row.confirmed_at,
+      // Present only on the magic exchange; the page swaps it into localStorage.
+      ...(manage ? { manage_token: manage } : {}),
+      unsubscribe_url: `${new URL(request.url).origin}/unsubscribe?token=${encodeURIComponent(unsub)}`,
+    },
+    { request, env },
+  );
+}
+
+/* ---------------------------------------------------------- browser: /update */
+
+async function handleUpdate(request, env) {
+  const auth = await authSubscriber(request, env, 'manage');
+  if (!auth) return fail(request, env, 401, 'unauthorized');
+  const body = await readJson(request);
+  if (!body) return fail(request, env, 400, 'bad_request');
+
+  const conferences = cleanIds(body.conferences, CONF_IDS);
+  const topics = cleanIds(body.topics, TOPIC_IDS);
+  const cadence = CADENCES.has(body.cadence) ? body.cadence : auth.row.cadence;
+
+  await env.DB.prepare('UPDATE subscribers SET conferences = ?, topics = ?, cadence = ?, updated = ? WHERE email = ?')
+    .bind(JSON.stringify(conferences), JSON.stringify(topics), cadence, nowIso(), auth.row.email)
+    .run();
+  return json({ ok: true, conferences, topics, cadence }, { request, env });
+}
+
+/* ------------------------------------------------------------ browser: /sync */
+
+/**
+ * One starred item added or removed. Idempotent by construction: adding an
+ * existing slug and removing an absent one are both no-ops, which is what lets
+ * favorites.js fire these off and forget them.
+ */
+async function handleSync(request, env) {
+  const auth = await authSubscriber(request, env, 'manage');
+  if (!auth) return fail(request, env, 401, 'unauthorized');
+  const body = await readJson(request);
+  if (!body) return fail(request, env, 400, 'bad_request');
+
+  const { op, kind } = body;
+  if (!['add', 'remove'].includes(op) || !['ws', 'paper'].includes(kind)) {
+    return fail(request, env, 400, 'bad_request');
+  }
+
+  const col = kind === 'ws' ? 'starred_ws' : 'starred_papers';
+  const current = JSON.parse(auth.row[col] || '[]');
+  let next;
+
+  if (kind === 'ws') {
+    const [slug] = cleanSlugs([body.slug]);
+    if (!slug) return fail(request, env, 400, 'bad_request');
+    next = op === 'add' ? [...new Set([...current, slug])] : current.filter((s) => s !== slug);
+  } else {
+    const [paper] = cleanPapers([body.paper]);
+    // Removal only needs an id; adding needs the whole snapshot, since there is
+    // no papers API to re-fetch a title from later (see favorites.js).
+    const id = paper?.id || (typeof body.id === 'string' ? body.id.slice(0, 120) : '');
+    if (!id || (op === 'add' && !paper)) return fail(request, env, 400, 'bad_request');
+    next =
+      op === 'add'
+        ? [...current.filter((p) => p?.id !== id), paper].slice(-1000)
+        : current.filter((p) => p?.id !== id);
+  }
+
+  await env.DB.prepare(`UPDATE subscribers SET ${col} = ?, updated = ? WHERE email = ?`)
+    .bind(JSON.stringify(next), nowIso(), auth.row.email)
+    .run();
+  return json({ ok: true, count: next.length }, { request, env });
+}
+
+/* ----------------------------------------------------- browser: /unsubscribe */
+
+/**
+ * Unsubscribing **deletes the row** (decision D8) — the most privacy-friendly
+ * reading of "unsubscribe", and the GDPR erasure path. Local stars survive on
+ * the device; nothing about the site changes.
+ *
+ * POST is the RFC 8058 one-click target that mail clients call directly: no
+ * body parsing, no confirmation page, plain-text 200.
+ */
+async function handleUnsubscribe(request, env) {
+  const token = new URL(request.url).searchParams.get('token') || '';
+  const post = request.method === 'POST';
+
+  let payload = null;
+  try {
+    payload = await verifyToken(token, env.HMAC_SECRET, { purpose: ['unsub', 'manage'] });
+  } catch {
+    /* fall through to the neutral response below */
+  }
+
+  if (payload) {
+    const row = await getSubscriber(env, payload.e);
+    if (row && row.nonce === payload.n) await deleteSubscriber(env, payload.e);
+  }
+
+  // A one-click POST always reports success: mail clients show an error banner
+  // otherwise, and an already-deleted row means the goal is met either way.
+  if (post) {
+    return new Response('Unsubscribed.\n', {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+    });
+  }
+  return redirect(`${env.SITE_ORIGIN}/alerts/unsubscribed/`);
+}
+
+/* --------------------------------------------------------- webhook: /resend */
+
+/**
+ * Verify Resend's Svix-style webhook signature: HMAC-SHA256 over
+ * `<id>.<timestamp>.<body>` with the base64 secret that follows `whsec_`.
+ * The header can carry several space-separated `v1,<sig>` values during a
+ * secret rotation, so any match counts.
+ */
+async function verifyResendSignature(env, request, raw) {
+  const secret = env.RESEND_WEBHOOK_SECRET;
+  if (!secret) return false;
+  const id = request.headers.get('svix-id');
+  const ts = request.headers.get('svix-timestamp');
+  const sigHeader = request.headers.get('svix-signature');
+  if (!id || !ts || !sigHeader) return false;
+
+  // Reject replays of an old capture (5-minute tolerance, Svix's own default).
+  const age = Math.abs(Math.floor(Date.now() / 1000) - Number(ts));
+  if (!Number.isFinite(age) || age > 300) return false;
+
+  const keyBytes = Uint8Array.from(atob(secret.replace(/^whsec_/, '')), (c) => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${id}.${ts}.${raw}`)));
+  let expected = '';
+  for (const b of mac) expected += String.fromCharCode(b);
+  const expectedB64 = btoa(expected);
+
+  // The header can carry several space-separated `v1,<sig>` values during a
+  // secret rotation, so any match counts. Compared in constant time, like every
+  // other signature check here.
+  return sigHeader
+    .split(' ')
+    .map((part) => part.split(',')[1])
+    .some((sig) => sig && constantTimeEqual(sig, expectedB64));
+}
+
+async function handleResendWebhook(request, env) {
+  // Server-to-server only. A browser request carries an Origin header; the
+  // signature check below already makes forgery infeasible, but refusing
+  // browser origins outright keeps the rule uniform with /admin/* and removes
+  // the endpoint from anything a page could reach at all.
+  if (request.headers.get('Origin')) return new Response('forbidden', { status: 403 });
+
+  const raw = await request.text();
+  if (!(await verifyResendSignature(env, request, raw))) {
+    return new Response('bad signature', { status: 401 });
+  }
+
+  let evt;
+  try {
+    evt = JSON.parse(raw);
+  } catch {
+    return new Response('ok', { status: 200 });
+  }
+
+  const type = evt?.type;
+  const to = [].concat(evt?.data?.to ?? []).map(normalizeEmail).filter(Boolean);
+
+  for (const email of to) {
+    if (type === 'email.complained') {
+      // A spam complaint is the strongest possible "stop" — delete, don't
+      // suppress. Keeping the address on file after one would be indefensible.
+      await deleteSubscriber(env, email);
+    } else if (type === 'email.bounced' && (evt?.data?.bounce?.type ?? 'hard').toLowerCase() === 'hard') {
+      await env.DB.prepare('UPDATE subscribers SET suppressed_at = ?, updated = ? WHERE email = ?')
+        .bind(nowIso(), nowIso(), email)
+        .run();
+    }
+  }
+
+  // Always 200 for anything else: a webhook that 4xx's on unknown event types
+  // gets retried forever and eventually disabled by the provider.
+  return new Response('ok', { status: 200 });
+}
+
+/* ------------------------------------------------------------------- admin */
+
+function adminOk(request, env) {
+  // Admin endpoints are for the Action only. A browser request carries an
+  // Origin header; refusing those means a stolen token still can't be used
+  // from a page a subscriber was tricked into loading.
+  if (request.headers.get('Origin')) return false;
+  const auth = request.headers.get('Authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  // Constant-time: this is the one comparison standing between a guessed token
+  // and the entire subscriber list.
+  return !!env.ADMIN_TOKEN && !!token && constantTimeEqual(token, env.ADMIN_TOKEN);
+}
+
+async function handleAdmin(request, env, path) {
+  const url = new URL(request.url);
+  const method = request.method;
+
+  /* ---- subscribers ------------------------------------------------------ */
+  if (path === '/admin/subscribers' && method === 'GET') {
+    const { results } = await env.DB.prepare(
+      "SELECT email, nonce, conferences, topics, starred_ws, starred_papers, cadence, confirmed_at, suppressed_at " +
+        "FROM subscribers WHERE confirmed_at IS NOT NULL AND suppressed_at IS NULL AND cadence != 'off'",
+    ).all();
+    return json({ ok: true, subscribers: results ?? [] });
+  }
+
+  /* ---- snapshot --------------------------------------------------------- */
+  if (path === '/admin/kv/snapshot') {
+    if (method === 'GET') {
+      const row = await env.DB.prepare("SELECT v FROM kv WHERE k = 'snapshot'").first();
+      return json({ ok: true, snapshot: row ? JSON.parse(row.v) : null });
+    }
+    if (method === 'PUT') {
+      const body = await readJson(request);
+      if (!body?.snapshot) return json({ ok: false, error: 'bad_request' }, { status: 400 });
+      await env.DB.prepare(
+        "INSERT INTO kv (k, v) VALUES ('snapshot', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v",
+      )
+        .bind(JSON.stringify(body.snapshot))
+        .run();
+      return json({ ok: true });
+    }
+  }
+
+  /* ---- events ----------------------------------------------------------- */
+  if (path === '/admin/events' && method === 'POST') {
+    const body = await readJson(request);
+    const items = Array.isArray(body?.items) ? body.items : null;
+    if (!items) return json({ ok: false, error: 'bad_request' }, { status: 400 });
+    const observed = typeof body.observed === 'string' ? body.observed : today();
+
+    const stmt = env.DB.prepare(
+      'INSERT INTO events (observed, slug, kind, old_utc, new_utc, days) VALUES (?, ?, ?, ?, ?, ?)',
+    );
+    // D1 batches are limited; chunk so a busy day can't exceed the statement cap.
+    for (let i = 0; i < items.length; i += 50) {
+      const chunk = items
+        .slice(i, i + 50)
+        .map((e) => stmt.bind(e.observed || observed, e.slug, e.kind, e.old_utc ?? null, e.new_utc ?? null, e.days ?? null));
+      if (chunk.length) await env.DB.batch(chunk);
+    }
+    return json({ ok: true, inserted: items.length });
+  }
+
+  if (path === '/admin/events' && method === 'GET') {
+    const since = url.searchParams.get('since') || '1970-01-01';
+    const { results } = await env.DB.prepare(
+      'SELECT observed, slug, kind, old_utc, new_utc, days FROM events WHERE observed >= ? ORDER BY id',
+    )
+      .bind(since.slice(0, 10))
+      .all();
+    return json({ ok: true, events: results ?? [] });
+  }
+
+  /* ---- urgent dedupe ---------------------------------------------------- */
+  if (path === '/admin/urgent-filter' && method === 'POST') {
+    const body = await readJson(request);
+    const items = Array.isArray(body?.items) ? body.items : [];
+    const out = [];
+    for (const it of items) {
+      const hit = await env.DB.prepare(
+        'SELECT 1 AS x FROM urgent_log WHERE email = ? AND slug = ? AND deadline_utc = ?',
+      )
+        .bind(normalizeEmail(it.email), it.slug, it.deadline_utc)
+        .first();
+      if (!hit) out.push(it);
+    }
+    return json({ ok: true, items: out });
+  }
+
+  if (path === '/admin/urgent-log' && method === 'POST') {
+    const body = await readJson(request);
+    const items = Array.isArray(body?.items) ? body.items : [];
+    const stmt = env.DB.prepare(
+      'INSERT OR IGNORE INTO urgent_log (email, slug, deadline_utc, sent) VALUES (?, ?, ?, ?)',
+    );
+    for (let i = 0; i < items.length; i += 50) {
+      const chunk = items
+        .slice(i, i + 50)
+        .map((it) => stmt.bind(normalizeEmail(it.email), it.slug, it.deadline_utc, nowIso()));
+      if (chunk.length) await env.DB.batch(chunk);
+    }
+    return json({ ok: true, logged: items.length });
+  }
+
+  /* ---- send ------------------------------------------------------------- */
+  if (path === '/admin/send' && method === 'POST') {
+    const body = await readJson(request);
+    const messages = Array.isArray(body?.messages) ? body.messages : null;
+    if (!messages) return json({ ok: false, error: 'bad_request' }, { status: 400 });
+    if (messages.length > SEND_CHUNK) return json({ ok: false, error: 'too_many' }, { status: 400 });
+
+    const origin = url.origin;
+    const prepared = [];
+    const results = new Array(messages.length).fill(null);
+
+    for (let i = 0; i < messages.length; i++) {
+      const m = messages[i];
+      const email = normalizeEmail(m.to);
+      const row = await getSubscriber(env, email);
+
+      // Rendering happens minutes before sending, so honor an unsubscribe that
+      // landed in between — the whole reason tokens are minted here and not in
+      // the Action, which has no row to check.
+      const state = recipientState(row);
+      if (state !== 'ok') {
+        results[i] = { ok: false, error: state };
+        continue;
+      }
+
+      const unsubToken = await mintToken({ email, nonce: row.nonce, purpose: 'unsub' }, env.HMAC_SECRET);
+      const manageToken = await mintToken({ email, nonce: row.nonce, purpose: 'manage' }, env.HMAC_SECRET);
+      const unsubUrl = `${origin}/unsubscribe?token=${encodeURIComponent(unsubToken)}`;
+      const manageUrl = `${env.SITE_ORIGIN}/alerts/manage/#t=${encodeURIComponent(manageToken)}`;
+
+      // Substitute, then refuse anything still carrying a template placeholder
+      // or missing its unsubscribe link. Refusing is reported per-message; it is
+      // never a silent drop, and never a send.
+      const built = personalize({ to: email, subject: m.subject, html: m.html, text: m.text }, { unsubUrl, manageUrl });
+      if (!built.ok) {
+        console.error(`admin/send refused a message: ${built.error}`);
+        results[i] = { ok: false, error: built.error };
+        continue;
+      }
+
+      prepared.push({ index: i, message: built.message });
+    }
+
+    const sent = await sendBatch(env, prepared.map((p) => p.message));
+    prepared.forEach((p, k) => {
+      results[p.index] = sent[k] ?? { ok: false, error: 'no_result' };
+    });
+    return json({ ok: true, results });
+  }
+
+  /* ---- maintenance ------------------------------------------------------ */
+  if (path === '/admin/maintenance' && method === 'POST') {
+    const cutoff = new Date(Date.now() - EVENT_RETENTION_DAYS * 86_400_000).toISOString().slice(0, 10);
+    const rl = await env.DB.prepare('DELETE FROM rl WHERE reset <= ?').bind(Math.floor(Date.now() / 1000)).run();
+    const ev = await env.DB.prepare('DELETE FROM events WHERE observed < ?').bind(cutoff).run();
+    // Unconfirmed rows past the confirmation TTL are abandoned signups. Holding
+    // an unconfirmed address indefinitely is exactly what double opt-in exists
+    // to avoid, so they are deleted rather than kept.
+    const stale = new Date(Date.now() - CONFIRM_TTL_S * 1000).toISOString();
+    const un = await env.DB.prepare('DELETE FROM subscribers WHERE confirmed_at IS NULL AND created < ?')
+      .bind(stale)
+      .run();
+    return json({
+      ok: true,
+      rate_limit_rows: rl.meta?.changes ?? 0,
+      events_pruned: ev.meta?.changes ?? 0,
+      unconfirmed_pruned: un.meta?.changes ?? 0,
+    });
+  }
+
+  return json({ ok: false, error: 'not_found' }, { status: 404 });
+}
+
+/* ------------------------------------------------------------------ router */
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/\/+$/, '') || '/';
+    const method = request.method;
+
+    if (method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(request, env) });
+
+    try {
+      if (path.startsWith('/admin/')) {
+        if (!adminOk(request, env)) return json({ ok: false, error: 'unauthorized' }, { status: 401 });
+        return await handleAdmin(request, env, path);
+      }
+
+      if (path === '/webhooks/resend' && method === 'POST') return await handleResendWebhook(request, env);
+
+      if (path === '/subscribe' && method === 'POST') return await handleSubscribe(request, env);
+      if (path === '/confirm' && method === 'GET') return await handleConfirm(request, env);
+      if (path === '/magic-link' && method === 'POST') return await handleMagicLink(request, env);
+      if (path === '/me' && method === 'GET') return await handleMe(request, env);
+      if (path === '/update' && method === 'POST') return await handleUpdate(request, env);
+      if (path === '/sync' && method === 'POST') return await handleSync(request, env);
+      if (path === '/unsubscribe' && (method === 'GET' || method === 'POST')) {
+        return await handleUnsubscribe(request, env);
+      }
+
+      // Cheap liveness probe for the Action, and a sane response at the root.
+      if (path === '/' || path === '/health') {
+        return json({ ok: true, service: 'aiwt-alerts' }, { request, env });
+      }
+
+      return json({ ok: false, error: 'not_found' }, { status: 404, request, env });
+    } catch (err) {
+      // Error text can quote a query, and a query can carry an address, so the
+      // response says nothing. The stack still reaches `wrangler tail`.
+      console.error('alerts worker error', err?.stack || err?.message);
+      return json({ ok: false, error: 'server_error' }, { status: 500, request, env });
+    }
+  },
+};
