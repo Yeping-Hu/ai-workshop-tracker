@@ -37,7 +37,7 @@ interface Props {
 }
 const {
   heading = 'Get deadline alerts by email',
-  blurb = 'Deadline changes and new calls in the areas you pick — nothing in a quiet week.',
+  blurb = '',
   compact = false,
   tight = false,
   collapsed = false,
@@ -62,10 +62,10 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
     <summary class="alerts-summary">
       <span class="alerts-summary-mark" aria-hidden="true">✉</span>
       <span>{summary}</span>
-      <span class="alerts-summary-hint">extensions, new calls, and the workshops you saved</span>
+      <span class="alerts-summary-hint">workshop extensions, new calls, and more</span>
     </summary>
     <h2 id="alertsSignupHead">{heading}</h2>
-    <p class="muted small">{blurb}</p>
+    {blurb && <p class="muted small">{blurb}</p>}
 
     <form id="alertsForm" novalidate>
       <div class="alerts-row">
@@ -105,16 +105,11 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
         </details>
       </div>
 
-      <p class="muted small alerts-hint">
-        Pick nothing and you get everything — that's the default. Workshops you've
-        saved are always included, whatever you pick here.
-      </p>
-
       <fieldset class="alerts-cadence">
         <legend class="alerts-legend">What you hear about</legend>
         <label class="check">
           <input type="radio" name="scope" value="all" checked />
-          The conferences and topics above, plus anything I've saved
+          These conferences and topics, plus anything I've saved
         </label>
         <label class="check">
           <input type="radio" name="scope" value="starred" />
@@ -152,8 +147,8 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
       <p class="alerts-status" id="alertsStatus" role="status" aria-live="polite" hidden></p>
 
       <p class="muted small alerts-privacy">
-        You get only what you tick above, and nothing at all in a quiet week. Your address is stored
-        only to send these; one-click unsubscribe deletes it. Nothing is sold, no tracking pixels.
+        Nothing is sent in a quiet week. Your address is stored only to send these; one-click
+        unsubscribe deletes it. Nothing is sold, no tracking pixels.
       </p>
     </form>
   </details>
