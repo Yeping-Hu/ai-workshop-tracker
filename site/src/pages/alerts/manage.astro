@@ -208,6 +208,17 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
             } catch {}
           }
 
+          // Reconcile the saved list now that this device is linked. favorites.js
+          // runs the same merge on page load, but on THIS load it ran before the
+          // token existed, so without this a device linked by magic link would
+          // not sync until the next navigation — and anything starred here while
+          // signed out would sit unuploaded until then.
+          try {
+            await window.awtFavsSync?.();
+            const again = await fetch(`${ALERTS_API}/me`, { headers: { Authorization: `Bearer ${token}` } });
+            if (again.ok) me = await again.json();
+          } catch {}
+
           const prefs = $('prefsForm');
           $('prefsEmail').textContent = me.email || '';
           for (const box of prefs.querySelectorAll('input[name="conference"]')) {

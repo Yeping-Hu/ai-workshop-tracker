@@ -85,7 +85,11 @@ function syncOp(op, kind, payload) {
       body,
       keepalive: true, // survives a click that navigates away
     });
-  send().catch(() => send().catch(() => {}));
+  // Returns a promise that always resolves. Star toggles ignore it — the local
+  // write already succeeded and blocking the UI on the network would make an
+  // optional feature feel load-bearing. The reconcile awaits it, so a caller
+  // that then re-reads the server sees the upload rather than racing it.
+  return send().catch(() => send().catch(() => {}));
 }
 
 /**
@@ -129,9 +133,11 @@ async function hydrateFromServer() {
     // Push what the server has never seen. One request per kind rather than one
     // per item: /sync reads the row, modifies it and writes it back, so
     // concurrent single-item calls would race and silently drop all but the
-    // last. Fire-and-forget, like every other sync.
-    if (uploadWs.length) syncOp('add', 'ws', { slugs: uploadWs });
-    if (uploadPapers.length) syncOp('add', 'paper', { papers: uploadPapers });
+    // last. Awaited so a caller can trust the server afterwards.
+    const uploads = [];
+    if (uploadWs.length) uploads.push(syncOp('add', 'ws', { slugs: uploadWs }));
+    if (uploadPapers.length) uploads.push(syncOp('add', 'paper', { papers: uploadPapers }));
+    if (uploads.length) await Promise.all(uploads);
   } catch {
     /* offline or blocked — the local list is authoritative anyway */
   }
@@ -229,6 +235,11 @@ if (!window.__awtFavsInit) {
   // Dynamically rendered content (search results) calls this after injecting
   // star buttons so they pick up saved state.
   window.awtFavsHydrate = hydrate;
+  // The /alerts/ pages call this immediately after storing a token, so linking
+  // a device reconciles at once instead of waiting for the next page load.
+  // Exposed rather than reimplemented: a second copy of the merge is how the
+  // upload half went missing on the confirm page in the first place.
+  window.awtFavsSync = hydrateFromServer;
 
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-star-ws],[data-star-paper]');

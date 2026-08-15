@@ -81,24 +81,25 @@ const enabled = !!ALERTS_API;
           };
 
           try {
-            const res = await fetch(`${ALERTS_API}/me`, { headers: { Authorization: `Bearer ${token}` } });
-            if (!res.ok) throw new Error(String(res.status));
-            const me = await res.json();
+            // Delegate to favorites.js rather than merging here. It runs the
+            // same tested rule the rest of the site uses — union in BOTH
+            // directions, so anything starred on this device before signing up
+            // is uploaded rather than stranded. This page previously had its
+            // own copy that only pulled, which is exactly how that half went
+            // missing.
+            if (window.awtFavsSync) {
+              await window.awtFavsSync();
+            } else {
+              // favorites.js hasn't finished loading yet; it runs the same
+              // reconcile on init, so this page just reports what it finds.
+              await new Promise((r) => setTimeout(r, 400));
+              await window.awtFavsSync?.();
+            }
 
-            // Union-merge: server ∪ local. Never a subtraction.
-            const ws = [...new Set([...read(WS_KEY), ...(me.starred_ws || [])])];
-            const localPapers = read(P_KEY);
-            const byId = new Map(localPapers.map((p) => [p.id, p]));
-            for (const p of me.starred_papers || []) if (p && p.id && !byId.has(p.id)) byId.set(p.id, p);
-
-            localStorage.setItem(WS_KEY, JSON.stringify(ws));
-            localStorage.setItem(P_KEY, JSON.stringify([...byId.values()]));
-            window.awtFavsHydrate?.();
-
-            const n = ws.length + byId.size;
-            note.textContent = me.email
-              ? `Synced as ${me.email} — ${n} saved item${n === 1 ? '' : 's'} on this device.`
-              : 'This device is linked.';
+            const n = read(WS_KEY).length + read(P_KEY).length;
+            note.textContent = email
+              ? `Synced as ${email} — ${n} saved item${n === 1 ? '' : 's'} on this device.`
+              : `This device is linked — ${n} saved item${n === 1 ? '' : 's'}.`;
           } catch {
             // The subscription is confirmed regardless; only the sync failed.
             note.textContent = 'This device is linked. (Your saved list could not be fetched just now — it will sync later.)';

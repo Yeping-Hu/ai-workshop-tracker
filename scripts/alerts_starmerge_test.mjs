@@ -50,6 +50,46 @@ const paper = (id, over = {}) => ({ id, title: `Paper ${id}`, ws: 'neurips-2026-
   check('...and changes nothing locally', after.changedLocal === false);
 }
 
+/* -------------------- signing in on a phone that already has its own stars ----
+ * The realistic first-sign-in cases. Someone saves things on their phone with
+ * no account, then signs in; their phone's list may be a subset of the server's,
+ * overlap partially, or share nothing at all. In every case the result they
+ * expect is "everything I had, plus everything the account had", with the
+ * difference pushed up so the account gains what only the phone knew.
+ */
+{
+  // Subset: the phone's stars are all already on the account.
+  const sub = mergeStars({ localWs: ['a', 'b'], serverWs: ['a', 'b', 'c', 'd'] });
+  check('subset — phone ends up with the full account list', eqSet(sub.ws, ['a', 'b', 'c', 'd']));
+  check('subset — nothing needs uploading', sub.uploadWs.length === 0);
+  check('subset — the phone is told to rewrite locally', sub.changedLocal === true);
+
+  // Partial overlap: the common real case.
+  const part = mergeStars({ localWs: ['a', 'b', 'phone1', 'phone2'], serverWs: ['a', 'b', 'acct1'] });
+  check('partial overlap — the union is complete',
+    eqSet(part.ws, ['a', 'b', 'phone1', 'phone2', 'acct1']), JSON.stringify(part.ws));
+  check('partial overlap — only the phone-only items go up',
+    eqSet(part.uploadWs, ['phone1', 'phone2']), JSON.stringify(part.uploadWs));
+  check('partial overlap — shared items are not re-uploaded', !part.uploadWs.includes('a'));
+
+  // No overlap at all.
+  const none = mergeStars({ localWs: ['p1', 'p2'], serverWs: ['s1', 's2'] });
+  check('no overlap — the union has all four', eqSet(none.ws, ['p1', 'p2', 's1', 's2']));
+  check('no overlap — both phone items go up', eqSet(none.uploadWs, ['p1', 'p2']));
+  check('no overlap — the phone gains the account items', none.changedLocal === true);
+
+  // And each converges: after the upload, both sides hold the union.
+  for (const [label, r, server] of [
+    ['subset', sub, ['a', 'b', 'c', 'd']],
+    ['partial overlap', part, ['a', 'b', 'acct1', 'phone1', 'phone2']],
+    ['no overlap', none, ['s1', 's2', 'p1', 'p2']],
+  ]) {
+    const second = mergeStars({ localWs: r.ws, serverWs: server });
+    check(`${label} — a second sign-in is a no-op`,
+      second.uploadWs.length === 0 && second.changedLocal === false);
+  }
+}
+
 /* ------------------------------------------- the other direction: a new device */
 {
   const r = mergeStars({ localWs: [], serverWs: ['a', 'b', 'c'] });
