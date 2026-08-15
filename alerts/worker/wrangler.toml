@@ -21,10 +21,10 @@ compatibility_date = "2026-08-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "aiwt-alerts"
-# HUMAN: fill after `wrangler d1 create aiwt-alerts`. Deploys fail loudly until
-# this is a real id, which is the intended behavior — a Worker pointed at no
-# database would accept signups and drop them.
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+# Created 2026-08-14 with `wrangler d1 create aiwt-alerts` (region WNAM). This
+# is an identifier, not a credential — it is useless without an account token,
+# which is why it belongs in the repo.
+database_id = "0764b285-e878-4811-bd6a-42482a950bf1"
 
 [vars]
 SITE_ORIGIN = "https://aiworkshoptracker.com"

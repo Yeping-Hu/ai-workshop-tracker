@@ -9,6 +9,28 @@ The one-line summary: **the tracker does not depend on this.** Delete `alerts/`,
 the two alerts workflows and the `PUBLIC_ALERTS_API` build variable, and the
 site is exactly what it was.
 
+## Current deployment
+
+Provisioned 2026-08-14. None of these are secrets — the Turnstile *site* key and
+the Worker URL are both public by design, and a D1 database id is useless
+without an account credential.
+
+| | |
+|---|---|
+| Worker | `aiwt-alerts` → `https://aiwt-alerts.aiwt-alerts-worker.workers.dev` |
+| D1 database | `aiwt-alerts` (region WNAM), id in `alerts/worker/wrangler.toml` |
+| Turnstile widget | `aiworkshoptracker-alerts`, managed mode, hosts `aiworkshoptracker.com` + `localhost` |
+| Turnstile site key | `0x4AAAAAAEQVcjRzfH9U80a9` |
+
+Worker secrets set: `HMAC_SECRET`, `ADMIN_TOKEN`, `TURNSTILE_SECRET`.
+Still to set once Resend is configured: `RESEND_API_KEY`,
+`RESEND_WEBHOOK_SECRET`. Until they exist, `sendEmail()` returns a failure for
+every message and no mail leaves the Worker.
+
+To move to `api.aiworkshoptracker.com` later: **Workers & Pages → aiwt-alerts →
+Settings → Domains & Routes → Add custom domain**, then update the
+`ALERTS_API_BASE` secret and the `ALERTS_API` variable to match.
+
 ## What exists
 
 | Piece | Where | Notes |
