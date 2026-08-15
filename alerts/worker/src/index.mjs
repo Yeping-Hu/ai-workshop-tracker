@@ -477,9 +477,17 @@ async function handleUpdate(request, env) {
 /* ------------------------------------------------------------ browser: /sync */
 
 /**
- * One starred item added or removed. Idempotent by construction: adding an
- * existing slug and removing an absent one are both no-ops, which is what lets
- * favorites.js fire these off and forget them.
+ * Starred items added or removed.
+ *
+ * Accepts a single item (`slug` / `paper` / `id`) or a batch (`slugs` /
+ * `papers`). The batch form exists because this endpoint reads the row,
+ * modifies it and writes it back: firing N concurrent single-item calls would
+ * have them all read the same starting row and the last write would win,
+ * silently dropping the rest. Anything reconciling more than one item at a time
+ * — notably the re-link merge in favorites.js — must send one request.
+ *
+ * Idempotent by construction: adding an existing slug and removing an absent
+ * one are both no-ops, which is what lets callers fire and forget.
  */
 async function handleSync(request, env) {
   const auth = await authSubscriber(request, env, 'manage');
@@ -497,19 +505,31 @@ async function handleSync(request, env) {
   let next;
 
   if (kind === 'ws') {
-    const [slug] = cleanSlugs([body.slug]);
-    if (!slug) return fail(request, env, 400, 'bad_request');
-    next = op === 'add' ? [...new Set([...current, slug])] : current.filter((s) => s !== slug);
+    // Single or batch, validated by the same allowlist either way.
+    const slugs = cleanSlugs(Array.isArray(body.slugs) ? body.slugs : [body.slug]);
+    if (!slugs.length) return fail(request, env, 400, 'bad_request');
+    if (op === 'add') {
+      next = [...new Set([...current, ...slugs])];
+    } else {
+      const drop = new Set(slugs);
+      next = current.filter((s) => !drop.has(s));
+    }
   } else {
-    const [paper] = cleanPapers([body.paper]);
-    // Removal only needs an id; adding needs the whole snapshot, since there is
-    // no papers API to re-fetch a title from later (see favorites.js).
-    const id = paper?.id || (typeof body.id === 'string' ? body.id.slice(0, 120) : '');
-    if (!id || (op === 'add' && !paper)) return fail(request, env, 400, 'bad_request');
-    next =
-      op === 'add'
-        ? [...current.filter((p) => p?.id !== id), paper].slice(-1000)
-        : current.filter((p) => p?.id !== id);
+    const papers = cleanPapers(Array.isArray(body.papers) ? body.papers : [body.paper]);
+    // Removal only needs ids; adding needs whole snapshots, since there is no
+    // papers API to re-fetch a title from later (see favorites.js).
+    const ids = papers.length
+      ? papers.map((p) => p.id)
+      : [Array.isArray(body.ids) ? body.ids : body.id].flat().filter((v) => typeof v === 'string').map((v) => v.slice(0, 120));
+    if (!ids.length) return fail(request, env, 400, 'bad_request');
+    if (op === 'add') {
+      if (!papers.length) return fail(request, env, 400, 'bad_request');
+      const incoming = new Set(papers.map((p) => p.id));
+      next = [...current.filter((p) => p?.id && !incoming.has(p.id)), ...papers].slice(-1000);
+    } else {
+      const drop = new Set(ids);
+      next = current.filter((p) => p?.id && !drop.has(p.id));
+    }
   }
 
   await env.DB.prepare(`UPDATE subscribers SET ${col} = ?, updated = ? WHERE email = ?`)

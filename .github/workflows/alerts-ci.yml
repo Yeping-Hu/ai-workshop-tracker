@@ -14,6 +14,7 @@ on:
       - 'alerts/**'
       - 'scripts/alerts_*'
       - 'scripts/gen_alerts_ids.mjs'
+      - 'site/src/scripts/star-merge.js'
       - 'data/conferences.yml'
       - 'data/topics.yml'
       - '.github/workflows/alerts-ci.yml'
@@ -23,6 +24,7 @@ on:
       - 'alerts/**'
       - 'scripts/alerts_*'
       - 'scripts/gen_alerts_ids.mjs'
+      - 'site/src/scripts/star-merge.js'
       - 'data/conferences.yml'
       - 'data/topics.yml'
 
@@ -54,6 +56,8 @@ jobs:
         run: node scripts/alerts_ratelimit_test.mjs
       - name: Test the mail adapter (RFC 8058 headers, failure paths)
         run: node scripts/alerts_mail_test.mjs
+      - name: Test saved-list merge (uploads stars made while unlinked)
+        run: node scripts/alerts_starmerge_test.mjs
 
       # The Worker cannot read data/*.yml at runtime, so its id allowlist is a
       # generated file. Drift means a new conference is silently unsubscribable.

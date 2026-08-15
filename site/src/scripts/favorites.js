@@ -29,6 +29,8 @@
  * identical code path with `alertsApi()` returning null.
  */
 
+import { mergeStars } from './star-merge.js';
+
 const WS_KEY = 'awt-fav-workshops';
 const P_KEY = 'awt-fav-papers';
 const TOKEN_KEY = 'awt-alerts-token';
@@ -87,14 +89,19 @@ function syncOp(op, kind, payload) {
 }
 
 /**
- * Merge the server's saved list into this device's on load.
+ * Reconcile this device's saved list with the server's, in both directions.
  *
- * **Union only** — hydrating never deletes locally. Removals propagate solely
- * as explicit `remove` operations. Known accepted limitation: a removal made on
- * device A while offline can be resurrected by device B's union-hydrate. That
- * is the price of not building tombstones, and for a saved-workshops list the
- * failure mode (a star comes back) is far cheaper than the alternative (a
- * hydrate race silently empties the list). Do not add tombstones for v1.
+ * Pulling alone is not enough. Anything starred while this device was unlinked
+ * — before subscribing, or after "unlink this device" — never reached the
+ * server, because syncOp() returns early without a token. Those items would
+ * otherwise sit on one device forever while the manage page reported a smaller
+ * number, with no way to reconcile short of unstarring and re-starring each.
+ * So local-only items are uploaded here.
+ *
+ * The rule itself lives in star-merge.js and is unit-tested; this function is
+ * only the I/O around it. Removals still propagate solely as explicit `remove`
+ * operations — see that file for why union-without-tombstones is the deliberate
+ * v1 choice.
  */
 async function hydrateFromServer() {
   const api = alertsApi();
@@ -105,17 +112,26 @@ async function hydrateFromServer() {
     if (!res.ok) return; // includes 401: a revoked token just stops syncing
     const me = await res.json();
 
-    const ws = [...new Set([...favWorkshops(), ...(me.starred_ws || [])])];
-    const byId = new Map(favPapers().map((p) => [p.id, p]));
-    for (const p of me.starred_papers || []) if (p?.id && !byId.has(p.id)) byId.set(p.id, p);
+    const { ws, papers, uploadWs, uploadPapers, changedLocal } = mergeStars({
+      localWs: favWorkshops(),
+      serverWs: me.starred_ws || [],
+      localPapers: favPapers(),
+      serverPapers: me.starred_papers || [],
+    });
 
-    const papers = [...byId.values()];
-    const changed = ws.length !== favWorkshops().length || papers.length !== favPapers().length;
-    if (!changed) return;
-    write(WS_KEY, ws);
-    write(P_KEY, papers);
-    hydrate();
-    document.dispatchEvent(new CustomEvent('awt:favs-changed', { detail: { type: 'sync' } }));
+    if (changedLocal) {
+      write(WS_KEY, ws);
+      write(P_KEY, papers);
+      hydrate();
+      document.dispatchEvent(new CustomEvent('awt:favs-changed', { detail: { type: 'sync' } }));
+    }
+
+    // Push what the server has never seen. One request per kind rather than one
+    // per item: /sync reads the row, modifies it and writes it back, so
+    // concurrent single-item calls would race and silently drop all but the
+    // last. Fire-and-forget, like every other sync.
+    if (uploadWs.length) syncOp('add', 'ws', { slugs: uploadWs });
+    if (uploadPapers.length) syncOp('add', 'paper', { papers: uploadPapers });
   } catch {
     /* offline or blocked — the local list is authoritative anyway */
   }
