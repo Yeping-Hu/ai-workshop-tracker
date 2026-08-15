@@ -15,14 +15,14 @@ const enabled = !!ALERTS_API;
 
 <Base
   title="Email alerts"
-  description="An optional weekly email with the workshop deadline changes and new calls in the areas you pick. No account, one-click unsubscribe."
+  description="Optional email alerts for AI/ML workshop deadlines: a weekly digest, plus alerts when a saved deadline moves or is about to close. No account needed."
 >
   <section class="masthead">
     <p class="eyebrow">Optional</p>
     <h1>Deadline alerts by email</h1>
     <p class="lede">
-      One email a week, covering only the conferences and topics you choose — plus an optional
-      nudge when a workshop you starred is about to close.
+      Deadline extensions, new calls, and the workshops you saved — covering only the conferences
+      and topics you choose, with nothing sent in a quiet week.
     </p>
   </section>
 
@@ -36,6 +36,12 @@ const enabled = !!ALERTS_API;
 
   <div class="prose">
     <h2>What arrives</h2>
+    <p>
+      Three things, and you tick which of them you want. They are independent — take all three,
+      or just one.
+    </p>
+
+    <h3>The weekly digest</h3>
     <p>Every Monday, one message with four short sections, filtered to your selection:</p>
     <ul>
       <li><strong>Deadline changes this week</strong> — extensions and any date that moved earlier.</li>
@@ -46,6 +52,19 @@ const enabled = !!ALERTS_API;
     <p>
       <strong>Quiet weeks send nothing.</strong> If none of your areas moved, there is no email —
       the digest is skipped rather than padded.
+    </p>
+
+    <h3>A deadline you follow is close</h3>
+    <p>
+      One alert when a workshop you saved is within 72 hours of closing. Sent once per deadline —
+      if the organizers then extend it, the new date re-arms it.
+    </p>
+
+    <h3>A deadline you follow moved</h3>
+    <p>
+      One alert on the day we record a change to a saved workshop's deadline: an extension, a date
+      brought forward, or a deadline published for the first time. This is the one worth having if
+      you would rather not wait until Monday to hear that something slipped.
     </p>
 
     <h2>A sample</h2>

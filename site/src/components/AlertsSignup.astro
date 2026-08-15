@@ -37,7 +37,7 @@ interface Props {
 }
 const {
   heading = 'Get deadline alerts by email',
-  blurb = 'One email a week with the deadline changes and new workshops in your areas.',
+  blurb = 'Deadline changes and new calls in the areas you pick — nothing in a quiet week.',
   compact = false,
   tight = false,
   collapsed = false,
@@ -62,7 +62,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
     <summary class="alerts-summary">
       <span class="alerts-summary-mark" aria-hidden="true">✉</span>
       <span>{summary}</span>
-      <span class="alerts-summary-hint">one a week at most · one-click unsubscribe</span>
+      <span class="alerts-summary-hint">extensions, new calls, and the workshops you saved</span>
     </summary>
     <h2 id="alertsSignupHead">{heading}</h2>
     <p class="muted small">{blurb}</p>
@@ -76,7 +76,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
           type="email"
           autocomplete="email"
           required
-          placeholder="you@university.edu"
+          placeholder="Your email address"
         />
 
         <details class="dd">
@@ -152,8 +152,8 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
       <p class="alerts-status" id="alertsStatus" role="status" aria-live="polite" hidden></p>
 
       <p class="muted small alerts-privacy">
-        One email a week at most, plus optional urgent deadline alerts. Your address is stored only
-        to send these; one-click unsubscribe deletes it. Nothing is sold, no tracking pixels.
+        You get only what you tick above, and nothing at all in a quiet week. Your address is stored
+        only to send these; one-click unsubscribe deletes it. Nothing is sold, no tracking pixels.
       </p>
     </form>
   </details>

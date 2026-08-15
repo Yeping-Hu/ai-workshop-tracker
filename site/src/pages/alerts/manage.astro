@@ -35,7 +35,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
         <p class="lede">Enter your address and we'll email you a sign-in link. It's valid for 15 minutes.</p>
         <form id="magicForm">
           <div class="manage-row">
-            <input id="magicEmail" type="email" autocomplete="email" placeholder="you@university.edu" required />
+            <input id="magicEmail" type="email" autocomplete="email" placeholder="Your email address" required />
             <button class="btn" type="submit">Email me a link</button>
           </div>
           {TURNSTILE_SITE_KEY && (
