@@ -18,6 +18,8 @@
  */
 import {
   matchesSubscriber,
+  wantsStarredChanges,
+  wantsWeekly,
   matchingWorkshops,
   matchingEvents,
   normalizeSubscriber,
@@ -144,6 +146,57 @@ const sub = (over = {}) =>
     !wantsUrgent(sub({ cadence: 'weekly_urgent', confirmed_at: null })));
   check('a suppressed weekly_urgent subscriber gets nothing',
     !wantsUrgent(sub({ cadence: 'weekly_urgent', suppressed_at: '2026-08-02T00:00:00Z' })));
+}
+
+/* -------------------------------------------------- scope: saved-only ------
+ * Empty facets mean "everything", so there was previously no way to ask for
+ * nothing-but-my-saved-list. `scope: 'starred'` is that request.
+ */
+{
+  const s = sub({ scope: 'starred', starred_ws: '["neurips-2026-nlp"]' });
+  check('saved-only matches a starred workshop', matchesSubscriber(NLP, s));
+  check('saved-only ignores everything else', !matchesSubscriber(VISION, s));
+
+  // Facets are irrelevant in this mode — they must not widen it back out.
+  const withFacets = sub({
+    scope: 'starred',
+    starred_ws: '["neurips-2026-nlp"]',
+    conferences: '["cvpr","icra"]',
+    topics: '["vision","robotics"]',
+  });
+  check('saved-only ignores conference facets', !matchesSubscriber(VISION, withFacets));
+  check('saved-only ignores topic facets', !matchesSubscriber(ROBOTS, withFacets));
+  check('...while still matching the saved one', matchesSubscriber(NLP, withFacets));
+
+  // Empty facets under saved-only must mean "nothing", not "everything".
+  const bare = sub({ scope: 'starred' });
+  check('saved-only with nothing saved matches nothing', !matchesSubscriber(NLP, bare));
+}
+
+/* ------------------------------------- scope defaults protect existing rows */
+{
+  // Rows created before the column existed have no value at all.
+  check('a missing scope behaves as "all"', matchesSubscriber(VISION, sub()));
+  check('an unknown scope value falls back to "all"',
+    matchesSubscriber(VISION, normalizeSubscriber({ scope: 'nonsense' })));
+  check('scope "all" keeps the starred bypass (guards the pre-existing promise)',
+    matchesSubscriber(ROBOTS, sub({ conferences: '["neurips"]', starred_ws: '["icra-2026-robots"]' })));
+}
+
+/* ---------------------------------------------------- the new cadence -------- */
+{
+  const changes = sub({ cadence: 'starred_changes' });
+  check('starred_changes opts into same-day change mail', wantsStarredChanges(changes));
+  check('starred_changes also gets the 72h imminent alert', wantsUrgent(changes));
+  check('starred_changes gets NO weekly digest', !wantsWeekly(changes));
+
+  check('weekly still gets the digest', wantsWeekly(sub()));
+  check('weekly does not get same-day change mail', !wantsStarredChanges(sub()));
+  check('weekly_urgent still gets the digest', wantsWeekly(sub({ cadence: 'weekly_urgent' })));
+  check('paused gets nothing at all',
+    !wantsWeekly(sub({ cadence: 'off' })) && !wantsStarredChanges(sub({ cadence: 'off' })) && !wantsUrgent(sub({ cadence: 'off' })));
+  check('an unconfirmed starred_changes subscriber gets nothing',
+    !wantsStarredChanges(sub({ cadence: 'starred_changes', confirmed_at: null })));
 }
 
 console.log(failed === 0 ? '\nMatching logic OK.' : `\n${failed} test(s) failed.`);

@@ -38,6 +38,9 @@ export function normalizeSubscriber(row) {
     topics: arr(row.topics),
     starred_ws: arr(row.starred_ws),
     starred_papers: arr(row.starred_papers),
+    // Rows created before the column existed have no value; 'all' is the
+    // behaviour they already had.
+    scope: row.scope === 'starred' ? 'starred' : 'all',
     cadence: row.cadence || 'weekly',
     confirmed_at: row.confirmed_at ?? null,
     suppressed_at: row.suppressed_at ?? null,
@@ -47,14 +50,23 @@ export function normalizeSubscriber(row) {
 /**
  * Does this workshop belong in this subscriber's digest?
  *
- *   slug ∈ starred_ws
- *   OR ((conferences == [] OR conference ∈ conferences)
- *       AND (topics == [] OR topics ∩ subscriber.topics ≠ ∅))
+ *   scope 'starred':  slug ∈ starred_ws, and nothing else
+ *   scope 'all':      slug ∈ starred_ws
+ *                     OR ((conferences == [] OR conference ∈ conferences)
+ *                         AND (topics == [] OR topics ∩ subscriber.topics ≠ ∅))
+ *
+ * Starred workshops are included under 'all' whatever the facets say — if you
+ * went to the trouble of saving something, you want to hear about it even when
+ * it sits outside the conferences and topics you picked. `scope: 'starred'` is
+ * the opposite request: the saved list *is* the subscription. It exists because
+ * empty facets mean "everything", so there was previously no way to ask for
+ * nothing-but-my-saved-list.
  */
 export function matchesSubscriber(workshop, sub) {
   if (!workshop) return false;
   const starred = new Set(sub.starred_ws ?? []);
   if (starred.has(workshop.slug)) return true;
+  if (sub.scope === 'starred') return false;
 
   const confOk = isAll(sub.conferences) || sub.conferences.includes(workshop.conference);
   if (!confOk) return false;
@@ -86,7 +98,25 @@ export function isMailable(sub) {
   return !!sub.confirmed_at && !sub.suppressed_at && sub.cadence !== 'off';
 }
 
-/** Only the `weekly_urgent` cadence opts into the 72 h starred-deadline alert. */
+/**
+ * The 72 h "a saved deadline is imminent" alert. Both opt-in cadences get it:
+ * someone who asked to hear about their saved workshops the day something
+ * changes plainly also wants to know the day before one closes.
+ */
 export function wantsUrgent(sub) {
-  return isMailable(sub) && sub.cadence === 'weekly_urgent';
+  return isMailable(sub) && (sub.cadence === 'weekly_urgent' || sub.cadence === 'starred_changes');
+}
+
+/** Same-day mail when a saved workshop's deadline moves. Opt-in. */
+export function wantsStarredChanges(sub) {
+  return isMailable(sub) && sub.cadence === 'starred_changes';
+}
+
+/**
+ * The Monday digest. `starred_changes` deliberately excludes it — that cadence
+ * exists precisely for people who want their saved workshops and nothing on a
+ * schedule.
+ */
+export function wantsWeekly(sub) {
+  return isMailable(sub) && sub.cadence !== 'starred_changes';
 }

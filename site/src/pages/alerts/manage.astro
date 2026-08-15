@@ -80,13 +80,29 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
             </details>
           </div>
 
+          <fieldset class="manage-cadence">
+            <legend class="manage-legend">Coverage</legend>
+            <label class="check">
+              <input type="radio" name="scope" value="all" />
+              The conferences and topics above, plus anything I've saved
+            </label>
+            <label class="check">
+              <input type="radio" name="scope" value="starred" />
+              Only the workshops I've saved
+            </label>
+          </fieldset>
+
           <h2>How often</h2>
           <fieldset class="manage-cadence">
             <legend class="alerts-sr">Cadence</legend>
-            <label class="check"><input type="radio" name="cadence" value="weekly" /> Weekly digest</label>
+            <label class="check"><input type="radio" name="cadence" value="weekly" /> Weekly digest, Mondays</label>
             <label class="check">
               <input type="radio" name="cadence" value="weekly_urgent" />
-              Weekly digest + urgent alerts (starred deadline within 72 hours)
+              Weekly digest + an alert when a saved deadline is within 72 hours
+            </label>
+            <label class="check">
+              <input type="radio" name="cadence" value="starred_changes" />
+              No weekly digest — only when a saved workshop's deadline changes
             </label>
             <label class="check">
               <input type="radio" name="cadence" value="off" />
@@ -229,6 +245,8 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
           }
           const cadence = prefs.querySelector(`input[name="cadence"][value="${me.cadence || 'weekly'}"]`);
           if (cadence) cadence.checked = true;
+          const scope = prefs.querySelector(`input[name="scope"][value="${me.scope || 'all'}"]`);
+          if (scope) scope.checked = true;
           $('deleteLink').href = me.unsubscribe_url || '#';
           $('deviceLine').textContent =
             `${(me.starred_ws || []).length} workshop(s) and ${(me.starred_papers || []).length} paper(s) are stored with your subscription.`;
@@ -240,8 +258,17 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
             $('prefsConfSummary').textContent = c ? `Conferences: ${c} selected` : 'Conferences: all';
             $('prefsTopicSummary').textContent = t ? `Topics: ${t} selected` : 'Topics: all';
           };
-          prefs.addEventListener('change', syncSummary);
+          const syncScope = () => {
+            const starredOnly = prefs.querySelector('input[name="scope"]:checked')?.value === 'starred';
+            for (const d of prefs.querySelectorAll('details.dd')) {
+              d.toggleAttribute('data-disabled', starredOnly);
+              if (starredOnly) d.open = false;
+              for (const i of d.querySelectorAll('input')) i.disabled = starredOnly;
+            }
+          };
+          prefs.addEventListener('change', () => { syncSummary(); syncScope(); });
           syncSummary();
+          syncScope();
           show('prefsBox');
 
           prefs.addEventListener('submit', async (e) => {
@@ -255,6 +282,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
                 body: JSON.stringify({
                   conferences: picked('conference'),
                   topics: picked('topic'),
+                  scope: prefs.querySelector('input[name="scope"]:checked')?.value || 'all',
                   cadence: prefs.querySelector('input[name="cadence"]:checked')?.value || 'weekly',
                 }),
               });
@@ -291,6 +319,11 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
   }
   .manage-cadence { border: 0; padding: 0; margin: 0.4rem 0 0; display: grid; gap: 0.35rem; }
   .manage-cadence .check { align-items: baseline; }
+  .manage-legend {
+    font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); padding: 0; margin-bottom: 0.15rem;
+  }
+  details.dd[data-disabled] { opacity: 0.45; pointer-events: none; }
   .manage-status { font-size: 0.9rem; margin: 0; }
   .manage-status.is-ok { color: var(--accent); font-weight: 600; }
   .manage-status.is-err { color: var(--urgent); }

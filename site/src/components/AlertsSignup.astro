@@ -25,11 +25,15 @@ interface Props {
   blurb?: string;
   /** Set on /alerts/, where the surrounding page already explains the feature. */
   compact?: boolean;
+  /** Set when the box sits directly under a masthead, which already carries
+   *  1.4rem of bottom padding — the default 2.6rem margin then reads as a hole. */
+  tight?: boolean;
 }
 const {
   heading = 'Get deadline alerts by email',
   blurb = 'One email a week with the deadline changes and new workshops in your areas.',
   compact = false,
+  tight = false,
 } = Astro.props;
 
 const enabled = !!ALERTS_API;
@@ -38,7 +42,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
 ---
 
 {enabled && (
-  <section class="alerts-signup" aria-labelledby="alertsSignupHead" data-compact={compact ? '' : undefined}>
+  <section class="alerts-signup" aria-labelledby="alertsSignupHead" data-compact={compact ? '' : undefined} data-tight={tight ? '' : undefined}>
     <h2 id="alertsSignupHead">{heading}</h2>
     <p class="muted small">{blurb}</p>
 
@@ -81,18 +85,35 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
       </div>
 
       <p class="muted small alerts-hint">
-        Pick nothing and you get everything — that's the default.
+        Pick nothing and you get everything — that's the default. Workshops you've
+        saved are always included, whatever you pick here.
       </p>
 
       <fieldset class="alerts-cadence">
-        <legend class="alerts-sr">How often</legend>
+        <legend class="alerts-legend">What you hear about</legend>
+        <label class="check">
+          <input type="radio" name="scope" value="all" checked />
+          The conferences and topics above, plus anything I've saved
+        </label>
+        <label class="check">
+          <input type="radio" name="scope" value="starred" />
+          Only the workshops I've saved
+        </label>
+      </fieldset>
+
+      <fieldset class="alerts-cadence">
+        <legend class="alerts-legend">How often</legend>
         <label class="check">
           <input type="radio" name="cadence" value="weekly" checked />
-          Weekly digest
+          Weekly digest, Mondays
         </label>
         <label class="check">
           <input type="radio" name="cadence" value="weekly_urgent" />
-          Weekly digest + urgent alerts when a starred deadline is within 72 hours
+          Weekly digest + an alert when a saved deadline is within 72 hours
+        </label>
+        <label class="check">
+          <input type="radio" name="cadence" value="starred_changes" />
+          No weekly digest — only email me when a saved workshop's deadline changes
         </label>
       </fieldset>
 
@@ -143,10 +164,24 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
       };
       const confSummary = document.getElementById('alertsConfSummary');
       const topicSummary = document.getElementById('alertsTopicSummary');
+      const facetPickers = [confSummary.closest('details'), topicSummary.closest('details')];
+      const syncScope = () => {
+        // Saved-only ignores the facets entirely, so show that rather than
+        // leaving controls that quietly do nothing.
+        const starredOnly = form.querySelector('input[name="scope"]:checked')?.value === 'starred';
+        for (const d of facetPickers) {
+          if (!d) continue;
+          d.toggleAttribute('data-disabled', starredOnly);
+          if (starredOnly) d.open = false;
+          for (const i of d.querySelectorAll('input')) i.disabled = starredOnly;
+        }
+      };
       form.addEventListener('change', () => {
         syncSummary('conference', confSummary, 'Conferences');
         syncSummary('topic', topicSummary, 'Topics');
+        syncScope();
       });
+      syncScope();
 
       const readStars = (key) => {
         try {
@@ -182,6 +217,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
               // before this device has been linked for sync.
               starred_ws: readStars('awt-fav-workshops'),
               starred_papers: readStars('awt-fav-papers'),
+              scope: form.querySelector('input[name="scope"]:checked')?.value || 'all',
               cadence: form.querySelector('input[name="cadence"]:checked')?.value || 'weekly',
               turnstile_token,
             }),
@@ -228,6 +264,8 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
     border-radius: 14px;
   }
   .alerts-signup[data-compact] { background: transparent; }
+  /* Directly under a masthead, whose padding already supplies the gap. */
+  .alerts-signup[data-tight] { margin-top: 0.6rem; }
   .alerts-signup h2 { margin: 0 0 0.2rem; font-size: 1.12rem; }
   .alerts-signup p { margin: 0; }
   .alerts-row {
@@ -257,6 +295,16 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
     gap: 0.35rem;
   }
   .alerts-cadence .check { align-items: baseline; }
+  .alerts-legend {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0;
+    margin-bottom: 0.15rem;
+  }
+  details.dd[data-disabled] { opacity: 0.45; pointer-events: none; }
   .alerts-signup .cf-turnstile { margin-top: 0.85rem; }
   .alerts-status { margin-top: 0.8rem !important; font-size: 0.9rem; }
   .alerts-status.is-ok { color: var(--accent); font-weight: 600; }

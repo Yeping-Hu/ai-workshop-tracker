@@ -29,6 +29,7 @@ import { fileURLToPath } from 'node:url';
 import {
   renderDigest,
   renderUrgent,
+  renderStarredChanges,
   renderConfirm,
   renderMagic,
   facetUrl,
@@ -235,6 +236,67 @@ const sub = (over = {}) =>
   check('the magic email has a plaintext part', magic.text.includes('#t=xyz'));
   check('every template sets a subject',
     [confirm, magic].every((m) => typeof m.subject === 'string' && m.subject.length > 5));
+}
+
+/* ------------------------------------------- saved-workshop change alerts */
+{
+  const workshops = {
+    'neurips-2026-alpha': ws('neurips-2026-alpha', { deadline_utc: iso(30), next_stage_utc: iso(30) }),
+    'neurips-2026-beta': ws('neurips-2026-beta', { deadline_utc: iso(9), next_stage_utc: iso(9) }),
+  };
+  const s = sub({ starred_ws: '["neurips-2026-alpha","neurips-2026-beta"]' });
+
+  const one = renderStarredChanges({
+    sub: s,
+    events: [{ slug: 'neurips-2026-alpha', kind: 'extended', days: 6, old_utc: iso(24), new_utc: iso(30) }],
+    workshops, ids,
+  });
+  check('a single saved change renders', !!one);
+  check('the subject names the workshop', /^Deadline update: ALPHA — AI Workshop Tracker$/.test(one.subject), one.subject);
+  check('it describes the extension', /Extended 6 days/.test(one.html));
+  check('it links the workshop page', one.html.includes('https://aiworkshoptracker.com/workshop/neurips-2026-alpha/'));
+
+  const two = renderStarredChanges({
+    sub: s,
+    events: [
+      { slug: 'neurips-2026-alpha', kind: 'extended', days: 6, old_utc: iso(24), new_utc: iso(30) },
+      { slug: 'neurips-2026-beta', kind: 'earlier', days: 2, old_utc: iso(11), new_utc: iso(9) },
+    ],
+    workshops, ids,
+  });
+  check('several changes are counted in the subject',
+    /^2 deadline updates on your saved workshops — AI Workshop Tracker$/.test(two.subject), two.subject);
+  check('a moved-earlier deadline is described', /Moved 2 days earlier/.test(two.html));
+
+  // It is deliberately narrow: this cadence exists to REPLACE a weekly summary,
+  // so padding it with "closing soon" would defeat the point.
+  check('it carries no closing-soon section', !/Closing in the next/.test(two.html));
+  check('it carries no newly-announced section', !/Newly announced/.test(two.html));
+
+  // Same rules as every other bulk message.
+  check('nothing to report renders null',
+    renderStarredChanges({ sub: s, events: [], workshops, ids }) === null);
+  check('an event whose workshop vanished renders null',
+    renderStarredChanges({ sub: s, events: [{ slug: 'gone', kind: 'extended', days: 1, new_utc: iso(5) }], workshops: {}, ids }) === null);
+  check('it carries the unsubscribe placeholder', two.html.includes(UNSUB_PLACEHOLDER));
+  check('it carries the manage placeholder', two.html.includes(MANAGE_PLACEHOLDER));
+  check('it has a plaintext part', two.text.length > 50 && !/<html/i.test(two.text));
+  check('the plaintext carries the unsubscribe placeholder', two.text.includes(UNSUB_PLACEHOLDER));
+  check('it carries the accuracy caveat', two.text.includes(FOOTER_CAVEAT));
+  check('no tracking pixel', !/<img/i.test(two.html));
+
+  // Section caps apply here too.
+  const many = {};
+  const manyEvents = [];
+  for (let i = 0; i < SECTION_CAP + 4; i++) {
+    const slug = `neurips-2026-m${i}`;
+    many[slug] = ws(slug, { deadline_utc: iso(20 + i), next_stage_utc: iso(20 + i) });
+    manyEvents.push({ slug, kind: 'extended', days: 1, old_utc: iso(19 + i), new_utc: iso(20 + i) });
+  }
+  const capped = renderStarredChanges({ sub: sub({ starred_ws: JSON.stringify(Object.keys(many)) }), events: manyEvents, workshops: many, ids });
+  check(`at most SECTION_CAP (${SECTION_CAP}) changes are listed`,
+    (capped.html.match(/<li /g) || []).length === SECTION_CAP);
+  check('the overflow links to the saved page', capped.html.includes('https://aiworkshoptracker.com/saved/'));
 }
 
 console.log(failed === 0 ? '\nRendering OK.' : `\n${failed} test(s) failed.`);

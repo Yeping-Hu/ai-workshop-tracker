@@ -299,6 +299,54 @@ export function renderDigest({
   return { subject, html: shell({ title: subject, bodyHtml, manageUrl, unsubUrl }), text };
 }
 
+/* ------------------------------------------------- saved-workshop changes */
+
+/**
+ * Same-day mail for the `starred_changes` cadence: a deadline moved on
+ * something this subscriber saved.
+ *
+ * Deliberately narrow. It reports only what changed today on their own saved
+ * list — no "closing soon", no new workshops, nothing from the facets. Someone
+ * chose this cadence to stop receiving a weekly summary, so padding it out
+ * would defeat the point. Returns null when nothing matched, like every other
+ * template here.
+ *
+ * `events` must already be filtered to this subscriber's starred slugs.
+ */
+export function renderStarredChanges({
+  sub,
+  events,
+  workshops,
+  ids,
+  manageUrl = MANAGE_PLACEHOLDER,
+  unsubUrl = UNSUB_PLACEHOLDER,
+}) {
+  const items = events
+    .filter((e) => workshops[e.slug])
+    .map((e) => changeItem(e, workshops[e.slug], ids));
+  if (!items.length) return null;
+
+  const one = items.length === 1;
+  const first = workshops[events[0].slug];
+  const subject = one
+    ? `Deadline update: ${first.acronym || first.name} — AI Workshop Tracker`
+    : `${items.length} deadline updates on your saved workshops — AI Workshop Tracker`;
+
+  const sec = section({ heading: one ? 'A saved workshop changed' : 'Your saved workshops changed', items, moreUrl: `${SITE_ORIGIN}/saved/` });
+
+  const bodyHtml =
+    `<h1 style="margin:0 0 6px;font-size:21px;line-height:1.25;">${one ? 'A deadline you follow moved' : 'Deadlines you follow moved'}</h1>` +
+    `<p style="margin:0;font-size:14px;${MUTED}">You saved ${one ? 'this workshop' : 'these workshops'} on aiworkshoptracker.com.</p>` +
+    sec.html;
+
+  const text =
+    `${one ? 'A deadline you follow moved' : 'Deadlines you follow moved'}\n` +
+    sec.text +
+    textFooter({ manageUrl, unsubUrl });
+
+  return { subject, html: shell({ title: subject, bodyHtml, manageUrl, unsubUrl }), text };
+}
+
 /* -------------------------------------------------------------------- urgent */
 
 /**

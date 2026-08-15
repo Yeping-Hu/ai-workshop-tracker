@@ -127,6 +127,9 @@ const current = (p: string) =>
       <script is:inline defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon={`{"token": "${CF_TOKEN}"}`}></script>
     )}
     <script src="../scripts/favorites.js"></script>
+    {/* Closes <details class="dd"> pickers on outside click / Escape, on
+        every page that has them. Self-initialising; see the module. */}
+    <script src="../scripts/dropdowns.js"></script>
     <script>
       // External links (a different host — arXiv PDFs, a workshop's own site)
       // open in a new tab so the tracker stays available behind them. Internal

@@ -47,8 +47,10 @@ import {
   matchesSubscriber,
   isMailable,
   wantsUrgent,
+  wantsStarredChanges,
+  wantsWeekly,
 } from '../alerts/match.mjs';
-import { renderDigest, renderUrgent } from '../alerts/render.mjs';
+import { renderDigest, renderUrgent, renderStarredChanges } from '../alerts/render.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -242,6 +244,49 @@ async function main() {
     log('4. urgent: no starred deadline inside the window');
   }
 
+  /* 4b. saved-workshop change alerts (every run) --------------------------- */
+  // Same-day mail for the `starred_changes` cadence. Uses today's classified
+  // events, which this run already computed — no extra fetch.
+  const changeSubs = subs.filter(wantsStarredChanges);
+  let changeSent = 0;
+  if (changeSubs.length && diff.events.length) {
+    const messages = [];
+    const logRows = [];
+    for (const sub of changeSubs) {
+      const starred = new Set(sub.starred_ws ?? []);
+      const mine = diff.events.filter((e) => starred.has(e.slug) && live.workshops[e.slug]);
+      if (!mine.length) continue;
+
+      // Deduped through urgent_log on the event's NEW value, under a distinct
+      // slug prefix so it cannot collide with the 72h alert's own rows. A
+      // re-run on the same day therefore sends nothing twice.
+      const triples = mine.map((e) => ({
+        email: sub.email,
+        slug: `chg:${e.slug}`,
+        deadline_utc: e.new_utc || e.observed,
+      }));
+      const { items: fresh } = await admin('/admin/urgent-filter', { method: 'POST', body: { items: triples } });
+      if (!fresh.length) continue;
+      const freshSlugs = new Set(fresh.map((t) => t.slug.replace(/^chg:/, '')));
+      const events = mine.filter((e) => freshSlugs.has(e.slug));
+      if (!events.length) continue;
+
+      const mail = renderStarredChanges({ sub, events, workshops: live.workshops, ids });
+      if (!mail) continue;
+      messages.push({ to: sub.email, subject: mail.subject, html: mail.html, text: mail.text });
+      logRows.push(fresh);
+      log(`   saved-change: ${events.length} event(s) — ${events.map((e) => e.slug).join(', ')}`);
+    }
+
+    const { accepted, failed, acceptedIndexes } = await send(messages, 'saved-change');
+    changeSent = accepted;
+    const toLog = acceptedIndexes.flatMap((i) => logRows[i]);
+    if (toLog.length && !DRY_RUN) await admin('/admin/urgent-log', { method: 'POST', body: { items: toLog } });
+    log(`4b. saved-workshop changes: ${accepted} sent, ${failed} failed`);
+  } else {
+    log(`4b. saved-workshop changes: nothing to report (${changeSubs.length} subscriber(s) opted in)`);
+  }
+
   /* 5. weekly pass (Mondays) ---------------------------------------------- */
   const isWeeklyDay = NOW.getUTCDay() === WEEKLY_DOW;
   let digestsSent = 0;
@@ -251,7 +296,9 @@ async function main() {
     log(`5. weekly: ${events.length} event(s) since ${since}`);
 
     const messages = [];
-    for (const sub of subs) {
+    // `starred_changes` subscribers opted out of a scheduled summary entirely.
+    const weeklySubs = subs.filter(wantsWeekly);
+    for (const sub of weeklySubs) {
       const mine = matchingEvents(events, live.workshops, sub);
       // Sections 3 and 4 read the live projection rather than events, so the
       // projection is narrowed with the same tested matcher — a subscriber with
@@ -271,7 +318,7 @@ async function main() {
 
     const { accepted, failed } = await send(messages, 'digest');
     digestsSent = accepted;
-    log(`5. weekly: ${accepted} sent, ${failed} failed, ${subs.length - messages.length} skipped (empty)`);
+    log(`5. weekly: ${accepted} sent, ${failed} failed, ${weeklySubs.length - messages.length} skipped (empty)`);
   } else {
     log(`5. weekly: not today (UTC day ${NOW.getUTCDay()}, weekly day is ${WEEKLY_DOW})`);
   }
@@ -284,7 +331,7 @@ async function main() {
     log('6. [dry-run] maintenance skipped');
   }
 
-  log(`done — ${urgentSent} urgent, ${digestsSent} digest(s)${DRY_RUN ? ' (dry run: nothing was sent)' : ''}`);
+  log(`done — ${urgentSent} urgent, ${changeSent} saved-change, ${digestsSent} digest(s)${DRY_RUN ? ' (dry run: nothing was sent)' : ''}`);
 }
 
 main().catch((err) => {

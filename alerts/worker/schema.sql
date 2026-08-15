@@ -3,7 +3,15 @@
 -- Apply with:
 --   npx wrangler d1 execute aiwt-alerts --remote --file=./schema.sql
 --
--- Everything is IF NOT EXISTS so re-running is safe.
+-- Everything is IF NOT EXISTS so re-running is safe. That also means CREATE
+-- TABLE will NOT add a column to a database that already exists — a new column
+-- needs an explicit migration against the live database, e.g.
+--
+--   ALTER TABLE subscribers ADD COLUMN scope TEXT NOT NULL DEFAULT 'all';
+--
+-- Migrations applied so far:
+--   2026-08-15  subscribers.scope (default 'all' — existing rows keep today's
+--               behaviour, so the migration is safe to run before deploying)
 --
 -- Privacy note that governs this whole file: subscriber addresses live HERE and
 -- nowhere else. They never enter the Git repo, a workflow log, a commit message
@@ -19,7 +27,14 @@ CREATE TABLE IF NOT EXISTS subscribers (
   topics         TEXT NOT NULL DEFAULT '[]',  -- JSON array of topic ids (data/topics.yml); [] = all
   starred_ws     TEXT NOT NULL DEFAULT '[]',  -- JSON array of workshop slugs
   starred_papers TEXT NOT NULL DEFAULT '[]',  -- JSON array of {id,title,ws,wsName,pdf?} (favorites.js shape)
-  cadence        TEXT NOT NULL DEFAULT 'weekly',  -- 'weekly' | 'weekly_urgent' | 'off'
+  -- What they hear about, independent of how often:
+  --   'all'     the conference/topic filters below (empty = everything),
+  --             with starred workshops always included on top
+  --   'starred' nothing but the workshops they saved
+  scope          TEXT NOT NULL DEFAULT 'all',
+  -- How often. 'starred_changes' means same-day mail when a saved workshop's
+  -- deadline moves, and no weekly digest at all.
+  cadence        TEXT NOT NULL DEFAULT 'weekly',  -- 'weekly' | 'weekly_urgent' | 'starred_changes' | 'off'
   created        TEXT NOT NULL,
   updated        TEXT NOT NULL
 );

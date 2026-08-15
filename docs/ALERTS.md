@@ -105,6 +105,20 @@ repo needs editing except `database_id`.
 7. **Deploy:** push to `main` (the deploy workflow fires on `alerts/**`) or
    `npx wrangler deploy` from `alerts/worker/`.
 
+### Schema migrations
+
+`schema.sql` uses `CREATE TABLE IF NOT EXISTS`, which will **not** add a column
+to a database that already exists. A new column needs an explicit `ALTER TABLE`
+against the live database *before* deploying a Worker that selects it:
+
+```bash
+npx wrangler d1 execute aiwt-alerts --remote \
+  --command "ALTER TABLE subscribers ADD COLUMN scope TEXT NOT NULL DEFAULT 'all'"
+```
+
+Applied so far: `subscribers.scope` (2026-08-15). Its default reproduces the
+previous behaviour, so the migration is safe to run ahead of the deploy.
+
 ## Local development
 
 `wrangler dev --env dev` from `alerts/worker/` runs the Worker locally; the
@@ -130,6 +144,29 @@ Set the always-passes secret with `wrangler secret put TURNSTILE_SECRET` (or in
 `PUBLIC_TURNSTILE_SITE_KEY` in the site build. Never use a dummy key in
 production: it passes everything, which is exactly the open relay the
 fail-closed behavior exists to prevent.
+
+## What a subscription can express
+
+Two independent axes. `scope` is *what* you hear about; `cadence` is *when*.
+
+| `scope` | Covers |
+|---|---|
+| `all` (default) | The conference/topic filters — empty means everything — **plus** anything the subscriber saved, whatever the filters say |
+| `starred` | Only saved workshops. Exists because empty filters mean "everything", so there was otherwise no way to ask for nothing-but-my-saved-list |
+
+| `cadence` | Sends |
+|---|---|
+| `weekly` (default) | The Monday digest |
+| `weekly_urgent` | The digest, plus an alert when a saved deadline is within 72 h |
+| `starred_changes` | **No digest.** Same-day mail when a saved workshop's deadline moves, plus the 72 h alert |
+| `off` | Nothing; preferences and saved list are kept |
+
+Saved workshops are always included under `scope: 'all'` — that is
+`matchesSubscriber`'s starred bypass, not something the subscriber configures.
+
+Same-day change mail is deduped through `urgent_log` on the event's new
+deadline value, under a `chg:` slug prefix so it cannot collide with the 72 h
+alert's rows. Running the pipeline twice in one day therefore sends once.
 
 ## Daily operation
 

@@ -49,7 +49,9 @@ import { sendEmail, sendBatch } from './mail.mjs';
 
 const CONF_IDS = new Set(ids.conferences.map((c) => c.id));
 const TOPIC_IDS = new Set(ids.topics.map((t) => t.id));
-const CADENCES = new Set(['weekly', 'weekly_urgent', 'off']);
+const CADENCES = new Set(['weekly', 'weekly_urgent', 'starred_changes', 'off']);
+// What a subscription covers, independent of how often it sends.
+const SCOPES = new Set(['all', 'starred']);
 
 /* --------------------------------------------------------------------- CORS */
 
@@ -245,6 +247,7 @@ async function handleSubscribe(request, env) {
   const starred_ws = cleanSlugs(body.starred_ws);
   const starred_papers = cleanPapers(body.starred_papers);
   const cadence = CADENCES.has(body.cadence) && body.cadence !== 'off' ? body.cadence : 'weekly';
+  const scope = SCOPES.has(body.scope) ? body.scope : 'all';
 
   const existing = await getSubscriber(env, email);
   const ts = nowIso();
@@ -297,8 +300,8 @@ async function handleSubscribe(request, env) {
       );
     }
     await env.DB.prepare(
-      'INSERT INTO subscribers (email, nonce, conferences, topics, starred_ws, starred_papers, cadence, created, updated) ' +
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO subscribers (email, nonce, conferences, topics, starred_ws, starred_papers, scope, cadence, created, updated) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     )
       .bind(
         email,
@@ -307,6 +310,7 @@ async function handleSubscribe(request, env) {
         JSON.stringify(topics),
         JSON.stringify(starred_ws),
         JSON.stringify(starred_papers),
+        scope,
         cadence,
         ts,
         ts,
@@ -319,13 +323,14 @@ async function handleSubscribe(request, env) {
       return NEUTRAL;
     }
     await env.DB.prepare(
-      'UPDATE subscribers SET conferences = ?, topics = ?, starred_ws = ?, starred_papers = ?, cadence = ?, updated = ? WHERE email = ?',
+      'UPDATE subscribers SET conferences = ?, topics = ?, starred_ws = ?, starred_papers = ?, scope = ?, cadence = ?, updated = ? WHERE email = ?',
     )
       .bind(
         JSON.stringify(conferences),
         JSON.stringify(topics),
         JSON.stringify(starred_ws),
         JSON.stringify(starred_papers),
+        scope,
         cadence,
         ts,
         email,
@@ -446,6 +451,7 @@ async function handleMe(request, env) {
       topics: JSON.parse(row.topics || '[]'),
       starred_ws: JSON.parse(row.starred_ws || '[]'),
       starred_papers: JSON.parse(row.starred_papers || '[]'),
+      scope: row.scope || 'all',
       cadence: row.cadence,
       confirmed: !!row.confirmed_at,
       // Present only on the magic exchange; the page swaps it into localStorage.
@@ -467,11 +473,12 @@ async function handleUpdate(request, env) {
   const conferences = cleanIds(body.conferences, CONF_IDS);
   const topics = cleanIds(body.topics, TOPIC_IDS);
   const cadence = CADENCES.has(body.cadence) ? body.cadence : auth.row.cadence;
+  const scope = SCOPES.has(body.scope) ? body.scope : auth.row.scope || 'all';
 
-  await env.DB.prepare('UPDATE subscribers SET conferences = ?, topics = ?, cadence = ?, updated = ? WHERE email = ?')
-    .bind(JSON.stringify(conferences), JSON.stringify(topics), cadence, nowIso(), auth.row.email)
+  await env.DB.prepare('UPDATE subscribers SET conferences = ?, topics = ?, scope = ?, cadence = ?, updated = ? WHERE email = ?')
+    .bind(JSON.stringify(conferences), JSON.stringify(topics), scope, cadence, nowIso(), auth.row.email)
     .run();
-  return json({ ok: true, conferences, topics, cadence }, { request, env });
+  return json({ ok: true, conferences, topics, scope, cadence }, { request, env });
 }
 
 /* ------------------------------------------------------------ browser: /sync */
@@ -671,7 +678,7 @@ async function handleAdmin(request, env, path) {
   /* ---- subscribers ------------------------------------------------------ */
   if (path === '/admin/subscribers' && method === 'GET') {
     const { results } = await env.DB.prepare(
-      "SELECT email, nonce, conferences, topics, starred_ws, starred_papers, cadence, confirmed_at, suppressed_at " +
+      "SELECT email, nonce, conferences, topics, starred_ws, starred_papers, scope, cadence, confirmed_at, suppressed_at " +
         "FROM subscribers WHERE confirmed_at IS NOT NULL AND suppressed_at IS NULL AND cadence != 'off'",
     ).all();
     return json({ ok: true, subscribers: results ?? [] });

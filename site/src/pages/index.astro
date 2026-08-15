@@ -787,18 +787,8 @@ const datasetLd: Record<string, any> = {
       for (const f of FACETS) sel[f].clear();
       renderChips(); renderFacetPanels(); runSearch();
     });
-    // Facet dropdowns: only one open at a time; click-away closes them.
-    // (Handled on summary click — the <details> toggle event fires
-    // asynchronously, which left two panels visible for a frame.)
-    const dds = [...document.querySelectorAll('.facetbar details.dd')];
-    for (const d of dds) {
-      d.querySelector('summary').addEventListener('click', () => {
-        for (const o of dds) if (o !== d) o.open = false;
-      });
-    }
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.facetbar details.dd')) for (const o of dds) o.open = false;
-    });
+    // Facet dropdown open/close now lives in scripts/dropdowns.js, loaded by
+    // Base.astro and shared with the alerts pickers.
 
     facetOptions = Object.freeze(
       Object.fromEntries(FACETS.map((f) => [f, Object.freeze(facetSort(f, Object.keys(initialCounts[f] ?? {})))])),
