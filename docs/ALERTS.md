@@ -27,9 +27,29 @@ Still to set once Resend is configured: `RESEND_API_KEY`,
 `RESEND_WEBHOOK_SECRET`. Until they exist, `sendEmail()` returns a failure for
 every message and no mail leaves the Worker.
 
-To move to `api.aiworkshoptracker.com` later: **Workers & Pages → aiwt-alerts →
-Settings → Domains & Routes → Add custom domain**, then update the
-`ALERTS_API_BASE` secret and the `ALERTS_API` variable to match.
+**The DNS zone is in a different Cloudflare account from the Worker.** The
+Workers account above holds no zones, while `aiworkshoptracker.com` is served by
+Cloudflare nameservers under another login. Two things follow:
+
+- A Worker **custom domain requires the zone in the same account**, so
+  `api.aiworkshoptracker.com` cannot be attached to this Worker as things
+  stand. Either move the zone into the Workers account (Cloudflare supports
+  transferring a zone between accounts), or stay on the `workers.dev` URL,
+  which works fine and is what the deployment uses.
+- **All mail DNS is added in the other login.** Resend does not care which
+  provider hosts the records.
+
+Verify the mail records before asking a provider to verify the domain:
+
+```bash
+node scripts/alerts_dns_check.mjs
+```
+
+It resolves against 1.1.1.1/8.8.8.8 rather than the local cache, and looks
+specifically for the doubled-suffix mistake — Cloudflare appends the zone to
+whatever you type, so pasting `send.mail.aiworkshoptracker.com` creates
+`send.mail.aiworkshoptracker.com.aiworkshoptracker.com` and the provider just
+reports "unverified".
 
 ## What exists
 
