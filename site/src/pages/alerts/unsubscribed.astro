@@ -1,0 +1,46 @@
+---
+/**
+ * /alerts/unsubscribed/ — where the Worker lands a GET unsubscribe.
+ *
+ * By the time this renders the row is already deleted. The page also clears the
+ * local sign-in token, because leaving a dead token behind would make the saved
+ * page keep trying to sync against a subscription that no longer exists.
+ */
+import Base from '../../components/Base.astro';
+import { href } from '../../lib/site';
+---
+
+<Base title="Unsubscribed" description="Your address has been removed from the alerts list.">
+  <section class="masthead">
+    <p class="eyebrow">Email alerts</p>
+    <h1>You're unsubscribed</h1>
+    <p class="lede">Your address and preferences have been deleted — not deactivated, deleted.</p>
+  </section>
+
+  <div class="prose">
+    <p>
+      Nothing further will be sent. There is no record left to reactivate, so signing up again
+      later starts from scratch (and needs a fresh confirmation click).
+    </p>
+    <p>
+      <strong>Your saved list is untouched.</strong> Starred workshops and papers live in this
+      browser's own storage and always have — they are still on
+      <a href={href('/saved/')}>your saved list</a>, and starring keeps working exactly as it does
+      for anyone who never subscribed.
+    </p>
+    <p>
+      If this was a mistake, you can <a href={href('/alerts/')}>subscribe again</a>. If the emails
+      were simply too frequent, the manage page also has a <em>pause</em> option that keeps your
+      preferences.
+    </p>
+  </div>
+
+  <script is:inline>
+    // The subscription is gone; a stale token here would only produce failing
+    // sync requests on every page load.
+    try {
+      localStorage.removeItem('awt-alerts-token');
+      localStorage.removeItem('awt-alerts-email');
+    } catch {}
+  </script>
+</Base>

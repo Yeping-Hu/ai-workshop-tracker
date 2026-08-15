@@ -1,0 +1,37 @@
+---
+/**
+ * /alerts/error/ — where the Worker sends a confirmation link it cannot honor.
+ *
+ * Deliberately vague about *why*: a page that distinguished "expired" from
+ * "unknown address" would be an account-enumeration oracle for anyone holding a
+ * guessed link. Every failure reads the same and offers the same way forward.
+ */
+import Base from '../../components/Base.astro';
+import { href } from '../../lib/site';
+---
+
+<Base title="Link didn't work" description="That alerts link has expired or is no longer valid.">
+  <section class="masthead">
+    <p class="eyebrow">Email alerts</p>
+    <h1>That link didn't work</h1>
+    <p class="lede">Confirmation links expire after 48 hours, and sign-in links after 15 minutes.</p>
+  </section>
+
+  <div class="prose">
+    <p>Nothing has been changed. Two ways forward:</p>
+    <ul>
+      <li>
+        Never confirmed a subscription? <a href={href('/alerts/')}>Sign up again</a> — a fresh
+        confirmation email arrives immediately.
+      </li>
+      <li>
+        Already subscribed? Request a new sign-in link on the
+        <a href={href('/alerts/manage/')}>manage page</a>.
+      </li>
+    </ul>
+    <p class="muted small">
+      A link can also stop working because the subscription was deleted, or because
+      "unlink all devices" was used. Both are permanent by design.
+    </p>
+  </div>
+</Base>

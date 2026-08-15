@@ -1,0 +1,127 @@
+---
+/**
+ * /alerts/ — what the email alerts are, and the signup form.
+ *
+ * Like every page under /alerts/, it stays reachable when PUBLIC_ALERTS_API is
+ * empty but explains that the feature is not enabled on this build, so a fork
+ * never ships a form that silently posts nowhere.
+ */
+import Base from '../../components/Base.astro';
+import AlertsSignup from '../../components/AlertsSignup.astro';
+import { ALERTS_API, href } from '../../lib/site';
+
+const enabled = !!ALERTS_API;
+---
+
+<Base
+  title="Email alerts"
+  description="An optional weekly email with the workshop deadline changes and new calls in the areas you pick. No account, one-click unsubscribe."
+>
+  <section class="masthead">
+    <p class="eyebrow">Optional</p>
+    <h1>Deadline alerts by email</h1>
+    <p class="lede">
+      One email a week, covering only the conferences and topics you choose — plus an optional
+      nudge when a workshop you starred is about to close.
+    </p>
+  </section>
+
+  {!enabled && (
+    <p class="muted">
+      Email alerts are not enabled on this build of the site. The tracker itself works exactly the
+      same without them — everything on the <a href={href('/')}>deadline board</a> and your
+      <a href={href('/saved/')}>saved list</a> is unaffected.
+    </p>
+  )}
+
+  <div class="prose">
+    <h2>What arrives</h2>
+    <p>Every Monday, one message with four short sections, filtered to your selection:</p>
+    <ul>
+      <li><strong>Deadline changes this week</strong> — extensions and any date that moved earlier.</li>
+      <li><strong>Newly announced</strong> — workshops that appeared in the tracker this week.</li>
+      <li><strong>Closing in the next 7 days</strong> — sorted by whichever stage is next.</li>
+      <li><strong>Your starred</strong> — the next deadlines on your saved list, whatever your filters say.</li>
+    </ul>
+    <p>
+      <strong>Quiet weeks send nothing.</strong> If none of your areas moved, there is no email —
+      the digest is skipped rather than padded.
+    </p>
+
+    <h2>A sample</h2>
+    <pre class="alerts-sample"><code>{`This week in AI workshops
+
+Deadline changes this week
+--------------------------
+* → Extended 5 days · MARINE (ECCV 2026) — now 19 Sep 2026, 23:59 UTC
+* → Deadline just announced · AI4MAT (NeurIPS 2026) — now 3 Oct 2026, 23:59 UTC
+
+Closing in the next 7 days
+--------------------------
+* ★ AGENTIC (ICML 2026) — 18 Aug 2026, 23:59 UTC
+*   SAFEGEN (NeurIPS 2026) — 20 Aug 2026, 07:59 UTC (abstract)
+
+Your starred — next deadlines
+-----------------------------
+* ★ AGENTIC (ICML 2026) — 18 Aug 2026, 23:59 UTC`}</code></pre>
+  </div>
+
+  <AlertsSignup
+    heading="Subscribe"
+    blurb="Double opt-in — you'll get one confirmation email, and nothing else until you click it."
+    compact
+  />
+
+  <div class="prose">
+    <h2>Questions</h2>
+
+    <h3>Is the data guaranteed correct?</h3>
+    <p>
+      No, and the emails say so. Dates are when <em>we</em> recorded a value, not necessarily when
+      organizers changed it, and some entries are unverified imports.
+      <strong>Always confirm on the official workshop page</strong> before you plan a submission.
+    </p>
+
+    <h3>Do I need an account?</h3>
+    <p>
+      No. There is no password and no profile — your email address plus a signed link is the whole
+      system. To change anything later, request a sign-in link on the
+      <a href={href('/alerts/manage/')}>manage page</a>.
+    </p>
+
+    <h3>What do you store, and how do I delete it?</h3>
+    <p>
+      Your address, the conferences and topics you picked, your starred items, and your cadence.
+      Nothing else — no open tracking, no click redirects, no third-party sharing. Unsubscribing
+      <strong>deletes the row entirely</strong>, immediately: there is no "inactive" state to sit in.
+      Every email has a one-click unsubscribe link, and the manage page has the same button.
+    </p>
+
+    <h3>Does my saved list still work without this?</h3>
+    <p>
+      Completely. Starring writes to your own browser and always has. Subscribing simply lets that
+      list follow you to another device — see <a href={href('/saved/')}>your saved list</a>.
+    </p>
+
+    <h3>Can I just use a calendar or the RSS feed instead?</h3>
+    <p>
+      New workshops are announced in the <a href={href('/rss.xml')}>RSS feed</a>, and the full
+      dataset is at <a href={href('/api/workshops.json')}><code>/api/workshops.json</code></a> if
+      you'd rather build your own reminder.
+    </p>
+  </div>
+</Base>
+
+<style>
+  .alerts-sample {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+  .alerts-sample code { background: none; padding: 0; }
+</style>

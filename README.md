@@ -6,7 +6,8 @@ A static website that aggregates **AI/ML/Robotics conference workshop** informat
 
 - 📅 **Upcoming submission deadlines** for COLM, CVPR, CoRL, ECCV, ICLR, ICML, ICRA, IROS, and NeurIPS workshops, with live countdowns and AoE → local-time conversion; the board shows open calls, and everything else is reachable through search
 - 🔎 **One unified, faceted search** across every workshop edition and 20k+ accepted-paper titles, filterable by conference, status, year, and topic — fully static (Pagefind), so it runs entirely in the browser with no search server
-- ⭐ **Save workshops and papers** to a personal list, stored in your own browser (no account, no sign-in)
+- ⭐ **Save workshops and papers** to a personal list, stored in your own browser (no account, no sign-in) — and optionally sync it across devices by subscribing to alerts
+- ✉️ **Optional weekly email digest** of deadline changes and new calls in the conferences and topics you pick, plus opt-in alerts when a starred deadline is within 72 hours — no password, one-click unsubscribe that deletes your address ([docs/ALERTS.md](docs/ALERTS.md))
 - 📄 **Auto-generated accepted-paper listings** for OpenReview-hosted workshops on each workshop's page
 - 🗂️ **A page for each conference** (e.g. `/conference/neurips/`) listing its workshops by year — with schema.org structured data and an `/llms.txt` summary that make the dataset easy for search engines and AI assistants to cite
 
@@ -24,6 +25,7 @@ GitHub repo (single source of truth)
  ├── lib/                      shared date/AoE, data-loading, and ICS code
  ├── scripts/                  validation, OpenReview fetcher, automation helpers
  ├── site/                     Astro static site (reads ../data at build time)
+ ├── alerts/                   optional email-alerts satellite (Worker + pure logic)
  └── .github/workflows/        CI validation + scheduled automation
 ```
 
@@ -89,4 +91,6 @@ Contributions are governed by lightweight [contributor terms](CONTRIBUTOR_TERMS.
 
 ## Scope (deliberately) excluded
 
-No accounts, no backend, no email alerts, no scraping of non-OpenReview portals, no LLM pipelines, no PDF rehosting. These are the things that make trackers expensive to run and easy to abandon.
+No accounts, no scraping of non-OpenReview portals, no LLM pipelines, no PDF rehosting. These are the things that make trackers expensive to run and easy to abandon.
+
+Email alerts do exist, but as an **optional, isolated satellite** (one Cloudflare Worker + one small database) rather than a backend the site depends on: there are still no passwords and no login wall, the tracker is built and served as a fully static site, and deleting the alerts system leaves the site byte-for-byte unchanged. A build with `PUBLIC_ALERTS_API` unset — every fork, every PR preview — carries no trace of it. See **[docs/ALERTS.md](docs/ALERTS.md)**.

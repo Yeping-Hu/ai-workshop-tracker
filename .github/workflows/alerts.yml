@@ -1,0 +1,60 @@
+# Daily email-alerts pipeline.
+#
+# Diffs the freshly deployed /api/workshops.json against yesterday's snapshot,
+# records what changed, sends urgent starred-deadline alerts, and on Mondays
+# sends the weekly digests.
+#
+# Timing matters: deploy.yml's daily rebuild runs at 05:17 UTC and is what makes
+# today's workshops.json exist. This job runs at 06:30 UTC — 73 minutes later —
+# so it always diffs the rebuilt feed, never yesterday's. If deploy.yml's cron
+# moves, move this one with it.
+#
+# This job never commits to the repo, so it deliberately does NOT join the
+# `data-write` concurrency group (see docs/AUTOMATION.md); it has its own.
+name: Email alerts
+
+on:
+  schedule:
+    - cron: '30 6 * * *' # daily 06:30 UTC, ≥60 min after deploy.yml's 05:17
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Render and report without sending anything'
+        type: boolean
+        default: true
+      force_weekly:
+        description: 'Run the weekly digest pass even if today is not Monday'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alerts
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    # Skipped entirely in forks and wherever the feature is unconfigured, so a
+    # fork's Actions tab isn't full of red runs it can never fix.
+    if: github.repository_owner == 'Yeping-Hu'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      # The script prints counts, slugs and subjects only — never an address and
+      # never a message body. Workflow logs on a public repo are public.
+      - name: Run the alerts pipeline
+        env:
+          ALERTS_API_BASE: ${{ secrets.ALERTS_API_BASE }}
+          ALERTS_ADMIN_TOKEN: ${{ secrets.ALERTS_ADMIN_TOKEN }}
+          # A scheduled run always sends; a manual one defaults to a dry run.
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}
+          FORCE_WEEKLY: ${{ inputs.force_weekly && '1' || '0' }}
+        run: node scripts/alerts_run.mjs

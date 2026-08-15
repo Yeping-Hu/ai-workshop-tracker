@@ -6,3 +6,11 @@ site/dist/
 
 # Transient changelog the discovery workflow writes (never committed)
 .deadline-changes.md
+
+# Local Worker development: .dev.vars holds real secret values for
+# `wrangler dev`, and .wrangler/ is its local state (including a local copy of
+# the D1 database, which would contain subscriber addresses). Neither ever
+# belongs in the repo.
+.dev.vars
+.wrangler/
+alerts/worker/node_modules/

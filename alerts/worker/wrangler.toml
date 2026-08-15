@@ -1,0 +1,39 @@
+# Cloudflare Worker "aiwt-alerts" — the entire backend for email alerts.
+#
+# This is the ONLY server-side component in the project. The tracker itself
+# stays a static build; delete this directory and the site is unchanged (see
+# docs/ARCHITECTURE.md, "Email alerts (optional satellite)").
+#
+# First-time setup (maintainer — see docs/plans/email-alerts.md §9):
+#   npx wrangler d1 create aiwt-alerts        # then paste the id below
+#   npx wrangler d1 execute aiwt-alerts --remote --file=./schema.sql
+#   npx wrangler secret put HMAC_SECRET       # 32+ random bytes, hex
+#   npx wrangler secret put ADMIN_TOKEN       # shared with the GitHub Action
+#   npx wrangler secret put TURNSTILE_SECRET
+#   npx wrangler secret put RESEND_API_KEY
+#   npx wrangler secret put RESEND_WEBHOOK_SECRET
+#   npx wrangler deploy
+
+name = "aiwt-alerts"
+main = "src/index.mjs"
+compatibility_date = "2026-08-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "aiwt-alerts"
+# Created 2026-08-14 with `wrangler d1 create aiwt-alerts` (region WNAM). This
+# is an identifier, not a credential — it is useless without an account token,
+# which is why it belongs in the repo.
+database_id = "0764b285-e878-4811-bd6a-42482a950bf1"
+
+[vars]
+SITE_ORIGIN = "https://aiworkshoptracker.com"
+# A dedicated subdomain so the apex domain's sending reputation is never at
+# risk (decision D7). Must be verified in Resend with SPF/DKIM/DMARC published.
+MAIL_FROM = "AI Workshop Tracker <alerts@mail.aiworkshoptracker.com>"
+
+# `wrangler dev` only: allows the local Astro dev server through CORS.
+[env.dev.vars]
+SITE_ORIGIN = "https://aiworkshoptracker.com"
+MAIL_FROM = "AI Workshop Tracker <alerts@mail.aiworkshoptracker.com>"
+DEV = "1"

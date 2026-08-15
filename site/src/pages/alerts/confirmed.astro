@@ -1,0 +1,110 @@
+---
+/**
+ * /alerts/confirmed/ — the landing page after clicking a confirmation link.
+ *
+ * The Worker redirects here with the manage token in the URL **fragment**
+ * (`#t=…`). Fragments are never sent to a server, so the token stays out of
+ * access logs, Referer headers and analytics. This page moves it into
+ * localStorage — that single step is what "links" this device for cross-device
+ * sync — then merges the server's starred lists into the local ones.
+ *
+ * The merge is a **union**, never a delete: hydrating must not be able to wipe
+ * a list. Removals only ever propagate as explicit `remove` operations from
+ * favorites.js. (Accepted limitation, documented there.)
+ */
+import Base from '../../components/Base.astro';
+import { ALERTS_API, href } from '../../lib/site';
+
+const enabled = !!ALERTS_API;
+---
+
+<Base title="Subscription confirmed" description="Your email alerts are active.">
+  <section class="masthead">
+    <p class="eyebrow">Email alerts</p>
+    <h1 id="confirmHead">You're subscribed</h1>
+    <p class="lede" id="confirmLede">
+      The first digest arrives on the next Monday with something to report.
+    </p>
+  </section>
+
+  {!enabled ? (
+    <p class="muted">Email alerts are not enabled on this build of the site.</p>
+  ) : (
+    <>
+      <p class="muted" id="confirmSync">Linking this device…</p>
+      <p>
+        <a class="btn" href={href('/saved/')}>Go to your saved list</a>
+        <a class="btn-quiet" href={href('/alerts/manage/')} style="margin-left:0.9rem;">Manage preferences</a>
+      </p>
+      <p class="muted small" style="margin-top:1.6rem;">
+        Nothing else is sent until there is news in your areas. Every email has a one-click
+        unsubscribe link that deletes your address on the spot.
+      </p>
+
+      <script is:inline define:vars={{ ALERTS_API }}>
+        (async () => {
+          const TOKEN_KEY = 'awt-alerts-token';
+          const EMAIL_KEY = 'awt-alerts-email';
+          const WS_KEY = 'awt-fav-workshops';
+          const P_KEY = 'awt-fav-papers';
+          const note = document.getElementById('confirmSync');
+
+          const params = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+          const token = params.get('t');
+          const email = params.get('e');
+
+          // Clear the fragment as soon as it is read, so the token is not left
+          // in the address bar, in a bookmark, or in a shared screenshot.
+          if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+
+          if (!token) {
+            note.textContent =
+              'This device is not linked (the confirmation link had no token). Your subscription is still active.';
+            return;
+          }
+
+          try {
+            localStorage.setItem(TOKEN_KEY, token);
+            if (email) localStorage.setItem(EMAIL_KEY, email);
+          } catch {
+            note.textContent = 'Your subscription is active, but this browser blocks storage, so the list cannot sync here.';
+            return;
+          }
+
+          const read = (k) => {
+            try {
+              const v = JSON.parse(localStorage.getItem(k) || '[]');
+              return Array.isArray(v) ? v : [];
+            } catch {
+              return [];
+            }
+          };
+
+          try {
+            const res = await fetch(`${ALERTS_API}/me`, { headers: { Authorization: `Bearer ${token}` } });
+            if (!res.ok) throw new Error(String(res.status));
+            const me = await res.json();
+
+            // Union-merge: server ∪ local. Never a subtraction.
+            const ws = [...new Set([...read(WS_KEY), ...(me.starred_ws || [])])];
+            const localPapers = read(P_KEY);
+            const byId = new Map(localPapers.map((p) => [p.id, p]));
+            for (const p of me.starred_papers || []) if (p && p.id && !byId.has(p.id)) byId.set(p.id, p);
+
+            localStorage.setItem(WS_KEY, JSON.stringify(ws));
+            localStorage.setItem(P_KEY, JSON.stringify([...byId.values()]));
+            window.awtFavsHydrate?.();
+
+            const n = ws.length + byId.size;
+            note.textContent = me.email
+              ? `Synced as ${me.email} — ${n} saved item${n === 1 ? '' : 's'} on this device.`
+              : 'This device is linked.';
+          } catch {
+            // The subscription is confirmed regardless; only the sync failed.
+            note.textContent = 'This device is linked. (Your saved list could not be fetched just now — it will sync later.)';
+          }
+        })();
+      </script>
+    </>
+  )}
+</Base>

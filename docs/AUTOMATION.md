@@ -28,6 +28,23 @@ for human review, as do dependency updates.
 | `deadline-review.yml` | weekly | One consolidated issue listing deadlines that need a human decision Also reports a `website` that changed on OpenReview (reported, never applied). |
 | `stale-check.yml` | weekly | One consolidated issue listing entries needing follow-up |
 | `link-check.yml` | monthly | One consolidated issue listing broken URLs Before running, `scripts/lychee_exclusions.mjs` appends every `review_ack.website` to `.lycheeignore`, so a URL deliberately removed as dead is not re-reported each month. |
+| `alerts.yml` | daily, manual | `scripts/alerts_run.mjs` — diffs `/api/workshops.json` against yesterday's snapshot, records events, sends urgent starred-deadline alerts, and on Mondays the weekly digests. Commits nothing. |
+| `alerts-worker-deploy.yml` | push touching `alerts/**` | `wrangler deploy` of the alerts Worker, after checking `alerts/ids.json` is in sync with the data vocabulary |
+| `alerts-ci.yml` | PRs & pushes touching `alerts/**` or `scripts/alerts_*` | The four pure-logic alerts suites (tokens, diff, matching, rendering) plus the ids sync check |
+
+## The alerts job is outside the data-write group
+
+`alerts.yml` never commits to the repo, so it deliberately does **not** join the
+`data-write` concurrency group described below — queueing it behind the data jobs
+would only delay mail. It has its own `alerts` group so two runs can't overlap.
+
+What it *does* need is ordering against `deploy.yml`: the diff must read the
+`workshops.json` that today's rebuild produced, or it compares yesterday's feed
+against yesterday's snapshot and reports nothing. `deploy.yml`'s daily cron is
+05:17 UTC and the alerts cron is 06:30 UTC — 73 minutes later. **Moving either
+cron means moving both.** Everything else about the job is stateless: it holds
+no credentials beyond a bearer token, and all state lives in the Worker's
+database. See [ALERTS.md](ALERTS.md).
 
 ## Every deadline write is logged
 

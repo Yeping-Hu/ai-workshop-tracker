@@ -1,0 +1,278 @@
+---
+/**
+ * Email-alerts signup — the only new interactive surface on the site.
+ *
+ * Renders **nothing** when PUBLIC_ALERTS_API is empty, so a fork or a PR
+ * preview build ships without a trace of the feature (and the static site keeps
+ * working if the alerts satellite is deleted entirely).
+ *
+ * The conference and topic pickers are built at build time from the same data
+ * the homepage facets use, and submit **ids** while displaying labels — the
+ * Worker validates against a generated allowlist (alerts/ids.json), so a
+ * vocabulary change flows through without touching this file.
+ *
+ * Stars are read from localStorage at submit time and sent along, so
+ * starred-workshop alerts work from the very first signup — before any device
+ * has been linked for sync.
+ */
+import { conferences, topics } from '../lib/data';
+import { ALERTS_API, TURNSTILE_SITE_KEY, href } from '../lib/site';
+
+interface Props {
+  /** Headline above the form. The homepage and /saved/ frame it differently. */
+  heading?: string;
+  /** Short line under the heading. */
+  blurb?: string;
+  /** Set on /alerts/, where the surrounding page already explains the feature. */
+  compact?: boolean;
+}
+const {
+  heading = 'Get deadline alerts by email',
+  blurb = 'One email a week with the deadline changes and new workshops in your areas.',
+  compact = false,
+} = Astro.props;
+
+const enabled = !!ALERTS_API;
+const confList = [...conferences].sort((a, b) => a.name.localeCompare(b.name));
+const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.label));
+---
+
+{enabled && (
+  <section class="alerts-signup" aria-labelledby="alertsSignupHead" data-compact={compact ? '' : undefined}>
+    <h2 id="alertsSignupHead">{heading}</h2>
+    <p class="muted small">{blurb}</p>
+
+    <form id="alertsForm" novalidate>
+      <div class="alerts-row">
+        <label class="alerts-sr" for="alertsEmail">Email address</label>
+        <input
+          id="alertsEmail"
+          name="email"
+          type="email"
+          autocomplete="email"
+          required
+          placeholder="you@university.edu"
+        />
+
+        <details class="dd">
+          <summary id="alertsConfSummary">Conferences: all</summary>
+          <div class="dd-panel" id="alertsConfPanel">
+            {confList.map((c: any) => (
+              <label class="check">
+                <input type="checkbox" name="conference" value={c.id} />
+                <span class="conf-dot" style={`--conf:${c.color}`}></span>
+                {c.name}
+              </label>
+            ))}
+          </div>
+        </details>
+
+        <details class="dd">
+          <summary id="alertsTopicSummary">Topics: all</summary>
+          <div class="dd-panel" id="alertsTopicPanel">
+            {topicList.map((t: any) => (
+              <label class="check">
+                <input type="checkbox" name="topic" value={t.id} />
+                {t.label}
+              </label>
+            ))}
+          </div>
+        </details>
+      </div>
+
+      <p class="muted small alerts-hint">
+        Pick nothing and you get everything — that's the default.
+      </p>
+
+      <fieldset class="alerts-cadence">
+        <legend class="alerts-sr">How often</legend>
+        <label class="check">
+          <input type="radio" name="cadence" value="weekly" checked />
+          Weekly digest
+        </label>
+        <label class="check">
+          <input type="radio" name="cadence" value="weekly_urgent" />
+          Weekly digest + urgent alerts when a starred deadline is within 72 hours
+        </label>
+      </fieldset>
+
+      {TURNSTILE_SITE_KEY && (
+        <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} data-appearance="interaction-only"></div>
+      )}
+
+      <div class="alerts-row">
+        <button class="btn" type="submit" id="alertsSubmit">Subscribe</button>
+        <a class="btn-quiet" href={href('/alerts/manage/')}>Already subscribed? Manage or unsubscribe</a>
+      </div>
+
+      <p class="alerts-status" id="alertsStatus" role="status" aria-live="polite" hidden></p>
+
+      <p class="muted small alerts-privacy">
+        One email a week at most, plus optional urgent deadline alerts. Your address is stored only
+        to send these; one-click unsubscribe deletes it. Nothing is sold, no tracking pixels.
+      </p>
+    </form>
+  </section>
+)}
+
+{enabled && TURNSTILE_SITE_KEY && (
+  <script is:inline async defer src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
+)}
+
+{enabled && (
+  <script is:inline define:vars={{ ALERTS_API }}>
+    (() => {
+      const form = document.getElementById('alertsForm');
+      if (!form || form.dataset.wired) return;
+      form.dataset.wired = '1';
+
+      const status = document.getElementById('alertsStatus');
+      const submit = document.getElementById('alertsSubmit');
+      const say = (msg, kind) => {
+        status.textContent = msg;
+        status.hidden = false;
+        status.className = `alerts-status is-${kind}`;
+      };
+
+      // Summaries mirror the homepage facet dropdowns: they always state the
+      // current selection, so a collapsed picker is never ambiguous.
+      const picked = (name) => [...form.querySelectorAll(`input[name="${name}"]:checked`)].map((i) => i.value);
+      const syncSummary = (name, el, noun) => {
+        const n = picked(name).length;
+        el.textContent = n === 0 ? `${noun}: all` : `${noun}: ${n} selected`;
+      };
+      const confSummary = document.getElementById('alertsConfSummary');
+      const topicSummary = document.getElementById('alertsTopicSummary');
+      form.addEventListener('change', () => {
+        syncSummary('conference', confSummary, 'Conferences');
+        syncSummary('topic', topicSummary, 'Topics');
+      });
+
+      const readStars = (key) => {
+        try {
+          const v = JSON.parse(localStorage.getItem(key) || '[]');
+          return Array.isArray(v) ? v : [];
+        } catch {
+          return [];
+        }
+      };
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = form.querySelector('#alertsEmail').value.trim();
+        if (!email || !email.includes('@')) return say('Please enter a valid email address.', 'err');
+
+        // Turnstile renders its own hidden input; the Worker fails closed if it
+        // is missing, so an ad blocker that eats the widget gets a clear message
+        // rather than a silent rejection.
+        const tsField = form.querySelector('[name="cf-turnstile-response"]');
+        const turnstile_token = tsField ? tsField.value : '';
+
+        submit.disabled = true;
+        say('Sending…', 'busy');
+        try {
+          const res = await fetch(`${ALERTS_API}/subscribe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email,
+              conferences: picked('conference'),
+              topics: picked('topic'),
+              // Sent at signup so starred-workshop alerts work immediately,
+              // before this device has been linked for sync.
+              starred_ws: readStars('awt-fav-workshops'),
+              starred_papers: readStars('awt-fav-papers'),
+              cadence: form.querySelector('input[name="cadence"]:checked')?.value || 'weekly',
+              turnstile_token,
+            }),
+          });
+          const body = await res.json().catch(() => ({}));
+
+          if (body.ok) {
+            say(body.message || 'Check your inbox to confirm.', 'ok');
+            form.querySelector('#alertsEmail').value = '';
+          } else if (body.error === 'list_full') {
+            say(body.message || 'The alert list is full right now — please try again in a while.', 'err');
+          } else if (body.error === 'rate_limited') {
+            say('Too many attempts from here. Please try again in an hour.', 'err');
+          } else if (body.error === 'captcha_failed') {
+            say("The anti-spam check didn't pass. Reload the page and try again.", 'err');
+          } else if (body.error === 'invalid_email') {
+            say('That address does not look valid.', 'err');
+          } else {
+            say('Something went wrong. Please try again shortly.', 'err');
+          }
+        } catch {
+          say("Couldn't reach the alerts service. Check your connection and try again.", 'err');
+        } finally {
+          submit.disabled = false;
+          window.turnstile?.reset?.();
+        }
+      });
+    })();
+  </script>
+)}
+
+{/* `is:inline` rather than a scoped <style>: Astro extracts and hoists scoped
+    styles at build time whether or not the markup renders, which left ~1.2 KB
+    of dead CSS on every page when PUBLIC_ALERTS_API was empty. Inline keeps the
+    promise that an unconfigured build carries no trace of the feature. Class
+    names are prefixed, so the lack of scoping is not a collision risk. */}
+{enabled && (
+<style is:inline>
+  .alerts-signup {
+    margin: 2.6rem 0 0;
+    padding: 1.3rem 1.4rem;
+    background: var(--accent-soft);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  .alerts-signup[data-compact] { background: transparent; }
+  .alerts-signup h2 { margin: 0 0 0.2rem; font-size: 1.12rem; }
+  .alerts-signup p { margin: 0; }
+  .alerts-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem 0.7rem;
+    align-items: center;
+    margin-top: 0.9rem;
+  }
+  .alerts-signup input[type='email'] {
+    font: inherit;
+    font-size: 0.95rem;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.45rem 0.7rem;
+    min-width: 16rem;
+    flex: 1 1 16rem;
+  }
+  .alerts-hint { margin-top: 0.45rem !important; }
+  .alerts-cadence {
+    border: 0;
+    padding: 0;
+    margin: 0.85rem 0 0;
+    display: grid;
+    gap: 0.35rem;
+  }
+  .alerts-cadence .check { align-items: baseline; }
+  .alerts-signup .cf-turnstile { margin-top: 0.85rem; }
+  .alerts-status { margin-top: 0.8rem !important; font-size: 0.9rem; }
+  .alerts-status.is-ok { color: var(--accent); font-weight: 600; }
+  .alerts-status.is-err { color: var(--urgent); }
+  .alerts-status.is-busy { color: var(--muted); }
+  .alerts-privacy { margin-top: 0.85rem !important; max-width: 46rem; }
+  .alerts-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>
+)}

@@ -1,0 +1,292 @@
+---
+/**
+ * /alerts/manage/ — preferences, pause, unlink, and delete.
+ *
+ * Three entry points, in order of preference:
+ *   1. a `magic` token in the URL fragment (from a sign-in email), exchanged
+ *      once for a long-lived `manage` token that is stored locally;
+ *   2. a `manage` token already in localStorage (this device was linked when
+ *      the subscription was confirmed);
+ *   3. neither — show the "email me a sign-in link" form.
+ *
+ * Everything happens client-side against the Worker; the page itself is static.
+ */
+import Base from '../../components/Base.astro';
+import { conferences, topics } from '../../lib/data';
+import { ALERTS_API, TURNSTILE_SITE_KEY, href } from '../../lib/site';
+
+const enabled = !!ALERTS_API;
+const confList = [...conferences].sort((a: any, b: any) => a.name.localeCompare(b.name));
+const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.label));
+---
+
+<Base title="Manage email alerts" description="Change what you receive, pause it, or delete your address.">
+  <section class="masthead">
+    <p class="eyebrow">Email alerts</p>
+    <h1>Manage your alerts</h1>
+  </section>
+
+  {!enabled ? (
+    <p class="muted">Email alerts are not enabled on this build of the site.</p>
+  ) : (
+    <>
+      {/* 1. Sign-in — shown when there is no usable token. */}
+      <section id="signInBox" hidden>
+        <p class="lede">Enter your address and we'll email you a sign-in link. It's valid for 15 minutes.</p>
+        <form id="magicForm">
+          <div class="manage-row">
+            <input id="magicEmail" type="email" autocomplete="email" placeholder="you@university.edu" required />
+            <button class="btn" type="submit">Email me a link</button>
+          </div>
+          {TURNSTILE_SITE_KEY && (
+            <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} data-appearance="interaction-only" style="margin-top:0.8rem;"></div>
+          )}
+          <p class="manage-status" id="magicStatus" role="status" aria-live="polite" hidden></p>
+        </form>
+      </section>
+
+      {/* 2. Preferences — shown once /me resolves. */}
+      <section id="prefsBox" hidden>
+        <p class="lede">Signed in as <strong id="prefsEmail"></strong>.</p>
+
+        <form id="prefsForm">
+          <h2>What you hear about</h2>
+          <p class="muted small">Select nothing in a list to mean "all of them".</p>
+
+          <div class="manage-row">
+            <details class="dd">
+              <summary id="prefsConfSummary">Conferences: all</summary>
+              <div class="dd-panel">
+                {confList.map((c: any) => (
+                  <label class="check">
+                    <input type="checkbox" name="conference" value={c.id} />
+                    <span class="conf-dot" style={`--conf:${c.color}`}></span>
+                    {c.name}
+                  </label>
+                ))}
+              </div>
+            </details>
+
+            <details class="dd">
+              <summary id="prefsTopicSummary">Topics: all</summary>
+              <div class="dd-panel">
+                {topicList.map((t: any) => (
+                  <label class="check">
+                    <input type="checkbox" name="topic" value={t.id} />
+                    {t.label}
+                  </label>
+                ))}
+              </div>
+            </details>
+          </div>
+
+          <h2>How often</h2>
+          <fieldset class="manage-cadence">
+            <legend class="alerts-sr">Cadence</legend>
+            <label class="check"><input type="radio" name="cadence" value="weekly" /> Weekly digest</label>
+            <label class="check">
+              <input type="radio" name="cadence" value="weekly_urgent" />
+              Weekly digest + urgent alerts (starred deadline within 72 hours)
+            </label>
+            <label class="check">
+              <input type="radio" name="cadence" value="off" />
+              Pause — keep my preferences and saved list, send nothing
+            </label>
+          </fieldset>
+
+          <p class="manage-row" style="margin-top:1.2rem;">
+            <button class="btn" type="submit">Save preferences</button>
+            <span class="manage-status" id="prefsStatus" role="status" aria-live="polite" hidden></span>
+          </p>
+        </form>
+
+        <h2>This device</h2>
+        <p class="muted small" id="deviceLine">
+          Your saved list syncs to this browser while it is linked.
+        </p>
+        <p>
+          <button class="btn-quiet" type="button" id="unlinkBtn">Unlink this device</button>
+        </p>
+        <p class="muted small">
+          Unlinking only forgets the sign-in token in this browser. Your subscription and your
+          saved items are untouched, and starring keeps working exactly as it does without alerts.
+        </p>
+
+        <h2>Delete</h2>
+        <p>
+          <a class="btn secondary" id="deleteLink" href="#">Unsubscribe &amp; delete my data</a>
+        </p>
+        <p class="muted small">
+          This removes your address, preferences and stored stars from the alerts database
+          immediately — there is no deactivated state. Items you starred stay in this browser.
+        </p>
+      </section>
+
+      {/* 3. A token that no longer works. */}
+      <section id="expiredBox" hidden>
+        <p class="lede">That link has expired or was already used.</p>
+        <p><button class="btn" type="button" id="expiredRetry">Email me a new sign-in link</button></p>
+      </section>
+
+      {TURNSTILE_SITE_KEY && (
+        <script is:inline async defer src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
+      )}
+
+      <script is:inline define:vars={{ ALERTS_API }}>
+        (async () => {
+          const TOKEN_KEY = 'awt-alerts-token';
+          const EMAIL_KEY = 'awt-alerts-email';
+          const $ = (id) => document.getElementById(id);
+          const show = (id, on = true) => { $(id).hidden = !on; };
+          const say = (el, msg, kind) => {
+            el.textContent = msg;
+            el.hidden = false;
+            el.className = `manage-status is-${kind}`;
+          };
+
+          // A magic token in the fragment wins over a stored one; clear the
+          // fragment immediately so the token is not left in the address bar.
+          const frag = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+          const fragToken = frag.get('t');
+          if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+
+          let token = fragToken || (() => { try { return localStorage.getItem(TOKEN_KEY); } catch { return null; } })();
+
+          /* ---------------- sign-in (magic link) ---------------- */
+          const magicForm = $('magicForm');
+          magicForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const status = $('magicStatus');
+            const email = $('magicEmail').value.trim();
+            if (!email.includes('@')) return say(status, 'Please enter a valid email address.', 'err');
+            const ts = document.querySelector('[name="cf-turnstile-response"]');
+            say(status, 'Sending…', 'busy');
+            try {
+              const res = await fetch(`${ALERTS_API}/magic-link`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, turnstile_token: ts ? ts.value : '' }),
+              });
+              const body = await res.json().catch(() => ({}));
+              // Deliberately neutral: the Worker answers the same way whether
+              // or not the address is on the list, so this page must too.
+              say(status, body.message || 'If that address is subscribed, a sign-in link is on its way.', 'ok');
+            } catch {
+              say(status, "Couldn't reach the alerts service. Try again shortly.", 'err');
+            } finally {
+              window.turnstile?.reset?.();
+            }
+          });
+          $('expiredRetry').addEventListener('click', () => {
+            show('expiredBox', false);
+            show('signInBox', true);
+            $('magicEmail').focus();
+          });
+
+          if (!token) { show('signInBox'); return; }
+
+          /* ---------------- load preferences ---------------- */
+          let me;
+          try {
+            const res = await fetch(`${ALERTS_API}/me`, { headers: { Authorization: `Bearer ${token}` } });
+            if (res.status === 401) { show('expiredBox'); return; }
+            if (!res.ok) throw new Error(String(res.status));
+            me = await res.json();
+          } catch {
+            show('signInBox');
+            say($('magicStatus'), "Couldn't reach the alerts service. Try a fresh sign-in link.", 'err');
+            return;
+          }
+
+          // A magic exchange returns a long-lived manage token; store it so this
+          // device stays linked after the 15-minute magic token dies.
+          if (me.manage_token) {
+            token = me.manage_token;
+            try {
+              localStorage.setItem(TOKEN_KEY, token);
+              if (me.email) localStorage.setItem(EMAIL_KEY, me.email);
+            } catch {}
+          }
+
+          const prefs = $('prefsForm');
+          $('prefsEmail').textContent = me.email || '';
+          for (const box of prefs.querySelectorAll('input[name="conference"]')) {
+            box.checked = (me.conferences || []).includes(box.value);
+          }
+          for (const box of prefs.querySelectorAll('input[name="topic"]')) {
+            box.checked = (me.topics || []).includes(box.value);
+          }
+          const cadence = prefs.querySelector(`input[name="cadence"][value="${me.cadence || 'weekly'}"]`);
+          if (cadence) cadence.checked = true;
+          $('deleteLink').href = me.unsubscribe_url || '#';
+          $('deviceLine').textContent =
+            `${(me.starred_ws || []).length} workshop(s) and ${(me.starred_papers || []).length} paper(s) are stored with your subscription.`;
+
+          const picked = (name) => [...prefs.querySelectorAll(`input[name="${name}"]:checked`)].map((i) => i.value);
+          const syncSummary = () => {
+            const c = picked('conference').length;
+            const t = picked('topic').length;
+            $('prefsConfSummary').textContent = c ? `Conferences: ${c} selected` : 'Conferences: all';
+            $('prefsTopicSummary').textContent = t ? `Topics: ${t} selected` : 'Topics: all';
+          };
+          prefs.addEventListener('change', syncSummary);
+          syncSummary();
+          show('prefsBox');
+
+          prefs.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const status = $('prefsStatus');
+            say(status, 'Saving…', 'busy');
+            try {
+              const res = await fetch(`${ALERTS_API}/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({
+                  conferences: picked('conference'),
+                  topics: picked('topic'),
+                  cadence: prefs.querySelector('input[name="cadence"]:checked')?.value || 'weekly',
+                }),
+              });
+              if (res.status === 401) { show('prefsBox', false); show('expiredBox'); return; }
+              if (!res.ok) throw new Error(String(res.status));
+              say(status, 'Saved.', 'ok');
+            } catch {
+              say(status, "Couldn't save just now. Try again shortly.", 'err');
+            }
+          });
+
+          $('unlinkBtn').addEventListener('click', () => {
+            try {
+              localStorage.removeItem(TOKEN_KEY);
+              localStorage.removeItem(EMAIL_KEY);
+            } catch {}
+            location.reload();
+          });
+        })();
+      </script>
+    </>
+  )}
+</Base>
+
+{/* Inline for the same reason as AlertsSignup: a scoped <style> is hoisted at
+    build time even when the markup it styles never renders. */}
+{enabled && (
+<style is:inline>
+  .manage-row { display: flex; flex-wrap: wrap; gap: 0.6rem 0.8rem; align-items: center; }
+  #magicEmail {
+    font: inherit; font-size: 0.95rem; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+    padding: 0.45rem 0.7rem; min-width: 16rem; flex: 1 1 16rem;
+  }
+  .manage-cadence { border: 0; padding: 0; margin: 0.4rem 0 0; display: grid; gap: 0.35rem; }
+  .manage-cadence .check { align-items: baseline; }
+  .manage-status { font-size: 0.9rem; margin: 0; }
+  .manage-status.is-ok { color: var(--accent); font-weight: 600; }
+  .manage-status.is-err { color: var(--urgent); }
+  .manage-status.is-busy { color: var(--muted); }
+  .alerts-sr {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+</style>
+)}

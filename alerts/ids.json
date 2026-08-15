@@ -1,0 +1,192 @@
+{
+  "_generated_by": "scripts/gen_alerts_ids.mjs — do not edit by hand",
+  "conferences": [
+    {
+      "id": "icml",
+      "label": "ICML",
+      "full_name": "International Conference on Machine Learning"
+    },
+    {
+      "id": "iclr",
+      "label": "ICLR",
+      "full_name": "International Conference on Learning Representations"
+    },
+    {
+      "id": "neurips",
+      "label": "NeurIPS",
+      "full_name": "Conference on Neural Information Processing Systems"
+    },
+    {
+      "id": "icra",
+      "label": "ICRA",
+      "full_name": "IEEE International Conference on Robotics and Automation"
+    },
+    {
+      "id": "iros",
+      "label": "IROS",
+      "full_name": "IEEE/RSJ International Conference on Intelligent Robots and Systems"
+    },
+    {
+      "id": "cvpr",
+      "label": "CVPR",
+      "full_name": "IEEE/CVF Conference on Computer Vision and Pattern Recognition"
+    },
+    {
+      "id": "corl",
+      "label": "CoRL",
+      "full_name": "Conference on Robot Learning"
+    },
+    {
+      "id": "colm",
+      "label": "COLM",
+      "full_name": "Conference on Language Modeling"
+    },
+    {
+      "id": "eccv",
+      "label": "ECCV",
+      "full_name": "European Conference on Computer Vision"
+    }
+  ],
+  "topics": [
+    {
+      "id": "agents",
+      "label": "Agents"
+    },
+    {
+      "id": "causality",
+      "label": "Causality"
+    },
+    {
+      "id": "climate",
+      "label": "Climate & sustainability"
+    },
+    {
+      "id": "datasets",
+      "label": "Datasets"
+    },
+    {
+      "id": "diffusion",
+      "label": "Diffusion models"
+    },
+    {
+      "id": "education",
+      "label": "Education"
+    },
+    {
+      "id": "efficiency",
+      "label": "Efficiency"
+    },
+    {
+      "id": "evaluation-benchmarks",
+      "label": "Evaluation & benchmarks"
+    },
+    {
+      "id": "fairness",
+      "label": "Fairness & ethics"
+    },
+    {
+      "id": "federated-learning",
+      "label": "Federated learning"
+    },
+    {
+      "id": "generative-models",
+      "label": "Generative models"
+    },
+    {
+      "id": "genomics",
+      "label": "Genomics"
+    },
+    {
+      "id": "graphs",
+      "label": "Graphs"
+    },
+    {
+      "id": "healthcare-bio",
+      "label": "Healthcare & biology"
+    },
+    {
+      "id": "interpretability",
+      "label": "Interpretability"
+    },
+    {
+      "id": "llms",
+      "label": "Large language models"
+    },
+    {
+      "id": "math-reasoning",
+      "label": "Math & reasoning"
+    },
+    {
+      "id": "multimodal",
+      "label": "Multimodal"
+    },
+    {
+      "id": "neuroscience",
+      "label": "Neuroscience"
+    },
+    {
+      "id": "nlp",
+      "label": "NLP"
+    },
+    {
+      "id": "optimization",
+      "label": "Optimization"
+    },
+    {
+      "id": "physics",
+      "label": "Physical sciences"
+    },
+    {
+      "id": "privacy",
+      "label": "Privacy & security"
+    },
+    {
+      "id": "reinforcement-learning",
+      "label": "Reinforcement learning"
+    },
+    {
+      "id": "robotics",
+      "label": "Robotics"
+    },
+    {
+      "id": "robustness",
+      "label": "Robustness"
+    },
+    {
+      "id": "safety-alignment",
+      "label": "Safety & alignment"
+    },
+    {
+      "id": "science-applications",
+      "label": "AI for science"
+    },
+    {
+      "id": "speech-audio",
+      "label": "Speech & audio"
+    },
+    {
+      "id": "systems",
+      "label": "ML systems"
+    },
+    {
+      "id": "tabular",
+      "label": "Tabular & structured data"
+    },
+    {
+      "id": "theory",
+      "label": "Theory"
+    },
+    {
+      "id": "time-series",
+      "label": "Time series"
+    },
+    {
+      "id": "vision",
+      "label": "Computer vision"
+    },
+    {
+      "id": "other",
+      "label": "Other"
+    }
+  ]
+}

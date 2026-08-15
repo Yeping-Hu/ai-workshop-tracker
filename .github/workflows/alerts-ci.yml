@@ -1,0 +1,61 @@
+# Tests for the email-alerts satellite.
+#
+# A sibling of validate.yml rather than extra steps inside it: validate.yml is
+# scoped to data/schema/scripts/lib and runs the whole data suite, and alerts
+# changes have no bearing on workshop data. Keeping them apart means an alerts
+# PR doesn't re-run 15 data tests and a data PR doesn't wait on these.
+#
+# Everything here is pure logic — no network, no Cloudflare, no secrets.
+name: Validate alerts
+
+on:
+  pull_request:
+    paths:
+      - 'alerts/**'
+      - 'scripts/alerts_*'
+      - 'scripts/gen_alerts_ids.mjs'
+      - 'data/conferences.yml'
+      - 'data/topics.yml'
+      - '.github/workflows/alerts-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'alerts/**'
+      - 'scripts/alerts_*'
+      - 'scripts/gen_alerts_ids.mjs'
+      - 'data/conferences.yml'
+      - 'data/topics.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Test token signing (expiry, purpose isolation, revocation, tamper)
+        run: node scripts/alerts_tokens_test.mjs
+      - name: Test snapshot diff (first-run seed, shrink guard, change threshold)
+        run: node scripts/alerts_diff_test.mjs
+      - name: Test subscriber matching (empty filters = all, starred bypasses)
+        run: node scripts/alerts_match_test.mjs
+      - name: Test email rendering (empty digest skipped, unsubscribe present)
+        run: node scripts/alerts_render_test.mjs
+      - name: Test send-time contract (placeholder guard, recipient eligibility)
+        run: node scripts/alerts_send_test.mjs
+      - name: Test rate limits and magic-token single use (incl. row expiry)
+        run: node scripts/alerts_ratelimit_test.mjs
+      - name: Test the mail adapter (RFC 8058 headers, failure paths)
+        run: node scripts/alerts_mail_test.mjs
+
+      # The Worker cannot read data/*.yml at runtime, so its id allowlist is a
+      # generated file. Drift means a new conference is silently unsubscribable.
+      - name: Check alerts/ids.json matches data/conferences.yml + data/topics.yml
+        run: node scripts/gen_alerts_ids.mjs --check

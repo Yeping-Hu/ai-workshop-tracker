@@ -53,6 +53,12 @@ jobs:
           # variables -> Actions -> Variables). Leave unset for no tracking.
           PUBLIC_GOATCOUNTER: ${{ vars.GOATCOUNTER_CODE }}
           PUBLIC_CF_ANALYTICS_TOKEN: ${{ vars.CF_ANALYTICS_TOKEN }}
+          # Optional email alerts. Both empty -> every alerts UI element is
+          # absent from the build, which is the correct state for a fork and
+          # the state this repo ships in until the Worker is deployed.
+          # (repo Settings -> Secrets and variables -> Actions -> Variables)
+          PUBLIC_ALERTS_API: ${{ vars.ALERTS_API }}
+          PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           # Unique per deploy → lets a stale bfcache page detect it's outdated
           # and reload once (see the pageshow guard in Base.astro).
           BUILD_ID: ${{ github.sha }}
