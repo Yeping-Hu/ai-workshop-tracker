@@ -55,9 +55,21 @@ npx wrangler secret put RESEND_WEBHOOK_SECRET
 npx wrangler deploy
 ```
 
-Then set `PUBLIC_ALERTS_API` + `PUBLIC_TURNSTILE_SITE_KEY` in the **site build**
-environment, and `ALERTS_API_BASE`, `ALERTS_ADMIN_TOKEN`, `CLOUDFLARE_API_TOKEN`,
-`CLOUDFLARE_ACCOUNT_ID` as **repo Action secrets**.
+Then wire the build variables. On **GitHub Pages** the build runs in
+`deploy.yml`, which reads them from repo *Variables* (Settings → Secrets and
+variables → Actions → Variables), not Secrets — they are public values baked
+into the HTML:
+
+| Repo variable | Becomes | Value |
+|---|---|---|
+| `ALERTS_API` | `PUBLIC_ALERTS_API` | the Worker's URL, no trailing slash |
+| `TURNSTILE_SITE_KEY` | `PUBLIC_TURNSTILE_SITE_KEY` | Turnstile's public site key |
+
+On **Cloudflare Pages**, set `PUBLIC_ALERTS_API` and `PUBLIC_TURNSTILE_SITE_KEY`
+directly as build environment variables instead.
+
+Either way, add `ALERTS_API_BASE`, `ALERTS_ADMIN_TOKEN`, `CLOUDFLARE_API_TOKEN`
+and `CLOUDFLARE_ACCOUNT_ID` as **repo Action secrets**.
 
 ### DNS
 
