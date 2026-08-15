@@ -52,6 +52,8 @@ jobs:
         run: node scripts/alerts_send_test.mjs
       - name: Test rate limits and magic-token single use (incl. row expiry)
         run: node scripts/alerts_ratelimit_test.mjs
+      - name: Test the mail adapter (RFC 8058 headers, failure paths)
+        run: node scripts/alerts_mail_test.mjs
 
       # The Worker cannot read data/*.yml at runtime, so its id allowlist is a
       # generated file. Drift means a new conference is silently unsubscribable.
