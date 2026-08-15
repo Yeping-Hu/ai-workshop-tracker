@@ -490,12 +490,32 @@ The decisions worth knowing before changing anything here:
   `deriveDeadlineChange`, and `alerts_diff_test.mjs` asserts the two agree on
   concrete cases. Otherwise an email could announce an extension the board
   suppresses.
-- **Union-merge, and its accepted limitation.** Hydrating the saved list from
-  the server only ever *adds*; removals propagate solely as explicit `remove`
-  operations. So a removal made on device A while offline can be resurrected by
-  device B's next hydrate. That is deliberate for v1: the alternative failure
-  (a hydrate race silently emptying someone's list) is far worse than a star
-  coming back, and tombstones are not worth the complexity here.
+- **Saved-list sync records intent; it does not infer it.** The account holds
+  the truth and each device holds the truth *plus* an outbox of what it has done
+  since it last reached the server: `local = (server ∪ pending.add) −
+  pending.remove` (`site/src/scripts/star-merge.js`, unit-tested by
+  `scripts/alerts_starmerge_test.mjs`). An earlier version merged by set
+  difference instead — anything a device had that the server lacked was
+  uploaded — which cannot tell "I starred this offline" from "another device
+  deleted this". With two devices every removal was resurrected: the second
+  device re-uploaded the item the first had just deleted. Intent is not
+  recoverable from state; it has to be written down.
+- **The outbox is retired by observation, not by a `200`.** An entry leaves only
+  once the server is seen holding the intended state. `/sync` reads the
+  subscriber row, edits it and writes it back as separate statements, so two
+  concurrent calls can each return `200` while one silently overwrites the
+  other — and a dropped response looks the same from the client. Retiring on
+  observation makes both self-correcting: the next page load simply retries, and
+  `/sync` is idempotent, so retrying is free. For the same reason every sync
+  request is serialized rather than fired in parallel.
+- **A device remembers which account it synced with** (`awt-fav-synced`), so
+  linking a *different* account adopts that account's list instead of merging
+  the previous one into it. A device that has never synced seeds its whole local
+  list as pending adds, which is what makes "star things, then sign up" work.
+- **What remains is ordinary last-write-wins.** Two devices editing the same
+  item while one is offline resolve in whatever order reaches the server. No
+  vector clocks, no tombstone GC — the failure it can produce is one item
+  resolving the way you didn't expect, not a list emptying itself.
 - **No PII in the repo, ever.** Addresses live only in D1. The `events` and
   `kv` tables hold workshop data only, which is why the Action can log slugs and
   counts freely — and why it logs nothing else. Unsubscribing is a `DELETE`, not
