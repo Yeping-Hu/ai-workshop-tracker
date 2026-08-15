@@ -28,12 +28,20 @@ interface Props {
   /** Set when the box sits directly under a masthead, which already carries
    *  1.4rem of bottom padding — the default 2.6rem margin then reads as a hole. */
   tight?: boolean;
+  /** Render as a one-line <details> that expands to the form. Used everywhere
+   *  the box is a secondary offer — the homepage, /saved/, conference pages —
+   *  so it never pushes the page's actual content below the fold. */
+  collapsed?: boolean;
+  /** Summary line for the collapsed variant. */
+  summary?: string;
 }
 const {
   heading = 'Get deadline alerts by email',
   blurb = 'One email a week with the deadline changes and new workshops in your areas.',
   compact = false,
   tight = false,
+  collapsed = false,
+  summary = 'Get deadline alerts by email',
 } = Astro.props;
 
 const enabled = !!ALERTS_API;
@@ -42,7 +50,20 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
 ---
 
 {enabled && (
-  <section class="alerts-signup" aria-labelledby="alertsSignupHead" data-compact={compact ? '' : undefined} data-tight={tight ? '' : undefined}>
+  <details
+    class="alerts-signup"
+    data-compact={compact ? '' : undefined}
+    data-tight={tight ? '' : undefined}
+    data-collapsed={collapsed ? '' : undefined}
+    open={!collapsed}
+  >
+    {/* One structure for both variants: `open` with the summary hidden gives
+        the full box, without a second copy of the form and its element ids. */}
+    <summary class="alerts-summary">
+      <span class="alerts-summary-mark" aria-hidden="true">✉</span>
+      <span>{summary}</span>
+      <span class="alerts-summary-hint">one a week at most · one-click unsubscribe</span>
+    </summary>
     <h2 id="alertsSignupHead">{heading}</h2>
     <p class="muted small">{blurb}</p>
 
@@ -101,19 +122,21 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
         </label>
       </fieldset>
 
+      {/* Three independent notifications, not one axis. As radios these forced
+          artificial combinations and one label was simply untrue. */}
       <fieldset class="alerts-cadence">
-        <legend class="alerts-legend">How often</legend>
+        <legend class="alerts-legend">Send me</legend>
         <label class="check">
-          <input type="radio" name="cadence" value="weekly" checked />
-          Weekly digest, Mondays
+          <input type="checkbox" name="notify" value="weekly" checked />
+          A weekly digest, Mondays
         </label>
         <label class="check">
-          <input type="radio" name="cadence" value="weekly_urgent" />
-          Weekly digest + an alert when a saved deadline is within 72 hours
+          <input type="checkbox" name="notify" value="urgent" />
+          An alert when a saved workshop's deadline is within 72 hours
         </label>
         <label class="check">
-          <input type="radio" name="cadence" value="starred_changes" />
-          No weekly digest — only email me when a saved workshop's deadline changes
+          <input type="checkbox" name="notify" value="changes" />
+          An alert the day a saved workshop's deadline changes
         </label>
       </fieldset>
 
@@ -133,7 +156,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
         to send these; one-click unsubscribe deletes it. Nothing is sold, no tracking pixels.
       </p>
     </form>
-  </section>
+  </details>
 )}
 
 {enabled && TURNSTILE_SITE_KEY && (
@@ -196,6 +219,8 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
         e.preventDefault();
         const email = form.querySelector('#alertsEmail').value.trim();
         if (!email || !email.includes('@')) return say('Please enter a valid email address.', 'err');
+        // The Worker rejects this too; catching it here explains it sooner.
+        if (!picked('notify').length) return say('Pick at least one thing to be sent.', 'err');
 
         // Turnstile renders its own hidden input; the Worker fails closed if it
         // is missing, so an ad blocker that eats the widget gets a clear message
@@ -218,7 +243,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
               starred_ws: readStars('awt-fav-workshops'),
               starred_papers: readStars('awt-fav-papers'),
               scope: form.querySelector('input[name="scope"]:checked')?.value || 'all',
-              cadence: form.querySelector('input[name="cadence"]:checked')?.value || 'weekly',
+              notify: picked('notify'),
               turnstile_token,
             }),
           });
@@ -235,6 +260,8 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
             say("The anti-spam check didn't pass. Reload the page and try again.", 'err');
           } else if (body.error === 'invalid_email') {
             say('That address does not look valid.', 'err');
+          } else if (body.error === 'no_notifications') {
+            say('Pick at least one thing to be sent.', 'err');
           } else {
             say('Something went wrong. Please try again shortly.', 'err');
           }
@@ -266,6 +293,34 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
   .alerts-signup[data-compact] { background: transparent; }
   /* Directly under a masthead, whose padding already supplies the gap. */
   .alerts-signup[data-tight] { margin-top: 0.6rem; }
+  /* Expanded variant: the summary is redundant with the h2 below it. */
+  .alerts-signup:not([data-collapsed]) > .alerts-summary { display: none; }
+  /* Collapsed variant: the summary IS the heading, so the h2 would repeat it. */
+  .alerts-signup[data-collapsed] > h2 { display: none; }
+  .alerts-signup[data-collapsed] { padding: 0.75rem 1.1rem; }
+  .alerts-signup[data-collapsed][open] { padding-bottom: 1.3rem; }
+  .alerts-summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.2rem 0.6rem;
+    font-weight: 600;
+    font-size: 0.98rem;
+  }
+  .alerts-summary::-webkit-details-marker { display: none; }
+  .alerts-summary-mark { color: var(--accent); font-weight: 400; }
+  .alerts-summary-hint { color: var(--muted); font-size: 0.84rem; font-weight: 400; }
+  .alerts-signup[data-collapsed] > .alerts-summary::after {
+    content: '+';
+    margin-left: auto;
+    color: var(--muted);
+    font-weight: 400;
+    font-family: var(--font-mono);
+  }
+  .alerts-signup[data-collapsed][open] > .alerts-summary::after { content: '−'; }
+  .alerts-signup[data-collapsed] > p:first-of-type { margin-top: 0.7rem !important; }
   .alerts-signup h2 { margin: 0 0 0.2rem; font-size: 1.12rem; }
   .alerts-signup p { margin: 0; }
   .alerts-row {

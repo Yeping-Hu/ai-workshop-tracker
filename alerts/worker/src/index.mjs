@@ -43,12 +43,14 @@ import {
   constantTimeEqual,
 } from '../../tokens.mjs';
 import { renderConfirm, renderMagic } from '../../render.mjs';
+import { NOTIFY_KINDS, parseNotify, serializeNotify } from '../../match.mjs';
 import { personalize, recipientState } from '../../send.mjs';
 import { consume, magicUsedBucket, MAGIC_USED_WINDOW_S } from '../../ratelimit.mjs';
 import { sendEmail, sendBatch } from './mail.mjs';
 
 const CONF_IDS = new Set(ids.conferences.map((c) => c.id));
 const TOPIC_IDS = new Set(ids.topics.map((t) => t.id));
+// Legacy single-value cadences, still accepted from an older cached page.
 const CADENCES = new Set(['weekly', 'weekly_urgent', 'starred_changes', 'off']);
 // What a subscription covers, independent of how often it sends.
 const SCOPES = new Set(['all', 'starred']);
@@ -144,6 +146,25 @@ async function verifyTurnstile(env, token, ip) {
   } catch {
     return false;
   }
+}
+
+/**
+ * The stored `cadence` value for a request body.
+ *
+ * Accepts the new `notify: ['weekly','urgent']` array and, for a page cached
+ * before this shipped, a legacy `cadence` string. Returns null when the caller
+ * asked for nothing, which /subscribe rejects and /update treats as pause.
+ */
+function readNotify(body, fallback = null) {
+  if (Array.isArray(body?.notify)) {
+    const on = Object.fromEntries(NOTIFY_KINDS.map((k) => [k, body.notify.includes(k)]));
+    const value = serializeNotify(on);
+    return value === 'off' ? null : value;
+  }
+  if (typeof body?.cadence === 'string' && CADENCES.has(body.cadence)) {
+    return body.cadence === 'off' ? null : body.cadence;
+  }
+  return fallback;
 }
 
 /* -------------------------------------------------------------------- utils */
@@ -246,7 +267,10 @@ async function handleSubscribe(request, env) {
   const topics = cleanIds(body.topics, TOPIC_IDS);
   const starred_ws = cleanSlugs(body.starred_ws);
   const starred_papers = cleanPapers(body.starred_papers);
-  const cadence = CADENCES.has(body.cadence) && body.cadence !== 'off' ? body.cadence : 'weekly';
+  const cadence = readNotify(body, 'weekly');
+  // Subscribing to nothing is a mistake, not a preference — confirming by
+  // email and then never hearing anything is worse than a clear error.
+  if (!cadence) return fail(request, env, 400, 'no_notifications');
   const scope = SCOPES.has(body.scope) ? body.scope : 'all';
 
   const existing = await getSubscriber(env, email);
@@ -453,6 +477,7 @@ async function handleMe(request, env) {
       starred_papers: JSON.parse(row.starred_papers || '[]'),
       scope: row.scope || 'all',
       cadence: row.cadence,
+      notify: parseNotify(row.cadence),
       confirmed: !!row.confirmed_at,
       // Present only on the magic exchange; the page swaps it into localStorage.
       ...(manage ? { manage_token: manage } : {}),
@@ -472,13 +497,14 @@ async function handleUpdate(request, env) {
 
   const conferences = cleanIds(body.conferences, CONF_IDS);
   const topics = cleanIds(body.topics, TOPIC_IDS);
-  const cadence = CADENCES.has(body.cadence) ? body.cadence : auth.row.cadence;
+  // Unchecking everything here is exactly what pausing means.
+  const cadence = readNotify(body, auth.row.cadence) ?? 'off';
   const scope = SCOPES.has(body.scope) ? body.scope : auth.row.scope || 'all';
 
   await env.DB.prepare('UPDATE subscribers SET conferences = ?, topics = ?, scope = ?, cadence = ?, updated = ? WHERE email = ?')
     .bind(JSON.stringify(conferences), JSON.stringify(topics), scope, cadence, nowIso(), auth.row.email)
     .run();
-  return json({ ok: true, conferences, topics, scope, cadence }, { request, env });
+  return json({ ok: true, conferences, topics, scope, cadence, notify: parseNotify(cadence) }, { request, env });
 }
 
 /* ------------------------------------------------------------ browser: /sync */

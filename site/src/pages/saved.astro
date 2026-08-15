@@ -33,7 +33,9 @@ const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.
       {/* Props are plain strings, not markup — Astro escapes them on render, so
           an HTML entity here would show through literally as "&amp;". */}
       <AlertsSignup
+        collapsed
         tight
+        summary="Back up this list & get deadline alerts"
         heading="Back up this list & get deadline alerts"
         blurb="Subscribing makes this list follow you to another device, and emails you when a saved workshop's deadline moves or approaches."
       />

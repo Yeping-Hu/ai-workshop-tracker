@@ -123,6 +123,11 @@ const datasetLd: Record<string, any> = {
     <p class="nextline" id="next-deadline" aria-live="off">Next deadline: …</p>
   </section>
 
+  {/* Renders nothing unless PUBLIC_ALERTS_API is set at build time. Collapsed,
+      so it costs one line above the board rather than a screenful — and it sits
+      above the board because at the foot of the page nobody found it. */}
+  <AlertsSignup collapsed tight />
+
   <!-- search mode -->
   <section id="searchPanel" hidden>
     <ol class="pf-results" id="results"></ol>
@@ -183,8 +188,6 @@ const datasetLd: Record<string, any> = {
       </span>
     </aside>
 
-    {/* Renders nothing unless PUBLIC_ALERTS_API is set at build time. */}
-    <AlertsSignup />
 
   </div>
 

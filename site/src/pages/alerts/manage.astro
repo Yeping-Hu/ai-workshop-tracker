@@ -92,23 +92,22 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
             </label>
           </fieldset>
 
-          <h2>How often</h2>
+          <h2>Send me</h2>
           <fieldset class="manage-cadence">
-            <legend class="alerts-sr">Cadence</legend>
-            <label class="check"><input type="radio" name="cadence" value="weekly" /> Weekly digest, Mondays</label>
+            <legend class="alerts-sr">Notifications</legend>
+            <label class="check"><input type="checkbox" name="notify" value="weekly" /> A weekly digest, Mondays</label>
             <label class="check">
-              <input type="radio" name="cadence" value="weekly_urgent" />
-              Weekly digest + an alert when a saved deadline is within 72 hours
+              <input type="checkbox" name="notify" value="urgent" />
+              An alert when a saved workshop's deadline is within 72 hours
             </label>
             <label class="check">
-              <input type="radio" name="cadence" value="starred_changes" />
-              No weekly digest — only when a saved workshop's deadline changes
-            </label>
-            <label class="check">
-              <input type="radio" name="cadence" value="off" />
-              Pause — keep my preferences and saved list, send nothing
+              <input type="checkbox" name="notify" value="changes" />
+              An alert the day a saved workshop's deadline changes
             </label>
           </fieldset>
+          <p class="muted small" id="pauseHint">
+            Untick all three to pause: your preferences and saved list are kept, and nothing is sent.
+          </p>
 
           <p class="manage-row" style="margin-top:1.2rem;">
             <button class="btn" type="submit">Save preferences</button>
@@ -243,8 +242,12 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
           for (const box of prefs.querySelectorAll('input[name="topic"]')) {
             box.checked = (me.topics || []).includes(box.value);
           }
-          const cadence = prefs.querySelector(`input[name="cadence"][value="${me.cadence || 'weekly'}"]`);
-          if (cadence) cadence.checked = true;
+          // The server sends the parsed flags, so the form never has to know
+          // about the stored encoding or the legacy values behind it.
+          const notify = me.notify || { weekly: true, urgent: false, changes: false };
+          for (const box of prefs.querySelectorAll('input[name="notify"]')) {
+            box.checked = !!notify[box.value];
+          }
           const scope = prefs.querySelector(`input[name="scope"][value="${me.scope || 'all'}"]`);
           if (scope) scope.checked = true;
           $('deleteLink').href = me.unsubscribe_url || '#';
@@ -283,12 +286,12 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
                   conferences: picked('conference'),
                   topics: picked('topic'),
                   scope: prefs.querySelector('input[name="scope"]:checked')?.value || 'all',
-                  cadence: prefs.querySelector('input[name="cadence"]:checked')?.value || 'weekly',
+                  notify: picked('notify'),
                 }),
               });
               if (res.status === 401) { show('prefsBox', false); show('expiredBox'); return; }
               if (!res.ok) throw new Error(String(res.status));
-              say(status, 'Saved.', 'ok');
+              say(status, picked('notify').length ? 'Saved.' : 'Saved — paused. Nothing will be sent.', 'ok');
             } catch {
               say(status, "Couldn't save just now. Try again shortly.", 'err');
             }

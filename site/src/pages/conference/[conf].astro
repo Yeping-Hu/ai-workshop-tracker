@@ -1,5 +1,6 @@
 ---
 import Base from '../../components/Base.astro';
+import AlertsSignup from '../../components/AlertsSignup.astro';
 import MarkdownExport from '../../components/MarkdownExport.astro';
 import { workshops, conferences } from '../../lib/data';
 import { href, REPO_URL } from '../../lib/site';
@@ -141,6 +142,11 @@ const statusLines = (w: any): string[] =>
       <span><strong>{openCalls.length}</strong> open calls</span>
     </div>
   </section>
+
+  {/* Conference hubs are where most visitors arrive from search, so the offer
+      belongs here too — collapsed, so it never displaces the listings people
+      came for. Renders nothing unless PUBLIC_ALERTS_API is set. */}
+  <AlertsSignup collapsed tight />
 
   {yearGroups.map(([year, ws]) => (
     <section class="conf-year">

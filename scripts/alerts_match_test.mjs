@@ -20,6 +20,9 @@ import {
   matchesSubscriber,
   wantsStarredChanges,
   wantsWeekly,
+  parseNotify,
+  serializeNotify,
+  NOTIFY_KINDS,
   matchingWorkshops,
   matchingEvents,
   normalizeSubscriber,
@@ -183,20 +186,59 @@ const sub = (over = {}) =>
     matchesSubscriber(ROBOTS, sub({ conferences: '["neurips"]', starred_ws: '["icra-2026-robots"]' })));
 }
 
-/* ---------------------------------------------------- the new cadence -------- */
+/* ------------------------------------------- three independent notifications
+ * These were radio buttons, which forced artificial combinations and produced
+ * a label that lied: "only email me when a deadline changes" also sent the 72h
+ * alert. Independent flags make every combination reachable, and the legacy
+ * values must keep parsing to exactly what they always did.
+ */
 {
-  const changes = sub({ cadence: 'starred_changes' });
-  check('starred_changes opts into same-day change mail', wantsStarredChanges(changes));
-  check('starred_changes also gets the 72h imminent alert', wantsUrgent(changes));
-  check('starred_changes gets NO weekly digest', !wantsWeekly(changes));
+  const legacy = [
+    ['weekly', { weekly: true, urgent: false, changes: false }],
+    ['weekly_urgent', { weekly: true, urgent: true, changes: false }],
+    // The mislabelled one: it always sent the 72h alert as well.
+    ['starred_changes', { weekly: false, urgent: true, changes: true }],
+    ['off', { weekly: false, urgent: false, changes: false }],
+  ];
+  for (const [value, want] of legacy) {
+    eq(`legacy cadence "${value}" parses to what it always did`, parseNotify(value), want);
+  }
 
-  check('weekly still gets the digest', wantsWeekly(sub()));
-  check('weekly does not get same-day change mail', !wantsStarredChanges(sub()));
-  check('weekly_urgent still gets the digest', wantsWeekly(sub({ cadence: 'weekly_urgent' })));
-  check('paused gets nothing at all',
-    !wantsWeekly(sub({ cadence: 'off' })) && !wantsStarredChanges(sub({ cadence: 'off' })) && !wantsUrgent(sub({ cadence: 'off' })));
-  check('an unconfirmed starred_changes subscriber gets nothing',
-    !wantsStarredChanges(sub({ cadence: 'starred_changes', confirmed_at: null })));
+  eq('a canonical CSV parses', parseNotify('weekly,changes'), { weekly: true, urgent: false, changes: true });
+  eq('whitespace is tolerated', parseNotify(' weekly , urgent '), { weekly: true, urgent: true, changes: false });
+  eq('unknown tokens are ignored', parseNotify('weekly,nonsense'), { weekly: true, urgent: false, changes: false });
+  eq('an empty value means nothing enabled', parseNotify(''), { weekly: false, urgent: false, changes: false });
+  eq('a missing value means nothing enabled', parseNotify(undefined), { weekly: false, urgent: false, changes: false });
+
+  check('serialize writes "off" rather than "" (the admin filter depends on it)',
+    serializeNotify({ weekly: false, urgent: false, changes: false }) === 'off');
+  check('serialize is canonical and ordered',
+    serializeNotify({ changes: true, weekly: true, urgent: true }) === 'weekly,urgent,changes');
+
+  // Every one of the eight combinations must round-trip and select correctly —
+  // the whole point of dropping the radios.
+  for (let mask = 0; mask < 8; mask++) {
+    const want = { weekly: !!(mask & 1), urgent: !!(mask & 2), changes: !!(mask & 4) };
+    const stored = serializeNotify(want);
+    eq(`round-trip ${stored}`, parseNotify(stored), want);
+    const s = sub({ cadence: stored });
+    const any = NOTIFY_KINDS.some((k) => want[k]);
+    check(`${stored}: mailable=${any}`, isMailable(s) === any);
+    check(`${stored}: weekly digest ${want.weekly}`, wantsWeekly(s) === want.weekly);
+    check(`${stored}: 72h alert ${want.urgent}`, wantsUrgent(s) === want.urgent);
+    check(`${stored}: same-day changes ${want.changes}`, wantsStarredChanges(s) === want.changes);
+  }
+
+  // The combination the radios made unreachable: changes without the 72h alert.
+  const onlyChanges = sub({ cadence: 'changes' });
+  check('changes-only is now reachable', wantsStarredChanges(onlyChanges) && !wantsUrgent(onlyChanges) && !wantsWeekly(onlyChanges));
+
+  // Turning everything off is pausing; there is no separate paused state.
+  check('everything off is not mailable', !isMailable(sub({ cadence: 'off' })));
+  check('confirmation still gates everything',
+    !wantsWeekly(sub({ cadence: 'weekly,urgent,changes', confirmed_at: null })));
+  check('suppression still gates everything',
+    !wantsUrgent(sub({ cadence: 'weekly,urgent,changes', suppressed_at: '2026-08-02T00:00:00Z' })));
 }
 
 console.log(failed === 0 ? '\nMatching logic OK.' : `\n${failed} test(s) failed.`);

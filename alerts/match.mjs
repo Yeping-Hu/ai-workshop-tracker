@@ -15,6 +15,51 @@
 /** Empty filter arrays mean "everything", not "nothing" — say so in the UI. */
 const isAll = (list) => !Array.isArray(list) || list.length === 0;
 
+/* ------------------------------------------------------- what gets sent ----
+ * Three independent notifications, not one axis:
+ *
+ *   weekly   the Monday digest
+ *   urgent   a saved workshop's deadline is within 72 h
+ *   changes  a saved workshop's deadline moved, same day
+ *
+ * They were radio buttons, which forced artificial combinations and produced a
+ * label that lied: "only email me when a deadline changes" also sent the 72 h
+ * alert, because the old `starred_changes` value enabled both. Independent
+ * flags make every combination reachable and each one honestly named.
+ *
+ * Stored in the existing `cadence` column as a canonical comma-joined subset,
+ * or 'off' when nothing is enabled — so there is no migration and no backfill.
+ * The four historical values are still understood on read, forever.
+ */
+export const NOTIFY_KINDS = ['weekly', 'urgent', 'changes'];
+
+const LEGACY_CADENCE = {
+  weekly: { weekly: true, urgent: false, changes: false },
+  // What it actually did, whatever its label claimed.
+  weekly_urgent: { weekly: true, urgent: true, changes: false },
+  starred_changes: { weekly: false, urgent: true, changes: true },
+  off: { weekly: false, urgent: false, changes: false },
+};
+
+/** Parse a stored `cadence` value — canonical CSV or a legacy keyword. */
+export function parseNotify(cadence) {
+  const raw = String(cadence ?? '').trim();
+  if (!raw) return { ...LEGACY_CADENCE.off };
+  if (LEGACY_CADENCE[raw]) return { ...LEGACY_CADENCE[raw] };
+  const on = new Set(raw.split(',').map((s) => s.trim()).filter(Boolean));
+  return {
+    weekly: on.has('weekly'),
+    urgent: on.has('urgent'),
+    changes: on.has('changes'),
+  };
+}
+
+/** The value to store. 'off' rather than '' so the admin query's filter holds. */
+export function serializeNotify(notify) {
+  const on = NOTIFY_KINDS.filter((k) => notify?.[k]);
+  return on.length ? on.join(',') : 'off';
+}
+
 /**
  * Normalize a D1 subscriber row (JSON columns arrive as strings) into the shape
  * the matcher and renderer expect. Tolerant by design: a corrupt JSON column
@@ -42,6 +87,9 @@ export function normalizeSubscriber(row) {
     // behaviour they already had.
     scope: row.scope === 'starred' ? 'starred' : 'all',
     cadence: row.cadence || 'weekly',
+    // Which of the three notifications are on. Derived from `cadence`, which
+    // holds either the canonical CSV or one of the legacy keywords.
+    notify: parseNotify(row.cadence || 'weekly'),
     confirmed_at: row.confirmed_at ?? null,
     suppressed_at: row.suppressed_at ?? null,
   };
@@ -93,30 +141,23 @@ export function matchingEvents(events, workshops, sub) {
   });
 }
 
-/** Subscribers we may mail at all: confirmed, not suppressed, not paused. */
+/**
+ * Subscribers we may mail at all: confirmed, not suppressed, and with at least
+ * one notification enabled. Turning everything off *is* pausing — there is no
+ * separate paused state to keep in step.
+ */
 export function isMailable(sub) {
-  return !!sub.confirmed_at && !sub.suppressed_at && sub.cadence !== 'off';
+  const n = sub.notify ?? parseNotify(sub.cadence);
+  return !!sub.confirmed_at && !sub.suppressed_at && NOTIFY_KINDS.some((k) => n[k]);
 }
 
-/**
- * The 72 h "a saved deadline is imminent" alert. Both opt-in cadences get it:
- * someone who asked to hear about their saved workshops the day something
- * changes plainly also wants to know the day before one closes.
- */
-export function wantsUrgent(sub) {
-  return isMailable(sub) && (sub.cadence === 'weekly_urgent' || sub.cadence === 'starred_changes');
-}
+const flag = (sub, kind) => isMailable(sub) && (sub.notify ?? parseNotify(sub.cadence))[kind];
 
-/** Same-day mail when a saved workshop's deadline moves. Opt-in. */
-export function wantsStarredChanges(sub) {
-  return isMailable(sub) && sub.cadence === 'starred_changes';
-}
+/** The 72 h "a saved deadline is imminent" alert. */
+export const wantsUrgent = (sub) => flag(sub, 'urgent');
 
-/**
- * The Monday digest. `starred_changes` deliberately excludes it — that cadence
- * exists precisely for people who want their saved workshops and nothing on a
- * schedule.
- */
-export function wantsWeekly(sub) {
-  return isMailable(sub) && sub.cadence !== 'starred_changes';
-}
+/** Same-day mail when a saved workshop's deadline moves. */
+export const wantsStarredChanges = (sub) => flag(sub, 'changes');
+
+/** The Monday digest. */
+export const wantsWeekly = (sub) => flag(sub, 'weekly');

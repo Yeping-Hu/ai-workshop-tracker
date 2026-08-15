@@ -154,12 +154,36 @@ Two independent axes. `scope` is *what* you hear about; `cadence` is *when*.
 | `all` (default) | The conference/topic filters — empty means everything — **plus** anything the subscriber saved, whatever the filters say |
 | `starred` | Only saved workshops. Exists because empty filters mean "everything", so there was otherwise no way to ask for nothing-but-my-saved-list |
 
-| `cadence` | Sends |
+Three **independent** notifications, any combination:
+
+| Notification | Sends |
 |---|---|
-| `weekly` (default) | The Monday digest |
-| `weekly_urgent` | The digest, plus an alert when a saved deadline is within 72 h |
-| `starred_changes` | **No digest.** Same-day mail when a saved workshop's deadline moves, plus the 72 h alert |
-| `off` | Nothing; preferences and saved list are kept |
+| `weekly` | The Monday digest |
+| `urgent` | A saved workshop's deadline is within 72 h |
+| `changes` | Same-day, when a saved workshop's deadline moves |
+
+They were a single-choice `cadence`, which forced artificial combinations and
+mislabelled one of them — `starred_changes` also sent the 72 h alert while its
+label said "only when a deadline changes". Independent flags make every
+combination reachable and each honestly named.
+
+**Encoding.** The `cadence` column now stores a canonical comma-joined subset
+(`weekly,urgent`), or `off` when nothing is enabled — so this needed no
+migration. The four historical values are still parsed on read, forever:
+
+| Legacy value | Parses to |
+|---|---|
+| `weekly` | weekly |
+| `weekly_urgent` | weekly + urgent |
+| `starred_changes` | urgent + changes (what it always did) |
+| `off` | nothing |
+
+Turning everything off *is* pausing; there is no separate paused state, and
+`isMailable()` is "confirmed, not suppressed, at least one notification on".
+`/subscribe` rejects an empty set (`no_notifications`) — confirming by email and
+then never hearing anything is worse than an error — while `/update` accepts it
+as pause. Paused rows always store `off`, so `/admin/subscribers`' `cadence !=
+'off'` filter still holds.
 
 Saved workshops are always included under `scope: 'all'` — that is
 `matchesSubscriber`'s starred bypass, not something the subscriber configures.
