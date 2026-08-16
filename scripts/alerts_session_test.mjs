@@ -76,6 +76,15 @@ const session = files.find(([f]) => f === SESSION);
   check('it reconciles the saved list after linking', /awtFavsSync/.test(src));
   check('it announces changes so blocks can repaint', /awt:alerts-session/.test(src));
   check('it is exposed for landing pages', /window\.awtAlertsAdopt/.test(src));
+
+  // The module is deferred, so every inline consumer paints once before it
+  // exists — as signed out. Unless it announces on init, a signed-in visitor
+  // stays looking signed out on every page that has no `#t=` fragment, which
+  // is every page after the first.
+  const init = src.slice(src.indexOf('__awtAlertsSessionInit'));
+  check('it announces on init, not only when adopting a token',
+    /announce\(\);/.test(init.slice(0, init.indexOf('awtAlertsAdopt'))),
+    'a deferred module must tell inline scripts the real state');
 }
 
 /* ------------------------------------------- consumers use it, not localStorage */

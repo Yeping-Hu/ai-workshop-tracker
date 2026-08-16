@@ -116,7 +116,23 @@ if (!window.__awtAlertsSessionInit) {
   window.__awtAlertsSessionInit = true;
   window.awtAlertsSession = session;
   window.awtAlertsSignOut = signOut;
+
+  // Announce immediately, before anything else happens.
+  //
+  // This module is a bundled <script src>, so it is deferred and runs AFTER the
+  // inline scripts that consume it. Those inline scripts therefore paint once
+  // with `window.awtAlertsSession` still undefined — i.e. as signed out — and
+  // will never correct themselves unless told. Announcing here is what tells
+  // them, and it has to happen whether or not there is a token to adopt: a
+  // page loaded with no `#t=` fragment is the *normal* case, and it was the
+  // one that silently stayed signed out.
+  announce();
+
   // Landing pages await this to report a result; every other page just lets it
-  // run, which is a no-op without a fragment.
-  window.awtAlertsAdopt = adoptFromUrl();
+  // run, which is a no-op without a fragment. It announces again when the
+  // exchange changes anything.
+  window.awtAlertsAdopt = adoptFromUrl().then((s) => {
+    announce();
+    return s;
+  });
 }
