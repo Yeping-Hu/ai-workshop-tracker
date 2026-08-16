@@ -34,6 +34,11 @@ interface Props {
   collapsed?: boolean;
   /** Summary line for the collapsed variant. */
   summary?: string;
+  /** Set on a page that already shows its own signed-in indicator — /saved/
+   *  has "Synced as … · manage" in its masthead. The block still hides its
+   *  signup form when linked; it just does not add a second line saying the
+   *  same thing, with a "your saved list" link to the current page. */
+  hideSignedIn?: boolean;
 }
 const {
   heading = 'Get workshop updates by email',
@@ -42,6 +47,7 @@ const {
   tight = false,
   collapsed = false,
   summary = 'Get workshop updates by email',
+  hideSignedIn = false,
 } = Astro.props;
 
 const enabled = !!ALERTS_API;
@@ -53,7 +59,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
     signed-in visitor is offered a signup on every page but /saved/, which
     reads as "you are not signed in". Filled in by the script below, since the
     pages are static and the token lives in localStorage. */}
-{enabled && (
+{enabled && !hideSignedIn && (
   <p class="alerts-signedin" id="alertsSignedIn" hidden>
     <span class="alerts-summary-mark" aria-hidden="true">✉</span>
     <span id="alertsSignedInText"></span>
