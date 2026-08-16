@@ -223,6 +223,31 @@ because a public repo has public logs. Normal output looks like:
 "Skipped (empty)" is the normal majority on a quiet week — a subscriber with
 nothing to report gets no email at all.
 
+## How many people are subscribed
+
+```bash
+node scripts/alerts_stats.mjs          # counts only, never an address
+node scripts/alerts_stats.mjs --days 7 # signups in a shorter window
+```
+
+Aggregates only: totals, how many are confirmed vs awaiting confirmation vs
+suppressed vs paused, which notifications they picked, and a per-day signup
+sparkline. It reads D1 directly through wrangler rather than `/admin/subscribers`,
+because that endpoint deliberately returns only *mailable* rows — it exists to
+feed the digest — so it cannot see people who are pending, paused or suppressed,
+which is most of what you want when asking whether signup is working.
+
+**MAILABLE** is the number that matters: confirmed, not suppressed, not paused.
+It is also the number to watch against Resend's free tier (100/day), since the
+weekly digest sends one message per subscriber with something to report.
+
+Two other views, neither of which needs this repo:
+
+- **Resend dashboard** — delivery, bounces, complaints, and how close the daily
+  send limit is. The authoritative source for anything about delivery.
+- **GoatCounter**, if enabled — page views for `/alerts/`, which is the top of
+  the funnel that `alerts_stats.mjs` shows the bottom of.
+
 ## Things that go wrong
 
 ### "shrink guard: live dataset shrank to N from M"
