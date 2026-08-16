@@ -86,6 +86,8 @@ export function normalizeSubscriber(row) {
     // Rows created before the column existed have no value; 'all' is the
     // behaviour they already had.
     scope: row.scope === 'starred' ? 'starred' : 'all',
+    // Null when unknown — the renderer then shows UTC only.
+    tz: typeof row.tz === 'string' && row.tz ? row.tz : null,
     cadence: row.cadence || 'weekly',
     // Which of the three notifications are on. Derived from `cadence`, which
     // holds either the canonical CSV or one of the legacy keywords.

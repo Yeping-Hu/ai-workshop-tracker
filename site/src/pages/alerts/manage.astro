@@ -115,6 +115,8 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
           </p>
         </form>
 
+        <p class="muted small" id="tzLine"></p>
+
         <h2>This device</h2>
         <p class="muted small" id="deviceLine">
           Your saved list syncs to this browser while it is linked.
@@ -251,6 +253,22 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
           const scope = prefs.querySelector(`input[name="scope"][value="${me.scope || 'all'}"]`);
           if (scope) scope.checked = true;
           $('deleteLink').href = me.unsubscribe_url || '#';
+
+          // Times in alerts are converted at send, from a zone stored on the
+          // account — email cannot run JS. Showing it makes a wrong time
+          // diagnosable instead of mysterious. It refreshes on its own; there
+          // is nothing to set.
+          let browserTz = null;
+          try { browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch {}
+          const tzLine = $('tzLine');
+          if (me.tz || browserTz) {
+            tzLine.textContent = `Times in emails: ${me.tz || browserTz}` +
+              (browserTz && me.tz && browserTz !== me.tz
+                ? ` — updating to ${browserTz} from this browser`
+                : ' (detected from your browser)');
+          } else {
+            tzLine.textContent = 'Times in emails are shown in UTC — open the site once to detect your timezone.';
+          }
           $('deviceLine').textContent =
             `${(me.starred_ws || []).length} workshop(s) and ${(me.starred_papers || []).length} paper(s) are stored with your subscription.`;
 
@@ -287,6 +305,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
                   topics: picked('topic'),
                   scope: prefs.querySelector('input[name="scope"]:checked')?.value || 'all',
                   notify: picked('notify'),
+                  tz: browserTz,
                 }),
               });
               if (res.status === 401) { show('prefsBox', false); show('expiredBox'); return; }

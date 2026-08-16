@@ -55,6 +55,25 @@ const CADENCES = new Set(['weekly', 'weekly_urgent', 'starred_changes', 'off']);
 // What a subscription covers, independent of how often it sends.
 const SCOPES = new Set(['all', 'starred']);
 
+/**
+ * An IANA timezone name, or null.
+ *
+ * Validated against the runtime's own zone list where available, because this
+ * string is handed to Intl.DateTimeFormat at send time and a junk value would
+ * otherwise surface as a rendering failure inside the digest loop.
+ */
+function cleanTz(value) {
+  if (typeof value !== 'string' || !value || value.length > 64) return null;
+  if (!/^[A-Za-z][A-Za-z0-9_+-]*(\/[A-Za-z0-9_+-]+)*$/.test(value)) return null;
+  try {
+    // Throws on an unknown zone; cheaper and more current than a shipped list.
+    new Intl.DateTimeFormat('en-US', { timeZone: value });
+    return value;
+  } catch {
+    return null;
+  }
+}
+
 /* --------------------------------------------------------------------- CORS */
 
 function allowedOrigins(env) {
@@ -272,6 +291,7 @@ async function handleSubscribe(request, env) {
   // email and then never hearing anything is worse than a clear error.
   if (!cadence) return fail(request, env, 400, 'no_notifications');
   const scope = SCOPES.has(body.scope) ? body.scope : 'all';
+  const tz = cleanTz(body.tz);
 
   const existing = await getSubscriber(env, email);
   const ts = nowIso();
@@ -324,8 +344,8 @@ async function handleSubscribe(request, env) {
       );
     }
     await env.DB.prepare(
-      'INSERT INTO subscribers (email, nonce, conferences, topics, starred_ws, starred_papers, scope, cadence, created, updated) ' +
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO subscribers (email, nonce, conferences, topics, starred_ws, starred_papers, scope, tz, cadence, created, updated) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     )
       .bind(
         email,
@@ -335,6 +355,7 @@ async function handleSubscribe(request, env) {
         JSON.stringify(starred_ws),
         JSON.stringify(starred_papers),
         scope,
+        tz,
         cadence,
         ts,
         ts,
@@ -347,7 +368,7 @@ async function handleSubscribe(request, env) {
       return NEUTRAL;
     }
     await env.DB.prepare(
-      'UPDATE subscribers SET conferences = ?, topics = ?, starred_ws = ?, starred_papers = ?, scope = ?, cadence = ?, updated = ? WHERE email = ?',
+      'UPDATE subscribers SET conferences = ?, topics = ?, starred_ws = ?, starred_papers = ?, scope = ?, tz = COALESCE(?, tz), cadence = ?, updated = ? WHERE email = ?',
     )
       .bind(
         JSON.stringify(conferences),
@@ -355,6 +376,7 @@ async function handleSubscribe(request, env) {
         JSON.stringify(starred_ws),
         JSON.stringify(starred_papers),
         scope,
+        tz,
         cadence,
         ts,
         email,
@@ -476,6 +498,7 @@ async function handleMe(request, env) {
       starred_ws: JSON.parse(row.starred_ws || '[]'),
       starred_papers: JSON.parse(row.starred_papers || '[]'),
       scope: row.scope || 'all',
+      tz: row.tz || null,
       cadence: row.cadence,
       notify: parseNotify(row.cadence),
       confirmed: !!row.confirmed_at,
@@ -495,16 +518,42 @@ async function handleUpdate(request, env) {
   const body = await readJson(request);
   if (!body) return fail(request, env, 400, 'bad_request');
 
-  const conferences = cleanIds(body.conferences, CONF_IDS);
-  const topics = cleanIds(body.topics, TOPIC_IDS);
-  // Unchecking everything here is exactly what pausing means.
-  const cadence = readNotify(body, auth.row.cadence) ?? 'off';
-  const scope = SCOPES.has(body.scope) ? body.scope : auth.row.scope || 'all';
+  // A **partial** update: every field is optional, and an absent one is left
+  // alone rather than reset. The preferences form sends all of them; the
+  // background timezone refresh sends only `tz`, and must not have to echo the
+  // rest back correctly — a field added later that it forgot to echo would
+  // otherwise be silently wiped on every page load.
+  const conferences = Array.isArray(body.conferences)
+    ? JSON.stringify(cleanIds(body.conferences, CONF_IDS))
+    : null;
+  const topics = Array.isArray(body.topics) ? JSON.stringify(cleanIds(body.topics, TOPIC_IDS)) : null;
+  const scope = SCOPES.has(body.scope) ? body.scope : null;
+  const tz = cleanTz(body.tz);
+  // Unchecking everything is exactly what pausing means — but only when the
+  // caller actually sent a selection.
+  const sentNotify = Array.isArray(body.notify) || typeof body.cadence === 'string';
+  const cadence = sentNotify ? (readNotify(body, auth.row.cadence) ?? 'off') : null;
 
-  await env.DB.prepare('UPDATE subscribers SET conferences = ?, topics = ?, scope = ?, cadence = ?, updated = ? WHERE email = ?')
-    .bind(JSON.stringify(conferences), JSON.stringify(topics), scope, cadence, nowIso(), auth.row.email)
+  await env.DB.prepare(
+    'UPDATE subscribers SET conferences = COALESCE(?, conferences), topics = COALESCE(?, topics), ' +
+      'scope = COALESCE(?, scope), tz = COALESCE(?, tz), cadence = COALESCE(?, cadence), updated = ? WHERE email = ?',
+  )
+    .bind(conferences, topics, scope, tz, cadence, nowIso(), auth.row.email)
     .run();
-  return json({ ok: true, conferences, topics, scope, cadence, notify: parseNotify(cadence) }, { request, env });
+  // Report the row as it now stands, not just what this call changed.
+  const row = await getSubscriber(env, auth.row.email);
+  return json(
+    {
+      ok: true,
+      conferences: JSON.parse(row.conferences || '[]'),
+      topics: JSON.parse(row.topics || '[]'),
+      scope: row.scope || 'all',
+      tz: row.tz || null,
+      cadence: row.cadence,
+      notify: parseNotify(row.cadence),
+    },
+    { request, env },
+  );
 }
 
 /* ------------------------------------------------------------ browser: /sync */
@@ -704,7 +753,7 @@ async function handleAdmin(request, env, path) {
   /* ---- subscribers ------------------------------------------------------ */
   if (path === '/admin/subscribers' && method === 'GET') {
     const { results } = await env.DB.prepare(
-      "SELECT email, nonce, conferences, topics, starred_ws, starred_papers, scope, cadence, confirmed_at, suppressed_at " +
+      "SELECT email, nonce, conferences, topics, starred_ws, starred_papers, scope, tz, cadence, confirmed_at, suppressed_at " +
         "FROM subscribers WHERE confirmed_at IS NOT NULL AND suppressed_at IS NULL AND cadence != 'off'",
     ).all();
     return json({ ok: true, subscribers: results ?? [] });

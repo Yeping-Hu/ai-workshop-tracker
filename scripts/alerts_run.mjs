@@ -226,7 +226,7 @@ async function main() {
       if (!mine?.length) continue;
       // One combined message per subscriber, never one per workshop.
       const items = mine.map((it) => live.workshops[it.slug]).filter(Boolean);
-      const mail = renderUrgent({ sub, items, nowMs: NOW_MS, ids });
+      const mail = renderUrgent({ sub, tz: sub.tz, items, nowMs: NOW_MS, ids });
       if (!mail) continue;
       messages.push({ to: sub.email, subject: mail.subject, html: mail.html, text: mail.text });
       logRows.push(mine);
@@ -271,7 +271,7 @@ async function main() {
       const events = mine.filter((e) => freshSlugs.has(e.slug));
       if (!events.length) continue;
 
-      const mail = renderStarredChanges({ sub, events, workshops: live.workshops, ids });
+      const mail = renderStarredChanges({ sub, tz: sub.tz, events, workshops: live.workshops, ids });
       if (!mail) continue;
       messages.push({ to: sub.email, subject: mail.subject, html: mail.html, text: mail.text });
       logRows.push(fresh);
@@ -306,7 +306,7 @@ async function main() {
       const scoped = Object.fromEntries(
         Object.entries(live.workshops).filter(([, w]) => matchesSubscriber(w, sub)),
       );
-      const mail = renderDigest({ sub, events: mine, workshops: scoped, nowMs: NOW_MS, ids });
+      const mail = renderDigest({ sub, tz: sub.tz, events: mine, workshops: scoped, nowMs: NOW_MS, ids });
       // An empty digest is skipped entirely — quiet weeks send nothing.
       if (!mail) continue;
       messages.push({ to: sub.email, subject: mail.subject, html: mail.html, text: mail.text });

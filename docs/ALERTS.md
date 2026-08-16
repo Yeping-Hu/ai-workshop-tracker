@@ -116,8 +116,32 @@ npx wrangler d1 execute aiwt-alerts --remote \
   --command "ALTER TABLE subscribers ADD COLUMN scope TEXT NOT NULL DEFAULT 'all'"
 ```
 
-Applied so far: `subscribers.scope` (2026-08-15). Its default reproduces the
-previous behaviour, so the migration is safe to run ahead of the deploy.
+```bash
+npx wrangler d1 execute aiwt-alerts --remote \
+  --command "ALTER TABLE subscribers ADD COLUMN tz TEXT"
+```
+
+Applied so far: `subscribers.scope` and `subscribers.tz` (both 2026-08-15).
+Each is safe to run ahead of the deploy — `scope` defaults to the previous
+behaviour, and a NULL `tz` renders as UTC, which is what every row got before
+the column existed.
+
+### Times in emails
+
+Email cannot run JavaScript, so a subscriber's local time has to be baked in at
+send. `subscribers.tz` holds an IANA zone name (`America/Los_Angeles`) captured
+from their browser, and `fmtWhen()` renders `16 Sep 2026, 16:59 PDT (23:59 UTC)`.
+With no zone stored it falls back to UTC only.
+
+The **name** is stored rather than an offset so each deadline resolves its own
+DST — an offset captured in July would be an hour wrong for a January deadline.
+
+It stays current on its own: `/me` returns the stored zone, and the reconcile in
+`favorites.js` runs on every page load from a linked device, sending one
+`/update` when the browser disagrees. Someone who moves is corrected on their
+next visit. `/update` is a partial update, so that call carries only `tz` and
+leaves every preference untouched. The manage page displays the zone in use, so
+a wrong time is diagnosable rather than mysterious.
 
 ## Local development
 

@@ -237,6 +237,10 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
               starred_ws: readStars('awt-fav-workshops'),
               starred_papers: readStars('awt-fav-papers'),
               scope: form.querySelector('input[name="scope"]:checked')?.value || 'all',
+              // Email cannot run JS, so the local time in every alert is baked in
+              // at send from this. Refreshed later whenever a linked device loads
+              // a page, so moving city fixes itself.
+              tz: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { return null; } })(),
               notify: picked('notify'),
               turnstile_token,
             }),

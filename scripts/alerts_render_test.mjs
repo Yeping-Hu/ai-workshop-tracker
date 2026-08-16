@@ -30,6 +30,7 @@ import {
   renderDigest,
   renderUrgent,
   renderStarredChanges,
+  fmtWhen,
   renderConfirm,
   renderMagic,
   facetUrl,
@@ -138,7 +139,7 @@ const sub = (over = {}) =>
     !/Newly announced/.test(out.html));
   check('items link to the workshop page',
     out.html.includes('https://aiworkshoptracker.com/workshop/neurips-2026-alpha/'));
-  check('the starred section is present', /Your starred/.test(out.html));
+  check('the saved-workshops section is present', /Your saved workshops/.test(out.html));
   check('a starred item is marked with a star', out.html.includes('★'));
   check('an abstract stage is labelled', /\(abstract\)/.test(out.html));
   check('the closing-soon section lists the imminent workshops',
@@ -202,13 +203,13 @@ const sub = (over = {}) =>
   const out = renderUrgent({ sub: sub(), items, nowMs: NOW, ids });
   check('an urgent alert renders', !!out);
   check('the subject leads with the soonest workshop and its hours',
-    /^⏰ SOON deadline in 20h — 14 Aug 2026 \(\+1 more\)$/.test(out.subject), out.subject);
+    /^⏰ 20h left: SOON \(NeurIPS 2026\) \(\+1 more\)$/.test(out.subject), out.subject);
   check('all imminent workshops are in ONE message', out.html.includes('neurips-2026-soon') && out.html.includes('neurips-2026-sooner'));
   check('the urgent email carries an unsubscribe placeholder', out.html.includes(UNSUB_PLACEHOLDER));
   check('the urgent email carries a manage placeholder', out.html.includes(MANAGE_PLACEHOLDER));
   check('the urgent plaintext carries both placeholders',
     out.text.includes(UNSUB_PLACEHOLDER) && out.text.includes(MANAGE_PLACEHOLDER));
-  check('the urgent email has a plaintext part', out.text.includes('A starred deadline is close'));
+  check('the urgent email has a plaintext part', out.text.includes('Deadline approaching'));
   check('the urgent email carries the accuracy caveat', out.text.includes(FOOTER_CAVEAT));
   check('the urgent email links the official page', out.html.includes('https://example.com/ws'));
   check('no items -> null', renderUrgent({ sub: sub(), items: [], nowMs: NOW, ids }) === null);
@@ -297,6 +298,90 @@ const sub = (over = {}) =>
   check(`at most SECTION_CAP (${SECTION_CAP}) changes are listed`,
     (capped.html.match(/<li /g) || []).length === SECTION_CAP);
   check('the overflow links to the saved page', capped.html.includes('https://aiworkshoptracker.com/saved/'));
+}
+
+/* ------------------------------------------- local time, baked in at send --
+ * Email cannot run JavaScript, so the conversion happens here from a zone
+ * stored on the subscriber. The IANA *name* is stored rather than an offset so
+ * each deadline resolves its own DST — an offset captured in July would be an
+ * hour wrong for a January deadline.
+ */
+{
+  const iso = '2026-09-16T23:59:00.000Z';
+  check('no zone renders UTC only, exactly as before',
+    fmtWhen(iso, null) === '16 Sep 2026, 23:59 UTC', fmtWhen(iso, null));
+  check('a zone renders local first with UTC alongside',
+    fmtWhen(iso, 'America/Los_Angeles') === '16 Sep 2026, 16:59 PDT (23:59 UTC)',
+    fmtWhen(iso, 'America/Los_Angeles'));
+  check('a zone ahead of UTC can roll to the next day',
+    fmtWhen(iso, 'Asia/Tokyo').startsWith('17 Sep 2026'), fmtWhen(iso, 'Asia/Tokyo'));
+  check('a half-hour offset is handled',
+    fmtWhen(iso, 'Asia/Kolkata').includes('05:29'), fmtWhen(iso, 'Asia/Kolkata'));
+  check('a subscriber already in UTC is not told the same time twice',
+    fmtWhen(iso, 'UTC') === '16 Sep 2026, 23:59 UTC', fmtWhen(iso, 'UTC'));
+
+  // The reason an IANA name is stored rather than an offset.
+  const winter = fmtWhen('2026-01-16T23:59:00.000Z', 'America/Los_Angeles');
+  const summer = fmtWhen('2026-07-16T23:59:00.000Z', 'America/Los_Angeles');
+  check('a winter deadline uses PST', winter.includes('PST') && winter.includes('15:59'), winter);
+  check('a summer deadline uses PDT', summer.includes('PDT') && summer.includes('16:59'), summer);
+
+  // One bad row must not take down the whole send.
+  check('an unknown zone degrades to UTC rather than throwing',
+    fmtWhen(iso, 'Not/AZone') === '16 Sep 2026, 23:59 UTC');
+  check('a junk zone degrades to UTC', fmtWhen(iso, '../../etc') === '16 Sep 2026, 23:59 UTC');
+  check('an unparseable date still returns empty', fmtWhen('nope', 'UTC') === '');
+}
+
+/* ------------------------------------- the workshop is named, not initialled */
+{
+  const workshops = {
+    'neurips-2026-lm4sci': ws('neurips-2026-lm4sci', {
+      name: 'LLM for Scientific Discovery: Reasoning, Assistance, and Collaboration',
+      acronym: 'LM4Sci',
+      deadline_utc: iso(2), next_stage_utc: iso(2),
+    }),
+  };
+  const s = sub({ starred_ws: '["neurips-2026-lm4sci"]' });
+  const u = renderUrgent({ sub: s, tz: 'America/Los_Angeles', items: [workshops['neurips-2026-lm4sci']], nowMs: NOW, ids });
+
+  // Every workshop in the dataset has an acronym, so `acronym || name` meant
+  // the full name never appeared anywhere. The body must carry it.
+  check('the body shows the full name', u.html.includes('LLM for Scientific Discovery'));
+  check('the body still shows the acronym', u.html.includes('LM4Sci'));
+  check('the plaintext shows the full name', u.text.includes('LLM for Scientific Discovery'));
+  // Subjects are read in a crowded list; a 66-char median name truncates away.
+  check('the subject uses the acronym', u.subject.includes('LM4Sci'));
+  check('the subject omits the full name', !u.subject.includes('LLM for Scientific Discovery'), u.subject);
+  check('the subject stays short', u.subject.length <= 70, `${u.subject.length}: ${u.subject}`);
+  check('the body carries the local time', u.html.includes('PDT'));
+
+  const d = renderDigest({
+    sub: s, tz: 'America/Los_Angeles',
+    events: [{ slug: 'neurips-2026-lm4sci', kind: 'extended', days: 3, old_utc: iso(-1), new_utc: iso(2) }],
+    workshops, nowMs: NOW, ids,
+  });
+  check('the digest shows the full name too', d.html.includes('LLM for Scientific Discovery'));
+  check('the digest shows local time too', d.html.includes('PDT'));
+}
+
+/* --------------------------------------------- no internal jargon reaches a reader */
+{
+  const workshops = { 'neurips-2026-a': ws('neurips-2026-a', { deadline_utc: iso(2), next_stage_utc: iso(2) }) };
+  const s = sub({ starred_ws: '["neurips-2026-a"]' });
+  const mails = [
+    renderUrgent({ sub: s, items: [workshops['neurips-2026-a']], nowMs: NOW, ids }),
+    renderDigest({ sub: s, events: [], workshops, nowMs: NOW, ids }),
+    renderStarredChanges({ sub: s, events: [{ slug: 'neurips-2026-a', kind: 'extended', days: 2, new_utc: iso(2) }], workshops, ids }),
+  ].filter(Boolean);
+  check('three templates rendered', mails.length === 3);
+  for (const m of mails) {
+    // "starred" is what the code calls it; the site calls it "saved", and so
+    // should anything a subscriber reads.
+    check(`no "starred" in "${m.subject.slice(0, 34)}…"`, !/starred/i.test(m.html) && !/starred/i.test(m.text));
+    // "close" reads as "closed" to a non-native speaker, inverting the meaning.
+    check(`no bare "is close" in "${m.subject.slice(0, 34)}…"`, !/is close\b/i.test(m.html));
+  }
 }
 
 console.log(failed === 0 ? '\nRendering OK.' : `\n${failed} test(s) failed.`);

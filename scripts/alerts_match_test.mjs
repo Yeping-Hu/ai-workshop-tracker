@@ -241,5 +241,15 @@ const sub = (over = {}) =>
     !wantsUrgent(sub({ cadence: 'weekly,urgent,changes', suppressed_at: '2026-08-02T00:00:00Z' })));
 }
 
+/* ------------------------------------------------------------ timezone ----- */
+{
+  check('a stored zone is carried through', normalizeSubscriber({ tz: 'Asia/Tokyo' }).tz === 'Asia/Tokyo');
+  // NULL is a real state, not a bug: emails then show UTC only rather than
+  // guessing a zone for someone who has never opened the site with a token.
+  check('a missing zone is null', normalizeSubscriber({}).tz === null);
+  check('an empty zone is null', normalizeSubscriber({ tz: '' }).tz === null);
+  check('a non-string zone is null', normalizeSubscriber({ tz: 42 }).tz === null);
+}
+
 console.log(failed === 0 ? '\nMatching logic OK.' : `\n${failed} test(s) failed.`);
 process.exit(failed === 0 ? 0 : 1);

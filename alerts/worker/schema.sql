@@ -12,6 +12,8 @@
 -- Migrations applied so far:
 --   2026-08-15  subscribers.scope (default 'all' — existing rows keep today's
 --               behaviour, so the migration is safe to run before deploying)
+--   2026-08-15  subscribers.tz (nullable; NULL renders as UTC, which is exactly
+--               what every existing row already got)
 --
 -- Privacy note that governs this whole file: subscriber addresses live HERE and
 -- nowhere else. They never enter the Git repo, a workflow log, a commit message
@@ -32,6 +34,10 @@ CREATE TABLE IF NOT EXISTS subscribers (
   --             with starred workshops always included on top
   --   'starred' nothing but the workshops they saved
   scope          TEXT NOT NULL DEFAULT 'all',
+  -- IANA zone name from the subscriber's browser, e.g. 'America/Los_Angeles'.
+  -- NULL is a real state: emails then show UTC only rather than guessing. The
+  -- name is stored rather than an offset so each deadline resolves its own DST.
+  tz             TEXT,
   -- How often. 'starred_changes' means same-day mail when a saved workshop's
   -- deadline moves, and no weekly digest at all.
   cadence        TEXT NOT NULL DEFAULT 'weekly',  -- 'weekly' | 'weekly_urgent' | 'starred_changes' | 'off'

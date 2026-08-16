@@ -214,6 +214,26 @@ async function reconcile() {
       if (me.email) localStorage.setItem(SYNCED_KEY, me.email);
     } catch {}
 
+    // Keep the account's timezone current. Alerts bake a local time in at send,
+    // because email cannot run JS — so a stored zone would otherwise go stale
+    // the moment someone moves. The browser always knows the live one, and this
+    // already runs on every page load, so one call on the rare day it differs
+    // keeps it right for nothing.
+    let browserTz = null;
+    try {
+      browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+    } catch {}
+    if (browserTz && browserTz !== me.tz) {
+      fetch(`${api}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        // /update is a partial update: sending only `tz` leaves every
+        // preference untouched.
+        body: JSON.stringify({ tz: browserTz }),
+        keepalive: true,
+      }).catch(() => {});
+    }
+
     if (changedLocal) {
       write(WS_KEY, ws);
       write(P_KEY, papers);

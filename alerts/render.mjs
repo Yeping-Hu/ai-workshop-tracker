@@ -47,6 +47,51 @@ export function fmtUtc(iso) {
   return `${d.getUTCDate()} ${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`;
 }
 
+/**
+ * A deadline as a subscriber should read it: their own time first, with the
+ * canonical UTC value alongside.
+ *
+ *   with a zone   16 Sep 2026, 16:59 PDT (23:59 UTC)
+ *   without one   16 Sep 2026, 23:59 UTC
+ *
+ * Email cannot run JavaScript, so the conversion has to happen here, at send
+ * time, from a zone stored on the subscriber. The IANA name is stored rather
+ * than an offset precisely so this call resolves the right offset for *this*
+ * deadline's date — a deadline on the far side of a DST boundary would
+ * otherwise be an hour out.
+ *
+ * Degrades to UTC on anything unexpected. An unrecognised zone must not throw
+ * here: this runs inside the loop that renders every subscriber's mail, and one
+ * bad row would take down the whole send.
+ */
+export function fmtWhen(iso, tz) {
+  const utc = fmtUtc(iso);
+  if (!tz || !utc) return utc;
+  try {
+    const d = new Date(iso);
+    // en-US, deliberately: it yields "Sep" (matching fmtUtc's own month names)
+    // and a real zone abbreviation like "PDT" where en-GB gives "GMT-7".
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZoneName: 'short',
+    }).formatToParts(d);
+    const get = (t) => parts.find((p) => p.type === t)?.value ?? '';
+    const local = `${get('day')} ${get('month')} ${get('year')}, ${get('hour')}:${get('minute')} ${get('timeZoneName')}`;
+    // Same wall clock in both zones (someone in UTC) — one reading is enough.
+    const utcTime = utc.split(', ')[1];
+    if (local.endsWith(utcTime)) return utc;
+    return `${local} (${utcTime})`;
+  } catch {
+    return utc;
+  }
+}
+
 /** Hours until `iso`, rounded down — the urgent subject's "in {h}h". */
 export function hoursUntil(iso, nowMs) {
   return Math.max(0, Math.floor((Date.parse(iso) - nowMs) / 3_600_000));
@@ -57,10 +102,25 @@ function confLabel(ids, id) {
   return ids?.conferences?.find((c) => c.id === id)?.label ?? id;
 }
 
-/** "MARINE (ECCV 2026)" — how a workshop is named throughout an email. */
-function wsTitle(w, ids) {
+/**
+ * How a workshop is named.
+ *
+ * Every workshop in the dataset has an acronym, so the old
+ * `acronym || name` meant the full name was never shown anywhere in any email —
+ * and "LM4Sci" alone tells a reader nothing. Bodies now carry the full name
+ * with the acronym beside it; subjects keep the acronym, which is short enough
+ * never to be truncated in an inbox list.
+ *
+ *   full:  LLM for Scientific Discovery: Reasoning… (LM4Sci · NeurIPS 2026)
+ *   short: LM4Sci (NeurIPS 2026)
+ */
+function wsTitle(w, ids, { full = false } = {}) {
   const conf = confLabel(ids, w.conference);
-  return `${w.acronym || w.name} (${conf} ${w.year})`;
+  const acr = w.acronym || '';
+  if (!full) return `${acr || w.name} (${conf} ${w.year})`;
+  const name = w.name || acr;
+  const tail = acr && acr !== name ? `${acr} · ${conf} ${w.year}` : `${conf} ${w.year}`;
+  return `${name} (${tail})`;
 }
 
 /**
@@ -165,10 +225,10 @@ function section({ heading, items, moreUrl }) {
 }
 
 /** "→ Extended 5 days · NAME (CONF year) — now <date> UTC" */
-function changeItem(ev, w, ids) {
-  const title = wsTitle(w, ids);
+function changeItem(ev, w, ids, tz) {
+  const title = wsTitle(w, ids, { full: true });
   const link = wsUrl(w.slug);
-  const when = ev.new_utc ? fmtUtc(ev.new_utc) : '';
+  const when = ev.new_utc ? fmtWhen(ev.new_utc, tz) : '';
   let lead;
   if (ev.kind === 'extended') lead = `→ Extended ${ev.days} day${ev.days === 1 ? '' : 's'}`;
   else if (ev.kind === 'earlier') lead = `△ Moved ${ev.days} day${ev.days === 1 ? '' : 's'} earlier`;
@@ -181,22 +241,22 @@ function changeItem(ev, w, ids) {
   };
 }
 
-function announcedItem(w, ids) {
-  const title = wsTitle(w, ids);
+function announcedItem(w, ids, tz) {
+  const title = wsTitle(w, ids, { full: true });
   const link = wsUrl(w.slug);
-  const when = w.deadline_utc ? ` — deadline ${fmtUtc(w.deadline_utc)}` : ' — deadline not yet announced';
+  const when = w.deadline_utc ? ` — deadline ${fmtWhen(w.deadline_utc, tz)}` : ' — deadline not yet announced';
   return {
     html: `<a href="${link}" style="${LINK}">${esc(title)}</a><span style="${MUTED}">${esc(when)}</span>`,
     text: `${title}${when}\n  ${link}`,
   };
 }
 
-function closingItem(w, ids, starredSet) {
-  const title = wsTitle(w, ids);
+function closingItem(w, ids, savedSet, tz) {
+  const title = wsTitle(w, ids, { full: true });
   const link = wsUrl(w.slug);
-  const star = starredSet.has(w.slug) ? '★ ' : '';
+  const star = savedSet.has(w.slug) ? '★ ' : '';
   const stage = w.next_stage_is_abstract ? ' (abstract)' : '';
-  const when = fmtUtc(w.next_stage_utc || w.deadline_utc);
+  const when = fmtWhen(w.next_stage_utc || w.deadline_utc, tz);
   return {
     html: `${star}<a href="${link}" style="${LINK}">${esc(title)}</a><span style="${MUTED}"> — ${esc(when)}${esc(stage)}</span>`,
     text: `${star}${title} — ${when}${stage}\n  ${link}`,
@@ -218,6 +278,7 @@ function closingItem(w, ids, starredSet) {
  */
 export function renderDigest({
   sub,
+  tz = sub?.tz ?? null,
   events,
   workshops,
   nowMs,
@@ -225,20 +286,20 @@ export function renderDigest({
   manageUrl = MANAGE_PLACEHOLDER,
   unsubUrl = UNSUB_PLACEHOLDER,
 }) {
-  const starred = new Set(sub.starred_ws ?? []);
+  const saved = new Set(sub.starred_ws ?? []);
   const more = facetUrl(sub, ids);
 
   // 1. Deadline changes this week.
   const changeKinds = new Set(['extended', 'earlier', 'deadline_announced']);
   const changes = events
     .filter((e) => changeKinds.has(e.kind) && workshops[e.slug])
-    .map((e) => changeItem(e, workshops[e.slug], ids));
+    .map((e) => changeItem(e, workshops[e.slug], ids, tz));
 
   // 2. Newly announced — but not ones that are already Past by the time the
   //    digest goes out (a back-filled 2024 edition is not news).
   const announced = events
     .filter((e) => e.kind === 'announced' && workshops[e.slug] && workshops[e.slug].status !== 'past')
-    .map((e) => announcedItem(workshops[e.slug], ids));
+    .map((e) => announcedItem(workshops[e.slug], ids, tz));
 
   // 3. Closing in the next 7 days, from the live projection (not events).
   const weekMs = 7 * 86_400_000;
@@ -250,10 +311,10 @@ export function renderDigest({
     })
     .filter((x) => x && x.ms >= nowMs && x.ms < nowMs + weekMs)
     .sort((a, b) => a.ms - b.ms)
-    .map(({ w }) => closingItem(w, ids, starred));
+    .map(({ w }) => closingItem(w, ids, saved, tz));
 
-  // 4. Your starred — next deadlines. Ignores the filters entirely (top 5).
-  const starredNext = [...starred]
+  // 4. Your saved workshops — next deadlines. Ignores the filters (top 5).
+  const savedNext = [...saved]
     .map((slug) => workshops[slug])
     .filter(Boolean)
     .map((w) => {
@@ -264,15 +325,15 @@ export function renderDigest({
     .filter(Boolean)
     .sort((a, b) => a.ms - b.ms)
     .slice(0, 5)
-    .map(({ w }) => closingItem(w, ids, starred));
+    .map(({ w }) => closingItem(w, ids, saved, tz));
 
-  if (!changes.length && !announced.length && !closing.length && !starredNext.length) return null;
+  if (!changes.length && !announced.length && !closing.length && !savedNext.length) return null;
 
   const secs = [
     section({ heading: 'Deadline changes this week', items: changes, moreUrl: more }),
     section({ heading: 'Newly announced', items: announced, moreUrl: more }),
     section({ heading: 'Closing in the next 7 days', items: closing, moreUrl: more }),
-    section({ heading: 'Your starred — next deadlines', items: starredNext, moreUrl: `${SITE_ORIGIN}/saved/` }),
+    section({ heading: 'Your saved workshops — next deadlines', items: savedNext, moreUrl: `${SITE_ORIGIN}/saved/` }),
   ];
 
   // Subject drops zero-count clauses rather than saying "0 changes".
@@ -282,7 +343,7 @@ export function renderDigest({
   if (!clauses.length && closing.length) {
     clauses.push(`${closing.length} deadline${closing.length === 1 ? '' : 's'} closing this week`);
   }
-  if (!clauses.length) clauses.push('your starred deadlines');
+  if (!clauses.length) clauses.push('your saved workshops');
   const subject = `${clauses.join(', ')} in your areas — AI Workshop Tracker`;
 
   const bodyHtml =
@@ -315,6 +376,7 @@ export function renderDigest({
  */
 export function renderStarredChanges({
   sub,
+  tz = sub?.tz ?? null,
   events,
   workshops,
   ids,
@@ -323,7 +385,7 @@ export function renderStarredChanges({
 }) {
   const items = events
     .filter((e) => workshops[e.slug])
-    .map((e) => changeItem(e, workshops[e.slug], ids));
+    .map((e) => changeItem(e, workshops[e.slug], ids, tz));
   if (!items.length) return null;
 
   const one = items.length === 1;
@@ -332,7 +394,7 @@ export function renderStarredChanges({
     ? `Deadline update: ${first.acronym || first.name} — AI Workshop Tracker`
     : `${items.length} deadline updates on your saved workshops — AI Workshop Tracker`;
 
-  const sec = section({ heading: one ? 'A saved workshop changed' : 'Your saved workshops changed', items, moreUrl: `${SITE_ORIGIN}/saved/` });
+  const sec = section({ heading: one ? 'A workshop you saved changed' : 'Workshops you saved changed', items, moreUrl: `${SITE_ORIGIN}/saved/` });
 
   const bodyHtml =
     `<h1 style="margin:0 0 6px;font-size:21px;line-height:1.25;">${one ? 'A deadline you follow moved' : 'Deadlines you follow moved'}</h1>` +
@@ -350,12 +412,13 @@ export function renderStarredChanges({
 /* -------------------------------------------------------------------- urgent */
 
 /**
- * One combined urgent alert covering every imminent starred workshop — one
+ * One combined urgent alert covering every imminent saved workshop — one
  * message, never one per workshop. `items` are live projections with a
  * `next_ms`.
  */
 export function renderUrgent({
   sub,
+  tz = sub?.tz ?? null,
   items,
   nowMs,
   ids,
@@ -370,7 +433,9 @@ export function renderUrgent({
   const firstIso = first.next_stage_utc || first.deadline_utc;
   const h = hoursUntil(firstIso, nowMs);
   const extra = sorted.length > 1 ? ` (+${sorted.length - 1} more)` : '';
-  const subject = `⏰ ${first.acronym || first.name} deadline in ${h}h — ${fmtUtc(firstIso).split(',')[0]}${extra}`;
+  // The acronym, not the full name: subjects are read in a crowded list and
+  // a 66-character median name would be truncated away. The body carries it.
+  const subject = `⏰ ${h}h left: ${wsTitle(first, ids)}${extra}`;
 
   const blocks = sorted
     .map((w) => {
@@ -379,23 +444,23 @@ export function renderUrgent({
       return {
         html:
           `<div style="margin:0 0 16px;padding:12px 14px;border:1px solid #dfe2e6;border-radius:8px;">` +
-          `<a href="${wsUrl(w.slug)}" style="${LINK}font-weight:600;">${esc(wsTitle(w, ids))}</a><br />` +
-          `<span style="${MUTED}">${esc(fmtUtc(iso))}${esc(stage)} · in ${hoursUntil(iso, nowMs)}h</span>` +
+          `<a href="${wsUrl(w.slug)}" style="${LINK}font-weight:600;">${esc(wsTitle(w, ids, { full: true }))}</a><br />` +
+          `<span style="${MUTED}">${esc(fmtWhen(iso, tz))}${esc(stage)} · in ${hoursUntil(iso, nowMs)}h</span>` +
           (w.website ? `<br /><a href="${esc(w.website)}" style="${LINK}font-size:14px;">Official page</a>` : '') +
           `</div>`,
         text:
-          `${wsTitle(w, ids)}\n  ${fmtUtc(iso)}${stage} · in ${hoursUntil(iso, nowMs)}h\n  ${wsUrl(w.slug)}` +
+          `${wsTitle(w, ids, { full: true })}\n  ${fmtWhen(iso, tz)}${stage} · in ${hoursUntil(iso, nowMs)}h\n  ${wsUrl(w.slug)}` +
           (w.website ? `\n  ${w.website}` : ''),
       };
     });
 
   const bodyHtml =
-    `<h1 style="margin:0 0 6px;font-size:21px;line-height:1.25;">A starred deadline is close</h1>` +
-    `<p style="margin:0 0 18px;font-size:14px;${MUTED}">You starred ${sorted.length === 1 ? 'this workshop' : 'these workshops'} on aiworkshoptracker.com.</p>` +
+    `<h1 style="margin:0 0 6px;font-size:21px;line-height:1.25;">Deadline approaching</h1>` +
+    `<p style="margin:0 0 18px;font-size:14px;${MUTED}">You saved ${sorted.length === 1 ? 'this workshop' : 'these workshops'} on aiworkshoptracker.com.</p>` +
     blocks.map((b) => b.html).join('');
 
   const text =
-    `A starred deadline is close\n\n` +
+    `Deadline approaching\n\n` +
     blocks.map((b) => b.text).join('\n\n') +
     '\n' +
     textFooter({ manageUrl, unsubUrl });
