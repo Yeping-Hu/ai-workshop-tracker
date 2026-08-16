@@ -169,6 +169,31 @@ Set the always-passes secret with `wrangler secret put TURNSTILE_SECRET` (or in
 production: it passes everything, which is exactly the open relay the
 fail-closed behavior exists to prevent.
 
+## Signing in, and where each link goes
+
+`site/src/scripts/alerts-session.js` is the **only** place that reads a `#t=`
+fragment and writes the sign-in token. It is loaded on every page when the
+feature is configured, so any page can be a landing page — which is what lets a
+sign-in link point at the saved list rather than a settings form. It exchanges a
+one-shot `magic` token for the durable `manage` one, clears the fragment before
+any network call, unlinks on a 401, and then reconciles the saved list.
+
+Two link types that must not converge:
+
+| Link | Token | Lands on |
+|---|---|---|
+| Sign-in link (`/magic-link`, and re-subscribing an existing address) | `magic`, 15 min, single use | `/saved/` |
+| "Manage preferences" in a digest footer | `manage`, nonce-bound | `/alerts/manage/` |
+
+`scripts/alerts_session_test.mjs` pins both, and pins that no second module
+writes the token. That is a structural check rather than a behavioural one: the
+saved-list merge once existed in two places, the fix went to one, and the other
+silently kept the old behaviour. A second copy is the failure mode worth a test.
+
+Every page's signup block hides itself once the browser is linked and shows
+"Alerts on for … · your saved list · manage" instead, so a signed-in visitor is
+never shown a signup offer.
+
 ## What a subscription can express
 
 Two independent axes. `scope` is *what* you hear about; `cadence` is *when*.

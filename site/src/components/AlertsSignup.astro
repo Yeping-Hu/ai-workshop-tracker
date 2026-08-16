@@ -36,18 +36,29 @@ interface Props {
   summary?: string;
 }
 const {
-  heading = 'Get deadline alerts by email',
+  heading = 'Get workshop updates by email',
   blurb = '',
   compact = false,
   tight = false,
   collapsed = false,
-  summary = 'Get deadline alerts by email',
+  summary = 'Get workshop updates by email',
 } = Astro.props;
 
 const enabled = !!ALERTS_API;
 const confList = [...conferences].sort((a, b) => a.name.localeCompare(b.name));
 const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.label));
 ---
+
+{/* Shown instead of the form once this browser is linked — otherwise a
+    signed-in visitor is offered a signup on every page but /saved/, which
+    reads as "you are not signed in". Filled in by the script below, since the
+    pages are static and the token lives in localStorage. */}
+{enabled && (
+  <p class="alerts-signedin" id="alertsSignedIn" hidden>
+    <span class="alerts-summary-mark" aria-hidden="true">✉</span>
+    <span id="alertsSignedInText"></span>
+  </p>
+)}
 
 {enabled && (
   <details
@@ -141,7 +152,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
 
       <div class="alerts-row">
         <button class="btn" type="submit" id="alertsSubmit">Subscribe</button>
-        <a class="btn-quiet" href={href('/alerts/manage/')}>Already subscribed? Manage or unsubscribe</a>
+        <a class="btn-quiet" href={href('/alerts/manage/')}>Already subscribed? Sign in</a>
       </div>
 
       <p class="alerts-status" id="alertsStatus" role="status" aria-live="polite" hidden></p>
@@ -158,11 +169,42 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
 )}
 
 {enabled && (
-  <script is:inline define:vars={{ ALERTS_API }}>
+  <script is:inline define:vars={{ ALERTS_API, SAVED_URL: href('/saved/'), MANAGE_URL: href('/alerts/manage/') }}>
     (() => {
       const form = document.getElementById('alertsForm');
       if (!form || form.dataset.wired) return;
       form.dataset.wired = '1';
+
+      // Swap the signup offer for a quiet confirmation once linked, and back
+      // again on sign-out. Driven by the shared session module's event, so the
+      // two never disagree.
+      const box = form.closest('.alerts-signup');
+      const banner = document.getElementById('alertsSignedIn');
+      const bannerText = document.getElementById('alertsSignedInText');
+      function paintSession() {
+        const s = window.awtAlertsSession?.() || { linked: false };
+        if (banner && bannerText) {
+          // Built from nodes rather than innerHTML: the email is the one piece
+          // of user data here, and textContent cannot be misread as markup.
+          bannerText.textContent = '';
+          if (s.linked) {
+            bannerText.append(s.email ? `Alerts on for ${s.email} · ` : 'Alerts on · ');
+            const saved = document.createElement('a');
+            saved.href = SAVED_URL;
+            saved.textContent = 'your saved list';
+            const manage = document.createElement('a');
+            manage.href = MANAGE_URL;
+            manage.textContent = 'manage';
+            bannerText.append(saved, ' · ', manage);
+          }
+          banner.hidden = !s.linked;
+        }
+        if (box) box.hidden = s.linked;
+      }
+      paintSession();
+      document.addEventListener('awt:alerts-session', paintSession);
+      // The module may finish adopting a `#t=` fragment after this runs.
+      Promise.resolve(window.awtAlertsAdopt).then(paintSession).catch(() => {});
 
       const status = document.getElementById('alertsStatus');
       const submit = document.getElementById('alertsSubmit');
@@ -291,6 +333,15 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
   .alerts-signup[data-compact] { background: transparent; }
   /* Directly under a masthead, whose padding already supplies the gap. */
   .alerts-signup[data-tight] { margin-top: 0.6rem; }
+  .alerts-signedin {
+    margin: 0.6rem 0 0;
+    font-size: 0.92rem;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: baseline;
+  }
   /* Expanded variant: the summary is redundant with the h2 below it. */
   .alerts-signup:not([data-collapsed]) > .alerts-summary { display: none; }
   /* Collapsed variant: the summary IS the heading, so the h2 would repeat it. */

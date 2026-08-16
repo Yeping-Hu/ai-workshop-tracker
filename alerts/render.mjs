@@ -498,10 +498,10 @@ export function renderMagic({ magicUrl }) {
   const subject = 'Your sign-in link — AI Workshop Tracker';
   const bodyHtml =
     `<h1 style="margin:0 0 12px;font-size:21px;">Your sign-in link</h1>` +
-    `<p style="margin:0 0 18px;">Open your alert preferences and saved list. ` +
-    `This link expires in 15 minutes and can be used once.</p>` +
+    `<p style="margin:0 0 18px;">Opens your saved workshops on this device, and links it so the ` +
+    `list stays in step. This link expires in 15 minutes and can be used once.</p>` +
     `<p style="margin:0 0 18px;"><a href="${esc(magicUrl)}" style="display:inline-block;padding:11px 18px;` +
-    `background:#0f766e;color:#ffffff;border-radius:7px;text-decoration:none;font-weight:600;">Open my preferences</a></p>` +
+    `background:#0f766e;color:#ffffff;border-radius:7px;text-decoration:none;font-weight:600;">Open my saved list</a></p>` +
     `<p style="margin:0;font-size:13px;${MUTED}">If you didn't request this, ignore it — no change has been made.</p>` +
     `<p style="margin:14px 0 0;font-size:12.5px;word-break:break-all;${MUTED}">${esc(magicUrl)}</p>`;
   const text =

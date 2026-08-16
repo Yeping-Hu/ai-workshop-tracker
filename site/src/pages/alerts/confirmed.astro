@@ -41,36 +41,9 @@ const enabled = !!ALERTS_API;
         unsubscribe link that deletes your address on the spot.
       </p>
 
-      <script is:inline define:vars={{ ALERTS_API }}>
+      <script is:inline>
         (async () => {
-          const TOKEN_KEY = 'awt-alerts-token';
-          const EMAIL_KEY = 'awt-alerts-email';
-          const WS_KEY = 'awt-fav-workshops';
-          const P_KEY = 'awt-fav-papers';
           const note = document.getElementById('confirmSync');
-
-          const params = new URLSearchParams((location.hash || '').replace(/^#/, ''));
-          const token = params.get('t');
-          const email = params.get('e');
-
-          // Clear the fragment as soon as it is read, so the token is not left
-          // in the address bar, in a bookmark, or in a shared screenshot.
-          if (location.hash) history.replaceState(null, '', location.pathname + location.search);
-
-          if (!token) {
-            note.textContent =
-              'This device is not linked (the confirmation link had no token). Your subscription is still active.';
-            return;
-          }
-
-          try {
-            localStorage.setItem(TOKEN_KEY, token);
-            if (email) localStorage.setItem(EMAIL_KEY, email);
-          } catch {
-            note.textContent = 'Your subscription is active, but this browser blocks storage, so the list cannot sync here.';
-            return;
-          }
-
           const read = (k) => {
             try {
               const v = JSON.parse(localStorage.getItem(k) || '[]');
@@ -80,30 +53,26 @@ const enabled = !!ALERTS_API;
             }
           };
 
-          try {
-            // Delegate to favorites.js rather than merging here. It runs the
-            // same tested rule the rest of the site uses — union in BOTH
-            // directions, so anything starred on this device before signing up
-            // is uploaded rather than stranded. This page previously had its
-            // own copy that only pulled, which is exactly how that half went
-            // missing.
-            if (window.awtFavsSync) {
-              await window.awtFavsSync();
-            } else {
-              // favorites.js hasn't finished loading yet; it runs the same
-              // reconcile on init, so this page just reports what it finds.
-              await new Promise((r) => setTimeout(r, 400));
-              await window.awtFavsSync?.();
-            }
+          // The token arrives in the fragment and is consumed by
+          // scripts/alerts-session.js, which every page loads. This page only
+          // reports the outcome — it deliberately holds no copy of that logic.
+          const result = (await window.awtAlertsAdopt) || {};
 
-            const n = read(WS_KEY).length + read(P_KEY).length;
-            note.textContent = email
-              ? `Synced as ${email} — ${n} saved item${n === 1 ? '' : 's'} on this device.`
-              : `This device is linked — ${n} saved item${n === 1 ? '' : 's'}.`;
-          } catch {
-            // The subscription is confirmed regardless; only the sync failed.
-            note.textContent = 'This device is linked. (Your saved list could not be fetched just now — it will sync later.)';
+          if (result.blocked) {
+            note.textContent =
+              'Your subscription is active, but this browser blocks storage, so the list cannot sync here.';
+            return;
           }
+          if (!result.linked) {
+            note.textContent =
+              'This device is not linked (the confirmation link had no token). Your subscription is still active.';
+            return;
+          }
+
+          const n = read('awt-fav-workshops').length + read('awt-fav-papers').length;
+          note.textContent = result.email
+            ? `Synced as ${result.email} — ${n} saved item${n === 1 ? '' : 's'} on this device.`
+            : `This device is linked — ${n} saved item${n === 1 ? '' : 's'}.`;
         })();
       </script>
     </>

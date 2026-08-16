@@ -231,7 +231,7 @@ const sub = (over = {}) =>
   check('the confirm email has no unsubscribe link', !confirm.text.includes('Unsubscribe:'));
   check('the confirm email tells you what happens if you ignore it', /ignore this email/.test(confirm.text));
 
-  const magic = renderMagic({ magicUrl: 'https://aiworkshoptracker.com/alerts/manage/#t=xyz' });
+  const magic = renderMagic({ magicUrl: 'https://aiworkshoptracker.com/saved/#t=xyz' });
   check('the magic email states the 15-minute expiry', /15 minutes/.test(magic.html));
   check('the magic email warns about unrequested links', /didn't request this/.test(magic.text));
   check('the magic email has a plaintext part', magic.text.includes('#t=xyz'));

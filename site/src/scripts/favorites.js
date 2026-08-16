@@ -185,10 +185,10 @@ async function reconcile() {
   try {
     const res = await fetch(`${api}/me`, { headers: { Authorization: `Bearer ${token}` } });
     if (res.status === 401) {
-      try {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem('awt-alerts-email');
-      } catch {}
+      // Subscription gone, or the token revoked. Unlink through the shared
+      // helper so every block on the page updates rather than continuing to
+      // claim this browser is signed in.
+      window.awtAlertsSignOut?.();
       return;
     }
     if (!res.ok) return;

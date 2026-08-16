@@ -130,6 +130,11 @@ const current = (p: string) =>
     {/* Closes <details class="dd"> pickers on outside click / Escape, on
         every page that has them. Self-initialising; see the module. */}
     <script src="../scripts/dropdowns.js"></script>
+    {/* Turns a `#t=` link from an email into a linked device, on any page, and
+        answers "is this browser signed in?". One module by design — see it.
+        Only shipped when the feature is configured: it is inert without the
+        meta tag above, but a build with alerts off should carry no trace. */}
+    {ALERTS_API && <script src="../scripts/alerts-session.js"></script>}
     <script>
       // External links (a different host — arXiv PDFs, a workshop's own site)
       // open in a new tab so the tracker stays available behind them. Internal

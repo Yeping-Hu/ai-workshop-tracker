@@ -27,9 +27,10 @@ const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.
     )}
   </section>
 
-  {/* Hidden once this device is linked — the sync line above replaces it. */}
+  {/* AlertsSignup hides itself once this device is linked; the sync line above
+      replaces it. */}
   {ALERTS_API && (
-    <div id="savedSignup">
+    <div>
       {/* Props are plain strings, not markup — Astro escapes them on render, so
           an HTML entity here would show through literally as "&amp;". */}
       <AlertsSignup
@@ -365,22 +366,23 @@ const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.
     // fires `awt:favs-changed {type:'sync'}` when it changes anything, which the
     // handler above already re-renders on. All this does is say which account
     // the list belongs to, and hide the signup box once it is redundant.
+    // This page is also a landing page for sign-in links, so the session may
+    // arrive a moment after first paint. State comes from the shared module —
+    // /saved/ used to read the token itself, which is one more place that would
+    // have had to change every time the rule did.
     (() => {
-      let email = null;
-      let token = null;
-      try {
-        token = localStorage.getItem('awt-alerts-token');
-        email = localStorage.getItem('awt-alerts-email');
-      } catch {}
-      if (!token) return;
-      const signup = document.getElementById('savedSignup');
-      if (signup) signup.hidden = true;
-      const line = document.getElementById('savedSyncLine');
-      const who = document.getElementById('savedSyncEmail');
-      if (line && who) {
-        who.textContent = email || 'your subscription';
-        line.hidden = false;
-      }
+      const paint = () => {
+        const s = (window as any).awtAlertsSession?.() || { linked: false };
+        const line = document.getElementById('savedSyncLine');
+        const who = document.getElementById('savedSyncEmail');
+        if (line && who) {
+          who.textContent = s.email || 'your subscription';
+          line.hidden = !s.linked;
+        }
+      };
+      paint();
+      document.addEventListener('awt:alerts-session', paint);
+      Promise.resolve((window as any).awtAlertsAdopt).then(paint).catch(() => {});
     })();
 
     renderWorkshops();

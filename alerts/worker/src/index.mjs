@@ -323,7 +323,7 @@ async function handleSubscribe(request, env) {
         { email, nonce: existing.nonce, purpose: 'magic', ttlSeconds: MAGIC_TTL_S },
         env.HMAC_SECRET,
       );
-      const magicUrl = `${env.SITE_ORIGIN}/alerts/manage/#t=${encodeURIComponent(token)}`;
+      const magicUrl = `${env.SITE_ORIGIN}/saved/#t=${encodeURIComponent(token)}`;
       const mail = renderMagic({ magicUrl });
       await sendEmail(env, { to: email, subject: mail.subject, html: mail.html, text: mail.text });
     }
@@ -455,7 +455,11 @@ async function handleMagicLink(request, env) {
       { email, nonce: row.nonce, purpose: 'magic', ttlSeconds: MAGIC_TTL_S },
       env.HMAC_SECRET,
     );
-    const magicUrl = `${env.SITE_ORIGIN}/alerts/manage/#t=${encodeURIComponent(token)}`;
+    // Sign-in links land on the saved list, not the preferences form: someone
+    // signing in on a new device wants their list, and the page's sync line
+    // links onward to manage. Any page can adopt a `#t=` token now that
+    // scripts/alerts-session.js is loaded site-wide.
+    const magicUrl = `${env.SITE_ORIGIN}/saved/#t=${encodeURIComponent(token)}`;
     const mail = renderMagic({ magicUrl });
     await sendEmail(env, { to: email, subject: mail.subject, html: mail.html, text: mail.text });
   }

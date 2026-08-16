@@ -37,10 +37,8 @@ import { href } from '../../lib/site';
 
   <script is:inline>
     // The subscription is gone; a stale token here would only produce failing
-    // sync requests on every page load.
-    try {
-      localStorage.removeItem('awt-alerts-token');
-      localStorage.removeItem('awt-alerts-email');
-    } catch {}
+    // sync requests on every page load. Shared helper, so the signup blocks
+    // stop showing this browser as signed in.
+    window.awtAlertsSignOut?.();
   </script>
 </Base>

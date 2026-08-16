@@ -152,7 +152,6 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
       <script is:inline define:vars={{ ALERTS_API }}>
         (async () => {
           const TOKEN_KEY = 'awt-alerts-token';
-          const EMAIL_KEY = 'awt-alerts-email';
           const $ = (id) => document.getElementById(id);
           const show = (id, on = true) => { $(id).hidden = !on; };
           const say = (el, msg, kind) => {
@@ -161,13 +160,11 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
             el.className = `manage-status is-${kind}`;
           };
 
-          // A magic token in the fragment wins over a stored one; clear the
-          // fragment immediately so the token is not left in the address bar.
-          const frag = new URLSearchParams((location.hash || '').replace(/^#/, ''));
-          const fragToken = frag.get('t');
-          if (location.hash) history.replaceState(null, '', location.pathname + location.search);
-
-          let token = fragToken || (() => { try { return localStorage.getItem(TOKEN_KEY); } catch { return null; } })();
+          // scripts/alerts-session.js consumes any `#t=` fragment, exchanges a
+          // one-shot magic token for the durable one, and stores it — on every
+          // page, so this one holds no copy of that logic.
+          await window.awtAlertsAdopt;
+          let token = (() => { try { return localStorage.getItem(TOKEN_KEY); } catch { return null; } })();
 
           /* ---------------- sign-in (magic link) ---------------- */
           const magicForm = $('magicForm');
@@ -215,26 +212,9 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
             return;
           }
 
-          // A magic exchange returns a long-lived manage token; store it so this
-          // device stays linked after the 15-minute magic token dies.
-          if (me.manage_token) {
-            token = me.manage_token;
-            try {
-              localStorage.setItem(TOKEN_KEY, token);
-              if (me.email) localStorage.setItem(EMAIL_KEY, me.email);
-            } catch {}
-          }
-
-          // Reconcile the saved list now that this device is linked. favorites.js
-          // runs the same merge on page load, but on THIS load it ran before the
-          // token existed, so without this a device linked by magic link would
-          // not sync until the next navigation — and anything starred here while
-          // signed out would sit unuploaded until then.
-          try {
-            await window.awtFavsSync?.();
-            const again = await fetch(`${ALERTS_API}/me`, { headers: { Authorization: `Bearer ${token}` } });
-            if (again.ok) me = await again.json();
-          } catch {}
+          // The session module already exchanged any magic token and reconciled
+          // the saved list, so `me` is current and the stored token is durable.
+          try { token = localStorage.getItem(TOKEN_KEY) || token; } catch {}
 
           const prefs = $('prefsForm');
           $('prefsEmail').textContent = me.email || '';
@@ -317,10 +297,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
           });
 
           $('unlinkBtn').addEventListener('click', () => {
-            try {
-              localStorage.removeItem(TOKEN_KEY);
-              localStorage.removeItem(EMAIL_KEY);
-            } catch {}
+            window.awtAlertsSignOut?.();
             location.reload();
           });
         })();
