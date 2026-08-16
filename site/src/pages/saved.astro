@@ -28,9 +28,11 @@ const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.
   </section>
 
   {/* AlertsSignup hides itself once this device is linked; the sync line above
-      replaces it. */}
+      replaces it. Marked so the spacing can close up when it does — otherwise
+      the next heading's 2.2rem top margin lands straight under the masthead's
+      own padding and leaves a hole where the block used to be. */}
   {ALERTS_API && (
-    <div>
+    <div id="savedAlerts">
       {/* Props are plain strings, not markup — Astro escapes them on render, so
           an HTML entity here would show through literally as "&amp;". */}
       <AlertsSignup
@@ -380,6 +382,7 @@ const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.
           who.textContent = s.email || 'your subscription';
           line.hidden = !s.linked;
         }
+        document.getElementById('savedAlerts')?.classList.toggle('is-linked', s.linked);
       };
       paint();
       document.addEventListener('awt:alerts-session', paint);
@@ -389,4 +392,12 @@ const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.
     renderWorkshops();
     renderPapers();
   </script>
+
+  <style>
+    /* Signed in, so the signup block hides itself and the next heading's 2.2rem
+       top margin (global.css) would sit straight under the masthead's own
+       padding — ~3.6rem of nothing where the block used to be. Close it up. */
+    #savedAlerts.is-linked { display: none; }
+    #savedAlerts.is-linked + section h2 { margin-top: 0.9rem; }
+  </style>
 </Base>
