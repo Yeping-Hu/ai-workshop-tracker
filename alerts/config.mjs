@@ -39,7 +39,16 @@ export const MAGIC_TTL_S = 15 * 60;
 
 /** Rate limits. IPs are stored only as salted hashes, and only transiently. */
 export const RL_SUBSCRIBE_PER_IP_HOUR = 5;
-export const RL_MAGIC_PER_EMAIL_HOUR = 3;
+/**
+ * Sign-in links per address per hour.
+ *
+ * Shared deliberately with /subscribe's already-confirmed path, since both mail
+ * a sign-in link to the same address and a shared pool is what stops the pair
+ * being used to bomb someone else's inbox. Five rather than three because email
+ * is slow and lands in spam, so clicking again is the normal human response —
+ * and at three, two form submissions plus two link requests exhausted it.
+ */
+export const RL_MAGIC_PER_EMAIL_HOUR = 5;
 /** Global brake against signup floods (a bot that rotates IPs). */
 export const RL_NEW_SUBS_PER_DAY = 200;
 

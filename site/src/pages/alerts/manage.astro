@@ -182,9 +182,18 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
                 body: JSON.stringify({ email, turnstile_token: ts ? ts.value : '' }),
               });
               const body = await res.json().catch(() => ({}));
-              // Deliberately neutral: the Worker answers the same way whether
-              // or not the address is on the list, so this page must too.
-              say(status, body.message || 'If that address is subscribed, a sign-in link is on its way.', 'ok');
+              // Neutral about whether the address exists — the Worker answers
+              // identically either way, so this page must too. Being throttled
+              // is a different thing and is reported as an error, or someone
+              // waits for a link that was never sent.
+              say(
+                status,
+                body.message ||
+                  (body.ok
+                    ? 'If that address is subscribed, a sign-in link is on its way.'
+                    : 'Something went wrong. Please try again shortly.'),
+                body.ok ? 'ok' : 'err',
+              );
             } catch {
               say(status, "Couldn't reach the alerts service. Try again shortly.", 'err');
             } finally {

@@ -264,6 +264,21 @@ async function deleteSubscriber(env, email) {
 
 const redirect = (url) => new Response(null, { status: 302, headers: { Location: url, 'Cache-Control': 'no-store' } });
 
+/**
+ * Report a transactional send that failed.
+ *
+ * These endpoints answer neutrally whatever happens — they must, or they would
+ * reveal who is subscribed — which means a provider outage, a rejected API key
+ * or a bounce all look exactly like success from the outside. Without this line
+ * the only symptom is a person saying "I never got the email", and nothing to
+ * check. The provider's reason is logged; the recipient never is.
+ */
+async function logSend(kind, promise) {
+  const result = await promise;
+  if (!result?.ok) console.error(`send failed [${kind}]: ${result?.error ?? 'unknown'}`);
+  return result;
+}
+
 /* ------------------------------------------------------- browser: /subscribe */
 
 async function handleSubscribe(request, env) {
@@ -325,7 +340,7 @@ async function handleSubscribe(request, env) {
       );
       const magicUrl = `${env.SITE_ORIGIN}/saved/#t=${encodeURIComponent(token)}`;
       const mail = renderMagic({ magicUrl });
-      await sendEmail(env, { to: email, subject: mail.subject, html: mail.html, text: mail.text });
+      await logSend('resubscribe-signin', sendEmail(env, { to: email, subject: mail.subject, html: mail.html, text: mail.text }));
     }
     return NEUTRAL;
   }
@@ -364,6 +379,13 @@ async function handleSubscribe(request, env) {
   } else {
     // Unconfirmed row: refresh the preferences and re-send the confirmation,
     // rate-limited exactly like a magic link.
+    //
+    // This one stays NEUTRAL, unlike /magic-link, and the difference matters.
+    // Reaching here already means a row exists in an unconfirmed state — a
+    // genuinely new address takes the insert path above — so reporting "too
+    // many attempts" would answer a question the caller has no business asking.
+    // /magic-link can report it because there the limit is applied to any
+    // plausible address *before* any row is looked up.
     if (!(await rateLimit(env, `confirm:${email}:${Math.floor(Date.now() / 3_600_000)}`, RL_MAGIC_PER_EMAIL_HOUR, 3600))) {
       return NEUTRAL;
     }
@@ -391,7 +413,7 @@ async function handleSubscribe(request, env) {
   );
   const confirmUrl = `${new URL(request.url).origin}/confirm?token=${encodeURIComponent(token)}`;
   const mail = renderConfirm({ confirmUrl });
-  await sendEmail(env, { to: email, subject: mail.subject, html: mail.html, text: mail.text });
+  await logSend('confirm', sendEmail(env, { to: email, subject: mail.subject, html: mail.html, text: mail.text }));
 
   // Neutral either way: a send failure must not tell a prober anything, and the
   // subscriber can simply sign up again.
@@ -438,15 +460,29 @@ async function handleMagicLink(request, env) {
   }
 
   const email = normalizeEmail(body.email);
-  // Neutral response for every outcome below — invalid address, unknown
-  // address, rate-limited — so this endpoint cannot enumerate subscribers.
+  // Neutral about *existence*: an unknown address and a real one answer
+  // identically, so this endpoint cannot enumerate subscribers.
   const neutral = json(
     { ok: true, message: 'If that address is subscribed, a sign-in link is on its way.' },
     { request, env },
   );
   if (!isPlausibleEmail(email)) return neutral;
+
+  // Being throttled is NOT neutral, and pretending otherwise was a bug: the
+  // caller was told a link was on its way when nothing had been sent, and the
+  // natural response — click again — burned more budget for the same reassuring
+  // lie. Safe to report, because the limit is applied to any plausible address
+  // before the row is ever looked up, so this says nothing about who is
+  // subscribed.
   if (!(await rateLimit(env, `magic:${email}:${Math.floor(Date.now() / 3_600_000)}`, RL_MAGIC_PER_EMAIL_HOUR, 3600))) {
-    return neutral;
+    return json(
+      {
+        ok: false,
+        error: 'rate_limited',
+        message: 'Too many sign-in links requested for that address. Please try again in a few minutes.',
+      },
+      { status: 429, request, env },
+    );
   }
 
   const row = await getSubscriber(env, email);
@@ -461,7 +497,7 @@ async function handleMagicLink(request, env) {
     // scripts/alerts-session.js is loaded site-wide.
     const magicUrl = `${env.SITE_ORIGIN}/saved/#t=${encodeURIComponent(token)}`;
     const mail = renderMagic({ magicUrl });
-    await sendEmail(env, { to: email, subject: mail.subject, html: mail.html, text: mail.text });
+    await logSend('magic-link', sendEmail(env, { to: email, subject: mail.subject, html: mail.html, text: mail.text }));
   }
   return neutral;
 }
