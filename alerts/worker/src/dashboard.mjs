@@ -26,47 +26,103 @@ const esc = (s) =>
 
 const n = (v) => Number(v ?? 0).toLocaleString('en-US');
 
-/** A horizontal bar row: label, proportional bar, count. */
+/**
+ * A labelled bar per row.
+ *
+ * The name sits *above* its bar rather than beside it. Side-by-side needs a
+ * fixed label column, and the things being labelled here are workshop paths —
+ * `/workshop/neurips-2026-mlforsys` — which truncated to "/works…" in every
+ * row, so the list showed eight bars and no way to tell them apart. Stacking
+ * gives the name the full card width and lets it wrap.
+ */
 function bars(rows, { label = 'name', value = 'n', empty = 'nothing yet' } = {}) {
   const list = (rows ?? []).filter((r) => r);
   if (!list.length) return `<p class="empty">${esc(empty)}</p>`;
   const max = Math.max(...list.map((r) => Number(r[value]) || 0), 1);
-  return `<div class="bars">${list
+  return `<ul class="bars">${list
     .map((r) => {
       const v = Number(r[value]) || 0;
       const pct = Math.max((v / max) * 100, v > 0 ? 2 : 0);
-      return `<div class="bar-label" title="${esc(r[label])}">${esc(r[label])}</div>
+      return `<li>
+        <div class="bar-top"><span class="bar-name">${esc(r[label])}</span><span class="bar-val">${n(v)}</span></div>
         <div class="bar-track"><div class="bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
-        <div class="bar-val">${n(v)}</div>`;
+      </li>`;
     })
-    .join('')}</div>`;
+    .join('')}</ul>`;
 }
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 /**
- * A sparkline over daily counts.
- *
- * Drawn as a filled area plus a line, with the last point marked — an endpoint
- * dot is what turns "a shape" into "and here is where you are now".
+ * "2026-08-16" -> "Aug 16", by string surgery rather than Date parsing.
+ * `new Date('2026-08-16')` is UTC midnight, which in the Americas renders as
+ * the 15th — a chart silently one day out is worse than no chart.
  */
-function sparkline(series, { height = 56 } = {}) {
-  const pts = (series ?? []).map((d) => Number(d.n) || 0);
+const shortDay = (iso) => {
+  const [, m, d] = String(iso ?? '').split('-');
+  const name = MONTHS[Number(m) - 1];
+  return name ? `${name} ${Number(d)}` : String(iso ?? '');
+};
+
+/**
+ * A daily chart with dated axis labels and a hover readout per day.
+ *
+ * **The hover is CSS, not JavaScript.** Each day gets a full-height transparent
+ * rect; `:hover` on that group reveals a crosshair, a dot and a label. This
+ * page deliberately ships no script — see the note at the top of the file —
+ * and a tooltip is not worth giving that up for.
+ *
+ * The viewBox scales uniformly rather than with `preserveAspectRatio="none"`.
+ * The old sparkline stretched to fit, which is fine for a bare line and
+ * impossible once there is text: non-uniform scaling distorts glyphs. So the
+ * geometry is in a fixed 1000-unit space and the whole thing scales as a unit.
+ */
+function sparkline(series, { unit = '' } = {}) {
+  const pts = (series ?? []).map((d) => ({ day: String(d.day ?? ''), n: Number(d.n) || 0 }));
   if (pts.length < 2) return `<p class="empty">not enough days yet</p>`;
-  const max = Math.max(...pts, 1);
-  const W = 100;
-  const H = height;
-  const step = W / (pts.length - 1);
-  const y = (v) => H - 4 - (v / max) * (H - 10);
-  const line = pts.map((v, i) => `${(i * step).toFixed(2)},${y(v).toFixed(2)}`).join(' ');
-  const lastX = ((pts.length - 1) * step).toFixed(2);
-  const lastY = y(pts[pts.length - 1]).toFixed(2);
-  const total = pts.reduce((a, b) => a + b, 0);
+
+  const W = 1000, H = 210, PL = 12, PR = 12, PT = 24, PB = 34;
+  const plotW = W - PL - PR;
+  const plotH = H - PT - PB;
+  const last = pts.length - 1;
+  const max = Math.max(...pts.map((p) => p.n), 1);
+  const x = (i) => PL + (i / last) * plotW;
+  const y = (v) => PT + plotH - (v / max) * plotH;
+  const step = plotW / last;
+  const line = pts.map((p, i) => `${x(i).toFixed(1)},${y(p.n).toFixed(1)}`).join(' ');
+  const total = pts.reduce((a, b) => a + b.n, 0);
+
+  // Four dates: both ends plus two inside. Every label would collide at 30 days.
+  const ticks = [...new Set([0, Math.round(last / 3), Math.round((2 * last) / 3), last])]
+    .map((i) => {
+      const anchor = i === 0 ? 'start' : i === last ? 'end' : 'middle';
+      return `<text class="ax" x="${x(i).toFixed(1)}" y="${H - 8}" text-anchor="${anchor}">${esc(shortDay(pts[i].day))}</text>`;
+    })
+    .join('');
+
+  // The readout is anchored away from whichever edge it is near, so the first
+  // and last days do not render their label off the side of the chart.
+  const cols = pts
+    .map((p, i) => {
+      const cx = x(i);
+      const near = i <= 1 ? 'start' : i >= last - 1 ? 'end' : 'middle';
+      const lx = near === 'start' ? cx - 4 : near === 'end' ? cx + 4 : cx;
+      return `<g class="col">
+      <rect x="${(cx - step / 2).toFixed(1)}" y="0" width="${step.toFixed(1)}" height="${H}" fill="transparent"></rect>
+      <line class="cross" x1="${cx.toFixed(1)}" y1="${PT}" x2="${cx.toFixed(1)}" y2="${(PT + plotH).toFixed(1)}"></line>
+      <circle class="dot" cx="${cx.toFixed(1)}" cy="${y(p.n).toFixed(1)}" r="6"></circle>
+      <text class="tip" x="${lx.toFixed(1)}" y="16" text-anchor="${near}">${esc(shortDay(p.day))} · ${n(p.n)}${unit ? ` ${esc(unit)}` : ''}</text>
+    </g>`;
+    })
+    .join('');
+
   return `
-    <svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
-         aria-label="${n(total)} over the last ${pts.length} days, peak ${n(max)} in a day">
-      <polygon points="0,${H} ${line} ${lastX},${H}" fill="var(--accent-soft)"></polygon>
-      <polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="1.5"
-                vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline>
-      <circle cx="${lastX}" cy="${lastY}" r="2" fill="var(--accent)" vector-effect="non-scaling-stroke"></circle>
+    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img"
+         aria-label="${n(total)}${unit ? ` ${esc(unit)}` : ''} over ${pts.length} days, peak ${n(max)} in a day">
+      <polygon points="${PL},${(PT + plotH).toFixed(1)} ${line} ${(PL + plotW).toFixed(1)},${(PT + plotH).toFixed(1)}"
+               fill="var(--accent-soft)"></polygon>
+      <polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"></polyline>
+      ${ticks}${cols}
     </svg>`;
 }
 
@@ -85,7 +141,7 @@ function trafficSection(t) {
     <section class="card span-all">
       <h2>Traffic <span class="sub">last 30 days</span></h2>
       <div class="big">${n(t.total)} <span class="big-unit">pageviews</span></div>
-      ${sparkline(t.by_day, { height: 64 })}
+      ${sparkline(t.by_day, { unit: 'pageviews' })}
     </section>
     <section class="card">
       <h2>Top pages</h2>
@@ -153,12 +209,26 @@ export function renderDashboard(stats) {
   dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
   dd.zero{font-weight:400;color:var(--muted)}
   dd.flag{color:var(--warn)}
-  .bars{display:grid;grid-template-columns:minmax(0,1fr) 3.2fr auto;gap:.4rem .6rem;align-items:center}
-  .bar-label{font-size:.85rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .bar-track{background:var(--accent-soft);border-radius:99px;height:.55rem;overflow:hidden}
+  /* Name above its bar, so a long workshop path is readable in full. */
+  .bars{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.7rem}
+  .bar-top{display:flex;justify-content:space-between;align-items:baseline;gap:.7rem;margin-bottom:.25rem}
+  .bar-name{font-size:.85rem;color:var(--muted);min-width:0;overflow-wrap:anywhere;line-height:1.35}
+  .bar-val{font-size:.85rem;font-variant-numeric:tabular-nums;font-weight:600;flex:none}
+  .bar-track{background:var(--accent-soft);border-radius:99px;height:.5rem;overflow:hidden}
   .bar-fill{background:var(--accent);height:100%;border-radius:99px}
-  .bar-val{font-size:.85rem;font-variant-numeric:tabular-nums;font-weight:600}
-  .spark{width:100%;height:4rem;display:block;margin-top:.5rem;overflow:visible}
+
+  /* Charts. The hover readout is pure CSS — this page ships no JavaScript. */
+  .chart{width:100%;height:auto;display:block;margin-top:.4rem}
+  .chart .ax{font-size:30px;fill:var(--muted);font-family:var(--font-body)}
+  .chart .cross{stroke:var(--accent);stroke-width:2;stroke-dasharray:5 5;opacity:0}
+  .chart .dot{fill:var(--accent);stroke:var(--surface);stroke-width:3;opacity:0}
+  .chart .tip{font-size:34px;font-weight:600;fill:var(--ink);font-family:var(--font-body);opacity:0}
+  .chart .col:hover .cross,.chart .col:hover .dot,.chart .col:hover .tip{opacity:1}
+  @media (hover:none){
+    /* No pointer to hover with: show the endpoint so the chart still has an
+       anchor, rather than leaving a readout nobody can reach. */
+    .chart .col:last-of-type .dot{opacity:1}
+  }
   .empty{color:var(--muted);font-size:.88rem;margin:.2rem 0 0}
   footer{margin-top:2rem;color:var(--muted);font-size:.78rem;line-height:1.65}
   code{font-family:var(--font-mono);font-size:.85em}
@@ -202,7 +272,7 @@ export function renderDashboard(stats) {
 
     <section class="card span-all">
       <h2>Signups <span class="sub">${n(stats.recent_signups)} in the last ${n(stats.days)} days</span></h2>
-      ${sparkline(stats.by_day)}
+      ${sparkline(stats.by_day, { unit: 'signups' })}
     </section>
 
     <section class="card">
