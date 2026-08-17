@@ -81,7 +81,10 @@ function sparkline(series, { unit = '' } = {}) {
   const pts = (series ?? []).map((d) => ({ day: String(d.day ?? ''), n: Number(d.n) || 0 }));
   if (pts.length < 2) return `<p class="empty">not enough days yet</p>`;
 
-  const W = 1000, H = 210, PL = 12, PR = 12, PT = 24, PB = 34;
+  // PT reserves a band above the plot for the hover readout. It has to clear
+  // the largest font the readout ever uses — on a narrow screen that is ~42
+  // user units — or the text renders above y=0 and the SVG clips it away.
+  const W = 1000, H = 220, PL = 12, PR = 12, PT = 46, PB = 34;
   const plotW = W - PL - PR;
   const plotH = H - PT - PB;
   const last = pts.length - 1;
@@ -96,7 +99,7 @@ function sparkline(series, { unit = '' } = {}) {
   const ticks = [...new Set([0, Math.round(last / 3), Math.round((2 * last) / 3), last])]
     .map((i) => {
       const anchor = i === 0 ? 'start' : i === last ? 'end' : 'middle';
-      return `<text class="ax" x="${x(i).toFixed(1)}" y="${H - 8}" text-anchor="${anchor}">${esc(shortDay(pts[i].day))}</text>`;
+      return `<text class="ax" x="${x(i).toFixed(1)}" y="${H - 10}" text-anchor="${anchor}">${esc(shortDay(pts[i].day))}</text>`;
     })
     .join('');
 
@@ -111,7 +114,7 @@ function sparkline(series, { unit = '' } = {}) {
       <rect x="${(cx - step / 2).toFixed(1)}" y="0" width="${step.toFixed(1)}" height="${H}" fill="transparent"></rect>
       <line class="cross" x1="${cx.toFixed(1)}" y1="${PT}" x2="${cx.toFixed(1)}" y2="${(PT + plotH).toFixed(1)}"></line>
       <circle class="dot" cx="${cx.toFixed(1)}" cy="${y(p.n).toFixed(1)}" r="6"></circle>
-      <text class="tip" x="${lx.toFixed(1)}" y="16" text-anchor="${near}">${esc(shortDay(p.day))} · ${n(p.n)}${unit ? ` ${esc(unit)}` : ''}</text>
+      <text class="tip" x="${lx.toFixed(1)}" y="34" text-anchor="${near}">${esc(shortDay(p.day))} · ${n(p.n)}</text>
     </g>`;
     })
     .join('');
@@ -219,10 +222,20 @@ export function renderDashboard(stats) {
 
   /* Charts. The hover readout is pure CSS — this page ships no JavaScript. */
   .chart{width:100%;height:auto;display:block;margin-top:.4rem}
-  .chart .ax{font-size:30px;fill:var(--muted);font-family:var(--font-body)}
+  /* Text inside the SVG scales with the card, so one size cannot serve both:
+     the chart is ~985px wide on a desktop and ~330px on a phone, and a value
+     that reads well at one is nearly 3x wrong at the other. Hence the two
+     sets — these are user units, not rendered pixels. */
+  .chart .ax{font-size:15px;fill:var(--muted);font-family:var(--font-body)}
   .chart .cross{stroke:var(--accent);stroke-width:2;stroke-dasharray:5 5;opacity:0}
   .chart .dot{fill:var(--accent);stroke:var(--surface);stroke-width:3;opacity:0}
-  .chart .tip{font-size:34px;font-weight:600;fill:var(--ink);font-family:var(--font-body);opacity:0}
+  .chart .tip{font-size:20px;font-weight:600;fill:var(--ink);font-family:var(--font-body);opacity:0}
+  @media (max-width:44rem){
+    .chart .ax{font-size:34px}
+    .chart .tip{font-size:42px}
+    .chart .cross{stroke-width:4}
+    .chart .dot{stroke-width:6}
+  }
   .chart .col:hover .cross,.chart .col:hover .dot,.chart .col:hover .tip{opacity:1}
   @media (hover:none){
     /* No pointer to hover with: show the endpoint so the chart still has an
