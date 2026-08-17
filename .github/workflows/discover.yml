@@ -9,7 +9,18 @@ name: Discover new workshop venues
 
 on:
   schedule:
-    - cron: '19 3 * * 2' # Tuesdays 03:19 UTC
+    # Sundays 03:19 UTC — chosen to feed the Monday 06:30 digest, which is what
+    # actually tells anyone that a venue was found. This ran on Tuesdays until
+    # 2026-08-17, i.e. ~21 hours *after* the digest, so every discovery waited
+    # almost a full week to be announced. That was the worst available slot.
+    #
+    # Not Monday, though it would be fresher still: discovery can take ~35
+    # minutes on a slow OpenReview day and holds the `data-write` lock below,
+    # so an overrun would queue the 04:41 and 05:11 jobs behind it and push the
+    # whole lot past the 05:17 deploy — silently delaying the finds by another
+    # week, the exact problem this move exists to fix. Sunday spends ~24h of
+    # freshness to remove that failure mode.
+    - cron: '19 3 * * 0'
   workflow_dispatch:
 
 concurrency:

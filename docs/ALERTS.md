@@ -304,19 +304,66 @@ writes no snapshot, and logs no urgents.
 
 ### Reading the log
 
-Logs carry counts, slugs and subjects — **never** an address or a message body,
-because a public repo has public logs. Normal output looks like:
+**The repository is public, so these logs are public.** Dataset facts are
+printed exactly — workshops, events and slugs are on the site already, so hiding
+them would cost debuggability and protect nothing. Everything derived from the
+subscriber list is withheld:
 
 ```
-1. feed: 757 workshops (generated 2026-08-14T05:30:00.000Z)
+1. feed: 924 workshops (generated 2026-08-17T05:50:29.336Z)
 2. diff: 3 event(s) {"extended":1,"deadline_announced":1,"announced":1}
-3. subscribers: 214 mailable
-4. urgent: 2 sent, 0 failed (5 already sent earlier)
-5. weekly: 118 sent, 0 failed, 96 skipped (empty)
+3. subscribers: some mailable
+4. urgent: some sent, none failed (some already sent earlier)
+5. weekly: some sent, none failed, none skipped (empty)
+```
+
+`none` and `some` stay distinguishable on purpose: "ran but sent nothing" and
+"sent something" are the two states worth telling apart from a log, and a
+failure still fails the job loudly by exit code.
+
+Run it locally with **`ALERTS_VERBOSE=1`** for exact counts and one line per
+recipient. Never set that in a workflow.
+
+```
+3. subscribers: 5 mailable
+   digest #1: "14 deadline changes in your areas" (14 matched event(s))
+   ...
+5. weekly: 5 sent, 0 failed, 0 skipped (empty)
 ```
 
 "Skipped (empty)" is the normal majority on a quiet week — a subscriber with
 nothing to report gets no email at all.
+
+Three rules are enforced in `scripts/alerts_run.mjs` at the output helpers
+rather than at each call site, and pinned by `scripts/alerts_log_test.mjs`:
+
+1. **No address**, on any path to stdout including errors.
+2. **No count derived from the list** — `priv()` renders it qualitatively.
+3. **No per-recipient lines.** This is the one that is easy to get wrong:
+   redacting the numbers on those lines achieves nothing, because *counting the
+   lines* recovers the subscriber total exactly. They are suppressed entirely.
+
+### Who can see the list
+
+| Route | Who | Notes |
+|---|---|---|
+| D1 `aiwt-alerts` | the Cloudflare account owning the zone | the only copy since the second account was decommissioned |
+| `GET /admin/subscribers` | bearer `ADMIN_TOKEN` | also refuses any request carrying an `Origin`, so no web page can reach it |
+| `ALERTS_ADMIN_TOKEN` repo secret | anyone with **write** access to the repo | inherent — a collaborator can push a workflow that dumps it. Worth reviewing the collaborator list periodically |
+| Resend dashboard | the Resend login | shows recipient addresses of delivered mail |
+| Public Actions logs | everybody | constrained to the three rules above |
+
+No browser endpoint reveals whether an address is subscribed — they answer
+identically either way, deliberately, so the API cannot be used to enumerate
+subscribers. The `events` table holds no PII. Fork pull requests cannot read
+secrets, and no workflow uses `pull_request_target`.
+
+Residual, accepted as not worth the churn: `rl` bucket keys embed plaintext
+addresses (`magic:someone@example.com:496368`) and expire within the hour.
+
+Counts printed by runs *before* this was tightened remain public. Deleting those
+old workflow-run logs, or making the repository private, are the only ways to
+retract them.
 
 ## How many people are subscribed
 

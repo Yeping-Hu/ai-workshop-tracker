@@ -12,7 +12,7 @@ name: Re-check imminent deadlines
 
 on:
   schedule:
-    - cron: '41 4 * * *' # daily 04:41 UTC (after Tue discovery, before Wed review)
+    - cron: '41 4 * * *' # daily 04:41 UTC (after Sun discovery, before Wed review)
   workflow_dispatch:
 
 concurrency:

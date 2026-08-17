@@ -22,8 +22,10 @@
  *   5. weekly pass (UTC Monday, or FORCE_WEEKLY)
  *   6. maintenance
  *
- * NEVER log an email address or a message body. Counts and slugs only — the
- * workflow log is public on a public repo.
+ * NEVER log an address, a message body, or anything that reveals the size of
+ * the list — the workflow log is public on a public repo. Dataset facts
+ * (workshops, events, slugs) are fine; they are on the site already. See the
+ * output section below, which enforces this rather than trusting each call.
  *
  * Env:
  *   ALERTS_API_BASE     required, e.g. https://api.aiworkshoptracker.com
@@ -31,6 +33,8 @@
  *   WORKSHOPS_JSON_URL  optional override of the feed (tests)
  *   DRY_RUN=1           do everything except send, log urgents, write snapshot
  *   FORCE_WEEKLY=1      run the weekly pass on a non-Monday
+ *   ALERTS_VERBOSE=1    exact counts and per-recipient lines. Local use only —
+ *                       never set this in a workflow, the logs are public
  *
  * Run: node scripts/alerts_run.mjs
  */
@@ -68,9 +72,45 @@ const NOW = new Date();
 const NOW_MS = NOW.getTime();
 const TODAY = NOW.toISOString().slice(0, 10);
 
-const log = (...a) => console.log(...a);
+/* ------------------------------------------------------------------ output */
+
+/**
+ * This runs in GitHub Actions on a **public** repository, so everything printed
+ * here is world-readable. Three rules follow, and they are enforced at the
+ * choke points below rather than left to each call site to remember.
+ *
+ * 1. No address, ever — `redact()`, applied to every route to stdout.
+ * 2. No number derived from the subscriber list — `priv()`. Dataset numbers
+ *    (workshops, events, slugs) stay exact: they are already published on the
+ *    site, so hiding them would cost debuggability and protect nothing. The
+ *    line to hold is *derived from the list*, not *is a number*.
+ * 3. No per-recipient lines — see `perRecipient()`. Redacting the numbers on
+ *    those is useless, because counting the lines recovers the subscriber
+ *    count exactly.
+ *
+ * `ALERTS_VERBOSE=1` restores full detail and is never set by the workflow; it
+ * is for running this locally, where the output is not published. Exact figures
+ * are also available privately via scripts/alerts_stats.mjs, which is already
+ * admin-token gated, so nothing is actually lost to the maintainer.
+ */
+const VERBOSE = process.env.ALERTS_VERBOSE === '1';
+
+// Deliberately greedy. Over-redacting a log line costs nothing; a pattern with
+// clever exceptions is one that eventually lets the wrong thing through.
+const EMAIL_RE = /[^\s<>()[\]{},;:"']+@[^\s<>()[\]{},;:"']+\.[A-Za-z]{2,}/g;
+const redact = (v) => (typeof v === 'string' ? v.replace(EMAIL_RE, '[redacted]') : v);
+
+/** A count taken from the subscriber list. Qualitative unless run locally. */
+const priv = (n) => (VERBOSE ? String(n) : Number(n) > 0 ? 'some' : 'none');
+
+const log = (...a) => console.log(...a.map(redact));
+const warn = (...a) => console.warn(...a.map(redact));
+/** One line per recipient: emitted only when the output is not public. */
+const perRecipient = (...a) => {
+  if (VERBOSE) log(...a);
+};
 const die = (msg) => {
-  console.error(`✗ ${msg}`);
+  console.error(`✗ ${redact(msg)}`);
   process.exit(1);
 };
 
@@ -110,7 +150,7 @@ async function admin(pathname, { method = 'GET', body = null, tries = 3 } = {}) 
 async function send(messages, label) {
   if (!messages.length) return { accepted: 0, failed: 0, acceptedIndexes: [] };
   if (DRY_RUN) {
-    log(`   [dry-run] would send ${messages.length} ${label} message(s)`);
+    log(`   [dry-run] would send ${priv(messages.length)} ${label} message(s)`);
     return { accepted: messages.length, failed: 0, acceptedIndexes: messages.map((_, i) => i) };
   }
 
@@ -127,7 +167,7 @@ async function send(messages, label) {
       } else {
         failed++;
         // The error text is a provider message, never a recipient.
-        console.warn(`   ! ${label} message rejected: ${r?.error ?? 'unknown'}`);
+        warn(`   ! ${label} message rejected: ${r?.error ?? 'unknown'}`);
       }
     });
   }
@@ -197,7 +237,7 @@ async function main() {
   /* subscribers ----------------------------------------------------------- */
   const { subscribers: rows } = await admin('/admin/subscribers');
   const subs = rows.map(normalizeSubscriber).filter(isMailable);
-  log(`3. subscribers: ${subs.length} mailable`);
+  log(`3. subscribers: ${priv(subs.length)} mailable`);
 
   /* 4. urgent pass (every run) -------------------------------------------- */
   const urgentSubs = subs.filter(wantsUrgent);
@@ -230,7 +270,7 @@ async function main() {
       if (!mail) continue;
       messages.push({ to: sub.email, subject: mail.subject, html: mail.html, text: mail.text });
       logRows.push(mine);
-      log(`   urgent: ${mine.length} workshop(s) — ${mine.map((m) => m.slug).join(', ')}`);
+      perRecipient(`   urgent: ${mine.length} workshop(s) — ${mine.map((m) => m.slug).join(', ')}`);
     }
 
     const { accepted, failed, acceptedIndexes } = await send(messages, 'urgent');
@@ -239,7 +279,7 @@ async function main() {
     // silently swallow that subscriber's alert for this deadline forever.
     const toLog = acceptedIndexes.flatMap((i) => logRows[i]);
     if (toLog.length && !DRY_RUN) await admin('/admin/urgent-log', { method: 'POST', body: { items: toLog } });
-    log(`4. urgent: ${accepted} sent, ${failed} failed (${candidates.length - fresh.length} already sent earlier)`);
+    log(`4. urgent: ${priv(accepted)} sent, ${priv(failed)} failed (${priv(candidates.length - fresh.length)} already sent earlier)`);
   } else {
     log('4. urgent: no starred deadline inside the window');
   }
@@ -275,16 +315,16 @@ async function main() {
       if (!mail) continue;
       messages.push({ to: sub.email, subject: mail.subject, html: mail.html, text: mail.text });
       logRows.push(fresh);
-      log(`   saved-change: ${events.length} event(s) — ${events.map((e) => e.slug).join(', ')}`);
+      perRecipient(`   saved-change: ${events.length} event(s) — ${events.map((e) => e.slug).join(', ')}`);
     }
 
     const { accepted, failed, acceptedIndexes } = await send(messages, 'saved-change');
     changeSent = accepted;
     const toLog = acceptedIndexes.flatMap((i) => logRows[i]);
     if (toLog.length && !DRY_RUN) await admin('/admin/urgent-log', { method: 'POST', body: { items: toLog } });
-    log(`4b. saved-workshop changes: ${accepted} sent, ${failed} failed`);
+    log(`4b. saved-workshop changes: ${priv(accepted)} sent, ${priv(failed)} failed`);
   } else {
-    log(`4b. saved-workshop changes: nothing to report (${changeSubs.length} subscriber(s) opted in)`);
+    log(`4b. saved-workshop changes: nothing to report (${priv(changeSubs.length)} subscriber(s) opted in)`);
   }
 
   /* 5. weekly pass (Mondays) ---------------------------------------------- */
@@ -310,15 +350,16 @@ async function main() {
       // An empty digest is skipped entirely — quiet weeks send nothing.
       if (!mail) continue;
       messages.push({ to: sub.email, subject: mail.subject, html: mail.html, text: mail.text });
+      // One line per recipient, so it is suppressed unless run locally —
+      // counting these lines would recover the subscriber count exactly.
       if (DRY_RUN) {
-        // Subjects and counts are safe to print; addresses and bodies are not.
-        log(`   digest #${messages.length}: "${mail.subject}" (${mine.length} matched event(s))`);
+        perRecipient(`   digest #${messages.length}: "${mail.subject}" (${mine.length} matched event(s))`);
       }
     }
 
     const { accepted, failed } = await send(messages, 'digest');
     digestsSent = accepted;
-    log(`5. weekly: ${accepted} sent, ${failed} failed, ${weeklySubs.length - messages.length} skipped (empty)`);
+    log(`5. weekly: ${priv(accepted)} sent, ${priv(failed)} failed, ${priv(weeklySubs.length - messages.length)} skipped (empty)`);
   } else {
     log(`5. weekly: not today (UTC day ${NOW.getUTCDay()}, weekly day is ${WEEKLY_DOW})`);
   }
@@ -326,16 +367,16 @@ async function main() {
   /* 6. maintenance -------------------------------------------------------- */
   if (!DRY_RUN) {
     const m = await admin('/admin/maintenance', { method: 'POST' });
-    log(`6. maintenance: ${m.rate_limit_rows} rate-limit row(s), ${m.events_pruned} old event(s), ${m.unconfirmed_pruned} abandoned signup(s)`);
+    log(`6. maintenance: ${priv(m.rate_limit_rows)} rate-limit row(s), ${m.events_pruned} old event(s), ${priv(m.unconfirmed_pruned)} abandoned signup(s)`);
   } else {
     log('6. [dry-run] maintenance skipped');
   }
 
-  log(`done — ${urgentSent} urgent, ${changeSent} saved-change, ${digestsSent} digest(s)${DRY_RUN ? ' (dry run: nothing was sent)' : ''}`);
+  log(`done — ${priv(urgentSent)} urgent, ${priv(changeSent)} saved-change, ${priv(digestsSent)} digest(s)${DRY_RUN ? ' (dry run: nothing was sent)' : ''}`);
 }
 
 main().catch((err) => {
   // Fail loudly: GitHub's failure email is this repo's alerting channel.
-  console.error(`✗ alerts run failed: ${err.message}`);
+  console.error(redact(`✗ alerts run failed: ${err.message}`));
   process.exit(1);
 });

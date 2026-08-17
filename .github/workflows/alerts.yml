@@ -48,8 +48,11 @@ jobs:
           cache: npm
       - run: npm ci
 
-      # The script prints counts, slugs and subjects only — never an address and
-      # never a message body. Workflow logs on a public repo are public.
+      # Workflow logs on a public repo are public, so the script prints dataset
+      # facts only — workshops, events, slugs — and withholds anything derived
+      # from the subscriber list: no addresses, no counts, and no per-recipient
+      # lines (their number would be the count). Set ALERTS_VERBOSE=1 when
+      # running it locally for the full detail; never here.
       - name: Run the alerts pipeline
         env:
           ALERTS_API_BASE: ${{ secrets.ALERTS_API_BASE }}

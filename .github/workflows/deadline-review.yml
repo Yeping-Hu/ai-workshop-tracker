@@ -3,7 +3,7 @@
 # auto-sync will NOT fix on its own — deadlines a human edited that now disagree
 # with OpenReview, and bot-managed deadlines OpenReview moved *earlier* (declined
 # by the later-only rule). The maintainer resolves each by re-syncing (trust
-# OpenReview) or leaving it (keep the stored value). Runs after the Tuesday
+# OpenReview) or leaving it (keep the stored value). Runs after the Sunday
 # discovery so it reflects the freshly-synced state.
 name: Deadline review
 
