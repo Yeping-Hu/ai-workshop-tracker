@@ -390,6 +390,85 @@ Two other views, neither of which needs this repo:
 - **GoatCounter**, if enabled — page views for `/alerts/`, which is the top of
   the funnel that `alerts_stats.mjs` shows the bottom of.
 
+### The dashboard
+
+<https://api.aiworkshoptracker.com/dashboard> — the same figures as the script,
+plus where subscribers are and site traffic, on one page that works on a phone.
+
+The queries behind it live in `alerts/stats.mjs` and are shared with
+`scripts/alerts_stats.mjs`, so the page and the terminal cannot drift into
+disagreeing about how many people are subscribed. The script still reads D1
+directly through wrangler, which is deliberate: it keeps working when the Worker
+does not.
+
+**Why it is safe to host a page showing subscriber data.** Three independent
+things, in order of what fails first:
+
+1. **Cloudflare Access** authenticates at the edge. An unauthenticated request
+   gets a login screen and never reaches the Worker.
+2. **The Worker verifies the Access token anyway** (`src/access.mjs`). Access
+   protects a *hostname*; if the Worker ever became reachable by another route,
+   configuration alone would be bypassed. The algorithm is pinned to RS256 and
+   the `aud` claim is checked, so a token minted for a different Access
+   application is refused. Missing configuration fails **closed**.
+3. **Nothing behind it can return an address.** Every stats query selects a
+   `COUNT`, a date prefix, or a bucketed timezone.
+   `scripts/alerts_dashboard_test.mjs` fails the build if one mentions `email`,
+   or if `collectStats` runs an inline `SELECT` that dodges the shared queries.
+
+That third one is the point. Access is a lock configured in a dashboard nobody
+can review from the repo; the no-address rule is enforced by a test. If the lock
+were ever wrong, what leaks is counts, not people. **Full addresses are
+deliberately not available on this page** — use `alerts_stats.mjs` or query D1.
+
+Honest limits: whoever can read the maintainer's email can request the login
+PIN; Cloudflare sees the traffic, as it already does for the whole domain; and a
+session stays valid on a device until it expires or is revoked (Zero Trust →
+Logs → Access, or shorten the session duration on the application).
+
+Regions come from the IANA timezone the browser reported at signup, bucketed to
+a continent. **No IP geolocation anywhere**, and continent-level on purpose:
+with a small list, "Europe/Zurich × 1" identifies a person about as well as
+their address does.
+
+The page loads nothing from anywhere — no scripts, fonts, or images — because
+every external request would tell a third party that this page exists and when
+it is read. Traffic is cached in `kv` for 15 minutes, and if GoatCounter is
+down or unset, that section says so and the rest still renders.
+
+#### Setting it up
+
+Neither step can be done from this repo: Access is a Zero Trust dashboard flow,
+and the GoatCounter token belongs to that account.
+
+1. Cloudflare dashboard → **Zero Trust** → pick a team domain (one time only).
+2. **Access → Applications → Add an application → Self-hosted.**
+   Domain `api.aiworkshoptracker.com`, path `dashboard`.
+3. Policy: **Allow**, Include → **Emails** → your address. Login method: the
+   one-time PIN needs no identity provider.
+4. From the application's Overview, copy the **Application Audience (AUD) tag**
+   and the team name into `alerts/worker/wrangler.toml`:
+
+   ```toml
+   ACCESS_TEAM = "your-team"      # <team>.cloudflareaccess.com
+   ACCESS_AUD  = "<the AUD tag>"
+   ```
+
+   Both are public identifiers, not credentials — an audience tag names an
+   application, it does not grant entry to one.
+5. Optional, for the traffic section: GoatCounter → **Settings → API** → create
+   a token, then `npx wrangler secret put GOATCOUNTER_TOKEN`.
+6. `npx wrangler deploy` from `alerts/worker/`.
+
+Until steps 1–4 are done the route returns **403 to everything**, which is the
+correct state for an unconfigured deploy — verify with:
+
+```bash
+curl -o /dev/null -w '%{http_code}\n' https://api.aiworkshoptracker.com/dashboard
+curl -o /dev/null -w '%{http_code}\n' -H 'Cf-Access-Jwt-Assertion: garbage' \
+  https://api.aiworkshoptracker.com/dashboard
+```
+
 ## Things that go wrong
 
 ### "shrink guard: live dataset shrank to N from M"

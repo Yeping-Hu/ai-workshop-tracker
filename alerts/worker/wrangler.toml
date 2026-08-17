@@ -65,6 +65,23 @@ database_name = "aiwt-alerts"
 database_id = "e6831c9d-452a-4a25-a2d3-04e5c46fc8e5"
 
 [vars]
+# The maintainer's dashboard at /dashboard is authenticated by Cloudflare
+# Access, and the Worker verifies the token Access issues (src/access.mjs).
+# Both values below are public identifiers, not credentials — the audience tag
+# names an application, it does not grant entry to one.
+#
+# Until they are filled in, /dashboard refuses every request: an unconfigured
+# deploy must not be an open one. Set them from
+#   Zero Trust -> Access -> Applications -> (the app) -> Overview
+# ACCESS_TEAM is the subdomain of <team>.cloudflareaccess.com.
+ACCESS_TEAM = ""
+ACCESS_AUD = ""
+
+# Which GoatCounter site the dashboard reads. The matching API token is a
+# secret (`wrangler secret put GOATCOUNTER_TOKEN`) and is used server-side only
+# — in page JavaScript it would be readable by anyone who opened the dashboard.
+GOATCOUNTER_SITE = "aiworkshoptracker"
+
 SITE_ORIGIN = "https://aiworkshoptracker.com"
 # A dedicated subdomain so the apex domain's sending reputation is never at
 # risk (decision D7). Must be verified in Resend with SPF/DKIM/DMARC published.

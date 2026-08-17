@@ -46,7 +46,10 @@ import { renderConfirm, renderMagic } from '../../render.mjs';
 import { NOTIFY_KINDS, parseNotify, serializeNotify } from '../../match.mjs';
 import { personalize, recipientState } from '../../send.mjs';
 import { consume, magicUsedBucket, MAGIC_USED_WINDOW_S } from '../../ratelimit.mjs';
+import { SQL as STATS_SQL, foldCadence, foldRegions, fillDays } from '../../stats.mjs';
 import { sendEmail, sendBatch } from './mail.mjs';
+import { verifyAccessJwt } from './access.mjs';
+import { renderDashboard } from './dashboard.mjs';
 
 const CONF_IDS = new Set(ids.conferences.map((c) => c.id));
 const TOPIC_IDS = new Set(ids.topics.map((t) => t.id));
@@ -812,6 +815,18 @@ async function handleAdmin(request, env, path) {
     return json({ ok: true, subscribers: results ?? [] });
   }
 
+  /* ---- stats ------------------------------------------------------------ */
+  //
+  // What the dashboard runs on. Distinct from /admin/subscribers above in the
+  // way that matters: that one returns addresses because the digest cannot be
+  // sent without them, while nothing reachable from here selects one. The
+  // queries live in alerts/stats.mjs so this and scripts/alerts_stats.mjs
+  // cannot drift into disagreeing about how many people are subscribed, and a
+  // test asserts none of them mentions `email`.
+  if (path === '/admin/stats' && method === 'GET') {
+    return json({ ok: true, stats: await collectStats(env, url.searchParams.get('days')) });
+  }
+
   /* ---- snapshot --------------------------------------------------------- */
   if (path === '/admin/kv/snapshot') {
     if (method === 'GET') {
@@ -964,6 +979,115 @@ async function handleAdmin(request, env, path) {
   return json({ ok: false, error: 'not_found' }, { status: 404 });
 }
 
+/* ------------------------------------------------------------------- stats */
+
+/**
+ * Everything the dashboard shows, as aggregates.
+ *
+ * Shared by `/admin/stats` and `/dashboard` — the page renders server-side, so
+ * it calls this directly rather than fetching its own endpoint.
+ *
+ * Traffic is fetched last and separately: GoatCounter is a third party, and a
+ * dashboard that renders nothing because someone else's API is slow is worse
+ * than one that shows the subscriber numbers with a note where the chart goes.
+ */
+async function collectStats(env, daysParam) {
+  const days = Math.min(Math.max(Math.floor(Number(daysParam) || 30), 1), 365);
+  const rows = async (sql) => (await env.DB.prepare(sql).all()).results ?? [];
+
+  const [totals] = await rows(STATS_SQL.totals());
+  const [mailableRow] = await rows(STATS_SQL.mailable());
+  const [recentRow] = await rows(STATS_SQL.signupsSince(days));
+
+  return {
+    generated_at: nowIso(),
+    days,
+    totals: {
+      total: totals?.total ?? 0,
+      confirmed: totals?.confirmed ?? 0,
+      pending: totals?.pending ?? 0,
+      suppressed: totals?.suppressed ?? 0,
+      paused: totals?.paused ?? 0,
+      saved_only: totals?.saved_only ?? 0,
+      with_tz: totals?.with_tz ?? 0,
+      mailable: mailableRow?.n ?? 0,
+    },
+    recent_signups: recentRow?.n ?? 0,
+    by_day: fillDays(await rows(STATS_SQL.signupsByDay(days)), days, today()),
+    cadence: foldCadence(await rows(STATS_SQL.cadences())),
+    regions: foldRegions(await rows(STATS_SQL.timezones())),
+    traffic: await goatcounter(env),
+  };
+}
+
+/**
+ * Site traffic from GoatCounter.
+ *
+ * Server-side because the API token must never reach the page: anyone who ever
+ * loaded the dashboard would otherwise be holding a credential to the analytics
+ * account. Cached in `kv` for 15 minutes so refreshing costs nothing.
+ *
+ * Returns `{ error }` rather than throwing. Every caller renders the rest of
+ * the page regardless — see the note on collectStats.
+ */
+async function goatcounter(env) {
+  const token = env.GOATCOUNTER_TOKEN;
+  const site = env.GOATCOUNTER_SITE;
+  if (!token || !site) return { error: 'not_configured' };
+
+  const CACHE_KEY = 'goatcounter';
+  const CACHE_MS = 15 * 60 * 1000;
+  try {
+    const cached = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind(CACHE_KEY).first();
+    if (cached) {
+      const parsed = JSON.parse(cached.v);
+      if (Date.now() - Date.parse(parsed.fetched_at) < CACHE_MS) return parsed.data;
+    }
+  } catch {
+    /* a bad cache row must not take the dashboard down — refetch instead */
+  }
+
+  const end = today();
+  const start = new Date(Date.now() - 29 * 86_400_000).toISOString().slice(0, 10);
+  const call = async (p) => {
+    const res = await fetch(`https://${site}.goatcounter.com/api/v0/${p}&start=${start}&end=${end}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`goatcounter ${p} -> ${res.status}`);
+    return res.json();
+  };
+
+  let data;
+  try {
+    const [hits, pages, refs, locs] = await Promise.all([
+      call('stats/hits?daily=true'),
+      call('stats/hits?limit=8'),
+      call('stats/toprefs?limit=6'),
+      call('stats/locations?limit=8'),
+    ]);
+    data = {
+      by_day: (hits?.hits?.[0]?.stats ?? []).map((s) => ({ day: s.day, n: s.daily ?? 0 })),
+      total: (hits?.hits ?? []).reduce((sum, h) => sum + (h.count ?? 0), 0),
+      pages: (pages?.hits ?? []).map((h) => ({ path: h.path, n: h.count ?? 0 })),
+      referrers: (refs?.stats ?? []).map((s) => ({ name: s.name, n: s.count ?? 0 })),
+      locations: (locs?.stats ?? []).map((s) => ({ name: s.name, n: s.count ?? 0 })),
+    };
+  } catch (err) {
+    // The message can carry a URL but never the token, which travels in a header.
+    console.log(`dashboard: goatcounter unavailable (${err?.message ?? 'unknown'})`);
+    return { error: 'unavailable' };
+  }
+
+  try {
+    await env.DB.prepare('INSERT INTO kv (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v')
+      .bind(CACHE_KEY, JSON.stringify({ fetched_at: nowIso(), data }))
+      .run();
+  } catch {
+    /* caching is an optimisation; failing to cache is not failing */
+  }
+  return data;
+}
+
 /* ------------------------------------------------------------------ router */
 
 export default {
@@ -978,6 +1102,28 @@ export default {
       if (path.startsWith('/admin/')) {
         if (!adminOk(request, env)) return json({ ok: false, error: 'unauthorized' }, { status: 401 });
         return await handleAdmin(request, env, path);
+      }
+
+      // The maintainer's dashboard. Cloudflare Access authenticates this at the
+      // edge, so an unauthenticated request should never arrive here at all —
+      // and it is checked again anyway, because Access protects a *hostname*
+      // while this check protects the *route*. See src/access.mjs.
+      if (path === '/dashboard' && method === 'GET') {
+        if (!(await verifyAccessJwt(request, env))) {
+          return new Response('forbidden\n', {
+            status: 403,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+          });
+        }
+        return new Response(renderDashboard(await collectStats(env, url.searchParams.get('days'))), {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            // Aggregated subscriber data: never cached by a proxy, never stored.
+            'Cache-Control': 'no-store, private',
+            'Referrer-Policy': 'no-referrer',
+            'X-Robots-Tag': 'noindex, nofollow',
+          },
+        });
       }
 
       if (path === '/webhooks/resend' && method === 'POST') return await handleResendWebhook(request, env);

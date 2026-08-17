@@ -20,6 +20,7 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SQL, foldCadence, foldRegions } from '../alerts/stats.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const WORKER_DIR = path.join(ROOT, 'alerts', 'worker');
@@ -53,45 +54,17 @@ function query(sql) {
   return parsed[0]?.results ?? [];
 }
 
-const [totals] = query(`
-  SELECT
-    COUNT(*)                                                    AS total,
-    SUM(CASE WHEN confirmed_at IS NOT NULL THEN 1 ELSE 0 END)   AS confirmed,
-    SUM(CASE WHEN confirmed_at IS NULL THEN 1 ELSE 0 END)       AS pending,
-    SUM(CASE WHEN suppressed_at IS NOT NULL THEN 1 ELSE 0 END)  AS suppressed,
-    SUM(CASE WHEN cadence = 'off' THEN 1 ELSE 0 END)            AS paused,
-    SUM(CASE WHEN scope = 'starred' THEN 1 ELSE 0 END)          AS saved_only
-  FROM subscribers`);
-
-const mailable = query(`
-  SELECT COUNT(*) AS n FROM subscribers
-  WHERE confirmed_at IS NOT NULL AND suppressed_at IS NULL AND cadence != 'off'`)[0]?.n ?? 0;
-
-const recent = query(`
-  SELECT COUNT(*) AS n FROM subscribers
-  WHERE created >= datetime('now', '-${DAYS} days')`)[0]?.n ?? 0;
-
-const byDay = query(`
-  SELECT substr(created, 1, 10) AS day, COUNT(*) AS n
-  FROM subscribers
-  WHERE created >= datetime('now', '-${DAYS} days')
-  GROUP BY day ORDER BY day DESC LIMIT 14`);
-
-// `cadence` holds a canonical CSV or a legacy keyword; count the flags rather
-// than the raw strings, or 'weekly,urgent' and 'weekly_urgent' look different.
-const notify = query(`SELECT cadence, COUNT(*) AS n FROM subscribers
-  WHERE confirmed_at IS NOT NULL AND suppressed_at IS NULL GROUP BY cadence`);
-const flags = { weekly: 0, urgent: 0, changes: 0 };
-const LEGACY = {
-  weekly: ['weekly'],
-  weekly_urgent: ['weekly', 'urgent'],
-  starred_changes: ['urgent', 'changes'],
-  off: [],
-};
-for (const row of notify) {
-  const kinds = LEGACY[row.cadence] ?? String(row.cadence).split(',').map((s) => s.trim());
-  for (const k of kinds) if (k in flags) flags[k] += row.n;
-}
+// The queries live in alerts/stats.mjs because the Worker's /admin/stats runs
+// the same ones for the dashboard. Two definitions would eventually disagree
+// about how many people are subscribed, with no way to tell which was right.
+const [totals] = query(SQL.totals());
+const mailable = query(SQL.mailable())[0]?.n ?? 0;
+const recent = query(SQL.signupsSince(DAYS))[0]?.n ?? 0;
+// Newest first: a terminal reader scans down from today. The shared query is
+// ascending because a chart reads left-to-right through time.
+const byDay = query(SQL.signupsByDay(DAYS)).slice().reverse().slice(0, 14);
+const flags = foldCadence(query(SQL.cadences()));
+const regions = foldRegions(query(SQL.timezones()));
 
 const pad = (label, value) => `  ${String(label).padEnd(22)}${value}`;
 
@@ -109,6 +82,10 @@ console.log(pad('weekly digest', flags.weekly));
 console.log(pad('72h deadline alert', flags.urgent));
 console.log(pad('deadline changed', flags.changes));
 console.log(pad('saved-workshops only', totals.saved_only));
+console.log('');
+console.log('Where they are (the timezone their browser reported — no IP lookup):');
+for (const r of regions) console.log(pad(r.region, r.n));
+if (!regions.length) console.log(pad('(none yet)', ''));
 console.log('');
 console.log(`Signups in the last ${DAYS} days: ${recent}`);
 if (byDay.length) {
