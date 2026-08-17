@@ -131,8 +131,21 @@ if (!window.__awtAlertsSessionInit) {
   // Landing pages await this to report a result; every other page just lets it
   // run, which is a no-op without a fragment. It announces again when the
   // exchange changes anything.
-  window.awtAlertsAdopt = adoptFromUrl().then((s) => {
+  //
+  // Base.astro has already put a promise on `window.awtAlertsAdopt` from an
+  // inline <head> script, because this module is deferred and every inline
+  // consumer runs first — see ALERTS_BOOTSTRAP there for the whole story. So
+  // *resolve* that one rather than only overwriting it: a consumer that already
+  // captured it is holding the bootstrap's promise, and reassigning would leave
+  // it waiting on the 3s fallback. Resolving a promise with a promise chains
+  // them, so `await window.awtAlertsAdopt` still yields the session either way.
+  //
+  // The assignment stays for the case where the bootstrap did not run at all
+  // (a page rendered without Base, or alerts disabled mid-build).
+  const adopted = adoptFromUrl().then((s) => {
     announce();
     return s;
   });
+  window.awtAlertsAdopt = adopted;
+  window.__awtAlertsAdoptResolve?.(adopted);
 }

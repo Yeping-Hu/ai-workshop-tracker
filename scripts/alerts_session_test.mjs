@@ -87,6 +87,43 @@ const session = files.find(([f]) => f === SESSION);
     'a deferred module must tell inline scripts the real state');
 }
 
+/* --------------------------------- the promise exists before anyone asks --- */
+{
+  // The module is deferred; every `is:inline` consumer is classic and runs
+  // during parsing, so all of them reach for `window.awtAlertsAdopt` first and
+  // find nothing. `await undefined` resolves instantly rather than waiting, so
+  // /alerts/confirmed/ read `.linked` off an empty object and told every
+  // subscriber their device was not linked. Base.astro creates the promise in
+  // <head> to close that window; these checks pin the *position*, which is the
+  // entire fix — presence alone would still pass with it in the wrong place.
+  const base = files.find(([f]) => f === 'components/Base.astro')?.[1] ?? '';
+  const use = base.indexOf('set:html={ALERTS_BOOTSTRAP}');
+  const headEnd = base.indexOf('</head>');
+  // The default slot in the template, not the one named in the prose above it.
+  const slot = base.indexOf('<slot />', headEnd);
+
+  check('Base.astro creates window.awtAlertsAdopt', /window\.awtAlertsAdopt\s*=/.test(base));
+  check('...from a classic inline script, not a deferred module',
+    /<script is:inline set:html=\{ALERTS_BOOTSTRAP\}/.test(base),
+    'a bundled <script src> would be deferred and lose the same race');
+  check('...inside <head>', use > 0 && headEnd > 0 && use < headEnd);
+  check('...and therefore ahead of the page content at <slot />',
+    use > 0 && slot > 0 && use < slot,
+    'consumers render in the slot, before Base’s own scripts near </body>');
+  check('it cannot hang a page that fails to load the module',
+    /setTimeout\([\s\S]{0,80}resolve\(null\)/.test(base),
+    '/alerts/manage/ wires its forms only after this settles');
+
+  check('the session module resolves that promise rather than only replacing it',
+    /__awtAlertsAdoptResolve\?\.\(/.test(session?.[1] ?? ''),
+    'a consumer already holding the bootstrap promise would wait out the timeout');
+
+  const assigners = files.filter(([, src]) => /window\.awtAlertsAdopt\s*=/.test(src)).map(([f]) => f);
+  check('only Base.astro and the session module assign it',
+    assigners.length === 2 && assigners.includes('components/Base.astro') && assigners.includes(SESSION),
+    assigners.join(', '));
+}
+
 /* ------------------------------------------- consumers use it, not localStorage */
 {
   for (const page of ['pages/alerts/manage.astro', 'pages/alerts/confirmed.astro', 'pages/saved.astro']) {

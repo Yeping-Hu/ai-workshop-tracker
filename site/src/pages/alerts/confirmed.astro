@@ -31,7 +31,10 @@ const enabled = !!ALERTS_API;
     <p class="muted">Email alerts are not enabled on this build of the site.</p>
   ) : (
     <>
-      <p class="muted" id="confirmSync">Linking this device…</p>
+      {/* Hidden until there is something true to say. It used to read "Linking
+          this device…", which is both jargon and a claim that sticks forever if
+          the session module never loads. */}
+      <p class="muted" id="confirmSync" hidden></p>
       <p>
         <a class="btn" href={href('/saved/')}>Go to your saved list</a>
         <a class="btn-quiet" href={href('/alerts/manage/')} style="margin-left:0.9rem;">Manage preferences</a>
@@ -41,7 +44,7 @@ const enabled = !!ALERTS_API;
         unsubscribe link that deletes your address on the spot.
       </p>
 
-      <script is:inline>
+      <script is:inline define:vars={{ SAVED_URL: href('/saved/') }}>
         (async () => {
           const note = document.getElementById('confirmSync');
           const read = (k) => {
@@ -53,26 +56,50 @@ const enabled = !!ALERTS_API;
             }
           };
 
+          const say = (text) => {
+            note.textContent = text;
+            note.hidden = false;
+          };
+
           // The token arrives in the fragment and is consumed by
           // scripts/alerts-session.js, which every page loads. This page only
           // reports the outcome — it deliberately holds no copy of that logic.
+          //
+          // Base.astro creates this promise in an inline <head> script, so it
+          // exists no matter when this runs. Without that it would be undefined
+          // here, and `await undefined` resolves instantly to nothing rather
+          // than waiting — which is what made this page announce a failure
+          // before the work had begun.
           const result = (await window.awtAlertsAdopt) || {};
 
           if (result.blocked) {
-            note.textContent =
-              'Your subscription is active, but this browser blocks storage, so the list cannot sync here.';
-            return;
-          }
-          if (!result.linked) {
-            note.textContent =
-              'This device is not linked (the confirmation link had no token). Your subscription is still active.';
+            say('Your subscription is active, but this browser blocks storage, so the list cannot sync here.');
             return;
           }
 
-          const n = read('awt-fav-workshops').length + read('awt-fav-papers').length;
-          note.textContent = result.email
-            ? `Synced as ${result.email} — ${n} saved item${n === 1 ? '' : 's'} on this device.`
-            : `This device is linked — ${n} saved item${n === 1 ? '' : 's'}.`;
+          if (result.linked) {
+            const n = read('awt-fav-workshops').length + read('awt-fav-papers').length;
+            say(
+              result.email
+                ? `Synced as ${result.email} — ${n} saved item${n === 1 ? '' : 's'} on this device.`
+                : `This device is linked — ${n} saved item${n === 1 ? '' : 's'}.`,
+            );
+            return;
+          }
+
+          // A link that was real but is spent — the one unlinked case someone
+          // can act on, so it is the one worth naming. Every other reason to be
+          // unlinked (arriving here with no token at all, most often by
+          // revisiting the page) says nothing: the heading above already
+          // reports the subscription, and both buttons are right there.
+          if (result.expired) {
+            note.textContent = "Your saved list isn't synced here — that link had already been used. You can ";
+            const a = document.createElement('a');
+            a.href = SAVED_URL;
+            a.textContent = 'sign in again from your saved list';
+            note.append(a, '.');
+            note.hidden = false;
+          }
         })();
       </script>
     </>

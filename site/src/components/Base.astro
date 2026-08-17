@@ -24,6 +24,33 @@ const BUILD_ID = import.meta.env.PUBLIC_BUILD_ID;
 const current = (p: string) =>
   Astro.url.pathname.replace(/\/+$/, '/') === href(p).replace(/\/+$/, '/') ||
   (p === '/' && Astro.url.pathname === href('/'));
+
+/**
+ * Creates `window.awtAlertsAdopt` in <head>, before anything can ask for it.
+ *
+ * scripts/alerts-session.js is a bundled `<script src>`, so Astro emits it as
+ * `type="module"` — deferred, running only once the document is parsed. Every
+ * `is:inline` consumer is a classic script and runs *during* parsing, so all of
+ * them reach for `window.awtAlertsAdopt` before the module has created it. And
+ * `await undefined` does not wait; it resolves instantly to nothing. That is
+ * how /alerts/confirmed/ came to read `.linked` off an empty object and tell
+ * every subscriber their device was not linked, on every visit.
+ *
+ * <head> is required, not stylistic: page content renders at the <slot /> in
+ * the body, ahead of Base's own script tags near </body>, so a bootstrap placed
+ * beside the module tag would still lose to the pages it exists to serve.
+ *
+ * Emitted via set:html so the braces below stay JavaScript — inside an Astro
+ * expression container, `{` would otherwise be read as JSX.
+ */
+const ALERTS_BOOTSTRAP = `
+  window.awtAlertsAdopt = new Promise(function (resolve) {
+    window.__awtAlertsAdoptResolve = resolve;
+    // Never leave a page waiting on a script that failed to load:
+    // /alerts/manage/ wires its forms only after this settles.
+    setTimeout(function () { resolve(null); }, 3000);
+  });
+`.trim();
 ---
 
 <!doctype html>
@@ -73,6 +100,8 @@ const current = (p: string) =>
         if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
       } catch {}
     </script>
+    {/* Must stay in <head> and ahead of the <slot /> — see ALERTS_BOOTSTRAP. */}
+    {ALERTS_API && <script is:inline set:html={ALERTS_BOOTSTRAP} />}
     {canonical && <meta property="og:url" content={canonical} />}
     {/* Per-page structured data (JSON-LD) and any extra <head> tags. */}
     <slot name="head" />

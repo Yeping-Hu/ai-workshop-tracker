@@ -212,6 +212,34 @@ Every page's signup block hides itself once the browser is linked and shows
 "Alerts on for … · your saved list · manage" instead, so a signed-in visitor is
 never shown a signup offer.
 
+### The ordering rule, and why it has its own tests
+
+The session module is a bundled `<script src>`, so Astro emits it as
+`type="module"` — **deferred**. Every `is:inline` block on a page is a classic
+script and runs *during* parsing, so all of them run **before** it. Two
+consequences, both of which have bitten:
+
+- A page that reads `window.awtAlertsSession()` on load sees `undefined` and
+  paints "signed out". Fixed by the module calling `announce()` on init, which
+  every consumer listens for.
+- A page that reads `window.awtAlertsAdopt` sees `undefined` — and `await
+  undefined` does not wait, it resolves instantly to nothing. `/alerts/confirmed/`
+  read `.linked` off that and told every subscriber "this device is not linked",
+  on every visit, while the linking succeeded moments later. The `announce()`
+  fix did not cover it, because this consumer awaits a promise instead of
+  listening for an event.
+
+So `ALERTS_BOOTSTRAP` in `Base.astro` creates that promise in an inline `<head>`
+script, before any consumer can exist, and the module resolves it rather than
+reassigning it — reassignment would leave anyone already holding the bootstrap's
+promise waiting out its 3-second fallback.
+
+**The position is the fix**, so the tests assert position, not presence: the
+bootstrap must sit inside `<head>` and ahead of `<slot />`, since page content
+renders there, before Base's own scripts near `</body>`. Anything that reads the
+session on load needs to survive running first — if in doubt, listen for
+`awt:alerts-session` as well.
+
 ## What a subscription can express
 
 Two independent axes. `scope` is *what* you hear about; `cadence` is *when*.
