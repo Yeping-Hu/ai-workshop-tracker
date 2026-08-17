@@ -1059,17 +1059,24 @@ async function goatcounter(env) {
 
   let data;
   try {
-    const [hits, pages, refs, locs] = await Promise.all([
-      call('stats/hits?daily=true'),
+    const [totals, pages, refs, locs] = await Promise.all([
+      // Site-wide, and the only endpoint that is. `stats/hits` is *per path*:
+      // its top-level `total` counts just the paths it returned, so with
+      // limit=100 it reported 1358 against a real 1637, and its `stats` array
+      // is one page's series rather than the site's.
+      call('stats/total?'),
       call('stats/hits?limit=8'),
       call('stats/toprefs?limit=6'),
       call('stats/locations?limit=8'),
     ]);
     data = {
-      by_day: (hits?.hits?.[0]?.stats ?? []).map((s) => ({ day: s.day, n: s.daily ?? 0 })),
-      total: (hits?.hits ?? []).reduce((sum, h) => sum + (h.count ?? 0), 0),
+      by_day: (totals?.stats ?? []).map((s) => ({ day: s.day, n: s.daily ?? 0 })),
+      total: totals?.total ?? 0,
       pages: (pages?.hits ?? []).map((h) => ({ path: h.path, n: h.count ?? 0 })),
-      referrers: (refs?.stats ?? []).map((s) => ({ name: s.name, n: s.count ?? 0 })),
+      // An empty referrer name is traffic that arrived with no referer header —
+      // a bookmark, a typed URL, a link from an app. "" would render as a blank
+      // row, which reads as a bug rather than as the largest real category.
+      referrers: (refs?.stats ?? []).map((s) => ({ name: s.name || 'direct / none', n: s.count ?? 0 })),
       locations: (locs?.stats ?? []).map((s) => ({ name: s.name, n: s.count ?? 0 })),
     };
   } catch (err) {
