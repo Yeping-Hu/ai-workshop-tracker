@@ -760,13 +760,16 @@ async function handleResendWebhook(request, env) {
       // A spam complaint is the strongest possible "stop" — delete, don't
       // suppress. Keeping the address on file after one would be indefensible.
       //
-      // Log that it happened, because the deletion is otherwise invisible: on
-      // 2026-08-17 a subscriber disappeared and, with every endpoint answering
-      // neutrally by design, the only way to attribute it was to enumerate the
-      // code paths that can reach a DELETE. Note also that a complaint is not
-      // always a human pressing "spam" — an enterprise gateway that quarantines
-      // a message can report one on the recipient's behalf, so a whole domain
-      // can silently drain. The address itself never reaches the log.
+      // Log that it happened, because this deletion is the one nobody asks for.
+      // Every other route to a missing row is someone acting deliberately — the
+      // manage page's delete button, an unsubscribe link — and leaves the
+      // person unsurprised. A complaint-driven delete does not: it can be
+      // raised by an enterprise gateway on the recipient's behalf when it
+      // quarantines a message, so an address the subscriber still wants can
+      // vanish, and a whole domain can drain with nothing to point at. Every
+      // endpoint here answers neutrally by design and will not admit an address
+      // exists, so without this line there is no trail at all. The address
+      // itself never reaches the log — only the domain.
       const [, domain = '?'] = email.split('@');
       console.log(`alerts webhook: complaint, deleting subscriber at @${domain}`);
       await deleteSubscriber(env, email);

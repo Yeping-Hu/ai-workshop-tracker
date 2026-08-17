@@ -37,12 +37,13 @@ workers_dev = false
 pattern = "api.aiworkshoptracker.com"
 custom_domain = true
 
-# Persist logs. A subscriber vanished on 2026-08-17 and the only way to tell a
-# spam complaint from an unsubscribe was to reason backwards from which code
-# paths could reach a DELETE — the endpoints answer neutrally by design and
-# nothing recorded that the row had gone. `wrangler tail` is live-only, so it
-# cannot answer a question asked after the fact. Logs hold no addresses; the
-# webhook handler logs an event type and nothing else.
+# Persist logs. Every endpoint here answers neutrally on purpose — none will
+# admit whether an address is on the list — so when a row is gone there is
+# nothing to read back, and `wrangler tail` is live-only and cannot answer a
+# question asked after the event. That leaves reasoning backwards from which
+# code paths can reach a DELETE, which is slow and, done from a single read of
+# a table someone is still changing, easy to get wrong. Logs carry no
+# addresses: the webhook handler records an event type and a domain.
 [observability]
 enabled = true
 head_sampling_rate = 1
