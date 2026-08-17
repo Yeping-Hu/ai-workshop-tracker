@@ -11,33 +11,51 @@ site is exactly what it was.
 
 ## Current deployment
 
-Provisioned 2026-08-14. None of these are secrets — the Turnstile *site* key and
-the Worker URL are both public by design, and a D1 database id is useless
-without an account credential.
+Provisioned 2026-08-14, moved to the account that owns the domain 2026-08-17.
+None of these are secrets — the Turnstile *site* key and the Worker URL are both
+public by design, and a D1 database id is useless without an account credential.
 
 | | |
 |---|---|
-| Worker | `aiwt-alerts` → `https://aiwt-alerts.aiwt-alerts-worker.workers.dev` |
+| Worker | `aiwt-alerts` → `https://api.aiworkshoptracker.com` |
 | D1 database | `aiwt-alerts` (region WNAM), id in `alerts/worker/wrangler.toml` |
 | Turnstile widget | `aiworkshoptracker-alerts`, managed mode, hosts `aiworkshoptracker.com` + `localhost` |
-| Turnstile site key | `0x4AAAAAAEQVcjRzfH9U80a9` |
+| Turnstile site key | `0x4AAAAAAESHV3-Jgf08N7Z8` |
 
-Worker secrets set: `HMAC_SECRET`, `ADMIN_TOKEN`, `TURNSTILE_SECRET`.
-Still to set once Resend is configured: `RESEND_API_KEY`,
-`RESEND_WEBHOOK_SECRET`. Until they exist, `sendEmail()` returns a failure for
-every message and no mail leaves the Worker.
+Worker secrets set: `HMAC_SECRET`, `ADMIN_TOKEN`, `TURNSTILE_SECRET`,
+`RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`. Until all five exist, `sendEmail()`
+returns a failure for every message and no mail leaves the Worker.
 
-**The DNS zone is in a different Cloudflare account from the Worker.** The
-Workers account above holds no zones, while `aiworkshoptracker.com` is served by
-Cloudflare nameservers under another login. Two things follow:
+### Why the Worker must not live on `workers.dev`
 
-- A Worker **custom domain requires the zone in the same account**, so
-  `api.aiworkshoptracker.com` cannot be attached to this Worker as things
-  stand. Either move the zone into the Workers account (Cloudflare supports
-  transferring a zone between accounts), or stay on the `workers.dev` URL,
-  which works fine and is what the deployment uses.
-- **All mail DNS is added in the other login.** Resend does not care which
-  provider hosts the records.
+It did until 2026-08-17, in a second Cloudflare account that held no zones, and
+mail to a national lab silently disappeared. A controlled comparison found the
+cause — the sender was never the problem:
+
+| Message | Its one link points at | Delivered to `@llnl.gov` |
+|---|---|---|
+| Weekly digest | `aiworkshoptracker.com` | yes |
+| Sign-in link | `aiworkshoptracker.com/saved/#t=` | yes |
+| Confirmation | `aiwt-alerts…workers.dev/confirm?token=` | **no** |
+
+Same sender, same minute, SPF/DKIM/DMARC all passing, and Resend reporting
+"Delivered" — the recipient's gateway accepted the message at SMTP time and
+quarantined it afterwards. Gmail, a `.edu` and a `163.com` address took all
+three. What set the confirmation apart is that its sole call to action was an
+opaque-token link on a free hosting subdomain, which is the exact shape of a
+credential-phishing message.
+
+This is not confined to confirmations: unsubscribe links and the
+`List-Unsubscribe` header carry the same origin, so the API's hostname is part
+of the deliverability of *every* message.
+
+A Worker custom domain requires the zone in the same account, which is why the
+Worker now lives beside `aiworkshoptracker.com` rather than the zone moving to
+it. `workers_dev = false` in `wrangler.toml` keeps the old hostname from being
+republished by accident. **Do not re-enable it**, and if the Worker is ever
+recreated, attach the custom domain before sending any mail.
+
+To redo the move, see [Moving to another Cloudflare account](#moving-to-another-cloudflare-account).
 
 Verify the mail records before asking a provider to verify the domain:
 
@@ -370,6 +388,48 @@ npx wrangler d1 execute aiwt-alerts --remote \
 ```bash
 npx wrangler d1 execute aiwt-alerts --remote --command "DELETE FROM kv WHERE k='snapshot'"
 ```
+
+## Moving to another Cloudflare account
+
+Done once, on 2026-08-17, for the reason in
+[Why the Worker must not live on `workers.dev`](#why-the-worker-must-not-live-on-workersdev).
+Order matters: the old Worker keeps serving throughout, so the only visible
+moment is step 7.
+
+1. **Export D1.** `npx wrangler d1 export aiwt-alerts --remote --output=full.sql`
+   from the old account.
+2. **Split the `kv` snapshot out of the dump.** A single row holds ~450KB of
+   projected feed, and importing it fails with `SQLITE_TOOBIG` — D1 caps the
+   size of one statement, not of the database. Strip lines matching
+   `INSERT INTO "kv"` (wrangler quotes the table name) into a separate file and
+   import the remainder.
+3. **In the new account:** create the D1, apply `schema.sql`, import the
+   stripped dump, and paste the new `database_id` into `wrangler.toml`. Confirm
+   it took — a stale id silently writes to the *old* database and everything
+   looks fine until it doesn't.
+4. **Create a Turnstile widget** there. Site keys are account-scoped; the old
+   one fails validation against the new secret, and the failure surfaces to
+   users as "the anti-spam check didn't pass".
+5. **Set all five secrets.** `HMAC_SECRET` cannot be read back out of a Worker,
+   so it is necessarily new — see the warning below. `RESEND_WEBHOOK_SECRET` is
+   also new, because a Resend webhook URL is immutable and the endpoint has to
+   be deleted and recreated.
+6. **Deploy with the custom domain attached** (`workers_dev = false` plus the
+   `[[routes]]` block), then restore the snapshot through
+   `PUT /admin/kv/snapshot` — the admin API has no statement-size limit. Skip
+   this and the next run re-seeds silently, missing a day of deadline changes.
+7. **Switch the site over**: repo *variables* `ALERTS_API` and
+   `TURNSTILE_SITE_KEY`, repo *secrets* `ALERTS_API_BASE`, `ALERTS_ADMIN_TOKEN`,
+   `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. The two variables are baked
+   in at build time, so this needs a deploy, not just a settings change.
+8. **Repoint the Resend webhook** at the new origin.
+9. Verify, then delete the old Worker and D1.
+
+> **A new `HMAC_SECRET` invalidates every token in circulation.** Linked devices
+> sign out, and unsubscribe links in already-delivered mail stop working. The
+> second is the one that matters: a dead unsubscribe link earns spam
+> complaints. With a small list, re-sending is cheap insurance; with a large
+> one, carry the old secret over as a verify-only fallback first.
 
 ## The `events` table
 

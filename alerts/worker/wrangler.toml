@@ -18,13 +18,40 @@ name = "aiwt-alerts"
 main = "src/index.mjs"
 compatibility_date = "2026-08-01"
 
+# Answer on the site's own domain, and never on workers.dev.
+#
+# Not cosmetic. Confirmation emails are short messages whose single call to
+# action is an opaque-token link, and while that link pointed at
+# *.workers.dev — a free subdomain widely abused for phishing — a national-lab
+# mail filter quarantined every one of them. Sign-in emails, identical in shape
+# but linking to aiworkshoptracker.com, arrived from the same sender in the same
+# minute. Unsubscribe links and the List-Unsubscribe header carry the same
+# origin, so this affects every message, not just confirmations.
+#
+# `workers_dev = false` keeps the old hostname from being republished by
+# accident; the route below requires the zone to live in this same account,
+# which is why the Worker was moved here.
+workers_dev = false
+
+[[routes]]
+pattern = "api.aiworkshoptracker.com"
+custom_domain = true
+
 [[d1_databases]]
 binding = "DB"
 database_name = "aiwt-alerts"
-# Created 2026-08-14 with `wrangler d1 create aiwt-alerts` (region WNAM). This
-# is an identifier, not a credential — it is useless without an account token,
-# which is why it belongs in the repo.
-database_id = "0764b285-e878-4811-bd6a-42482a950bf1"
+# Created 2026-08-17 with `wrangler d1 create aiwt-alerts` (region WNAM), in the
+# Cloudflare account that owns aiworkshoptracker.com. An identifier, not a
+# credential — useless without an account token — which is why it belongs here.
+#
+# The Worker lived in a second account until 2026-08-17, on a *.workers.dev
+# hostname. A national-lab mail filter quarantined every confirmation email,
+# because its one call to action was an opaque-token link on a free hosting
+# subdomain — the exact shape of a credential-phishing message. Sign-in emails,
+# whose button points at aiworkshoptracker.com, arrived from the same sender in
+# the same minute. A Worker custom domain requires the zone in the same account,
+# so the Worker moved here and now answers on api.aiworkshoptracker.com.
+database_id = "e6831c9d-452a-4a25-a2d3-04e5c46fc8e5"
 
 [vars]
 SITE_ORIGIN = "https://aiworkshoptracker.com"

@@ -75,7 +75,7 @@ and `CLOUDFLARE_ACCOUNT_ID` as **repo Action secrets**.
 
 | Record | Purpose |
 |---|---|
-| `CNAME api` → the Worker (or use the `*.workers.dev` URL) | Where the browser and the Action talk to the Worker |
+| `api` → the Worker | Created automatically by `wrangler deploy` from the `custom_domain` route; the zone must be in the same Cloudflare account. Do **not** substitute the `*.workers.dev` URL — see [ALERTS.md](ALERTS.md#why-the-worker-must-not-live-on-workersdev) |
 | DKIM `CNAME`s on `mail.<domain>` | Published by Resend when you verify the sending subdomain |
 | SPF `TXT` on `mail.<domain>` | Resend's `include:` — the sending subdomain only |
 | MX on `mail.<domain>` | Resend's return path (bounce handling) |
