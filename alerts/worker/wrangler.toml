@@ -74,8 +74,8 @@ database_id = "e6831c9d-452a-4a25-a2d3-04e5c46fc8e5"
 # deploy must not be an open one. Set them from
 #   Zero Trust -> Access -> Applications -> (the app) -> Overview
 # ACCESS_TEAM is the subdomain of <team>.cloudflareaccess.com.
-ACCESS_TEAM = ""
-ACCESS_AUD = ""
+ACCESS_TEAM = "aiworkshoptracker"
+ACCESS_AUD = "6476b631eb5635f2832d67b8e48cba17d60931f3024922b4145f6a96e9ee9e94"
 
 # Which GoatCounter site the dashboard reads. The matching API token is a
 # secret (`wrangler secret put GOATCOUNTER_TOKEN`) and is used server-side only
