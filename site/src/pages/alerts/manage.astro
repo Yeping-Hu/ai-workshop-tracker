@@ -20,10 +20,20 @@ const confList = [...conferences].sort((a: any, b: any) => a.name.localeCompare(
 const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.label));
 ---
 
-<Base title="Manage email alerts" description="Change what you receive, pause it, or delete your address.">
+{/*
+  One URL, three pages: a sign-in form, a preferences form, and an expired-link
+  retry. Which one you get depends on the token in this browser, so the title
+  cannot be decided at build time — hence the neutral one here, and a heading
+  that JavaScript specialises alongside the boxes (see HEADINGS below).
+
+  The static heading stays vague on purpose. Naming either state would be wrong
+  half the time and would visibly correct itself; going from general to specific
+  reads as the page settling rather than as a mistake.
+*/}
+<Base title="Email alerts" description="Sign in to change what you receive, pause it, or delete your address.">
   <section class="masthead">
     <p class="eyebrow">Email alerts</p>
-    <h1>Manage your alerts</h1>
+    <h1 id="manageHead">Your email alerts</h1>
   </section>
 
   {!enabled ? (
@@ -141,7 +151,12 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
 
       {/* 3. A token that no longer works. */}
       <section id="expiredBox" hidden>
-        <p class="lede">That link has expired or was already used.</p>
+        {/* Same correction as /alerts/confirmed/: the token that reaches this
+            page is a `manage` one, which neither expires nor counts uses. It is
+            refused only when the subscription is gone or the signing secret has
+            rotated, so the old "expired or was already used" named two causes
+            that cannot apply here. */}
+        <p class="lede">That sign-in link is no longer valid.</p>
         <p><button class="btn" type="button" id="expiredRetry">Email me a new sign-in link</button></p>
       </section>
 
@@ -153,7 +168,21 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
         (async () => {
           const TOKEN_KEY = 'awt-alerts-token';
           const $ = (id) => document.getElementById(id);
-          const show = (id, on = true) => { $(id).hidden = !on; };
+
+          // The heading names whichever of the three states is on screen.
+          // Without this, the page's commonest entry — "Already subscribed?
+          // Sign in", which every signup block links to — put the words
+          // "Manage your alerts" above a form asking for an email address, and
+          // the expired-link state announced a management page too.
+          const HEADINGS = {
+            signInBox: 'Sign in',
+            prefsBox: 'Manage your alerts',
+            expiredBox: 'Sign in',
+          };
+          const show = (id, on = true) => {
+            $(id).hidden = !on;
+            if (on && HEADINGS[id]) $('manageHead').textContent = HEADINGS[id];
+          };
           const say = (el, msg, kind) => {
             el.textContent = msg;
             el.hidden = false;

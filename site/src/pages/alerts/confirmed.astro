@@ -44,7 +44,7 @@ const enabled = !!ALERTS_API;
         unsubscribe link that deletes your address on the spot.
       </p>
 
-      <script is:inline define:vars={{ SAVED_URL: href('/saved/') }}>
+      <script is:inline define:vars={{ MANAGE_URL: href('/alerts/manage/') }}>
         (async () => {
           const note = document.getElementById('confirmSync');
           const read = (k) => {
@@ -87,16 +87,27 @@ const enabled = !!ALERTS_API;
             return;
           }
 
-          // A link that was real but is spent — the one unlinked case someone
-          // can act on, so it is the one worth naming. Every other reason to be
-          // unlinked (arriving here with no token at all, most often by
-          // revisiting the page) says nothing: the heading above already
-          // reports the subscription, and both buttons are right there.
+          // A link the server refused — the one unlinked case someone can act
+          // on, so the only one worth naming. Every other reason to be unlinked
+          // (arriving with no token at all, most often by opening the page in a
+          // different browser from the one that consumed the link) says
+          // nothing: the heading already reports the subscription, and both
+          // buttons are right there.
+          //
+          // Deliberately not "already been used". Only `magic` tokens are
+          // single-use, and those land on /saved/; what arrives here is a
+          // `manage` token, which has no expiry and no use count. It is refused
+          // only when the row is gone or HMAC_SECRET has rotated — so naming a
+          // cause would be a guess, and "no longer valid" covers all of them.
+          //
+          // The link goes to the preferences page because that is where the
+          // sign-in form lives. /saved/ is where an emailed link *lands*, not
+          // where you go to ask for one.
           if (result.expired) {
-            note.textContent = "Your saved list isn't synced here — that link had already been used. You can ";
+            note.textContent = "Your saved list isn't synced here — that sign-in link is no longer valid. You can ";
             const a = document.createElement('a');
-            a.href = SAVED_URL;
-            a.textContent = 'sign in again from your saved list';
+            a.href = MANAGE_URL;
+            a.textContent = 'sign in again';
             note.append(a, '.');
             note.hidden = false;
           }
