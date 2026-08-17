@@ -37,6 +37,16 @@ workers_dev = false
 pattern = "api.aiworkshoptracker.com"
 custom_domain = true
 
+# Persist logs. A subscriber vanished on 2026-08-17 and the only way to tell a
+# spam complaint from an unsubscribe was to reason backwards from which code
+# paths could reach a DELETE — the endpoints answer neutrally by design and
+# nothing recorded that the row had gone. `wrangler tail` is live-only, so it
+# cannot answer a question asked after the fact. Logs hold no addresses; the
+# webhook handler logs an event type and nothing else.
+[observability]
+enabled = true
+head_sampling_rate = 1
+
 [[d1_databases]]
 binding = "DB"
 database_name = "aiwt-alerts"
