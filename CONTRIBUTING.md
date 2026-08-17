@@ -8,7 +8,7 @@ Open the **["Add a workshop" issue form](../../issues/new?template=add-workshop.
 
 ## 2. Edit an entry (no Git needed)
 
-Every workshop page has a **✎ Edit** link that opens a short, timezone-safe form pre-filled with that entry. Change the deadline, website, topics, or notes — you pick the deadline date and time from dropdowns (no format to get wrong) and choose the timezone it's written in, and the bot converts it to UTC for you, so there's no silent offset. Topics are a multi-select dropdown of the controlled vocabulary; because a GitHub form can't show an entry's current topics, selecting any **replaces** the whole list, so pick the full set you want (old plus new). It opens a pull request and replies on the issue, just like the add form. Need a field the form doesn't cover (organizers, dates, paper links)? The form links straight to the raw YAML for advanced edits.
+Every workshop page has a **✎ Edit** link that opens a short, timezone-safe form pre-filled with that entry. Change the deadline, website, topics, or notes — you pick the deadline date and time from dropdowns (no format to get wrong) and choose the timezone it's written in, and the bot converts it to UTC for you, so there's no silent offset. Topics are a checkbox list of the controlled vocabulary — tick as many as apply without the list closing between picks; because a GitHub form can't show an entry's current topics, ticking any **replaces** the whole list, so pick the full set you want (old plus new). It opens a pull request and replies on the issue, just like the add form. Need a field the form doesn't cover (organizers, dates, paper links)? The form links straight to the raw YAML for advanced edits.
 
 ## 3. Full pull request
 
@@ -97,7 +97,7 @@ The `validate` workflow runs on every PR and enforces three things:
 this file's Field reference table and in `_template.yml` (so new fields can't
 ship undocumented).
 
-`node scripts/topic_options_sync_test.mjs` — the "Topics" multi-select dropdowns
+`node scripts/topic_options_sync_test.mjs` — the "Topics" checkbox lists
 in both issue forms match `data/topics.yml`. The options are generated into the
 templates by `node scripts/gen_topic_options.mjs`; run that after editing
 `data/topics.yml` so the picker can never offer a stale or misspelled set.

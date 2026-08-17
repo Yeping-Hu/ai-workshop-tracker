@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Keeps the "Topics" multi-select dropdown in the issue forms in sync with the
+ * Keeps the "Topics" checkbox list in the issue forms in sync with the
  * controlled vocabulary in data/topics.yml. GitHub issue templates are static
  * YAML and can't read topics.yml at render time, so the option list is written
  * into both templates between marker comments. Run this whenever you add or
@@ -27,9 +27,17 @@ export const TEMPLATES = [
   path.join(ROOT, '.github', 'ISSUE_TEMPLATE', 'edit-workshop.yml'),
 ];
 
-/** The exact lines that belong between the markers: one `- <id>` per topic. */
+/**
+ * The exact lines that belong between the markers: one `- label: <id>` per
+ * topic.
+ *
+ * `label:` because the field is a `checkboxes`, whose options are mappings; a
+ * `dropdown`'s were bare scalars. The forms switched on 2026-08-17 — a GitHub
+ * multi-select dropdown closes after every pick, so choosing five topics meant
+ * reopening the list five times.
+ */
 export function topicOptionLines() {
-  return loadTopics().map((t) => `${INDENT}- ${t.id}`);
+  return loadTopics().map((t) => `${INDENT}- label: ${t.id}`);
 }
 
 /** Lines strictly between the start and end markers, or null if missing. */

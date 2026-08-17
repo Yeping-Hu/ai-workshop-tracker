@@ -601,7 +601,7 @@ forms (add and edit) auto-convert to PRs for non-technical contributors, so revi
 quality isn't a manual burden. See [AUTOMATION.md](AUTOMATION.md) for the
 full workflow list.
 
-The add/edit issue forms collect topics as a **multi-select dropdown** and the
+The add/edit issue forms collect topics as a **checkbox list** and the
 deadline as **year/month/day/hour/minute dropdowns**, so a contributor can't
 mistype a topic id or a date format — the previous free-text fields put that
 burden on CI to reject. GitHub issue templates are static YAML and can't read

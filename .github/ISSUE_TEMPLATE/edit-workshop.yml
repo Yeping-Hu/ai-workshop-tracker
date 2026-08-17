@@ -69,49 +69,49 @@ body:
         - Asia/Shanghai
         - Asia/Seoul
         - Asia/Singapore
-  - type: dropdown
+  # See add-workshop.yml for why these are checkboxes rather than a dropdown.
+  - type: checkboxes
     id: topics
     attributes:
       label: Topics
-      multiple: true
-      description: "Optional. Selecting topics REPLACES the entry's current topic list (this form can't show what's already set), so pick the full set you want — old plus new. Leave empty to keep the current topics. Pick 1–5."
+      description: "Optional. Selecting topics REPLACES the entry's current topic list (this form can't show what's already set), so tick the full set you want — old plus new. Leave every box unticked to keep the current topics. Pick 1–5."
       options:
         # topic-options:start — generated from data/topics.yml by scripts/gen_topic_options.mjs (do not edit by hand)
-        - agents
-        - causality
-        - climate
-        - datasets
-        - diffusion
-        - education
-        - efficiency
-        - evaluation-benchmarks
-        - fairness
-        - federated-learning
-        - generative-models
-        - genomics
-        - graphs
-        - healthcare-bio
-        - interpretability
-        - llms
-        - math-reasoning
-        - multimodal
-        - neuroscience
-        - nlp
-        - optimization
-        - physics
-        - privacy
-        - reinforcement-learning
-        - robotics
-        - robustness
-        - safety-alignment
-        - science-applications
-        - speech-audio
-        - systems
-        - tabular
-        - theory
-        - time-series
-        - vision
-        - other
+        - label: agents
+        - label: causality
+        - label: climate
+        - label: datasets
+        - label: diffusion
+        - label: education
+        - label: efficiency
+        - label: evaluation-benchmarks
+        - label: fairness
+        - label: federated-learning
+        - label: generative-models
+        - label: genomics
+        - label: graphs
+        - label: healthcare-bio
+        - label: interpretability
+        - label: llms
+        - label: math-reasoning
+        - label: multimodal
+        - label: neuroscience
+        - label: nlp
+        - label: optimization
+        - label: physics
+        - label: privacy
+        - label: reinforcement-learning
+        - label: robotics
+        - label: robustness
+        - label: safety-alignment
+        - label: science-applications
+        - label: speech-audio
+        - label: systems
+        - label: tabular
+        - label: theory
+        - label: time-series
+        - label: vision
+        - label: other
         # topic-options:end
   - type: input
     id: website

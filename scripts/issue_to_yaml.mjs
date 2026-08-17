@@ -14,6 +14,7 @@ import path from 'node:path';
 import * as yaml from 'js-yaml';
 import { WORKSHOPS_DIR, recordDeadlineObservation } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs, isValidTimezone, assembleDeadline } from '../lib/dates.mjs';
+import { parseTopics } from '../lib/issue_form.mjs';
 
 const body = process.env.ISSUE_BODY;
 if (!body) {
@@ -43,10 +44,7 @@ if (!name) errors.push('Workshop name is required.');
 if (!conference) errors.push('Conference is required.');
 if (!/^\d{4}$/.test(yearStr)) errors.push(`Year must be a 4-digit year (got "${yearStr}").`);
 if (!/^https?:\/\//.test(website)) errors.push('Workshop website must be a full http(s) URL.');
-const topics = topicsStr
-  .split(/[,\n]/)
-  .map((t) => t.trim().toLowerCase())
-  .filter(Boolean);
+const topics = parseTopics(topicsStr);
 if (topics.length === 0) errors.push('At least one topic id is required (see data/topics.yml).');
 // Deadline is picked from year/month/day/hour/minute dropdowns and reassembled
 // here, so there's no free-text date to mis-format. assembleDeadline returns ''

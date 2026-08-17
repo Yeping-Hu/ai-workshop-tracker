@@ -17,6 +17,7 @@ import path from 'node:path';
 import * as yaml from 'js-yaml';
 import { WORKSHOPS_DIR, recordDeadlineObservation } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs, isValidTimezone, assembleDeadline } from '../lib/dates.mjs';
+import { parseTopics } from '../lib/issue_form.mjs';
 import { syncedValue, LEGACY_IMPORT_NOTE, isAutoTopicsNote } from './discover_openreview.mjs';
 
 /**
@@ -134,7 +135,7 @@ function main() {
       hour: get('Deadline hour'),
       minute: get('Deadline minute'),
     });
-    const topics = get('Topics').split(/[,\n]/).map((t) => t.trim().toLowerCase()).filter(Boolean);
+    const topics = parseTopics(get('Topics'));
     result = applyWorkshopEdit(existing, {
       deadline,
       timezone: get('Timezone of the deadline'),

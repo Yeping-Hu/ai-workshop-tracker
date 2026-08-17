@@ -42,52 +42,54 @@ body:
       placeholder: "https://example.org/interpml2026"
     validations:
       required: true
-  - type: dropdown
+  # checkboxes, not a multi-select dropdown: GitHub closes a dropdown after
+  # every pick, so choosing five topics meant reopening the list five times.
+  # Checkboxes stay open and toggle freely. The trade is that `validations:
+  # required` is unavailable here — scripts/issue_to_yaml.mjs still rejects an
+  # empty selection and the workflow comments the reason on the issue.
+  - type: checkboxes
     id: topics
     attributes:
       label: Topics
-      multiple: true
-      description: "Pick 1–5 topics that best fit. This is the full controlled vocabulary (from data/topics.yml); choosing from the list keeps topic ids consistent — no typos, no unknown ids."
+      description: "Tick 1–5 topics that best fit. This is the full controlled vocabulary (from data/topics.yml); choosing from the list keeps topic ids consistent — no typos, no unknown ids."
       options:
         # topic-options:start — generated from data/topics.yml by scripts/gen_topic_options.mjs (do not edit by hand)
-        - agents
-        - causality
-        - climate
-        - datasets
-        - diffusion
-        - education
-        - efficiency
-        - evaluation-benchmarks
-        - fairness
-        - federated-learning
-        - generative-models
-        - genomics
-        - graphs
-        - healthcare-bio
-        - interpretability
-        - llms
-        - math-reasoning
-        - multimodal
-        - neuroscience
-        - nlp
-        - optimization
-        - physics
-        - privacy
-        - reinforcement-learning
-        - robotics
-        - robustness
-        - safety-alignment
-        - science-applications
-        - speech-audio
-        - systems
-        - tabular
-        - theory
-        - time-series
-        - vision
-        - other
+        - label: agents
+        - label: causality
+        - label: climate
+        - label: datasets
+        - label: diffusion
+        - label: education
+        - label: efficiency
+        - label: evaluation-benchmarks
+        - label: fairness
+        - label: federated-learning
+        - label: generative-models
+        - label: genomics
+        - label: graphs
+        - label: healthcare-bio
+        - label: interpretability
+        - label: llms
+        - label: math-reasoning
+        - label: multimodal
+        - label: neuroscience
+        - label: nlp
+        - label: optimization
+        - label: physics
+        - label: privacy
+        - label: reinforcement-learning
+        - label: robotics
+        - label: robustness
+        - label: safety-alignment
+        - label: science-applications
+        - label: speech-audio
+        - label: systems
+        - label: tabular
+        - label: theory
+        - label: time-series
+        - label: vision
+        - label: other
         # topic-options:end
-    validations:
-      required: true
   - type: markdown
     attributes:
       value: |
