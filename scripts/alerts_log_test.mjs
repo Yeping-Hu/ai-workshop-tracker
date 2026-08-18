@@ -39,7 +39,7 @@ const priv = (n, verbose) => (verbose ? String(n) : Number(n) > 0 ? 'some' : 'no
   check('a bare address is redacted',
     redact('someone@example.com') === '[redacted]');
   check('an address mid-sentence is redacted',
-    redact('sending to hu25@llnl.gov now') === 'sending to [redacted] now');
+    redact('sending to someone@example.org now') === 'sending to [redacted] now');
   check('several addresses in one string are all redacted',
     redact('a@b.io, c@d.org') === '[redacted], [redacted]');
   check('a subdomain address is redacted',

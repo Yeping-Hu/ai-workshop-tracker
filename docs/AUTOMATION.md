@@ -171,6 +171,11 @@ conference:
 - **A two-stage venue** gets `abstract_deadline` filled at import and kept current
   by the daily re-check; the countdown labelling and ordering follow from the field
   with no per-entry configuration.
+- **A new edition or a new track** joins its series with nothing to wire up. The
+  links between a workshop's tracks and its other years are recomputed from the
+  whole corpus on every build (ARCHITECTURE.md, "Related entries"), so next year's
+  entry links itself to the previous ones *and* they link back to it — no stored
+  relation to go stale, and no hand-editing on either side.
 
 Contributors adding a workshop by hand should leave `deadline_history` out
 entirely — `_template.yml` says so, and the automation fills it in.

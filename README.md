@@ -10,8 +10,9 @@ A static website that aggregates **AI/ML/Robotics conference workshop** informat
 - ✉️ **Optional weekly email digest** of deadline changes and new calls in the conferences and topics you pick, plus opt-in alerts when a starred deadline is within 72 hours — no password, one-click unsubscribe that deletes your address ([docs/ALERTS.md](docs/ALERTS.md))
 - 📄 **Auto-generated accepted-paper listings** for OpenReview-hosted workshops on each workshop's page
 - 🗂️ **A page for each conference** (e.g. `/conference/neurips/`) listing its workshops by year — with schema.org structured data and an `/llms.txt` summary that make the dataset easy for search engines and AI assistants to cite
+- 🔗 **Tracks and past editions linked automatically** — workshops that split submissions across separate tracks, and series that return year after year, are cross-linked on every one of their pages, so landing on any single track shows the rest of the workshop and each track's own deadline
 
-Conference deadline trackers exist; *workshop* deadlines never had one. This fills that gap. Ships with 750+ real workshop editions (2024–2026, across all nine conferences) and 20,000+ accepted-paper titles imported from OpenReview venue records.
+Conference deadline trackers exist; *workshop* deadlines never had one. This fills that gap. Ships with 900+ real workshop editions (2024–2026, across all nine conferences) and 20,000+ accepted-paper titles imported from OpenReview venue records.
 
 ## How it works
 

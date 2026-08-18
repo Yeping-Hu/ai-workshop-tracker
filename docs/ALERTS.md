@@ -29,10 +29,10 @@ returns a failure for every message and no mail leaves the Worker.
 ### Why the Worker must not live on `workers.dev`
 
 It did until 2026-08-17, in a second Cloudflare account that held no zones, and
-mail to a national lab silently disappeared. A controlled comparison found the
-cause — the sender was never the problem:
+mail to a strictly-filtered organisational domain silently disappeared. A
+controlled comparison found the cause — the sender was never the problem:
 
-| Message | Its one link points at | Delivered to `@llnl.gov` |
+| Message | Its one link points at | Delivered to that domain |
 |---|---|---|
 | Weekly digest | `aiworkshoptracker.com` | yes |
 | Sign-in link | `aiworkshoptracker.com/saved/#t=` | yes |

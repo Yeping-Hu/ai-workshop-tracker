@@ -45,7 +45,7 @@ One YAML file per workshop **edition** (same series ⇒ new file each year).
 | `proceedings_url` |  | Accepted-papers page for non-OpenReview workshops |
 | `submission_portal` |  | `openreview` \| `cmt` \| `email` \| `other` \| `unknown` |
 | `organizers` |  | List of names |
-| `previous_editions` |  | List of `{ year, website, proceedings_url }` |
+| `previous_editions` |  | List of `{ year, website, proceedings_url }` — only worth filling in for editions this tracker has **no entry for**. Editions that are tracked, and a workshop's other submission tracks, are linked on the workshop page automatically (see ARCHITECTURE.md, "Related entries"); an automatic link supersedes a hand-written row for the same year. |
 | `notes` |  | Free text. Bot-imported entries carry a short "topics were auto-suggested — edits welcome" note; the edit form drops it automatically once a human changes the topics. |
 | `review_ack` |  | An OpenReview value you reviewed and chose **not** to adopt (`name`, `acronym`, `website` and/or `submission_deadline`), which stops the weekly review reporting it. Stores the rejected value rather than muting the entry: if OpenReview later changes to something different, you are told again. |
 | `added` |  | `YYYY-MM-DD` — feeds the "new workshops" RSS |
