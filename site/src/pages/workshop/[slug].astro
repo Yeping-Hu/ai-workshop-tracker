@@ -18,6 +18,13 @@ const statusLabel = w.statusLabel;
 // from the form's intro.
 const editUrl = `${REPO_URL}/issues/new?template=edit-workshop.yml&slug=${encodeURIComponent(w.slug)}&website=${encodeURIComponent(w.website ?? '')}&title=${encodeURIComponent('Edit: ' + w.slug)}`;
 const isSeed = (w.notes || '').includes('SEED DATA');
+// Hand-written previous_editions rows are superseded by a tracked entry for
+// the same year (an internal link beats an external one); years we don't
+// track keep their external links.
+const manualEditions = (w.previous_editions ?? []).filter(
+  (p: any) => !(w.relatedEditions ?? []).some((e: any) => e.year === p.year),
+);
+const hasEditions = (w.relatedEditions?.length ?? 0) + manualEditions.length > 0;
 const portalLabel: Record<string, string> = {
   openreview: 'OpenReview',
   cmt: 'CMT',
@@ -307,11 +314,40 @@ const breadcrumbLd = {
       )}
     </dl>
 
-    {w.previous_editions?.length > 0 && (
+    {w.relatedTracks?.length > 0 && (
       <section>
-        <h2>Previous editions</h2>
+        <h2>Other tracks at {conf.name} {w.year}</h2>
+        <ul class="tracks-list">
+          {w.relatedTracks.map((t: any) => (
+            <li>
+              <span class="track-name"><a href={href(`/workshop/${t.slug}/`)} title={t.name}>{t.trackLabel}</a></span>
+              {t.deadlineWallClock ? (
+                <span class={t.passed ? 'muted' : ''}>
+                  <span class="mono">{t.deadlineWallClock}</span>{t.passed ? ' · closed' : ''}
+                </span>
+              ) : (
+                <span class="muted">deadline not yet announced</span>
+              )}
+            </li>
+          ))}
+        </ul>
+        <div class="muted small">Same workshop, separate calls — each track is listed as its own entry with its own deadline.</div>
+      </section>
+    )}
+
+    {hasEditions && (
+      <section>
+        <h2>Other editions</h2>
         <ul>
-          {w.previous_editions.map((p: any) => (
+          {(w.relatedEditions ?? []).map((e: any) => (
+            <li>
+              <a href={href(`/workshop/${e.slug}/`)} title={e.name}>
+                {conferenceById.get(e.conference)?.name ?? e.conference} {e.year}
+              </a>
+              {e.trackLabel && <span class="muted"> — {e.trackLabel}</span>}
+            </li>
+          ))}
+          {manualEditions.map((p: any) => (
             <li>
               {p.year} — {p.website && <a href={p.website} rel="noopener">website ↗</a>}{' '}
               {p.proceedings_url && <a href={p.proceedings_url} rel="noopener">papers ↗</a>}

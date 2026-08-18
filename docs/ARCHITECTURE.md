@@ -335,6 +335,40 @@ deadline/status, so they're unchanged; the workshop page additionally renders th
 per-track breakdown. The rules are pinned by `scripts/tracks_test.mjs` (run in the
 validate CI workflow).
 
+## Related entries (sibling tracks and other editions)
+
+The in-entry `tracks` field above covers tracks that live as child groups under
+one OpenReview venue. Some workshops instead publish each track as its own
+*top-level* venue (NeurIPS 2026 NeurReps is three: `NeurReps_Extended_Abstracts`
+/ `_Findings` / `_Proceedings`), and every workshop series returns each year as
+a fresh venue — so related entries end up as independent YAML files with nothing
+linking them. `computeRelations()` (lib/workshops.mjs) derives the links at
+build time from the whole corpus — nothing is stored, so a new crawl needs no
+human to wire anything up. Three signals, in decreasing strength:
+
+1. **Same website** (after folding scheme/`www.`/fragment/query/trailing-slash
+   variants, plus Google Sites' `/corp/` and `/home` spellings) — the same site
+   is the same workshop.
+2. **Same venue-id stem within one conference-year** — a corpus-validated
+   suffix vocabulary (`_Findings`, `_Track_1`, `_Non-Proceedings_Track`, …) is
+   stripped from the venue id's last segment. Needed because siblings don't
+   always share a website (ATTRIB_Late has none; IAB's competition track has
+   its own).
+3. **Same hostname, different paths** (series with per-edition URLs, e.g.
+   `latinxinai.org/icml-2024`) — but only when the names share identifying
+   words, because real labs host *unrelated* workshops on one domain
+   (dynsyslab.org, vap.aau.dk), and never for generic hosts
+   (sites.google.com, github.com, …).
+
+Each entry gets `relatedTracks` (same conference-year siblings, labeled by
+their venue-id suffix, shown with their own deadlines) and `relatedEditions`
+(the rest of the series, newest first). Only the workshop page renders them;
+an automatic edition link supersedes a hand-written `previous_editions` row
+for the same year, while untracked years keep their external links. Precision
+is deliberately favored over recall — an unlinked sibling is the safe failure.
+Pinned by `scripts/relations_test.mjs` (fixtures are real corpus records,
+including the must-NOT-link domain collisions).
+
 ## Two-stage venues (abstract registration, then paper)
 
 About 3% of OpenReview venues (6 of 229 sampled) gate paper submission behind an

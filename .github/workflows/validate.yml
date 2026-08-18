@@ -57,6 +57,8 @@ jobs:
         run: node scripts/topic_options_sync_test.mjs
       - name: Test topic keyword matcher (title -> topics)
         run: node scripts/topics_guess_test.mjs
+      - name: Test related entries (sibling tracks, other editions)
+        run: node scripts/relations_test.mjs
       - name: Validate workshop data
         id: validate
         run: node scripts/validate.mjs --report validation-report.md
