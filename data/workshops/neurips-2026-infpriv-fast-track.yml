@@ -10,3 +10,12 @@ submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
 added: '2026-08-14'
 location: NeurIPS 2026
+deadline_history:
+  - value: 2026-09-26 11:59
+    recorded: '2026-08-18'
+    timezone: UTC
+submission_deadline: 2026-09-26 11:59
+timezone: UTC
+deadline_notes: >-
+  Fast track for NeurIPS papers (accepted or rejected) submitted with their reviews appended. Short submissions have
+  their own earlier deadline, tracked on the main entry. (submitted as 2026-09-25 23:59 AoE)
