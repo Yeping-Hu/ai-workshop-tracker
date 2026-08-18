@@ -150,6 +150,29 @@ const placeKey = (v) => canon.get(v)?.key;
     'Bath/Bonn differ by two letters in a four-letter word');
 }
 
+/* --------------------------- a typo arriving later, on its own ------------ */
+{
+  // The real question about render-time correction: a workshop imported by next
+  // Sunday's crawl carries a misspelling nobody reviews. Folding runs on every
+  // build over the whole corpus, so it is fixed on the next deploy with no
+  // intervention — provided the correct spelling is already established.
+  const established = [...rep('Sydney, Australia', 58), ...rep('Paris, France', 28)];
+  const late = canonicalLocations([...established, 'Sidney, Australia']);
+  check('a typo arriving in a later crawl is corrected on the next build',
+    late.get('Sidney, Australia').label === 'Sydney, Australia');
+
+  // And the honest limits, pinned so they are a known shape rather than a surprise.
+  const firstOfItsKind = canonicalLocations([...established, 'Reykjavikk, Iceland']);
+  check('a misspelled city seen for the first time is shown as written',
+    firstOfItsKind.get('Reykjavikk, Iceland').label === 'Reykjavikk, Iceland',
+    'nothing to compare against — correcting it would need a dictionary, not the corpus');
+
+  const crowdWrong = canonicalLocations([...rep('Sidney, Australia', 20), ...rep('Sydney, Australia', 3)]);
+  check('a typo that becomes the majority spelling wins',
+    crowdWrong.get('Sydney, Australia').label === 'Sidney, Australia',
+    'frequency is the whole mechanism; it follows the crowd even when the crowd is wrong');
+}
+
 /* --------------------------------------------- shown only where it tells -- */
 {
   // Mirrors what loadWorkshops() computes: a card is marked only when its

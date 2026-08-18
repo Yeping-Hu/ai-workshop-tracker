@@ -225,6 +225,10 @@ details.dd .dd-panel {
    heading rather than on every row. Lighter than the heading it trails, so it
    reads as context and not as part of the conference's name. */
 .conf-year-where { font-weight: 400; font-size: 0.72em; color: var(--muted); }
+/* Size is left to the context rather than fixed here: inside `.ws-meta` on a
+   board card it inherits 0.82rem, while on a conference hub row it is given
+   `.small` so it matches the deadline sitting next to it. Setting one size
+   here would be wrong in one of the two places. */
 .ws-where { color: var(--muted); white-space: nowrap; opacity: 0.9; }
 .ws-where::before { content: "· "; opacity: 0.6; }
 .ws-deadline { font-size: 0.85rem; }
