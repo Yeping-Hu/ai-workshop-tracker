@@ -41,6 +41,7 @@ import path from 'node:path';
 import * as yaml from 'js-yaml';
 import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
+import { openreviewFetch, recordUnverified, getUnverified } from '../lib/openreview.mjs';
 
 // Prepended to new entries that lack a deadline, so anyone editing the raw YAML
 // directly (e.g. via the raw-YAML link in the edit form's intro) sees exactly
@@ -326,11 +327,14 @@ export async function deadlineFromInvitation(g) {
   // identical to "no deadline exists", which is how ECCV's WICV and ~20
   // siblings imported as "Deadline unknown" despite having a visible duedate.
   // Retry 429/5xx with backoff so throttling no longer masquerades as absence.
-  const MAX = 5;
+  // Pacing now comes from lib/openreview.mjs, which spends the budget the
+  // server advertises. The retry below is only a backstop for the case where
+  // the server 429s despite its own headers saying there was room.
+  const MAX = 3;
   for (let attempt = 0; attempt < MAX; attempt++) {
     try {
-      await new Promise((r) => setTimeout(r, 350 + attempt * attempt * 1000)); // pace, then escalating backoff to clear rate-limit penalties
-      const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+      if (attempt) await new Promise((r) => setTimeout(r, attempt * attempt * 1000));
+      const res = await openreviewFetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
       if (res.status === 429 || res.status >= 500) {
         if (attempt < MAX - 1) continue; // retry
         throw new Error(`rate-limited (HTTP ${res.status}) after ${MAX} attempts for ${invId}`);
@@ -340,7 +344,9 @@ export async function deadlineFromInvitation(g) {
       return msToDeadline(invitations[0]?.duedate);
     } catch (err) {
       if (attempt < MAX - 1) continue;
-      // Surface persistent throttling instead of hiding it as "no deadline".
+      // Record it. Returning null alone is indistinguishable from "no deadline
+      // exists", which is exactly how ~20 ECCV siblings once imported blank.
+      recordUnverified(invId, `deadline lookup: ${err.message}`);
       console.warn(`  ⚠ deadline lookup failed for ${invId}: ${err.message}`);
       return null;
     }
@@ -354,11 +360,11 @@ export async function deadlineFromInvitation(g) {
  *  "no sub-tracks" instead of crashing the whole import. */
 export async function fetchGroups(prefix) {
   const url = `https://api2.openreview.net/groups?prefix=${encodeURIComponent(prefix)}&limit=1000`;
-  const MAX = 5;
+  const MAX = 3;
   for (let attempt = 0; attempt < MAX; attempt++) {
     try {
-      await new Promise((r) => setTimeout(r, attempt === 0 ? 0 : attempt * attempt * 1000));
-      const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+      if (attempt) await new Promise((r) => setTimeout(r, attempt * attempt * 1000));
+      const res = await openreviewFetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
       if (res.status === 429 || res.status >= 500) {
         if (attempt < MAX - 1) continue;
         throw new Error(`HTTP ${res.status} after retries`);
@@ -368,6 +374,9 @@ export async function fetchGroups(prefix) {
       return groups;
     } catch (err) {
       if (attempt < MAX - 1) continue;
+      // `[]` reads downstream as "no sub-tracks", so a throttled probe would
+      // otherwise be filed as a fully checked venue.
+      recordUnverified(prefix, `group lookup: ${err.message}`);
       console.warn(`  ⚠ group lookup failed for ${prefix}: ${err.message}`);
       return [];
     }
@@ -479,7 +488,10 @@ export function mergeTracks(storedTracks, openreviewTracks, { allowEarlier = fal
 
 async function main({ conf, year, dryRun }) {
   const prefix = CONF_TEMPLATE[conf].replace('{year}', String(year));
-  const res = await fetch(
+  // Through the limiter like everything else — and being the first request of
+  // a cycle, it is what teaches the limiter the current budget before the
+  // per-venue burst starts.
+  const res = await openreviewFetch(
     `https://api2.openreview.net/groups?prefix=${encodeURIComponent(prefix + '/')}&limit=1000`,
     { headers: { 'User-Agent': UA, Accept: 'application/json' } },
   );
@@ -694,13 +706,27 @@ async function main({ conf, year, dryRun }) {
   if (changes.length && process.env.DEADLINE_CHANGELOG) {
     fs.appendFileSync(process.env.DEADLINE_CHANGELOG, changes.map((c) => `- ${c}`).join('\n') + '\n');
   }
+  // Anything the crawler could not actually reach. Reported next to the
+  // totals, because "116 venues, 116 already tracked" read as a complete pass
+  // even on the run where five of them were never checked at all.
+  const missed = getUnverified();
+  if (missed.length && process.env.OPENREVIEW_UNVERIFIED) {
+    // A file, not module state: the workflow runs each conference-year as its
+    // own `node` process, mirroring how $DEADLINE_CHANGELOG is accumulated.
+    fs.appendFileSync(
+      process.env.OPENREVIEW_UNVERIFIED,
+      missed.map((m) => `${conf}	${year}	${m.id}	${m.reason}`).join('\n') + '\n',
+    );
+  }
   console.log(
     `${conf} ${year}: ${venues.length} venues on OpenReview — ${created} created, ${skipped} already tracked` +
     `${backfilled ? `, ${backfilled} deadline(s) backfilled` : ''}` +
     `${updated ? `, ${updated} deadline(s) re-synced` : ''}` +
-    `${adopted ? `, ${adopted} legacy note(s) adopted` : ''}.`,
+    `${adopted ? `, ${adopted} legacy note(s) adopted` : ''}` +
+    `${missed.length ? `, ${missed.length} UNVERIFIED (see warnings)` : ''}.`,
   );
   for (const c of changes) console.log(`    ↳ ${c}`);
+  for (const m of missed) console.log(`    ⚠ unverified: ${m.id} — ${m.reason}`);
 }
 
 // Only run the CLI when invoked directly, so the exported helpers

@@ -102,6 +102,58 @@ but discovery can take ~35 minutes on a slow OpenReview day and a manual dispatc
 ignores the schedule entirely.
 
 
+## OpenReview's rate limit
+
+Every OpenReview response carries its own limit, and the crawler is expected to
+respect it rather than discover it by being refused:
+
+```
+ratelimit-policy: 20;w=60        20 requests per 60 seconds
+x-ratelimit-remaining: 19
+ratelimit-reset: 60
+```
+
+`lib/openreview.mjs` is the single gate every OpenReview request passes through.
+It reads those headers, spends the advertised budget, and pauses only at the
+window boundary — so a healthy crawl runs at full permitted speed and is never
+slowed for the sake of caution. `scripts/openreview_rate_test.mjs` pins both
+halves: it waits when the budget is gone, and it does **not** wait when there is
+room, because a limiter that throttles a healthy connection is its own bug.
+
+**This was learned the hard way, twice.** The first symptom was ECCV's WICV and
+around twenty siblings importing as "Deadline unknown" despite having a visible
+duedate; the fix then was retries with backoff, which treated the symptom. The
+second was 15 throttled venues in one run on 2026-08-18. The cause both times
+was the same: one path paced at 350ms and the other not at all, roughly 340
+requests a minute against a ceiling of 20. The retries then spent themselves
+inside a window that was already exhausted.
+
+It matters beyond discovery. `deadlineFromInvitation` is also called by
+`backfill_deadlines.mjs`, `deadline_crosscheck.mjs`, `recheck_imminent.mjs` and
+`resync_deadline.mjs`, three of them on daily crons and all sharing one per-IP
+budget.
+
+### When a venue still cannot be checked
+
+A failed lookup is **recorded, never treated as absent** — `null` for a deadline
+and `[]` for sub-tracks are otherwise indistinguishable from "there is nothing
+here", which is precisely how a throttled venue used to be filed as fully
+checked. Instead:
+
+1. The venue is appended to `$OPENREVIEW_UNVERIFIED` (a file, because the
+   workflow runs each conference-year as its own `node` process — the same
+   idiom as `$DEADLINE_CHANGELOG`).
+2. The cycle summary says so: `116 venues — … , 2 UNVERIFIED`.
+3. After all 18 cycles, discovery re-runs for just the affected
+   conference-years, by which point the budget has recovered. Re-running
+   discovery *is* the retry because it is idempotent and honours the later-only
+   rule and the human-edit freeze — `resync_deadline.mjs` must not be used here,
+   as it deliberately bypasses both.
+4. Whatever fails twice opens **"Data health: venues not verified"**
+   (label `data-health`), edited in place and **closed automatically** once a
+   later run verifies everything. It needs no action unless it persists for
+   several weeks, which would point at something other than rate limiting.
+
 ## What a new entry inherits automatically
 
 Nothing in this cycle's work needs hand-maintaining per workshop or per

@@ -37,6 +37,8 @@ concurrency:
 permissions:
   contents: write
   actions: write
+  # For the consolidated "venues not verified" issue below.
+  issues: write
 
 jobs:
   discover:
@@ -52,6 +54,7 @@ jobs:
         id: crawl
         env:
           DEADLINE_CHANGELOG: ${{ github.workspace }}/.deadline-changes.md
+          OPENREVIEW_UNVERIFIED: ${{ github.workspace }}/.unverified.tsv
         run: |
           Y=$(date -u +%Y)
           failed=""
@@ -76,6 +79,32 @@ jobs:
             echo "failed_cycles=$failed" >> "$GITHUB_OUTPUT"
             echo "::error::discovery did not complete for:$failed"
           fi
+      # OpenReview allows 20 requests per 60s and says so in every response, so
+      # lib/openreview.mjs paces against the advertised budget and 429s should
+      # be rare. When one does slip through, the venue is recorded rather than
+      # filed as "no deadline" — and by now the budget has fully recovered, so
+      # a second look usually settles it.
+      #
+      # Re-running discovery *is* the retry: it is idempotent and it honours the
+      # later-only rule and the human-edit freeze. resync_deadline.mjs would be
+      # the wrong tool here — it is a maintainer override that bypasses both.
+      - name: Re-check venues that could not be verified
+        id: recheck
+        env:
+          DEADLINE_CHANGELOG: ${{ github.workspace }}/.deadline-changes.md
+          OPENREVIEW_UNVERIFIED: ${{ github.workspace }}/.unverified-2.tsv
+        run: |
+          F="${{ github.workspace }}/.unverified.tsv"
+          [ -s "$F" ] || { echo "Everything verified on the first pass."; exit 0; }
+          echo "Unverified after pass 1:"; cut -f3 "$F" | sort -u | sed 's/^/  /'
+          : > "$OPENREVIEW_UNVERIFIED"
+          # Distinct conference-years only — one venue is enough to re-crawl its cycle.
+          cut -f1,2 "$F" | sort -u | while IFS=$'\t' read -r c y; do
+            echo "=== second pass: $c $y ==="
+            node scripts/discover_openreview.mjs --conf "$c" --year "$y" || true
+            sleep 20
+          done
+
       - name: Validate
         run: node scripts/validate.mjs
       # Validation passed above — publish directly. A failed validation fails
@@ -120,6 +149,79 @@ jobs:
           # Pushes made with GITHUB_TOKEN don't trigger on:push workflows,
           # so kick the deploy explicitly.
           gh workflow run deploy.yml --ref main
+
+      # Anything that failed twice becomes a consolidated issue, modelled on
+      # deadline-review.yml: one issue, edited in place, and **closed when the
+      # report comes back empty**. That last part is what stops it turning into
+      # a stale issue every Sunday — which would be worse than the log warning
+      # it replaces.
+      #
+      # A sibling to "Data health: deadlines to review" rather than a section
+      # inside it: that one is about deadlines where OpenReview and a human
+      # disagree, this one is about venues the crawler could not reach at all,
+      # and the two are written by workflows on different days.
+      - name: Report venues that failed twice
+        if: always()
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const f = `${process.env.GITHUB_WORKSPACE}/.unverified-2.tsv`;
+            const rows = fs.existsSync(f)
+              ? fs.readFileSync(f, 'utf8').split('\n').filter(Boolean)
+              : [];
+            const title = 'Data health: venues not verified';
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'data-health',
+              per_page: 100,
+            });
+            const existing = open.find((i) => i.title === title);
+            if (!rows.length) {
+              if (existing) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  state: 'closed',
+                });
+              }
+              return;
+            }
+            const seen = new Set();
+            const lines = [];
+            for (const r of rows) {
+              const [conf, year, id, reason] = r.split('\t');
+              if (seen.has(id)) continue;
+              seen.add(id);
+              lines.push(`- \`${id}\` — ${conf} ${year} — ${reason}`);
+            }
+            const body = [
+              `OpenReview could not be reached for these venues on two separate passes`,
+              `during the discovery run on ${new Date().toISOString().slice(0, 10)}.`,
+              '',
+              'Their deadlines may be stale: a lookup that fails is recorded here rather',
+              'than being written as "no deadline", which is what used to happen.',
+              '',
+              ...lines,
+              '',
+              'This issue closes itself as soon as a later run verifies them all, so it',
+              'needs no action unless it persists across several weeks — which would',
+              'point at something other than rate limiting.',
+            ].join('\n');
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body, labels: ['data-health'],
+              });
+            }
 
       # Runs last on purpose: whatever the crawl did find is validated and
       # published above, then the job goes red so a partial crawl is visible
