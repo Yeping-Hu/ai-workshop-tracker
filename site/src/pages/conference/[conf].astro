@@ -148,9 +148,21 @@ const statusLines = (w: any): string[] =>
       came for. Renders nothing unless PUBLIC_ALERTS_API is set. */}
   <AlertsSignup collapsed tight />
 
-  {yearGroups.map(([year, ws]) => (
+  {yearGroups.map(([year, ws]) => {
+    // A conference hub answers "where is this?" differently depending on the
+    // conference. NeurIPS 2026 is split across Sydney, Paris and Atlanta, so
+    // each workshop needs its own marker. ECCV 2026 is entirely in Malmö —
+    // repeating that on all 81 rows would be noise, but saying it nowhere
+    // leaves the reader of a page *about ECCV* still not knowing. So it is
+    // said once, in the heading.
+    const labels = ws.map((w: any) => w.locationLabel).filter(Boolean);
+    const sharedLocation =
+      !ws.some((w: any) => w.locationDistinguishes) && labels.length && new Set(labels).size === 1
+        ? labels[0]
+        : null;
+    return (
     <section class="conf-year">
-      <h2>{confName} {year}</h2>
+      <h2>{confName} {year}{sharedLocation && <span class="conf-year-where"> · {sharedLocation}</span>}</h2>
       <MarkdownExport
         exportUrl={href(`/exports/${conf.id}-${year}-workshops.md`)}
         filename={`${conf.id}-${year}-workshops.md`}
@@ -169,6 +181,9 @@ const statusLines = (w: any): string[] =>
                 >· abstract {w.abstractDeadlinePassed ? 'closed ' : 'by '}{w.abstractDeadlineWallClock}</span>
               )}
               {w.paperCount > 0 && <span class="muted small">· {w.paperCount} papers</span>}
+              {/* Only where the conference is genuinely split; otherwise the
+                  year heading above has already said it once. */}
+              {w.locationDistinguishes && <span class="ws-where">{w.locationLabel}</span>}
             </div>
             {w.acronym && w.name && w.name !== w.acronym && (
               <div class="ws-full">{w.name}</div>
@@ -177,7 +192,8 @@ const statusLines = (w: any): string[] =>
         ))}
       </ul>
     </section>
-  ))}
+    );
+  })}
 
   <section class="conf-faq">
     <h2>Frequently asked questions</h2>

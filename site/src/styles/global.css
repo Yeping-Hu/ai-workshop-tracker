@@ -221,6 +221,10 @@ details.dd .dd-panel {
    across places. Deliberately not a `.chip`: chips are topics and act as
    filters, and a location styled like one would look clickable without being
    so. Quiet by design — it is context, not a call to action. */
+/* On a conference hub, a single-city year says its location once in the
+   heading rather than on every row. Lighter than the heading it trails, so it
+   reads as context and not as part of the conference's name. */
+.conf-year-where { font-weight: 400; font-size: 0.72em; color: var(--muted); }
 .ws-where { color: var(--muted); white-space: nowrap; opacity: 0.9; }
 .ws-where::before { content: "· "; opacity: 0.6; }
 .ws-deadline { font-size: 0.85rem; }

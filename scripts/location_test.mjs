@@ -45,6 +45,7 @@ const REAL = [
   ...rep('Sydney, Paris, Atlanta', 2),
   'Sidney, Australia',      // a real one-letter typo, once, against 48 Sydneys
   'NeurIPS Paris 2026',     // a real value: the venue's name, not a city
+  'NeurIPS 2026',           // a real value naming no place whatsoever
 ];
 const canon = canonicalLocations(REAL);
 const shown = (v) => canon.get(v)?.label;
@@ -56,7 +57,7 @@ const placeKey = (v) => canon.get(v)?.key;
   // happens inside canonicalLocations, which is the layer that has the corpus.
   const places = new Set([...new Set(REAL)].map(placeKey));
   check('every spelling collapses to 6 places',
-    places.size === 6, [...places].join(', ') + '  (5 cities + the all-sites listing)');
+    places.size === 7, [...places].filter(Boolean).join(', ') + '  (5 cities + the all-sites listing + one unplaceable)');
 
   check('six Pittsburghs render as one',
     new Set(['Pittsburgh', 'Pittsburgh, PA', 'Pittsburgh, USA',
@@ -123,6 +124,14 @@ const placeKey = (v) => canon.get(v)?.key;
     shown('Sidney, Australia') === 'Sydney, Australia', shown('Sidney, Australia'));
   check('a venue name containing a city folds into that city',
     shown('NeurIPS Paris 2026') === 'Paris, France', shown('NeurIPS Paris 2026'));
+  check('a value naming no place renders nothing',
+    shown('NeurIPS 2026') === undefined,
+    'printing a conference name where a city belongs is worse than printing nothing');
+  check('...and does not count as a place',
+    placeKey('NeurIPS 2026') === undefined,
+    'or one junk value makes a single-city conference look split');
+  check('...while "NeurIPS Paris 2026" still resolves, because it names one',
+    shown('NeurIPS Paris 2026') === 'Paris, France');
   check('...and neither adds a phantom place',
     placeKey('Sidney, Australia') === placeKey('Sydney, Australia')
       && placeKey('NeurIPS Paris 2026') === placeKey('Paris, France'));
