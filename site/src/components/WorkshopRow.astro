@@ -48,6 +48,12 @@ const countdownName = isAbstractStage
     <div class="ws-meta">
       {w.acronym && <span class="mono">{w.acronym}</span>}
       <span>{conf.name} {w.year}</span>
+      {/* Only when the conference is actually split across places. NeurIPS 2026
+          runs in Sydney, Paris and Atlanta, and which one a workshop belongs to
+          is invisible anywhere else on the site. ECCV 2026 is entirely in Malmö,
+          where the same label on all 84 cards would only restate the conference
+          name — a marker that appears everywhere stops being read. */}
+      {w.locationDistinguishes && <span class="ws-where">{w.locationLabel}</span>}
       {(w.topics ?? []).map((t: string) => (
         <span class="chip">{topicById.get(t)?.label ?? t}</span>
       ))}

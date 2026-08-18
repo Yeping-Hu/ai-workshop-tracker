@@ -277,6 +277,16 @@ const breadcrumbLd = {
           <dd>{w.workshopDateLabel}</dd>
         </>
       )}
+      {/* From OpenReview. `locationLabel` is the tidied spelling, not the raw
+          value: one city is published under as many as six names, so the
+          spellings are folded together in lib/workshops.mjs. Shown whenever it
+          is known — someone who opened this page wants the detail. */}
+      {w.locationLabel && (
+        <>
+          <dt>Location</dt>
+          <dd>{w.locationLabel}</dd>
+        </>
+      )}
       {w.submission_portal && (
         <>
           <dt>Submission portal</dt>

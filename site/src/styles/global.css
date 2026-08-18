@@ -217,6 +217,12 @@ details.dd .dd-panel {
   background: var(--accent-soft); border-radius: 99px; padding: 0.1rem 0.55rem;
   white-space: nowrap;
 }
+/* Where a workshop is, shown on the card only when its conference is split
+   across places. Deliberately not a `.chip`: chips are topics and act as
+   filters, and a location styled like one would look clickable without being
+   so. Quiet by design — it is context, not a call to action. */
+.ws-where { color: var(--muted); white-space: nowrap; opacity: 0.9; }
+.ws-where::before { content: "· "; opacity: 0.6; }
 .ws-deadline { font-size: 0.85rem; }
 .ws-deadline .wall { font-family: var(--font-mono); font-size: 0.82rem; }
 .ws-deadline .local { color: var(--muted); font-size: 0.78rem; margin-top: 0.12rem; }

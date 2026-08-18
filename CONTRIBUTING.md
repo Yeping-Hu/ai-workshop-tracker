@@ -31,6 +31,7 @@ One YAML file per workshop **edition** (same series ⇒ new file each year).
 | `conference` | ✅ | An id from `data/conferences.yml` (`icml`, `iclr`, `neurips`) |
 | `year` | ✅ | Integer |
 | `website` | ✅ | Full `http(s)` URL |
+| `location` | — | Where it takes place, e.g. `Sydney, Australia`. Maintained by the weekly OpenReview sync; spellings are tidied for display, so leave it as published |
 | `topics` | ✅ | 1–5 ids from `data/topics.yml` (the add/edit issue forms offer these as a multi-select picker, so there are no typos or unknown ids) |
 | `submission_deadline` |  | `YYYY-MM-DD HH:MM` or `YYYY-MM-DD` (means 23:59) — **wall-clock time in `timezone`**. The add/edit issue forms collect this via year/month/day/hour/minute dropdowns. |
 | `timezone` | ⚠️ | **Required whenever `submission_deadline` is set** (CI rejects a deadline without one). `AoE` (Anywhere on Earth, UTC−12 — the ML default for date-only CFPs), `UTC`, or an IANA name like `America/Los_Angeles`. Via the issue form, pick any zone and the bot converts the deadline to UTC for you (keeping the original in `deadline_notes`). |

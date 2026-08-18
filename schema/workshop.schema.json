@@ -38,6 +38,11 @@
       "maxLength": 500,
       "description": "Official workshop website. Leave unset if unknown — the site shows a \"help us add it\" prompt."
     },
+    "location": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Where the workshop takes place, exactly as OpenReview publishes it. Stored raw — the values are free text and inconsistent (six spellings of Pittsburgh, one \"Sweeden\"), so spellings are folded together for display in lib/workshops.mjs rather than here. Keeping the source value means improving that later is a rebuild, not a data migration. Maintained by the weekly discovery sync; unset when OpenReview has none."
+    },
     "topics": {
       "type": "array",
       "minItems": 1,

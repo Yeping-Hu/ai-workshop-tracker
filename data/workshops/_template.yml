@@ -10,6 +10,7 @@ acronym: ""                    # short name, e.g. "MATH-AI"; leave "" if none
 conference: neurips            # (required) one of the ids in data/conferences.yml
 year: 2026                     # (required)
 website: "https://"            # (required) official workshop website
+# location: "Sydney, Australia" # (optional) filled by the weekly OpenReview sync
 topics: [other]                # (required) 1-5 ids from data/topics.yml
 
 # --- Deadlines (strongly encouraged) ---

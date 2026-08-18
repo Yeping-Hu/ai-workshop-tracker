@@ -320,6 +320,21 @@ export function msToDeadline(ms) {
 /** Fallback when the group's human-written `date` line is empty/unparseable:
  *  the submission *invitation* usually carries a machine-readable `duedate`
  *  (it's what renders next to the Submission button on openreview.net). */
+/**
+ * Where the workshop is, as OpenReview publishes it.
+ *
+ * Free (already in the group content, so no extra request — which matters now
+ * the crawler lives inside a 20-per-minute budget) and free text: one city
+ * arrives as "Pittsburgh", "Pittsburgh, PA" and "Pittsburgh, Pennsylvania,
+ * United States". Stored exactly as given; lib/workshops.mjs folds the
+ * spellings together for display, so improving that never needs a data change.
+ */
+export function locationFromContent(content) {
+  const v = val(content ?? {}, 'location');
+  const s = typeof v === 'string' ? v.trim() : '';
+  return s && s.length <= 200 ? s : null;
+}
+
 export async function deadlineFromInvitation(g) {
   const invId = val(g.content ?? {}, 'submission_id') || `${g.id}/-/Submission`;
   const url = `https://api2.openreview.net/invitations?id=${encodeURIComponent(invId)}&expired=true`;
@@ -597,6 +612,19 @@ async function main({ conf, year, dryRun }) {
         }
       }
 
+      // (A3) Mirror the location, same shape and reasoning as (A2): free — it is
+      // in the group content already fetched — and informational, so it is
+      // simply kept in step whenever it differs. Never deleted when OpenReview
+      // stops reporting one, so a value a human typed is not silently dropped.
+      {
+        const loc = locationFromContent(g.content ?? {});
+        if (loc && loc !== (raw.location ?? null)) {
+          raw.location = loc;
+          changed = true;
+          changes.push(`${raw.conference} ${raw.year} · ${path.basename(fp)}: location -> ${loc}`);
+        }
+      }
+
       // (B) Keep an existing *bot-managed, human-untouched* deadline in sync with
       // OpenReview. A deadline counts as bot-managed only if its note still holds
       // the value the bot last wrote (syncedValue) or the pre-sync legacy marker.
@@ -671,6 +699,8 @@ async function main({ conf, year, dryRun }) {
 
     const record = { name: title, acronym, conference: conf, year };
     if (website) record.website = website;
+    const loc = locationFromContent(g.content ?? {});
+    if (loc) record.location = loc;
     record.topics = guessTopics(`${title} ${acronym}`);
     if (deadline) {
       record.submission_deadline = deadline.submission_deadline;
