@@ -1,6 +1,8 @@
 # Puts the "Sponsor" button in the repo header and the "Sponsor this project"
 # panel in the right sidebar. Must live on the default branch to take effect.
-custom: ["https://ko-fi.com/aiworkshoptracker"]
+# Use the platform's own key (not `custom:`) so GitHub renders its logo and
+# name rather than a bare URL.
+ko_fi: aiworkshoptracker
 # GitHub Sponsors is not set up for this account; uncomment once it is active
 # (github.com/sponsors -> set up), and the two appear side by side.
 # github: Yeping-Hu
