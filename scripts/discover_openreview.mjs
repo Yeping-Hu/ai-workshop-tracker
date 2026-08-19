@@ -39,7 +39,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation } from '../lib/workshops.mjs';
+import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, loadConferences, stripVenueFromName } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 import { openreviewFetch, recordUnverified, getUnverified } from '../lib/openreview.mjs';
 
@@ -552,15 +552,27 @@ async function main({ conf, year, dryRun }) {
     console.log(`  (skipped ${allVenues.length - venues.length} archival/non-archival track twin(s))`);
 
   const known = new Map(); // venue_id -> { path, raw }
+  // Venue ids that are a *duplicate* group for a workshop already tracked
+  // elsewhere. Organizers occasionally create two groups for one workshop, and
+  // both get imported as separate entries showing contradictory deadlines. The
+  // surviving entry records the abandoned id in `merged_venue_ids`, and this is
+  // what keeps a re-crawl from simply re-creating what a merge removed.
+  const merged = new Map(); // venue_id -> slug it was merged into
   for (const f of listWorkshopFiles()) {
     const e = readWorkshopFile(f);
     if (e.raw?.openreview_venue_id) known.set(e.raw.openreview_venue_id, { path: f, raw: e.raw });
+    for (const id of e.raw?.merged_venue_ids ?? []) merged.set(String(id), path.basename(f, '.yml'));
   }
   const today = new Date().toISOString().slice(0, 10);
   let created = 0, skipped = 0, backfilled = 0, updated = 0, adopted = 0;
   const changes = []; // human-readable "old -> new" lines for the commit log
 
   for (const g of venues) {
+    if (merged.has(g.id) && !known.has(g.id)) {
+      console.log(`  – ${g.id}: merged into ${merged.get(g.id)}, not re-created`);
+      skipped++;
+      continue;
+    }
     if (known.has(g.id)) {
       const { path: fp, raw } = known.get(g.id);
       let changed = false;
@@ -703,7 +715,15 @@ async function main({ conf, year, dryRun }) {
     }
     const c = g.content ?? {};
     const tail = g.id.split('/').pop();
-    const title = String(val(c, 'title') || tail).trim().slice(0, 200);
+    // OpenReview venue titles routinely repeat the conference and year the
+    // entry is already filed under; every surface that shows the name says that
+    // already. Strip it here so it never reaches the YAML in the first place.
+    const confMeta = loadConferences().find((x) => x.id === conf) ?? {};
+    const title = stripVenueFromName(String(val(c, 'title') || tail).trim().slice(0, 200), {
+      confName: confMeta.name ?? conf,
+      confFullName: confMeta.full_name,
+      year,
+    });
     let acronym = String(val(c, 'subtitle') || tail).trim();
     if (acronym.length > 40 || acronym === title) acronym = tail.slice(0, 40);
     acronym = cleanAcronym(acronym, conf, year);

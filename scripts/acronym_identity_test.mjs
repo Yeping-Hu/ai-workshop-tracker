@@ -19,12 +19,13 @@
  * fix is almost always to teach TRACK_SUFFIX the new suffix, not to hand-edit
  * the acronym.
  */
-import { loadWorkshops, loadConferences, workshopShortName, venueFamily } from '../lib/workshops.mjs';
+import { loadWorkshops, loadConferences, workshopShortName, venueFamily, stripVenueFromName } from '../lib/workshops.mjs';
 
 let failed = 0;
 const fail = (msg) => { failed++; console.log(`✗ ${msg}`); };
 
 const workshops = loadWorkshops();
+const confMeta = new Map(loadConferences().map((c) => [c.id, c]));
 const confName = new Map(loadConferences().map((c) => [c.id, c.name]));
 
 // --- the invariant ---------------------------------------------------------
@@ -74,6 +75,49 @@ console.log(
   fragile.length
     ? `  (${fragile.length} such group(s) — informational, see the note above)`
     : '✓ every sibling group has at most one unlabelled (main) track',
+);
+
+// --- names carry no venue prefix -------------------------------------------
+// The importer strips "<CONF> <YEAR> Workshop on ..." on arrival, and
+// strip_venue_names.mjs swept the entries that predate it. This holds the
+// corpus at that state: a name arriving with the prefix again means either a
+// hand-written entry or an import path that bypassed stripVenueFromName, and
+// the fix is to re-run the sweep, not to leave it.
+const prefixed = [];
+for (const w of workshops) {
+  const c = confMeta.get(w.conference) ?? {};
+  const clean = stripVenueFromName(w.name, {
+    confName: c.name ?? w.conference,
+    confFullName: c.full_name,
+    year: w.year,
+  });
+  if (clean !== String(w.name).trim()) prefixed.push({ slug: w.slug, from: w.name, to: clean });
+}
+for (const p of prefixed) {
+  fail(`${p.slug} still names its own conference-year\n      -  ${p.from}\n      +  ${p.to}\n      -> node scripts/strip_venue_names.mjs --write`);
+}
+if (!prefixed.length) console.log('✓ no workshop name repeats its own conference and year');
+
+// --- merged venue ids stay recorded ----------------------------------------
+// Deleting a duplicate entry is not enough on its own: discovery keys off
+// openreview_venue_id, so an abandoned group whose file is gone is simply
+// re-created on the next weekly crawl. The surviving entry has to keep the id
+// in merged_venue_ids, which is what discover_openreview.mjs skips on.
+const allMerged = new Map();
+for (const w of workshops) {
+  for (const id of w.merged_venue_ids ?? []) {
+    allMerged.set(String(id), [...(allMerged.get(String(id)) ?? []), w.slug]);
+  }
+}
+const live = new Set(workshops.map((w) => w.openreview_venue_id).filter(Boolean));
+for (const [id, slugs] of allMerged) {
+  if (slugs.length > 1) fail(`venue id ${id} is claimed as merged by ${slugs.join(' and ')}`);
+  if (live.has(id)) fail(`venue id ${id} is listed as merged but is also a live openreview_venue_id`);
+}
+console.log(
+  allMerged.size
+    ? `✓ ${allMerged.size} merged venue id(s) recorded, none colliding with a live entry`
+    : '✓ no merged venue ids recorded',
 );
 
 // --- unit cases for the derivation itself ----------------------------------

@@ -5,7 +5,7 @@
 # Then click "Commit changes..." -> "Propose changes" to open a pull request.
 # It is validated automatically and usually merged within a day.
 # ---------------------------------------------------------------------------
-name: "ICML 2026 Workshop: Philosophy Meets Machine Learning"
+name: Philosophy Meets Machine Learning
 acronym: PhilML@ICML 2026
 conference: icml
 year: 2026

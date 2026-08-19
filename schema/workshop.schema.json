@@ -113,6 +113,15 @@
       "maxLength": 200,
       "description": "e.g. 'NeurIPS.cc/2024/Workshop/MATH-AI'. Enables the auto paper list."
     },
+    "merged_venue_ids": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "description": "Other OpenReview venue ids that are this same workshop — organizers occasionally create a second group. Recorded so discovery skips them instead of re-creating a duplicate entry."
+    },
     "proceedings_url": {
       "type": "string",
       "pattern": "^https?://",

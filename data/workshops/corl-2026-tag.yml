@@ -5,7 +5,7 @@
 # Then click "Commit changes..." -> "Propose changes" to open a pull request.
 # It is validated automatically and usually merged within a day.
 # ---------------------------------------------------------------------------
-name: 'CoRL 2026 Workshop on The Action Gap: Large Generative Models Learn Rich Knowledge'
+name: 'The Action Gap: Large Generative Models Learn Rich Knowledge'
 acronym: TAG 2026
 conference: corl
 year: 2026

@@ -42,6 +42,7 @@ One YAML file per workshop **edition** (same series ⇒ new file each year).
 | `notification_date` |  | `YYYY-MM-DD` |
 | `workshop_date` |  | `YYYY-MM-DD` |
 | `openreview_venue_id` |  | e.g. `NeurIPS.cc/2026/Workshop/MATH-AI` — enables the automatic paper list |
+| `merged_venue_ids` |  | Other OpenReview ids that are this *same* workshop, when organizers created a second group. Recorded so discovery skips them rather than re-creating a duplicate entry |
 | `proceedings_url` |  | Accepted-papers page for non-OpenReview workshops |
 | `submission_portal` |  | `openreview` \| `cmt` \| `email` \| `other` \| `unknown` |
 | `organizers` |  | List of names |

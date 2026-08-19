@@ -37,6 +37,8 @@ workshop_date: ""              # "YYYY-MM-DD"
 
 # --- Papers ---
 openreview_venue_id: ""        # e.g. "NeurIPS.cc/2026/Workshop/MATH-AI" -> auto paper list
+# merged_venue_ids:              # other OpenReview ids that are this same workshop
+#   - "IEEE.org/IROS/2026/Workshop/Alt-Group"   # keeps discovery from re-creating a duplicate
 proceedings_url: ""            # for non-OpenReview workshops: their accepted-papers page
 submission_portal: unknown     # openreview | cmt | email | other | unknown
 
