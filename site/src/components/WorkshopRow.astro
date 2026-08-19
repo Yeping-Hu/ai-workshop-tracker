@@ -1,5 +1,5 @@
 ---
-import { conferenceById, topicById } from '../lib/data';
+import { conferenceById, topicById, workshopShortName } from '../lib/data';
 import { href, CALENDAR_ENABLED } from '../lib/site';
 
 interface Props {
@@ -18,9 +18,10 @@ const hasDeadline = w.deadlineUtcMs != null;
 // deadline as if it were the submission deadline.
 const countdownMs = w.nextStageUtcMs ?? w.deadlineUtcMs;
 const isAbstractStage = !!w.nextStageIsAbstract;
-const countdownName = isAbstractStage
-  ? `${w.acronym || w.name} (abstract)`
-  : (w.acronym || w.name);
+// Same one-line identity the workshop page and saved list use, so a countdown
+// announced on the board names the same thing the reader clicks through to.
+const rowName = workshopShortName(w, conf.name).full;
+const countdownName = isAbstractStage ? `${rowName} (abstract)` : rowName;
 ---
 
 <div

@@ -2,7 +2,7 @@
 import Base from '../../components/Base.astro';
 import AlertsSignup from '../../components/AlertsSignup.astro';
 import MarkdownExport from '../../components/MarkdownExport.astro';
-import { workshops, conferences } from '../../lib/data';
+import { workshops, conferences, workshopShortName } from '../../lib/data';
 import { href, REPO_URL } from '../../lib/site';
 
 // One hub page per conference, generated from the same data the rest of the
@@ -176,7 +176,7 @@ const statusLines = (w: any): string[] =>
           <li>
             <span class={`pill ${statusPill(w)}`}>{statusLines(w).map((line, i) => <Fragment>{i > 0 && <br />}{line}</Fragment>)}</span>
             <div class="ws-head">
-              <a href={href(`/workshop/${w.slug}/`)}>{w.acronym || w.name}</a>
+              <a href={href(`/workshop/${w.slug}/`)}>{workshopShortName(w, confName).full}</a>
               {w.deadlineWallClock && (
                 <span class="muted mono small">{w.statusLabel === 'Open call' ? 'due ' : ''}{w.deadlineWallClock}</span>
               )}
@@ -189,7 +189,7 @@ const statusLines = (w: any): string[] =>
                   year heading above has already said it once. */}
               {w.locationDistinguishes && <span class="ws-where small">{w.locationLabel}</span>}
             </div>
-            {w.acronym && w.name && w.name !== w.acronym && (
+            {w.name && w.name !== workshopShortName(w, confName).full && (
               <div class="ws-full">{w.name}</div>
             )}
           </li>

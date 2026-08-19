@@ -1,6 +1,6 @@
 ---
 import Base from '../../components/Base.astro';
-import { workshops, conferenceById, topicById, loadPaperCache } from '../../lib/data';
+import { workshops, conferenceById, topicById, loadPaperCache, workshopShortName } from '../../lib/data';
 import { href, REPO_URL, CALENDAR_ENABLED } from '../../lib/site';
 import MarkdownExport from '../../components/MarkdownExport.astro';
 import { formatSingleWorkshopInfo } from '../../lib/markdown';
@@ -37,7 +37,10 @@ const portalLabel: Record<string, string> = {
 const paperId = (p: any, i: number) =>
   String(p.forum_url || p.pdf_url || '').match(/[?&]id=([^&#]+)/)?.[1] ?? `${w.slug}~${i}`;
 // How a saved paper is labeled/grouped on the /saved/ page.
-const wsLabel = `${w.acronym || w.name} — ${conf.name} ${w.year}`;
+// Deduped and track-disambiguated: two tracks of one workshop would otherwise
+// share a label and merge into a single group on /saved/.
+const shortName = workshopShortName(w, conf.name);
+const wsLabel = `${shortName.full} — ${conf.name} ${w.year}`;
 // Browse-mode sort key (used only when the search box is empty — keyword
 // queries keep Pagefind's relevance order). Lexicographic ascending over
 // '<band>-<14-digit ms>':
@@ -123,51 +126,23 @@ const breadcrumbLd = {
 // The query these pages should win is "<name> workshop <conf> <year> deadline"
 // (and, for past editions, "... accepted papers"), so the <title> has to contain
 // the words "Workshop" and "Deadline" — an acronym-only title has neither.
-//
-// Acronyms are not reliably clean: 389 of them already carry the conference name
-// and 603 the year ("COLM 2025 Workshop PragLM", "MELT Workshop @ COLM 2025"), so
-// appending "@ <conf> <year>" blindly repeats it on a third of all pages. Strip
-// that noise first, then re-add it in one canonical position.
-const dropConfYear = (str: string) => {
-  const c = conf.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return str
-    .replace(new RegExp(`\\s*(?:@|at|,|:|-|—)?\\s*${c}\\s*${w.year}\\b`, 'ig'), ' ')
-    .replace(new RegExp(`\\s*(?:@|at|,|:|-|—)?\\s*\\b${c}\\b`, 'ig'), ' ')
-    .replace(new RegExp(`\\s*\\b${w.year}\\b`, 'g'), ' ')
-    .replace(/\s{2,}/g, ' ')
-    .replace(/^[\s:@,\-—|]+|[\s:@,\-—|]+$/g, '')
-    .trim();
-};
-/** Trim at a word boundary so a long fallback name doesn't run away. */
+// `shortName` (above) supplies the identity: venue noise stripped, sibling
+// tracks told apart. The track label sits after "Workshop" rather than inside
+// the name, so the line reads "CVEU Workshop (Extended Abstracts) @ CVPR 2026".
+const titleTxt =
+  `${shortName.base}${/workshop/i.test(shortName.base) ? '' : ' Workshop'}` +
+  `${shortName.track ? ` (${shortName.track})` : ''}` +
+  ` @ ${conf.name} ${w.year} — ` +
+  (w.paperCount > 0 ? 'Papers & Deadline' : 'Deadline');
+/** Word-boundary trim for the description's (highly variable) workshop name. */
 const clip = (str: string, n: number) => {
   if (str.length <= n) return str;
   const sp = str.lastIndexOf(' ', n);
   return str
     .slice(0, sp > 20 ? sp : n)
     .replace(/[\s,:;-]+$/, '')
-    // never end on a dangling connective ("... A New Era in Drug Discovery and")
     .replace(/\s+(?:and|or|the|an?|of|for|to|in|on|with|using|from|towards?|at|by|via)$/i, '');
 };
-// A handful of acronyms are *only* conference + year ("COLM 2026"); stripping
-// leaves nothing, so those fall back to the full name — the one remaining thing
-// that identifies the workshop.
-const shortName = (() => {
-  const named = (str: string) => dropConfYear(str).replace(/workshop/gi, '').trim().length >= 2;
-  const raw = String(w.acronym || w.name);
-  if (named(raw)) return clip(dropConfYear(raw), 48);
-  // The acronym was only conference + year. Fall back to the name — but
-  // OpenReview sometimes prefixes that with the conference's own full title
-  // ("The Thirty-Ninth Annual Conference on ... workshop: AI for non-human
-  // animal communication"), so prefer whatever follows the final colon.
-  const full = String(w.name);
-  const tail = full.slice(full.lastIndexOf(':') + 1).trim();
-  const pick = tail.length >= 8 ? tail : full;
-  if (named(pick)) return clip(dropConfYear(pick), 48);
-  return raw.trim();
-})();
-const titleTxt =
-  `${shortName}${/workshop/i.test(shortName) ? '' : ' Workshop'} @ ${conf.name} ${w.year} — ` +
-  (w.paperCount > 0 ? 'Papers & Deadline' : 'Deadline');
 // The description carries the actual deadline date: Google bolds matched terms
 // and surfaces dates in snippets, and the daily rebuild keeps it current when a
 // deadline is extended.

@@ -37,6 +37,8 @@ jobs:
         run: node scripts/discover_website_test.mjs
       - name: Test venue-only acronyms are dropped on import
         run: node scripts/acronym_clean_test.mjs
+      - name: Test workshop short names stay unique within a conference-year
+        run: node scripts/acronym_identity_test.mjs
       - name: Test two-stage (abstract + paper) deadline handling
         run: node scripts/abstract_deadline_test.mjs
       - name: Test deadline provenance (observation log + UI derivation)

@@ -10,6 +10,7 @@ import {
   loadPaperCache,
   loadProposalCalls,
   sortByDeadline,
+  workshopShortName,
 } from '../../../lib/workshops.mjs';
 
 export type Workshop = Record<string, any>;
@@ -38,3 +39,6 @@ export const paperCount = workshops.reduce((n: number, w: Workshop) => {
   const c = loadPaperCache(w.slug);
   return n + (c?.paper_count ?? 0);
 }, 0);
+
+/** Re-exported for pages that need a workshop's one-line identity. */
+export { workshopShortName };
