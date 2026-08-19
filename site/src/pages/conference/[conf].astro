@@ -124,8 +124,12 @@ const statusLines = (w: any): string[] =>
 ---
 
 <Base
-  title={`${confName} Workshops — deadlines & papers`}
-  description={`Submission deadlines, dates, and accepted papers for ${confFull} (${confName}) workshops. ${list.length} editions tracked.`}
+  title={`${confName} Workshops${yearMax ? ` ${yearMax}` : ''} — Submission Deadlines & Papers`}
+  description={
+    `Submission deadlines, dates, and accepted papers for ${confFull} (${confName}) workshops` +
+    (yearMin && yearMax ? (yearMin === yearMax ? `, ${yearMax}` : `, ${yearMin}–${yearMax}`) : '') +
+    `. ${list.length} editions and ${paperTotal.toLocaleString('en-US')} papers tracked.`
+  }
 >
   <Fragment slot="head">
     <script is:inline type="application/ld+json" set:html={JSON.stringify(faqLd)} />

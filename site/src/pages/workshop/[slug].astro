@@ -86,7 +86,16 @@ const eventLd: Record<string, any> = {
     `A workshop at ${confFull} ${w.year}.`,
     w.paperCount > 0 ? `${w.paperCount} accepted papers listed.` : '',
   ].filter(Boolean).join(' '),
-  ...(w.workshopDateLabel ? { startDate: w.workshopDateLabel } : {}),
+  // schema.org wants ISO 8601 here; `workshopDateLabel` is the human-readable
+  // rendering ("Dec 6, 2026") and was never valid. The raw `workshop_date` is
+  // YYYY-MM-DD (schema/workshop.schema.json enforces the pattern, CI validates
+  // it). Guarded on the raw field so the derived fallbacks in workshops.mjs
+  // (conference end date, typical month) are never asserted as the event's
+  // official start. Same 5 workshops as before — this fixes the format, not
+  // the coverage; filling in `workshop_date` is what would widen that.
+  ...(typeof w.workshop_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(w.workshop_date.trim())
+    ? { startDate: w.workshop_date.trim() }
+    : {}),
   ...(w.website ? { sameAs: w.website } : {}),
   superEvent: {
     '@type': 'Event',
@@ -110,9 +119,75 @@ const breadcrumbLd = {
   ],
 };
 
+// --- SEO title & meta description ---
+// The query these pages should win is "<name> workshop <conf> <year> deadline"
+// (and, for past editions, "... accepted papers"), so the <title> has to contain
+// the words "Workshop" and "Deadline" — an acronym-only title has neither.
+//
+// Acronyms are not reliably clean: 389 of them already carry the conference name
+// and 603 the year ("COLM 2025 Workshop PragLM", "MELT Workshop @ COLM 2025"), so
+// appending "@ <conf> <year>" blindly repeats it on a third of all pages. Strip
+// that noise first, then re-add it in one canonical position.
+const dropConfYear = (str: string) => {
+  const c = conf.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return str
+    .replace(new RegExp(`\\s*(?:@|at|,|:|-|—)?\\s*${c}\\s*${w.year}\\b`, 'ig'), ' ')
+    .replace(new RegExp(`\\s*(?:@|at|,|:|-|—)?\\s*\\b${c}\\b`, 'ig'), ' ')
+    .replace(new RegExp(`\\s*\\b${w.year}\\b`, 'g'), ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^[\s:@,\-—|]+|[\s:@,\-—|]+$/g, '')
+    .trim();
+};
+/** Trim at a word boundary so a long fallback name doesn't run away. */
+const clip = (str: string, n: number) => {
+  if (str.length <= n) return str;
+  const sp = str.lastIndexOf(' ', n);
+  return str
+    .slice(0, sp > 20 ? sp : n)
+    .replace(/[\s,:;-]+$/, '')
+    // never end on a dangling connective ("... A New Era in Drug Discovery and")
+    .replace(/\s+(?:and|or|the|an?|of|for|to|in|on|with|using|from|towards?|at|by|via)$/i, '');
+};
+// A handful of acronyms are *only* conference + year ("COLM 2026"); stripping
+// leaves nothing, so those fall back to the full name — the one remaining thing
+// that identifies the workshop.
+const shortName = (() => {
+  const named = (str: string) => dropConfYear(str).replace(/workshop/gi, '').trim().length >= 2;
+  const raw = String(w.acronym || w.name);
+  if (named(raw)) return clip(dropConfYear(raw), 48);
+  // The acronym was only conference + year. Fall back to the name — but
+  // OpenReview sometimes prefixes that with the conference's own full title
+  // ("The Thirty-Ninth Annual Conference on ... workshop: AI for non-human
+  // animal communication"), so prefer whatever follows the final colon.
+  const full = String(w.name);
+  const tail = full.slice(full.lastIndexOf(':') + 1).trim();
+  const pick = tail.length >= 8 ? tail : full;
+  if (named(pick)) return clip(dropConfYear(pick), 48);
+  return raw.trim();
+})();
+const titleTxt =
+  `${shortName}${/workshop/i.test(shortName) ? '' : ' Workshop'} @ ${conf.name} ${w.year} — ` +
+  (w.paperCount > 0 ? 'Papers & Deadline' : 'Deadline');
+// The description carries the actual deadline date: Google bolds matched terms
+// and surfaces dates in snippets, and the daily rebuild keeps it current when a
+// deadline is extended.
+const describe = (nameMax: number) =>
+  [
+    `${clip(String(w.name), nameMax)} — ${conf.name} ${w.year}.`,
+    w.deadlineWallClock ? `Submission deadline: ${w.deadlineWallClock}.` : 'Submission deadline: TBA.',
+    w.workshopDateLabel ? `Workshop date: ${w.workshopDateLabel}.` : '',
+    w.paperCount > 0 ? `${w.paperCount} accepted papers listed.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+// Search results show roughly 160 characters. Tighten the (highly variable)
+// name until the deadline and paper count — the parts a searcher is actually
+// scanning for — fit inside that, rather than letting them be cut off.
+const metaDesc = [70, 55].reduce((out, n) => (out.length <= 160 ? out : describe(n)), describe(90));
+
 ---
 
-<Base title={`${w.acronym || w.name} (${conf.name} ${w.year})`} description={`${w.name} — ${conf.name} ${w.year}: deadline, dates, and accepted papers.`}>
+<Base title={titleTxt} description={metaDesc} ogType="article" siteSuffix={false}>
   <Fragment slot="head">
     <script is:inline type="application/ld+json" set:html={JSON.stringify(eventLd)} />
     <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbLd)} />

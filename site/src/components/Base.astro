@@ -6,9 +6,21 @@ import { conferences } from '../lib/data';
 interface Props {
   title?: string;
   description?: string;
+  /** og:type for this page ("website" for hubs, "article" for detail pages). */
+  ogType?: string;
+  /**
+   * Append " · {SITE_NAME}" to <title>. Detail pages pass false: their titles
+   * already carry name + conference + year, and the suffix pushes the keywords
+   * that matter past the ~60 characters a search result actually shows.
+   * og:site_name still carries the brand into social embeds, which render it as
+   * a separate field from the title.
+   */
+  siteSuffix?: boolean;
 }
-const { title, description = SITE_TAGLINE } = Astro.props;
-const pageTitle = title ? `${title} · ${SITE_NAME}` : `${SITE_NAME} — AI workshop deadlines & papers`;
+const { title, description = SITE_TAGLINE, ogType = 'website', siteSuffix = true } = Astro.props;
+const pageTitle = title
+  ? (siteSuffix ? `${title} · ${SITE_NAME}` : title)
+  : `${SITE_NAME} — AI workshop deadlines & papers`;
 const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : undefined;
 
 const nav = [
@@ -76,7 +88,8 @@ const ALERTS_BOOTSTRAP = `
     <link rel="alternate" type="application/rss+xml" title={`${SITE_NAME} — new workshops`} href={href('/rss.xml')} />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
-    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:type" content={ogType} />
     {ogImage && <meta property="og:image" content={ogImage} />}
     {ogImage && <meta name="twitter:card" content="summary_large_image" />}
     {ogImage && <meta name="twitter:image" content={ogImage} />}
