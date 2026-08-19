@@ -35,6 +35,8 @@ jobs:
         run: node scripts/sync_tracks_test.mjs
       - name: Test OpenReview website extraction (validated, shared reader)
         run: node scripts/discover_website_test.mjs
+      - name: Test venue-only acronyms are dropped on import
+        run: node scripts/acronym_clean_test.mjs
       - name: Test two-stage (abstract + paper) deadline handling
         run: node scripts/abstract_deadline_test.mjs
       - name: Test deadline provenance (observation log + UI derivation)
