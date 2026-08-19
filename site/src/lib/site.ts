@@ -14,11 +14,11 @@ export const REPO_URL =
 export const CALENDAR_ENABLED = false;
 
 /**
- * Footer "support this project" link. Points at GitHub Sponsors by default —
- * activate at github.com/sponsors, or swap for a Ko-fi / Buy Me a Coffee URL.
- * Set to '' to hide the link entirely.
+ * Support link — a Ko-fi tip jar. Gates **both** support surfaces: the footer
+ * "♥ Support" link and the "Support this project" section on /about/. Set to ''
+ * to take the ask off the site entirely, leaving no trace in the build.
  */
-export const SUPPORT_URL = ''; // hidden for launch — restore: 'https://github.com/sponsors/Yeping-Hu'
+export const SUPPORT_URL = 'https://ko-fi.com/aiworkshoptracker';
 
 /**
  * Base URL of the alerts Worker (e.g. https://api.aiworkshoptracker.com).

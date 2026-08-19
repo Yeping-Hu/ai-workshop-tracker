@@ -36,6 +36,10 @@ The maintainer may accept donations or sponsorship, and may offer paid services
 *around* the project (e.g. hosted alerts, support, or commercial data exports of
 the same openly licensed data) to sustain it. None of that changes points 1–3.
 
+Donations and sponsorship never influence what the tracker lists. They buy no
+placement, no ranking, no inclusion, and no removal — every entry is judged by
+the same public criteria, sponsor or not.
+
 ## 5. Conduct
 
 Be kind, assume good faith, and keep workshop entries factual with links to

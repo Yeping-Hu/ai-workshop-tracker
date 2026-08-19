@@ -1,5 +1,6 @@
-# Shows the "Sponsor" button on the repo once the account below has an
-# active GitHub Sponsors profile (github.com/sponsors -> set up).
-github: Yeping-Hu
-# Alternative/additional links (uncomment and edit once created):
-# custom: ["https://www.buymeacoffee.com/YOUR_HANDLE", "https://ko-fi.com/YOUR_HANDLE"]
+# Puts the "Sponsor" button in the repo header and the "Sponsor this project"
+# panel in the right sidebar. Must live on the default branch to take effect.
+custom: ["https://ko-fi.com/aiworkshoptracker"]
+# GitHub Sponsors is not set up for this account; uncomment once it is active
+# (github.com/sponsors -> set up), and the two appear side by side.
+# github: Yeping-Hu
