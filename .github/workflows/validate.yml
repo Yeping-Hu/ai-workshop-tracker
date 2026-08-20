@@ -39,6 +39,8 @@ jobs:
         run: node scripts/acronym_clean_test.mjs
       - name: Test workshop short names stay unique within a conference-year
         run: node scripts/acronym_identity_test.mjs
+      - name: Test the issue-form bot normalizes names, acronyms and slugs
+        run: node scripts/entry_normalization_test.mjs
       - name: Test two-stage (abstract + paper) deadline handling
         run: node scripts/abstract_deadline_test.mjs
       - name: Test deadline provenance (observation log + UI derivation)

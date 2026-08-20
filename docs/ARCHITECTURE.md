@@ -369,6 +369,51 @@ is deliberately favored over recall — an unlinked sibling is the safe failure.
 Pinned by `scripts/relations_test.mjs` (fixtures are real corpus records,
 including the must-NOT-link domain collisions).
 
+## A workshop's one-line identity
+
+Most surfaces need a workshop named in one line — the page `<title>`, the saved
+list, conference hub rows, the board countdown. The stored `acronym` cannot be
+used raw for that, for two independent reasons, and both come from upstream
+rather than from us.
+
+**It repeats the venue.** OpenReview's `subtitle` is frequently the conference
+itself, so 11 entries arrived with an "acronym" of `NeurIPS 2025` or `COLM 2026`,
+and 389 of 926 contained the conference name somewhere. Since every surface that
+shows the name already says which conference-year it is, that read twice — and
+where the acronym was *only* the venue, a workshop appeared on its own hub page
+called "COLM 2026".
+
+**Sibling tracks share it.** A workshop split across an archival and a
+non-archival track is two entries with one acronym. That produced 13 pairs of
+pages with identical `<title>`s (search engines pick one and drop the other) and
+3 pairs with identical saved-list labels — so starring papers from both tracks of
+a workshop merged them into one group with no way to tell them apart.
+
+`workshopShortName()` in `lib/workshops.mjs` is the single definition. It strips
+the venue noise, then appends the track label that `venueFamily()` already
+derives from the venue id and that the Tracks section on each page has always
+shown. Everything reads from it, so those surfaces cannot drift apart, and a
+newly imported track is named correctly with no edit at all.
+
+The disambiguation is *derived, never stored*. Writing "(Extended Abstracts)"
+into an acronym by hand fixes only the row someone remembers to edit, and it
+double-prints the moment the label is derived too. When a new track suffix is not
+recognised, the fix is to teach `TRACK_SUFFIX` the suffix — not to hand-edit the
+entry. `scripts/acronym_identity_test.mjs` holds the invariant over the real
+corpus (short names unique within a conference-year) and says so in its failure
+message.
+
+A handful of venue ids carry suffixes nothing can read — `AUTOPILOT-AT` vs
+`AUTOPILOT-NA`, `MLMP-IRT` vs `MLMP`. Those siblings are told apart only by having
+different names today. The test reports them as a warning rather than failing:
+labelling them would mean inventing meanings for two-letter suffixes, and widening
+`TRACK_SUFFIX` far enough to catch them would start eating real workshop names.
+
+The same normalisation runs at the point of entry — `discover_openreview.mjs` and
+`issue_to_yaml.mjs` both apply it — so the stored data matches what is rendered
+and the slug never bakes in a venue. See AUTOMATION.md, "What a new entry inherits
+automatically".
+
 ## Two-stage venues (abstract registration, then paper)
 
 About 3% of OpenReview venues (6 of 229 sampled) gate paper submission behind an

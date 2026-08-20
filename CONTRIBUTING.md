@@ -26,8 +26,8 @@ One YAML file per workshop **edition** (same series ⇒ new file each year).
 
 | Field | Required | Format / notes |
 |---|---|---|
-| `name` | ✅ | Full official name |
-| `acronym` |  | Short name; `""` if none |
+| `name` | ✅ | Full official name, **without the conference or year** — "Workshop on Machine Learning for Health", not "NeurIPS 2026 Workshop on Machine Learning for Health". Every page that shows a name already says which conference-year it belongs to. Submitted either way: a leading `<CONF> <YEAR>` and a trailing `@ <CONF> <YEAR>` are removed automatically |
+| `acronym` |  | Short name; `""` if none. Leave the conference and year out (`MATH-AI`, not `MATH-AI @ NeurIPS 2026`) — an "acronym" that is only the venue is dropped. Don't hand-write a track suffix either: sibling tracks are labelled automatically from `openreview_venue_id`, so a `…/CVEU_Extended_Abstract_Track` venue already renders as "CVEU (Extended Abstract Track)" and a parenthetical typed here would be shown twice |
 | `conference` | ✅ | An id from `data/conferences.yml` (`icml`, `iclr`, `neurips`) |
 | `year` | ✅ | Integer |
 | `website` | ✅ | Full `http(s)` URL |

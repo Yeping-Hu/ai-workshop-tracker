@@ -39,7 +39,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, loadConferences, stripVenueFromName } from '../lib/workshops.mjs';
+import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, loadConferences, stripVenueFromName, cleanAcronym } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 import { openreviewFetch, recordUnverified, getUnverified } from '../lib/openreview.mjs';
 
@@ -216,27 +216,6 @@ const TOPIC_KEYWORDS = [
   [/dataset|data.?centric|data quality|data curation|corpus|data problem/i, 'datasets'],
   [/educat|teach|tutoring|\bk.?12\b/i, 'education'],
 ];
-/**
- * Drop an "acronym" that only names the venue.
- *
- * OpenReview's `subtitle` is often the conference rather than the workshop
- * ("NeurIPS 2025", "COLM 2026"). Stored as an acronym it then stands in for the
- * workshop everywhere the site reads `acronym || name` — conference hub rows,
- * the saved list, .ics summaries — so an entry shows up simply called
- * "COLM 2026". Absent is honest; a real short name can always be added by hand.
- *
- * Compares against the conference id with the year and all punctuation removed,
- * so "NeurIPS 2025", "CoRL-2025" and a bare "CVPR" are all caught, while a
- * genuine acronym that merely contains digits ("AI4RWC") is not.
- */
-export function cleanAcronym(acronym, conf, year) {
-  const raw = String(acronym ?? '').trim();
-  const bare = raw
-    .split(String(year)).join('')
-    .replace(/[^a-z0-9]/gi, '')
-    .toLowerCase();
-  return bare === String(conf).toLowerCase() ? '' : raw;
-}
 
 /** Up to 3 topic ids whose keywords appear in `text`, in priority order; falls
  *  back to ['other'] when nothing matches. Exported so the re-tag pass and tests

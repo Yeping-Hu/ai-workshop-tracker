@@ -5,8 +5,14 @@
 # Delete comments you don't need. Fields marked (required) must be set.
 # ============================================================
 
-name: ""                       # (required) full official workshop name
-acronym: ""                    # short name, e.g. "MATH-AI"; leave "" if none
+name: ""                       # (required) full official name, WITHOUT the conference/year.
+                               #   yes: "Workshop on Machine Learning for Health"
+                               #   no:  "NeurIPS 2026 Workshop on Machine Learning for Health"
+                               #   Every page showing it already says the conference-year.
+acronym: ""                    # short name, e.g. "MATH-AI"; leave "" if none.
+                               # No conference/year ("MATH-AI", not "MATH-AI @ NeurIPS 2026"),
+                               # and no track suffix — sibling tracks are labelled
+                               # automatically from openreview_venue_id.
 conference: neurips            # (required) one of the ids in data/conferences.yml
 year: 2026                     # (required)
 website: "https://"            # (required) official workshop website

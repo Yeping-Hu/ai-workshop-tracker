@@ -12,7 +12,7 @@ body:
     id: name
     attributes:
       label: Workshop name
-      description: Full official name.
+      description: Full official name, without the conference or year — every page showing it already says which conference-year it is. If you paste a heading that starts with them, we take them back out.
       placeholder: "Workshop on Interpretability in Machine Learning"
     validations:
       required: true
@@ -20,6 +20,7 @@ body:
     id: acronym
     attributes:
       label: Acronym
+      description: Short name only — leave the conference and year out ("InterpML", not "InterpML @ NeurIPS 2026").
       placeholder: "InterpML"
   - type: dropdown
     id: conference

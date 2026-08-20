@@ -12,7 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { WORKSHOPS_DIR, recordDeadlineObservation } from '../lib/workshops.mjs';
+import { WORKSHOPS_DIR, recordDeadlineObservation, loadConferences, stripVenueFromName, cleanAcronym } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs, isValidTimezone, assembleDeadline } from '../lib/dates.mjs';
 import { parseTopics } from '../lib/issue_form.mjs';
 
@@ -34,13 +34,13 @@ while ((m = re.exec(body)) !== null) {
 const get = (label) => sections[label.toLowerCase()] ?? '';
 
 const errors = [];
-const name = get('Workshop name');
+const rawName = get('Workshop name');
 const conference = get('Conference').toLowerCase().trim();
 const yearStr = get('Year').trim();
 const website = get('Workshop website').trim();
 const topicsStr = get('Topics');
 
-if (!name) errors.push('Workshop name is required.');
+if (!rawName) errors.push('Workshop name is required.');
 if (!conference) errors.push('Conference is required.');
 if (!/^\d{4}$/.test(yearStr)) errors.push(`Year must be a 4-digit year (got "${yearStr}").`);
 if (!/^https?:\/\//.test(website)) errors.push('Workshop website must be a full http(s) URL.');
@@ -68,7 +68,20 @@ if (errors.length) {
 
 const slugify = (s) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'workshop';
-const acronym = get('Acronym');
+
+// Contributors copy the workshop's own CFP heading, which routinely leads with
+// the venue ("NeurIPS 2026 Workshop on Machine Learning for Health"), and type
+// acronyms like "ML4H @ NeurIPS 2026". Every surface that shows either already
+// says which conference-year it is, so normalise on the way in — the same
+// treatment scripts/discover_openreview.mjs gives an OpenReview import. Doing it
+// here rather than leaving it to CI matters twice over: the contributor gets a
+// green PR instead of a failing check telling them to run a maintainer script,
+// and the slug is derived from the cleaned value, so the venue never gets baked
+// into a filename and a URL that outlive any later fix to the name.
+const confMeta = loadConferences().find((c) => c.id === conference) ?? {};
+const venue = { confName: confMeta.name ?? conference, confFullName: confMeta.full_name, year: Number(yearStr) };
+const name = stripVenueFromName(rawName, venue);
+const acronym = cleanAcronym(stripVenueFromName(get('Acronym'), venue), conference, Number(yearStr));
 const slugBase = slugify(acronym || name);
 let filename = `${conference}-${yearStr}-${slugBase}.yml`;
 let i = 2;

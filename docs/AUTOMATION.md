@@ -177,8 +177,37 @@ conference:
   entry links itself to the previous ones *and* they link back to it — no stored
   relation to go stale, and no hand-editing on either side.
 
+- **A venue-prefixed name or acronym is normalised on arrival**, by every route.
+  OpenReview venue titles routinely lead with the conference and year ("COLM 2026
+  Workshop on Efficient Reasoning"), its `subtitle` field is frequently just the
+  venue ("NeurIPS 2025"), and contributors paste the workshop's own CFP heading,
+  which has the same shapes. `stripVenueFromName()` and `cleanAcronym()` in
+  `lib/workshops.mjs` are applied by `discover_openreview.mjs` *and* by
+  `issue_to_yaml.mjs`, so neither the entry nor the slug derived from it carries
+  the venue twice. Doing this at entry rather than in CI is deliberate: the slug
+  becomes a filename and a public URL, and unlike a name it cannot be corrected
+  later without breaking links.
+- **Sibling tracks name themselves apart.** Two tracks of one workshop share an
+  acronym upstream, which would give them the same page title and merge them into
+  one group on `/saved/`. The distinguishing label is derived from the venue id
+  (`venueFamily().suffixLabel`), never typed into YAML — see ARCHITECTURE.md,
+  "A workshop's one-line identity".
+- **A merged-away duplicate stays merged.** When one workshop arrives under two
+  OpenReview groups, the surviving entry lists the abandoned id in
+  `merged_venue_ids` and discovery skips it. Without that, deleting the duplicate
+  file would simply let the next weekly crawl re-create it.
+
 Contributors adding a workshop by hand should leave `deadline_history` out
 entirely — `_template.yml` says so, and the automation fills it in.
+
+### Re-running the one-time name sweep
+
+`scripts/strip_venue_names.mjs` swept the entries that predated the import-time
+normalisation. It is a no-op on a clean tree and should stay one: preview with
+`node scripts/strip_venue_names.mjs`, apply with `--write`. If
+`acronym_identity_test.mjs` ever reports that a name repeats its own
+conference-year, that is the script to run — but ask first how the entry got past
+the importer, because that is the actual defect.
 
 
 ## Adding a conference

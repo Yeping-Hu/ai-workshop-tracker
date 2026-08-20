@@ -107,6 +107,12 @@ jobs:
 
       - name: Validate
         run: node scripts/validate.mjs
+      # This job is the only scheduled one that CREATES entries, and it publishes
+      # straight to main — so the naming guards have to run here too. Everywhere
+      # else they run on pull_request (validate.yml), which would not see this
+      # content until whatever unrelated PR came next, and would blame it.
+      - name: Guard workshop naming (identity + venue prefixes)
+        run: node scripts/acronym_identity_test.mjs
       # Validation passed above — publish directly. A failed validation fails
       # the job before anything is committed (GitHub emails the owner).
       - name: Publish new/updated entries (if any)

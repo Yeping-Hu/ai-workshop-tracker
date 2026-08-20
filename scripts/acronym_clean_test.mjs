@@ -15,7 +15,7 @@
  * The cases below are the real values from that batch, plus the genuine
  * acronyms that sit closest to them and must survive.
  */
-import { cleanAcronym } from './discover_openreview.mjs';
+import { cleanAcronym } from '../lib/workshops.mjs';
 
 let failed = 0;
 function check(label, got, expect) {
