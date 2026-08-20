@@ -175,7 +175,11 @@ conference:
   links between a workshop's tracks and its other years are recomputed from the
   whole corpus on every build (ARCHITECTURE.md, "Related entries"), so next year's
   entry links itself to the previous ones *and* they link back to it — no stored
-  relation to go stale, and no hand-editing on either side.
+  relation to go stale, and no hand-editing on either side. Three things can do
+  the linking, all derived from what the importer already stores: the same
+  website, the same site with names that agree, or the same short name
+  registered on OpenReview. A series that moves to a new year-named site, or
+  renames itself past recognition while keeping its venue id, still links.
 
 - **A venue-prefixed name or acronym is normalised on arrival**, by every route.
   OpenReview venue titles routinely lead with the conference and year ("COLM 2026

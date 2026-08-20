@@ -355,9 +355,47 @@ human to wire anything up. Three signals, in decreasing strength:
    always share a website (ATTRIB_Late has none; IAB's competition track has
    its own).
 3. **Same site, different paths** (series with per-edition URLs, e.g.
-   `latinxinai.org/icml-2024`) — but only when the names share identifying
-   words, because real labs host *unrelated* workshops on one domain
-   (dynsyslab.org, vap.aau.dk).
+   `latinxinai.org/icml-2024`) — but never on the address alone, because real
+   labs host *unrelated* workshops on one domain (dynsyslab.org, vap.aau.dk).
+   A shared site is the *gate*; identity still has to be confirmed, by either of
+   two things.
+
+   **Confirmed by names.** The names must share identifying words — two shared
+   tokens, or Jaccard ≥ 0.5 over `nameTokens()`. Two details earn their keep:
+
+   - Names compare **pairwise**, entry against entry, never group-union against
+     group-union. A same-website group holds a workshop *and its tracks*, and a
+     track is often named for itself: unioning let "MetaFood Non-Proceedings
+     Track" drag its group to `{metafood, non, proceedings}`, which against
+     `{metafood}` shares one token and scores 0.33 — a sibling that identifies
+     nothing vetoing a correct match. Pairwise is also the honest reading of the
+     guard, which asks whether two *names* agree, and a name is what one entry
+     is called.
+   - Track vocabulary is in `NAME_STOPWORDS` (`proceedings`, `archival`,
+     `findings`, `shared`, `task`, …) beside the `track`/`tracks` already there.
+     It names a track, never which workshop the track belongs to, so without it
+     two unrelated workshops each publishing a "Non-Proceedings Track" agree on
+     `{non, proceedings}` alone and merge. Same vocabulary `TRACK_SUFFIX` reads
+     out of venue ids, for the same reason.
+
+   **Confirmed by the registered short name.** Some series no amount of token
+   matching can see: "Representational Alignment" and "Re-Align" share *zero*
+   tokens; "NewInML" against "New In Machine Learning (NewInML) Workshop"
+   scores 0.25. Both register the same short name on OpenReview every year, so
+   a shared `venueStem()` confirms identity too.
+
+   Note how this differs from signal 2, because the difference is the whole
+   point. Signal 2 compares `venueFamily()`'s **full key**, which embeds the
+   conference and the year — that is what scopes it to a single conference-year.
+   This compares only the key's **trailing segment**, the short name itself, so
+   it crosses editions. Written as key equality it would compile, review fine,
+   and link nothing; `venueStem()` exists so that is hard to get wrong.
+
+   Neither confirmation is safe alone: a short name is short and recurs across
+   unrelated venues (`opt`, `gram`), and a site root alone links nothing. The
+   pair means the same organisers registered the same short name — identity, not
+   coincidence. That is why this lives inside the site bucket rather than being
+   a tier of its own.
 
    The unit is `siteRoot()`, not the bare hostname. A generic host
    (github.com, codabench.org, …) belongs to nobody and has no site root, so it
@@ -395,7 +433,17 @@ an automatic edition link supersedes a hand-written `previous_editions` row
 for the same year, while untracked years keep their external links. Precision
 is deliberately favored over recall — an unlinked sibling is the safe failure.
 Pinned by `scripts/relations_test.mjs` (fixtures are real corpus records,
-including the must-NOT-link domain collisions).
+including the must-NOT-link domain collisions). Each fixture is checked to FAIL
+without the rule it pins — one that passes either way pins nothing, and this
+suite has caught exactly that twice.
+
+**Changing any of this is a guard-loosening change**, so it follows a fixed
+procedure: enumerate the old rule against the new over the whole corpus, diff
+the links, read every one that changes, and only then land it. Measure bundled
+rules separately and say which did the work — when pairwise comparison and the
+track stopwords shipped together, the stopwords accounted for every new link and
+pairwise was a no-op on the corpus, which is worth knowing rather than letting a
+diff imply both mattered.
 
 ## A workshop's one-line identity
 
@@ -439,7 +487,17 @@ labelling them would mean inventing meanings for two-letter suffixes, and wideni
 
 The same normalisation runs at the point of entry — `discover_openreview.mjs` and
 `issue_to_yaml.mjs` both apply it — so the stored data matches what is rendered
-and the slug never bakes in a venue. See AUTOMATION.md, "What a new entry inherits
+and the slug never bakes in a venue.
+
+**The page `<title>` is built from it**, as `<name> Workshop (<track>) @ <conf>
+<year> — Papers & Deadline`. Detail pages are the one place that omits the
+" · AI Workshop Tracker" suffix (`siteSuffix={false}` on `Base.astro`): a search
+result shows roughly 60 characters, and 22 of them spent on the site name pushed
+the words these pages should rank for — the workshop, its conference-year, and
+"Deadline" — off the end. `og:site_name` carries the brand into social embeds
+instead, where it renders as its own field rather than competing with the title.
+Hubs and About keep the suffix, since there the site name is plausibly part of
+what someone typed. See AUTOMATION.md, "What a new entry inherits
 automatically".
 
 ## Two-stage venues (abstract registration, then paper)
@@ -692,6 +750,16 @@ two-stage fields: `abstract_deadline` and `abstract_deadline_utc` (null for
 single-stage venues), plus `next_stage_utc` and `next_stage_is_abstract` — the
 instant the site's countdown targets and which stage that is. `deadline_history`
 is intentionally *not* published yet; it is a site-internal derivation for now.
+
+It also carries `short_name` and `track_label` — the site's own one-line identity
+for the entry (see "A workshop's one-line identity"). These exist because
+`acronym` alone is ambiguous: sibling tracks share one upstream, so 15 pairs in
+the corpus have identical acronyms, and the disambiguating label cannot be
+reconstructed downstream — it is attached only when an entry actually has
+siblings, which the payload never exposed. Without them every consumer either
+mislabels those pairs or reimplements `venueFamily()`. This project's own alerts
+digest was the first casualty: it built email subjects from `acronym || name`,
+so two different workshops produced byte-identical "Deadline update: CVEU".
 
 ## Build-time Markdown exports
 

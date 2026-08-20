@@ -74,7 +74,7 @@ list, the "add a conference" procedure, and bulk-importing workshop lists are in
 
 ## Data & API
 
-- Machine-readable dump: `/api/workshops.json` (regenerated on every deploy; `submission_deadline` is always the paper deadline, with `abstract_deadline` alongside it for two-stage venues)
+- Machine-readable dump: `/api/workshops.json` (regenerated on every deploy; `submission_deadline` is always the paper deadline, with `abstract_deadline` alongside it for two-stage venues, and `short_name` / `track_label` for labelling a workshop unambiguously when a series splits across tracks)
 - Markdown exports: `/exports/<conference>-<year>-workshops.md` — one file per conference edition, also regenerated on every deploy
 - Forum ids of papers with no PDF (supports saved-paper PDF links): `/api/papers-without-pdf.json`
 - New-workshop announcements: `/rss.xml`
