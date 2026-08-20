@@ -253,7 +253,12 @@ const sub = (over = {}) =>
     workshops, ids,
   });
   check('a single saved change renders', !!one);
-  check('the subject names the workshop', /^Deadline update: ALPHA — AI Workshop Tracker$/.test(one.subject), one.subject);
+  // Built with wsTitle like every other subject, so it carries the
+  // conference-year. This one used to interpolate `acronym || name` directly and
+  // was the only subject without it — which left it ambiguous both across
+  // editions (the same acronym recurs each year) and across sibling tracks.
+  check('the subject names the workshop and its edition',
+    /^Deadline update: ALPHA \(NeurIPS 2026\) — AI Workshop Tracker$/.test(one.subject), one.subject);
   check('it describes the extension', /Extended 6 days/.test(one.html));
   check('it links the workshop page', one.html.includes('https://aiworkshoptracker.com/workshop/neurips-2026-alpha/'));
 
@@ -382,6 +387,35 @@ const sub = (over = {}) =>
     // "close" reads as "closed" to a non-native speaker, inverting the meaning.
     check(`no bare "is close" in "${m.subject.slice(0, 34)}…"`, !/is close\b/i.test(m.html));
   }
+}
+
+// --- sibling tracks must not share a subject line --------------------------
+// Two tracks of one workshop carry the SAME acronym upstream (15 pairs in the
+// corpus today: CVEU vs CVEU_Extended_Abstract_Track, AIMS vs its competition
+// track, InfPriv vs its fast track...). The subject used to be built from
+// `acronym || name`, so a subscriber who saved one track received a mail naming
+// the other one just as accurately and could not tell which deadline had moved.
+// The feed now carries the site's own `short_name`; this holds that it is used.
+{
+  const ids = { conferences: [{ id: 'cvpr', name: 'CVPR' }], topics: [] };
+  const mk = (slug, short_name) => ({
+    slug, name: 'AI for Creative Visual Content Generation Editing and Understanding',
+    acronym: 'CVEU', short_name, conference: 'cvpr', year: 2026,
+    deadline_utc: iso(9), status: 'upcoming', topics: [],
+  });
+  const subjectFor = (slug, short_name) =>
+    renderStarredChanges({
+      events: [{ slug, kind: 'extended', days: 2, new_utc: iso(9) }],
+      workshops: { [slug]: mk(slug, short_name) }, ids,
+    })?.subject ?? '';
+
+  const base = subjectFor('cvpr-2026-cveu', 'CVEU');
+  const track = subjectFor('cvpr-2026-cveu-extended-abstract-track', 'CVEU (Extended Abstract Track)');
+  check('sibling tracks get distinct subjects', base !== track, `${base} === ${track}`);
+  check('the track subject names its track', /Extended Abstract Track/.test(track), track);
+  // A snapshot written before short_name existed must still render something.
+  const legacy = subjectFor('cvpr-2026-cveu', undefined);
+  check('falls back to the acronym without short_name', /CVEU/.test(legacy), legacy);
 }
 
 console.log(failed === 0 ? '\nRendering OK.' : `\n${failed} test(s) failed.`);

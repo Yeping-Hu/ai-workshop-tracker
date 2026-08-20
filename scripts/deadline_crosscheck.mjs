@@ -29,7 +29,7 @@
  *   node scripts/deadline_crosscheck.mjs --strict                      # exit 1 if anything to review
  */
 import fs from 'node:fs';
-import { listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
+import { listWorkshopFiles, readWorkshopFile, loadConferences, stripVenueFromName, cleanAcronym } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 export { normalizeWebsite } from './discover_openreview.mjs';
 import {
@@ -254,6 +254,28 @@ export function acronymDrift(storedAcronym, openreviewSubtitle, acked = null) {
   if (!a || !b || a === b) return null;
   if (acked && norm(acked) === b) return null; // reviewed and declined, and unchanged since
   return { stored: storedAcronym, openreview: sub };
+}
+
+/**
+ * What the importer would store for this venue today — the same
+ * stripVenueFromName()/cleanAcronym() pass that discover_openreview.mjs and
+ * issue_to_yaml.mjs run before anything reaches YAML.
+ *
+ * The review has to compare and suggest THIS, never OpenReview's raw strings.
+ * Upstream titles routinely lead with the conference and year, and the
+ * `subtitle` is frequently just the venue — so a maintainer accepting a
+ * suggestion verbatim would paste back exactly what the import path exists to
+ * strip, and acronym_identity_test.mjs would then fail on the next push. The
+ * automation would be fighting itself.
+ */
+export function upstreamIdentity(content, { conference, year }, conferences = loadConferences()) {
+  const cm = conferences.find((x) => x.id === conference) ?? {};
+  const venue = { confName: cm.name ?? conference, confFullName: cm.full_name, year };
+  const title = String(val(content, 'title') ?? '').trim();
+  return {
+    name: title ? stripVenueFromName(title, venue) : '',
+    acronym: cleanAcronym(stripVenueFromName(val(content, 'subtitle') ?? '', venue), conference, year),
+  };
 }
 
 /** A website worth reviewing: both sides have one and they genuinely differ.
@@ -484,9 +506,10 @@ async function main() {
     const ack = raw.review_ack ?? {};
     const wd = websiteDrift(raw.website, websiteFromContent(c), ack.website);
     if (wd) { drift.push({ ...meta, ...wd }); console.log(`•  WEBSITE   ${s2}: ours ${wd.stored} vs OpenReview ${wd.openreview}`); }
-    const td = titleDrift(raw.name, val(c, 'title'), raw.conference, ack.name);
+    const up = upstreamIdentity(c, raw);
+    const td = titleDrift(raw.name, up.name, raw.conference, ack.name);
     if (td) { renames.push({ ...meta, field: 'name', ...td }); console.log(`•  NAME      ${s2}: ours "${td.stored}" vs OpenReview "${td.openreview}"`); }
-    const ad = acronymDrift(raw.acronym, val(c, 'subtitle'), ack.acronym);
+    const ad = acronymDrift(raw.acronym, up.acronym, ack.acronym);
     if (ad) { renames.push({ ...meta, field: 'acronym', ...ad }); console.log(`•  ACRONYM   ${s2}: ours "${ad.stored}" vs OpenReview "${ad.openreview}"`); }
   }
 

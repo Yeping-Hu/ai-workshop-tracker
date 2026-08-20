@@ -111,12 +111,18 @@ function confLabel(ids, id) {
  * with the acronym beside it; subjects keep the acronym, which is short enough
  * never to be truncated in an inbox list.
  *
+ * The short form prefers `short_name` from the feed — the site's own one-line
+ * identity. A bare acronym is shared by sibling tracks (15 pairs today), so
+ * without it a reader who starred one track gets a subject naming the other
+ * just as well, and cannot tell which deadline moved. Falls back to the acronym
+ * for snapshots written before the field existed.
+ *
  *   full:  LLM for Scientific Discovery: Reasoning… (LM4Sci · NeurIPS 2026)
  *   short: LM4Sci (NeurIPS 2026)
  */
 function wsTitle(w, ids, { full = false } = {}) {
   const conf = confLabel(ids, w.conference);
-  const acr = w.acronym || '';
+  const acr = w.short_name || w.acronym || '';
   if (!full) return `${acr || w.name} (${conf} ${w.year})`;
   const name = w.name || acr;
   const tail = acr && acr !== name ? `${acr} · ${conf} ${w.year}` : `${conf} ${w.year}`;
@@ -391,7 +397,7 @@ export function renderStarredChanges({
   const one = items.length === 1;
   const first = workshops[events[0].slug];
   const subject = one
-    ? `Deadline update: ${first.acronym || first.name} — AI Workshop Tracker`
+    ? `Deadline update: ${wsTitle(first, ids)} — AI Workshop Tracker`
     : `${items.length} deadline updates on your saved workshops — AI Workshop Tracker`;
 
   const sec = section({ heading: one ? 'A workshop you saved changed' : 'Workshops you saved changed', items, moreUrl: `${SITE_ORIGIN}/saved/` });

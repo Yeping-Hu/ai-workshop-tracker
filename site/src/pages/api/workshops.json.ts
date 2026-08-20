@@ -3,7 +3,7 @@
  * to build on this data (CC-BY-4.0). Regenerated on every deploy.
  */
 import type { APIRoute } from 'astro';
-import { workshops } from '../../lib/data';
+import { workshops, conferenceById, workshopShortName } from '../../lib/data';
 import { REPO_URL } from '../../lib/site';
 
 export const GET: APIRoute = () => {
@@ -16,6 +16,15 @@ export const GET: APIRoute = () => {
       slug: w.slug,
       name: w.name,
       acronym: w.acronym || null,
+      // The site's own one-line identity for this workshop: venue noise removed
+      // and, where a workshop is split across tracks, the track that tells it
+      // apart. Sibling tracks share an acronym upstream — 15 pairs currently do
+      // — so `acronym || name` alone cannot distinguish them, and it cannot be
+      // reconstructed from this payload either. Emitting it keeps every consumer
+      // (including this project's own alerts digest) naming a workshop the way
+      // the site does.
+      short_name: workshopShortName(w, conferenceById.get(w.conference)?.name ?? w.conference).full,
+      track_label: w.trackLabel ?? null,
       conference: w.conference,
       year: w.year,
       website: w.website,

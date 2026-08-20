@@ -19,7 +19,7 @@
  * fix is almost always to teach TRACK_SUFFIX the new suffix, not to hand-edit
  * the acronym.
  */
-import { loadWorkshops, loadConferences, workshopShortName, venueFamily, stripVenueFromName } from '../lib/workshops.mjs';
+import { loadWorkshops, loadConferences, workshopShortName, venueFamily, stripVenueFromName, cleanAcronym } from '../lib/workshops.mjs';
 
 let failed = 0;
 const fail = (msg) => { failed++; console.log(`✗ ${msg}`); };
@@ -97,6 +97,27 @@ for (const p of prefixed) {
   fail(`${p.slug} still names its own conference-year\n      -  ${p.from}\n      +  ${p.to}\n      -> node scripts/strip_venue_names.mjs --write`);
 }
 if (!prefixed.length) console.log('✓ no workshop name repeats its own conference and year');
+
+// --- no stored acronym is only its own venue -------------------------------
+// The name half of this contract is checked above. The acronym half had no
+// corpus-level net at all: acronym_clean_test.mjs exercises cleanAcronym on
+// literals, so a stored `acronym: "NeurIPS 2026"` passed every gate and shipped
+// as a workshop displayed under its conference's name. Reachable by a
+// hand-written YAML file, and by the weekly rename review suggesting an
+// upstream `subtitle` for a maintainer to paste in.
+const venueAcronyms = [];
+for (const w of workshops) {
+  if (!w.acronym) continue;
+  const c = confMeta.get(w.conference) ?? {};
+  const venue = { confName: c.name ?? w.conference, confFullName: c.full_name, year: w.year };
+  if (!cleanAcronym(stripVenueFromName(w.acronym, venue), w.conference, w.year)) {
+    venueAcronyms.push({ slug: w.slug, acronym: w.acronym });
+  }
+}
+for (const p of venueAcronyms) {
+  fail(`${p.slug} stores an acronym that only names its venue: ${JSON.stringify(p.acronym)}\n      -> delete the acronym field; every surface falls back to the name`);
+}
+if (!venueAcronyms.length) console.log('✓ no stored acronym is only its own conference-year');
 
 // --- merged venue ids stay recorded ----------------------------------------
 // Deleting a duplicate entry is not enough on its own: discovery keys off

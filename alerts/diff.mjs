@@ -30,6 +30,11 @@ export function projectWorkshop(w) {
     slug: w.slug,
     name: w.name,
     acronym: w.acronym ?? null,
+    // The site's own short name, carried through so a digest names a workshop
+    // the way its page does. Sibling tracks share an acronym upstream, so
+    // without this two different workshops produce the same subject line.
+    short_name: w.short_name ?? null,
+    track_label: w.track_label ?? null,
     conference: w.conference,
     year: w.year,
     topics: w.topics ?? [],

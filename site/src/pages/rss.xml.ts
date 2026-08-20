@@ -1,6 +1,6 @@
 /** RSS feed of newly added workshops (sorted by the `added` date in each YAML). */
 import type { APIRoute } from 'astro';
-import { workshops, conferenceById } from '../lib/data';
+import { workshops, conferenceById, workshopShortName } from '../lib/data';
 import { href } from '../lib/site';
 
 const esc = (s: string) =>
@@ -17,7 +17,7 @@ export const GET: APIRoute = ({ site }) => {
       const link = new URL(href(`/workshop/${w.slug}/`), origin).href;
       const deadline = w.deadlineWallClock ? `Deadline: ${w.deadlineWallClock}.` : 'Deadline TBA.';
       return `  <item>
-   <title>${esc(`${w.name} (${conf?.name ?? w.conference} ${w.year})`)}</title>
+   <title>${esc(`${workshopShortName(w, conf?.name ?? w.conference).full} (${conf?.name ?? w.conference} ${w.year})`)}</title>
    <link>${esc(link)}</link>
    <guid isPermaLink="true">${esc(link)}</guid>
    <pubDate>${new Date(`${w.added}T12:00:00Z`).toUTCString()}</pubDate>

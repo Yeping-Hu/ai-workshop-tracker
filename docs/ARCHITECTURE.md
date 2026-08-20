@@ -804,19 +804,26 @@ workshops or papers is covered either way. The uncovered case is a **hand-edit
 to the search / link / back-nav code that still compiles** — `deploy.yml` only
 builds, so a behavior regression would build and ship with nothing flagging it.
 Until the suite is wired in, that case relies on someone remembering to run it
-(the tests pass today, so a green run is the baseline to protect).
+(124/124 pass as of this writing, so a green run is the baseline to protect).
 
-If wiring it into CI later, two things need fixing first (both learned the hard
-way here):
+**Both former blockers are gone**, so wiring it in is now a cost decision rather
+than a repair job:
 
-- The deploy-staleness test physically **moves** the Pagefind index/filter
-  chunk files out of `dist` and only restores them at the very end, so a
-  mid-test timeout leaves the working build corrupted (empty `pagefind/index`
-  and `pagefind/filter`). Wrap the move/restore in `try/finally` so it always
-  restores, regardless of how the test exits.
-- The static server must serve Pagefind's chunks **raw and concurrently**.
-  `astro preview` applies gzip `Content-Encoding` over the already-gzipped
-  chunks, so the browser double-decodes and Pagefind throws "invalid gzip
-  data"; single-threaded `python -m http.server` serves raw bytes but stalls
-  under Pagefind's parallel chunk fetches (intermittent timeouts). A threaded
-  HTTP/1.1 raw static server handles both.
+- The deploy-staleness test used to physically **move** the Pagefind index/filter
+  chunks out of `dist` and restore them only at the very end, so a mid-test
+  failure left the working build corrupted with the files stranded in `/tmp` —
+  which is exactly what happened the first time it was run after this was
+  written. It now simulates the outage with
+  `page.route('**/pagefind*/**')` returning 404. The route dies with the page, so
+  it cannot leak into the working tree at all.
+- The static server no longer needs special handling. `astro preview` used to
+  apply gzip `Content-Encoding` over the already-gzipped chunks, so the browser
+  double-decoded and Pagefind threw "invalid gzip data"; that no longer
+  reproduces — the suite has been run repeatedly against plain
+  `npm run preview --prefix site` with no failures. A single-threaded
+  `python -m http.server` still stalls under Pagefind's parallel chunk fetches,
+  so if a raw server is ever needed it has to be a threaded one.
+
+What wiring it in would cost: the build already runs in `pr-build-check.yml`, so
+the additions are a Playwright browser download (~150 MB, cacheable) and a
+preview server for the duration of the job.
