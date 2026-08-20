@@ -715,6 +715,38 @@ the tricky cases. The patterns can be re-run over already-imported entries with
 overwritten — and rewrites just the topics. That's how a one-off matcher
 improvement reclassifies the back catalogue without disturbing curated entries.
 
+## The sitemap dates each page from git, not from the build
+
+`<lastmod>` is a claim to a crawler, and it can be wrong in two directions.
+
+Stamping every URL with the build time is the obvious approach and the worse
+one: this site rebuilds itself daily, so it would assert that ~900 pages change
+every night. A crawler that keeps refetching pages it finds unchanged learns to
+discount the field, and then it is worth nothing on the day a page really does
+change.
+
+Deriving the date from what the YAML records about itself — `added`, and the
+`recorded` stamps in `deadline_history` — is honest but half-blind. It cannot see
+a name being corrected, a website finally being filled in, or a paper list being
+refetched, so a page that genuinely changed keeps advertising a months-old date
+and never gets recrawled.
+
+Git already knows. `lastDataChange()` in `lib/workshops.mjs` runs one `git log`
+over the two directories that feed a workshop page — its own YAML and the
+accepted-paper cache it renders — and takes the newest commit touching either.
+That is ~70ms for the whole corpus. Only the pages that genuinely track the whole
+dataset (home, the hubs, about) carry the build date, because for them it is true.
+
+The fallback matters as much as the mechanism: with no git history the function
+returns the in-YAML dates rather than failing the build, so a tarball export or a
+shallow checkout still produces a sitemap. That fallback is silent, which is
+precisely why `deploy.yml` sets `fetch-depth: 0` — a depth-1 checkout would date
+every page to the same single commit and look entirely plausible.
+`scripts/sitemap_lastmod_test.mjs` pins the properties rather than the dates:
+every page dated, nothing in the future, never older than the YAML's own stamps,
+and — the one that catches both failure modes — the dates must spread across many
+days rather than collapsing onto one.
+
 ## Discoverability: structured data, conference hubs, and llms.txt
 
 The dataset is the point of the site, so several build-time outputs exist purely

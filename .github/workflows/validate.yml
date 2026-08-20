@@ -65,6 +65,14 @@ jobs:
         run: node scripts/topics_guess_test.mjs
       - name: Test related entries (sibling tracks, other editions)
         run: node scripts/relations_test.mjs
+      - name: Test the sitemap reports honest per-page lastmod dates
+        run: node scripts/sitemap_lastmod_test.mjs
+      - name: Test issue-form field parsing
+        run: node scripts/issue_form_test.mjs
+      - name: Test location normalization
+        run: node scripts/location_test.mjs
+      - name: Test the OpenReview rate limiter
+        run: node scripts/openreview_rate_test.mjs
       - name: Validate workshop data
         id: validate
         run: node scripts/validate.mjs --report validation-report.md

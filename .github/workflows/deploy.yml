@@ -30,6 +30,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The sitemap's <lastmod> is read from git history (see
+          # lastDataChange in lib/workshops.mjs). A shallow clone would date
+          # every page to the same single commit, so fetch the lot — the whole
+          # history is ~11 MB and the log pass costs ~70ms.
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: 22

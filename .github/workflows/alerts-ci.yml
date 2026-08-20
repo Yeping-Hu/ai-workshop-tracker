@@ -62,6 +62,10 @@ jobs:
         run: node scripts/alerts_starmerge_test.mjs
       - name: Check the session arrangement (one owner of the sign-in token)
         run: node scripts/alerts_session_test.mjs
+      - name: Test the alerts dashboard
+        run: node scripts/alerts_dashboard_test.mjs
+      - name: Test the alerts log
+        run: node scripts/alerts_log_test.mjs
 
       # The Worker cannot read data/*.yml at runtime, so its id allowlist is a
       # generated file. Drift means a new conference is silently unsubscribable.

@@ -86,7 +86,7 @@ the file.)
 
 ## What CI checks
 
-The `validate` workflow runs on every PR and enforces three things:
+The `validate` workflow runs on every PR and enforces:
 
 `node scripts/validate.mjs`:
 - JSON Schema (`schema/workshop.schema.json`) — types, required fields, URL/date formats, no unknown fields
@@ -97,7 +97,18 @@ The `validate` workflow runs on every PR and enforces three things:
 
 `node scripts/docs_sync_test.mjs` — every field in the schema is documented in
 this file's Field reference table and in `_template.yml` (so new fields can't
-ship undocumented).
+ship undocumented), and every `scripts/*_test.mjs` is actually run by a workflow
+(so a guard can't quietly stop guarding).
+
+`node scripts/acronym_identity_test.mjs` — the naming rules in the `name` and
+`acronym` rows above. No two workshops in one conference-year may reduce to the
+same short name, and no name may repeat its own conference and year. If this
+fails on an entry you submitted through a form, that is a bug in the bot rather
+than something for you to fix — please say so on the issue.
+
+`node scripts/entry_normalization_test.mjs` — that the "Add a workshop" bot
+actually applies those rules to the name, the acronym *and* the slug, rather
+than leaving them to be caught here.
 
 `node scripts/topic_options_sync_test.mjs` — the "Topics" checkbox lists
 in both issue forms match `data/topics.yml`. The options are generated into the

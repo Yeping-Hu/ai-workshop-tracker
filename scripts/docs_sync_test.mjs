@@ -83,9 +83,34 @@ if (stale.length) {
   console.log('✓ no stale fields documented in CONTRIBUTING.md');
 }
 
+// --- second drift: a test script that no workflow ever runs ----------------
+// The step lists in the workflows are hand-maintained, so a new scripts/*_test.mjs
+// is only as useful as somebody remembering to add it. Five had quietly gone
+// unrun that way before this check existed — a guard nobody runs is worse than
+// no guard, because it reads like coverage.
+const WORKFLOWS = ['.github/workflows/validate.yml', '.github/workflows/alerts-ci.yml'];
+// ui_test.mjs is deliberately out: it drives a real browser against a preview
+// server, which is a different shape of job from these. If it is ever wired in,
+// drop it from here.
+const NOT_IN_CI_ON_PURPOSE = new Set(['ui_test.mjs']);
+
+const testFiles = fs
+  .readdirSync(path.join(ROOT, 'scripts'))
+  .filter((f) => f.endsWith('_test.mjs'))
+  .filter((f) => !NOT_IN_CI_ON_PURPOSE.has(f));
+const wired = WORKFLOWS.map((w) => read(w)).join('\n');
+const unwired = testFiles.filter((f) => !wired.includes(f));
+if (unwired.length) {
+  failed = true;
+  console.log(`✗ test script(s) that no workflow runs: ${unwired.join(', ')}`);
+  console.log(`  Add a step to ${WORKFLOWS.join(' or ')} (or allowlist it in NOT_IN_CI_ON_PURPOSE with a reason).`);
+} else {
+  console.log(`✓ every test script runs in CI (${testFiles.length} wired, ${NOT_IN_CI_ON_PURPOSE.size} allowlisted)`);
+}
+
 console.log(
   failed
-    ? '\nDocs are out of sync with the schema. Update the files above, then re-run.'
+    ? '\nDocs/CI are out of sync. Update the files above, then re-run.'
     : '\nSchema ↔ docs in sync.',
 );
 process.exit(failed ? 1 : 0);
