@@ -355,7 +355,11 @@ const datasetLd: Record<string, any> = {
         const order = ['Open call', 'Deadline unknown', 'Past'];
         return keys.sort((a, b) => order.indexOf(a) - order.indexOf(b));
       }
-      return keys.sort();
+      // localeCompare, matching the hero eyebrow and the footer's conference
+      // list. A bare .sort() compares UTF-16 code units, which puts "CVPR"
+      // before "CoRL" ("V" is 86, "o" is 111) while the other two read as a
+      // dictionary would — the same nine names in two different orders.
+      return keys.sort((a, b) => a.localeCompare(b));
     }
 
     // Counts for facet f reflect every OTHER facet's selection (standard
@@ -608,7 +612,16 @@ const datasetLd: Record<string, any> = {
       const gen = ++searchGen;
       if (!pagefind) showSearchSkeleton(); // engine not loaded yet → placeholder, not a blank panel
       const pf = await ensurePagefind();
-      if (!pf || gen !== searchGen) return;
+      if (gen !== searchGen) return; // superseded by a newer search — say nothing
+      if (!pf) {
+        // The loader reports its own failure in #searchStatus and resolves null.
+        // Mid-heal that is not enough: #results is showing "Refreshing the search
+        // index…" and would sit there for good, so finish the failure path and
+        // give the reader the reload button. A cold failure (no build yet in
+        // local dev) keeps the loader's own wording instead.
+        if (healAttempted) handleSearchFailure(new Error('the index could not be reloaded'));
+        return;
+      }
       const terms = [...keywords, input.value.trim()].filter(Boolean);
       const filters = {};
       for (const f of FACETS) if (sel[f].size) filters[f] = { any: [...sel[f]] };

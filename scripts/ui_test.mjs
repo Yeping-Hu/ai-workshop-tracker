@@ -662,28 +662,33 @@ check('conference heading shows its badge', (await page.$$('.saved-conf-head .ba
 await page.evaluate(() => localStorage.clear());
 
 console.log('— stale search index after a deploy: detect, heal, honest message —');
-const fsx = await import('node:fs');
 const errsBefore0 = errors.length;
 await page.goto(BASE, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => document.querySelector('[data-facet="year"]')?.children.length > 0, null, { timeout: 8000 });
 await page.waitForTimeout(1200); // idle prefetch: the engine memorizes the current data files
-const stash = '/tmp/pf-stash-test';
-fsx.mkdirSync(stash, { recursive: true });
-const chunkDirs = ['site/dist/pagefind/index', 'site/dist/pagefind/filter', 'site/dist/pagefind-papers/index', 'site/dist/pagefind-papers/filter'];
-const moved = [];
-for (const d of chunkDirs) for (const f of fsx.readdirSync(d)) { fsx.renameSync(`${d}/${f}`, `${stash}/${moved.length}`); moved.push(`${d}/${f}`); }
+
+// Simulate the deploy by serving 404 for every pagefind file the page would
+// re-fetch. This used to move the real files out of site/dist and move them
+// back afterwards, which meant a failing assertion aborted the run and left
+// the build broken, with 74 files stranded in /tmp. Interception cannot leak:
+// the route dies with the page.
+let outage = true;
+await page.route('**/pagefind*/**', (route) =>
+  outage ? route.fulfill({ status: 404, contentType: 'text/plain', body: '' }) : route.continue());
+
 await page.click('summary[data-facet-summary="year"]');
 await page.check('[data-facet="year"] input[data-f]');
-await page.waitForFunction(() => /Reload the page/.test(document.querySelector('#results')?.textContent || ''), null, { timeout: 10000 });
+await page.waitForFunction(() => /Reload the page/.test(document.querySelector('#results')?.textContent || ''), null, { timeout: 15000 });
 const staleMsg = await page.$eval('#results', (el) => el.textContent.trim());
 check('stale index shows an honest message, not "No matches"', /couldn't be refreshed/.test(staleMsg) && !/No matches/.test(staleMsg), staleMsg.slice(0, 90));
 check('message offers a reload button', (await page.$('#results .btn-quiet')) !== null);
 // the new deploy's files become reachable — search must recover IN PLACE
-moved.forEach((orig, i) => fsx.renameSync(`${stash}/${i}`, orig));
+outage = false;
 await page.uncheck('[data-facet="year"] input[data-f]');
 await page.check('[data-facet="year"] input[data-f]');
-await page.waitForSelector('#results .pf-result', { timeout: 10000 });
+await page.waitForSelector('#results .pf-result', { timeout: 15000 });
 check('search recovers without a page reload once files are back', (await page.$$('#results .pf-result')).length > 0);
+await page.unroute('**/pagefind*/**');
 // chunk 404s during the simulated outage are expected noise, not regressions
 const addedErrs = errors.splice(errsBefore0);
 for (const e of addedErrs) if (!/pagefind|fetch|404|load/i.test(e)) errors.push(e);
