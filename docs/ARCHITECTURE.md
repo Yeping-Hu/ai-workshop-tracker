@@ -354,11 +354,39 @@ human to wire anything up. Three signals, in decreasing strength:
    stripped from the venue id's last segment. Needed because siblings don't
    always share a website (ATTRIB_Late has none; IAB's competition track has
    its own).
-3. **Same hostname, different paths** (series with per-edition URLs, e.g.
+3. **Same site, different paths** (series with per-edition URLs, e.g.
    `latinxinai.org/icml-2024`) — but only when the names share identifying
    words, because real labs host *unrelated* workshops on one domain
-   (dynsyslab.org, vap.aau.dk), and never for generic hosts
-   (sites.google.com, github.com, …).
+   (dynsyslab.org, vap.aau.dk).
+
+   The unit is `siteRoot()`, not the bare hostname. A generic host
+   (github.com, codabench.org, …) belongs to nobody and has no site root, so it
+   is skipped — *unless* the host hands each publisher a path namespace, which
+   then plays the part the hostname plays elsewhere:
+   `sites.google.com/view/social-sims-with-llms` is one organiser's site as
+   surely as `latinxinai.org` is. Skipping the whole host was costing real
+   links: 175 entries live on Google Sites, and eleven genuine series sat
+   unlinked because of it.
+
+   Depth two, and the number is measured rather than assumed. Depth one makes
+   `sites.google.com/berkeley.edu` a publisher, and two unrelated Berkeley
+   workshops share the words "foundation" and "models" readily enough to satisfy
+   the name guard — a university is not a publisher. Dropping the host from
+   `GENERIC_HOSTS` outright adds **3821** links as the union cascades across the
+   host, which is the quantitative case for narrowing the *unit* rather than
+   loosening the *guard*.
+
+   `siteRoot()` also folds the year and conference out of the site name, because
+   editions usually get one site each and name it for the edition:
+   `hcvworkshop2024` and `hcvworkshop2026` are one series, as are `mhf-icml2024`
+   and `mhf-icml2025`. Same reasoning as `stripVenueFromName()`, applied to a URL
+   segment instead of a title — and the same reason it is derived rather than
+   configured: next year's site links itself with nothing to update.
+
+   `websiteKey()` is deliberately left exact, so Tier 1 keeps meaning "the same
+   page". Collapsing sub-pages there would union two workshops sharing one
+   Google Site with no name guard at all, since Tier 1 is the one tier without
+   one.
 
 Each entry gets `relatedTracks` (same conference-year siblings, labeled by
 their venue-id suffix, shown with their own deadlines) and `relatedEditions`

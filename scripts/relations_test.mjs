@@ -17,6 +17,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   websiteKey,
+  siteRoot,
   venueFamily,
   nameTokens,
   computeRelations,
@@ -47,6 +48,15 @@ function check(label, ok, detail = '') {
     websiteKey('https://sites.google.com/view/x?authuser=1') === websiteKey('https://sites.google.com/view/x'));
   check('a trailing /index.html does not split a site',
     websiteKey('https://musiml.org/events/2025-icml/index.html') === websiteKey('https://musiml.org/events/2025-icml'));
+  // Tier 1 means "the same PAGE". Folding a sub-page in here would union two
+  // workshops sharing one Google Site with no name guard at all — the site root
+  // is Tier 3's business, and Tier 3 has the guard.
+  check('a Google Sites sub-page is still its own address',
+    websiteKey('https://sites.google.com/view/social-sims-with-llms/social-sim26')
+      !== websiteKey('https://sites.google.com/view/social-sims-with-llms'));
+  check('the classic Workspace /a/ spelling folds like /corp/',
+    websiteKey('https://sites.google.com/a/berkeley.edu/bb-stat')
+      === websiteKey('https://sites.google.com/berkeley.edu/bb-stat'));
   check('Google Sites /corp/ and /home variants are one site',
     new Set([
       websiteKey('https://sites.google.com/corp/view/hidimlearning/home'),
@@ -153,7 +163,42 @@ function check(label, ok, detail = '') {
     // Two unrelated workshops that both point at sites.google.com.
     { slug: 'icml-2026-a', name: 'Workshop on Alpha Learning', conference: 'icml', year: 2026, website: 'https://sites.google.com/view/alpha-learning', openreview_venue_id: 'ICML.cc/2026/Workshop/Alpha', statusLabel: 'Open call' },
     { slug: 'icml-2026-b', name: 'Workshop on Beta Vision', conference: 'icml', year: 2026, website: 'https://sites.google.com/view/beta-vision', openreview_venue_id: 'ICML.cc/2026/Workshop/Beta', statusLabel: 'Open call' },
+    // One lab's Google Site with a sub-page per unrelated workshop. These share
+    // a site ROOT, so Tier 3 does compare them — and only namesAgree() keeps
+    // them apart. This is the surface siteRoot() opened; the pair above no
+    // longer covers it, because those two sit at different roots.
+    { slug: 'icml-2026-lab-alpha', name: 'Workshop on Alpha Learning', conference: 'icml', year: 2026, website: 'https://sites.google.com/view/somelab/alpha-learning', openreview_venue_id: 'ICML.cc/2026/Workshop/LabAlpha', statusLabel: 'Open call' },
+    { slug: 'neurips-2026-lab-beta', name: 'Workshop on Beta Vision', conference: 'neurips', year: 2026, website: 'https://sites.google.com/view/somelab/beta-vision', openreview_venue_id: 'NeurIPS.cc/2026/Workshop/LabBeta', statusLabel: 'Open call' },
+    // A real series whose editions each got their own year-named site — the
+    // shape siteRoot() exists to catch.
+    { slug: 'eccv-2024-hcvx', name: '1st Workshop on Human-inspired Computer Vision', conference: 'eccv', year: 2024, website: 'https://sites.google.com/view/hcvxworkshop2024', openreview_venue_id: 'thecvf.com/ECCV/2024/Workshop/HCVX', statusLabel: 'Past' },
+    { slug: 'eccv-2026-hcvx', name: '3rd Workshop on Human-inspired Computer Vision', conference: 'eccv', year: 2026, website: 'https://sites.google.com/view/hcvxworkshop2026', openreview_venue_id: 'thecvf.com/ECCV/2026/Workshop/HCVX', statusLabel: 'Open call' },
   ];
+  // --- siteRoot: the unit Tier 3 compares ---------------------------------
+  check('an ordinary domain is its own site root',
+    siteRoot('latinxinai.org/icml-2025') === 'latinxinai.org');
+  check('a generic host with no tenant path has no site root',
+    siteRoot('github.com/org/repo') === null && siteRoot('sites.google.com/view') === null);
+  check('a Google Sites sub-page belongs to its site root',
+    siteRoot('sites.google.com/view/social-sims-with-llms/social-sim26')
+      === 'sites.google.com/view/social-sims-with-llms');
+  // Editions usually get one site each, named for the year.
+  check('the year folds out of a site name',
+    siteRoot('sites.google.com/view/hcvworkshop2024') === siteRoot('sites.google.com/view/hcvworkshop2026'));
+  check('the conference folds out too, written with or without separators',
+    siteRoot('sites.google.com/view/mhf-icml2024') === siteRoot('sites.google.com/view/mhf-icml2025')
+      && siteRoot('sites.google.com/view/metafood-cvpr2025') === siteRoot('sites.google.com/view/cvpr-metafood-2026'));
+  // Depth 2, not 1: a university Workspace tenant is not a publisher, and its
+  // unrelated workshops share tokens ("foundation", "models") readily enough to
+  // satisfy namesAgree. Measured: depth 1 links these two, which is wrong.
+  check('two sites under one Workspace tenant stay apart',
+    siteRoot('sites.google.com/berkeley.edu/bb-stat')
+      !== siteRoot('sites.google.com/berkeley.edu/selfimprovingfoundationmodels'));
+  // A segment that was ONLY a year keeps its original form rather than
+  // collapsing to nothing and matching every other such segment.
+  check('a segment that is only a year does not collapse',
+    siteRoot('sites.google.com/view/2026') !== siteRoot('sites.google.com/view/2025'));
+
   const rel = computeRelations(FIX);
   const tracksOf = (s) => rel.get(s).relatedTracks.map((t) => t.slug);
   const editionsOf = (s) => rel.get(s).relatedEditions.map((e) => e.slug);
@@ -193,8 +238,15 @@ function check(label, ok, detail = '') {
     alone('corl-2024-mrm-d') && alone('icra-2026-srra'));
   check('...and on vap.aau.dk', alone('cvpr-2026-cvsports') && alone('eccv-2026-marine'));
   check('...and on opendrivelab.com', alone('cvpr-2024-agc') && alone('cvpr-2026-embodiedaiinlife'));
-  check('...and on sites.google.com, which is nobody\'s own domain',
-    alone('icml-2026-a') && alone('icml-2026-b'));
+  check('...and on sites.google.com, where they are two separate sites',
+    alone('icml-2026-a') && alone('icml-2026-b'),
+    'different site roots, so Tier 3 never even compares them');
+  check('two unrelated workshops as sub-pages of ONE Google Site stay apart',
+    alone('icml-2026-lab-alpha') && alone('neurips-2026-lab-beta'),
+    'one site root, so Tier 3 compares them — namesAgree is what must refuse');
+  check('editions on separate year-named sites link as one series',
+    editionsOf('eccv-2024-hcvx').join(',') === 'eccv-2026-hcvx'
+      && editionsOf('eccv-2026-hcvx').join(',') === 'eccv-2024-hcvx');
   check('CV4CHL\'s two tracks link, while AI4CHL on the same domain stays out',
     tracksOf('cvpr-2026-cv4chl').join(',') === 'cvpr-2026-cv4chl-non-proceeding' && alone('iclr-2025-ai4chl'),
     'Computer Vision for Children and AI for Children share a domain and a cause, not a name');
