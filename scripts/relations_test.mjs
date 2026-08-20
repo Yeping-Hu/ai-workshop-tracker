@@ -187,6 +187,23 @@ function check(label, ok, detail = '') {
     { slug: 'icml-2026-stub-alpha-np', name: 'Alpha Non-Proceedings Track', conference: 'icml', year: 2026, website: 'https://sites.google.com/view/stublab/alpha', openreview_venue_id: 'ICML.cc/2026/Workshop/StubAlpha_Non-Proceedings_Track', statusLabel: 'Open call' },
     { slug: 'neurips-2026-stub-beta', name: 'Workshop on Beta Vision', conference: 'neurips', year: 2026, website: 'https://sites.google.com/view/stublab/beta', openreview_venue_id: 'NeurIPS.cc/2026/Workshop/StubBeta', statusLabel: 'Open call' },
     { slug: 'neurips-2026-stub-beta-np', name: 'Beta Non-Proceedings Track', conference: 'neurips', year: 2026, website: 'https://sites.google.com/view/stublab/beta', openreview_venue_id: 'NeurIPS.cc/2026/Workshop/StubBeta_Non-Proceedings_Track', statusLabel: 'Open call' },
+    // Venue-stem signal. Same site root, same registered short name, names that
+    // share NOTHING — the shape that defeats token matching entirely
+    // ("Representational Alignment" vs "Re-Align", 0 shared tokens).
+    { slug: 'iclr-2024-realignx', name: 'Representational Alignmentx', conference: 'iclr', year: 2024, website: 'https://representational-alignmentx.github.io/2024', openreview_venue_id: 'ICLR.cc/2024/Workshop/Re-Alignx', statusLabel: 'Past' },
+    { slug: 'iclr-2026-realignx', name: 'Re-Alignx', conference: 'iclr', year: 2026, website: 'https://representational-alignmentx.github.io/2026', openreview_venue_id: 'ICLR.cc/2026/Workshop/Re-Alignx', statusLabel: 'Open call' },
+    // ...and across conferences, where only one token is shared (Jaccard 0.25).
+    { slug: 'icml-2025-newinmlx', name: 'NewInMLx', conference: 'icml', year: 2025, website: 'https://newinmlx.github.io/2025', openreview_venue_id: 'ICML.cc/2025/Workshop/NewInMLx', statusLabel: 'Past' },
+    { slug: 'neurips-2026-newinmlx', name: 'New In Machine Learning (NewInMLx) Workshop', conference: 'neurips', year: 2026, website: 'https://newinmlx.github.io/2026', openreview_venue_id: 'NeurIPS.cc/2026/Workshop/NewInMLx', statusLabel: 'Open call' },
+    // The discriminator, both directions. Same root, DIFFERENT stems: these must
+    // still link, and only names can do it — so stem equality is not quietly
+    // doing token matching's job (the real MTF vs MetaFood shape)...
+    { slug: 'cvpr-2025-stemdiffa', name: '2nd StemDiff Workshop', conference: 'cvpr', year: 2025, website: 'https://stemdiff.github.io/2025', openreview_venue_id: 'thecvf.com/CVPR/2025/Workshop/SDF', statusLabel: 'Past' },
+    { slug: 'cvpr-2026-stemdiffb', name: '3rd StemDiff Workshop', conference: 'cvpr', year: 2026, website: 'https://stemdiff.github.io/2026', openreview_venue_id: 'thecvf.com/CVPR/2026/Workshop/StemDiff', statusLabel: 'Open call' },
+    // ...and with different stems AND disagreeing names, nothing links them,
+    // so the stem rule is not firing on the root alone.
+    { slug: 'cvpr-2026-rootonlya', name: 'Workshop on Gamma Retrieval', conference: 'cvpr', year: 2026, website: 'https://onelab-two-workshops.github.io/gamma', openreview_venue_id: 'thecvf.com/CVPR/2026/Workshop/Gamma', statusLabel: 'Open call' },
+    { slug: 'eccv-2026-rootonlyb', name: 'Workshop on Delta Rendering', conference: 'eccv', year: 2026, website: 'https://onelab-two-workshops.github.io/delta', openreview_venue_id: 'thecvf.com/ECCV/2026/Workshop/Delta', statusLabel: 'Open call' },
     // A real series whose editions each got their own year-named site — the
     // shape siteRoot() exists to catch.
     { slug: 'eccv-2024-hcvx', name: '1st Workshop on Human-inspired Computer Vision', conference: 'eccv', year: 2024, website: 'https://sites.google.com/view/hcvxworkshop2024', openreview_venue_id: 'thecvf.com/ECCV/2024/Workshop/HCVX', statusLabel: 'Past' },
@@ -259,6 +276,18 @@ function check(label, ok, detail = '') {
   check('...and on sites.google.com, where they are two separate sites',
     alone('icml-2026-a') && alone('icml-2026-b'),
     'different site roots, so Tier 3 never even compares them');
+  check('one site, one registered short name: links even when the names share nothing',
+    editionsOf('iclr-2024-realignx').join(',') === 'iclr-2026-realignx',
+    '"Representational Alignmentx" and "Re-Alignx" share 0 tokens; the venue stem is the only signal');
+  check('...and across conferences on one shared token',
+    editionsOf('icml-2025-newinmlx').join(',') === 'neurips-2026-newinmlx',
+    'Jaccard 0.25, below the name threshold');
+  check('different stems on one root still link when the NAMES agree',
+    editionsOf('cvpr-2025-stemdiffa').join(',') === 'cvpr-2026-stemdiffb',
+    'SDF vs StemDiff — proves stem equality is not doing token matching\'s job');
+  check('different stems on one root and disagreeing names stay apart',
+    alone('cvpr-2026-rootonlya') && alone('eccv-2026-rootonlyb'),
+    'a shared root alone must never link anything');
   check('a stub-named track does not veto its own series (names compare pairwise)',
     editionsOf('cvpr-2025-mtfx').sort().join(',') === 'cvpr-2026-metafoodx,cvpr-2026-mtfx-np',
     'union would dilute {metafoodx} with {industry, demo, day} and refuse the match');
