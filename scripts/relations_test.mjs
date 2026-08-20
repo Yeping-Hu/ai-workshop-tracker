@@ -169,6 +169,24 @@ function check(label, ok, detail = '') {
     // longer covers it, because those two sit at different roots.
     { slug: 'icml-2026-lab-alpha', name: 'Workshop on Alpha Learning', conference: 'icml', year: 2026, website: 'https://sites.google.com/view/somelab/alpha-learning', openreview_venue_id: 'ICML.cc/2026/Workshop/LabAlpha', statusLabel: 'Open call' },
     { slug: 'neurips-2026-lab-beta', name: 'Workshop on Beta Vision', conference: 'neurips', year: 2026, website: 'https://sites.google.com/view/somelab/beta-vision', openreview_venue_id: 'NeurIPS.cc/2026/Workshop/LabBeta', statusLabel: 'Open call' },
+    // Pairwise-vs-union. A Tier-1 group holds a workshop AND its tracks, and a
+    // track is often named for itself rather than the workshop. Unioning a
+    // group's tokens lets that sibling veto a correct match: {metafoodx} against
+    // {metafoodx, industry, demo, day} shares one token and scores 0.25.
+    // Deliberately NOT a "Non-Proceedings Track" here — that vocabulary is in
+    // NAME_STOPWORDS, which would dissolve the dilution and stop this fixture
+    // testing the comparison at all.
+    { slug: 'cvpr-2025-mtfx', name: '2nd MetaFoodX Workshop', conference: 'cvpr', year: 2025, website: 'https://sites.google.com/view/metafoodx-cvpr2025/overview', openreview_venue_id: 'thecvf.com/CVPR/2025/Workshop/MTFX', statusLabel: 'Past' },
+    { slug: 'cvpr-2026-metafoodx', name: '3rd MetaFoodX Workshop', conference: 'cvpr', year: 2026, website: 'https://sites.google.com/view/cvpr-metafoodx-2026', openreview_venue_id: 'thecvf.com/CVPR/2026/Workshop/MetaFoodX', statusLabel: 'Open call' },
+    { slug: 'cvpr-2026-mtfx-np', name: 'MetaFoodX Industry Demo Day', conference: 'cvpr', year: 2026, website: 'https://sites.google.com/view/cvpr-metafoodx-2026', openreview_venue_id: 'thecvf.com/CVPR/2026/Workshop/MTFX_Industry_Day', statusLabel: 'Open call' },
+    // ...and the direction pairwise could have loosened: two UNRELATED workshops
+    // on one site root, each publishing a stub-named track. Their stubs share
+    // {non, proceedings} and nothing else, under either rule — which is why that
+    // vocabulary is in NAME_STOPWORDS. Without it these merge into one series.
+    { slug: 'icml-2026-stub-alpha', name: 'Workshop on Alpha Learning', conference: 'icml', year: 2026, website: 'https://sites.google.com/view/stublab/alpha', openreview_venue_id: 'ICML.cc/2026/Workshop/StubAlpha', statusLabel: 'Open call' },
+    { slug: 'icml-2026-stub-alpha-np', name: 'Alpha Non-Proceedings Track', conference: 'icml', year: 2026, website: 'https://sites.google.com/view/stublab/alpha', openreview_venue_id: 'ICML.cc/2026/Workshop/StubAlpha_Non-Proceedings_Track', statusLabel: 'Open call' },
+    { slug: 'neurips-2026-stub-beta', name: 'Workshop on Beta Vision', conference: 'neurips', year: 2026, website: 'https://sites.google.com/view/stublab/beta', openreview_venue_id: 'NeurIPS.cc/2026/Workshop/StubBeta', statusLabel: 'Open call' },
+    { slug: 'neurips-2026-stub-beta-np', name: 'Beta Non-Proceedings Track', conference: 'neurips', year: 2026, website: 'https://sites.google.com/view/stublab/beta', openreview_venue_id: 'NeurIPS.cc/2026/Workshop/StubBeta_Non-Proceedings_Track', statusLabel: 'Open call' },
     // A real series whose editions each got their own year-named site — the
     // shape siteRoot() exists to catch.
     { slug: 'eccv-2024-hcvx', name: '1st Workshop on Human-inspired Computer Vision', conference: 'eccv', year: 2024, website: 'https://sites.google.com/view/hcvxworkshop2024', openreview_venue_id: 'thecvf.com/ECCV/2024/Workshop/HCVX', statusLabel: 'Past' },
@@ -241,6 +259,13 @@ function check(label, ok, detail = '') {
   check('...and on sites.google.com, where they are two separate sites',
     alone('icml-2026-a') && alone('icml-2026-b'),
     'different site roots, so Tier 3 never even compares them');
+  check('a stub-named track does not veto its own series (names compare pairwise)',
+    editionsOf('cvpr-2025-mtfx').sort().join(',') === 'cvpr-2026-metafoodx,cvpr-2026-mtfx-np',
+    'union would dilute {metafoodx} with {industry, demo, day} and refuse the match');
+  check('...and two workshops sharing only track vocabulary still stay apart',
+    alone('icml-2026-stub-alpha') === false && !editionsOf('icml-2026-stub-alpha').some((x) => x.startsWith('neurips'))
+      && !tracksOf('icml-2026-stub-alpha').some((x) => x.startsWith('neurips')),
+    'their stubs share {non, proceedings}; NAME_STOPWORDS is what refuses them');
   check('two unrelated workshops as sub-pages of ONE Google Site stay apart',
     alone('icml-2026-lab-alpha') && alone('neurips-2026-lab-beta'),
     'one site root, so Tier 3 compares them — namesAgree is what must refuse');
