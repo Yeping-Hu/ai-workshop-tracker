@@ -88,11 +88,16 @@ if (stale.length) {
 // is only as useful as somebody remembering to add it. Five had quietly gone
 // unrun that way before this check existed — a guard nobody runs is worse than
 // no guard, because it reads like coverage.
-const WORKFLOWS = ['.github/workflows/validate.yml', '.github/workflows/alerts-ci.yml'];
-// ui_test.mjs is deliberately out: it drives a real browser against a preview
-// server, which is a different shape of job from these. If it is ever wired in,
-// drop it from here.
-const NOT_IN_CI_ON_PURPOSE = new Set(['ui_test.mjs']);
+const WORKFLOWS = [
+  '.github/workflows/validate.yml',
+  '.github/workflows/alerts-ci.yml',
+  // ui_test.mjs lives here: it needs a built site and a server, both of which
+  // this job already has.
+  '.github/workflows/pr-build-check.yml',
+];
+// Empty on purpose. Anything added here needs a reason in the comment, because
+// an allowlist is where a guard goes to stop guarding quietly.
+const NOT_IN_CI_ON_PURPOSE = new Set();
 
 const testFiles = fs
   .readdirSync(path.join(ROOT, 'scripts'))

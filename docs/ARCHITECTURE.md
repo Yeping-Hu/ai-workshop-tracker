@@ -789,41 +789,50 @@ footer link, breadcrumbs, and entries in the `Dataset` keywords and `llms.txt` o
 the next build. Because statuses are derived at build time (above), the daily
 rebuild keeps every derived value current.
 
-## Known gap: the UI behavior suite (`ui_test.mjs`) is not in CI
+## The UI behavior suite runs on every PR
 
 `scripts/ui_test.mjs` is a headless-browser suite that locks the homepage's
 runtime behavior — the dual-index search and its merge-immune counts, the
-deterministic result order, the external-vs-internal link rule, and the
-back/forward restore. **It is not run by any CI workflow.** It is a manual,
-local check: build the site, serve `site/dist` with a raw concurrent static
-server, then `node scripts/ui_test.mjs http://localhost:<port>`.
+deterministic result order, the external-vs-internal link rule, the back/forward
+restore, and the deploy-staleness heal. 124 checks. It runs in
+`pr-build-check.yml`, which already builds the site with the production
+environment, so the suite drives the artefact that would actually ship.
 
-What this does and doesn't leave exposed: data/content changes can't reach the
-code these tests guard and are already validated by `validate.yml`, so adding
-workshops or papers is covered either way. The uncovered case is a **hand-edit
-to the search / link / back-nav code that still compiles** — `deploy.yml` only
-builds, so a behavior regression would build and ship with nothing flagging it.
-Until the suite is wired in, that case relies on someone remembering to run it
-(124/124 pass as of this writing, so a green run is the baseline to protect).
+This was a documented gap for a long time, and worth being explicit about why it
+mattered here specifically. Data and content changes cannot reach the code these
+tests guard, and `validate.yml` already covers those — so adding workshops or
+papers was never the risk. The exposure was a **hand-edit to the search / link /
+back-nav code that still compiles**: `deploy.yml` only builds, so a behavior
+regression would build and ship with nothing flagging it. Given that most changes
+to this repo arrive as sweeping edits made across sessions rather than as small
+reviewed diffs, that was the single largest unguarded surface in the project.
 
-**Both former blockers are gone**, so wiring it in is now a cost decision rather
-than a repair job:
+**Cost.** A Chromium download (~150 MB) cached on `~/.cache/ms-playwright` and
+keyed by the Playwright version, so it is fetched once per upgrade and takes
+seconds thereafter; the OS libraries are not cacheable, so they are installed
+either way. Plus a preview server for the life of the job. Call it two to three
+minutes of PR latency. The repo is public, so Actions minutes are free.
 
-- The deploy-staleness test used to physically **move** the Pagefind index/filter
-  chunks out of `dist` and restore them only at the very end, so a mid-test
-  failure left the working build corrupted with the files stranded in `/tmp` —
-  which is exactly what happened the first time it was run after this was
-  written. It now simulates the outage with
-  `page.route('**/pagefind*/**')` returning 404. The route dies with the page, so
-  it cannot leak into the working tree at all.
-- The static server no longer needs special handling. `astro preview` used to
-  apply gzip `Content-Encoding` over the already-gzipped chunks, so the browser
-  double-decoded and Pagefind threw "invalid gzip data"; that no longer
-  reproduces — the suite has been run repeatedly against plain
-  `npm run preview --prefix site` with no failures. A single-threaded
-  `python -m http.server` still stalls under Pagefind's parallel chunk fetches,
-  so if a raw server is ever needed it has to be a threaded one.
+**If it goes red, read this first.** A browser suite is the one test category
+that fails for timing reasons as well as real ones, and a flaky required check
+teaches you to ignore CI — which is worse than not having the check. Two known
+shapes, neither of which is a regression:
 
-What wiring it in would cost: the build already runs in `pr-build-check.yml`, so
-the additions are a Playwright browser download (~150 MB, cacheable) and a
-preview server for the duration of the job.
+- **The server was not ready.** The job waits up to 60s for `:4321` to answer and
+  prints the preview log on failure. If that log shows a slow start rather than a
+  crash, lengthen the wait.
+- **Pagefind's parallel chunk fetches stalled.** The engine fetches many index
+  chunks at once, and a server that cannot serve them concurrently produces
+  intermittent timeouts deep in the suite rather than a clean failure. `astro
+  preview` handles this; a single-threaded `python -m http.server` does not, so
+  if the server is ever swapped it has to be a threaded one. (`astro preview`
+  once double-gzipped the already-gzipped chunks — "invalid gzip data" — but that
+  no longer reproduces.)
+
+The fix for either is a retry on the suite step or a longer wait. Deleting the
+step, or loosening an assertion to make red go green, gives back exactly the
+coverage this section spent so long arguing for.
+
+Run it locally the same way CI does: `npm run build --prefix site`, then
+`npm run preview --prefix site` in one shell and
+`node scripts/ui_test.mjs http://localhost:4321` in another.

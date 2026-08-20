@@ -21,6 +21,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Mirror deploy.yml: the sitemap's <lastmod> comes from git history
+          # (lastDataChange in lib/workshops.mjs), and a shallow clone would
+          # silently fall back to the dates inside the YAML — making this build
+          # a poor rehearsal of the real one.
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -39,3 +45,58 @@ jobs:
           PUBLIC_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
           BUILD_ID: ${{ github.sha }}
         run: npm run build --prefix site
+
+      # --- UI behavior suite -------------------------------------------------
+      # The only guard on the homepage's runtime behaviour: the dual-index
+      # search and its merge-immune counts, deterministic result order, the
+      # external-vs-internal link rule, back/forward restore, and the
+      # deploy-staleness heal. Data changes cannot reach that code, so
+      # validate.yml does not cover it — a hand-edit to the search or link code
+      # that still compiles would otherwise build and ship with nothing flagging
+      # it. It runs here because this job already builds the site with the
+      # production env vars, so the suite drives the artefact that would ship.
+      - name: Resolve the Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('./node_modules/playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache the Chromium build
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      # ~150 MB, fetched once per Playwright version and seconds thereafter. The
+      # OS libraries are not cacheable and the runner is fresh every time, so
+      # they are installed either way: with the browser on a miss, alone on a hit.
+      - name: Install Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install Chromium system libraries
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: Serve the built site
+        run: |
+          npm run preview --prefix site > /tmp/preview.log 2>&1 &
+          # Racing the server is the classic way a browser suite goes
+          # intermittently red, so wait generously and fail loudly rather than
+          # letting the suite open a connection-refused page and report nonsense.
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null http://localhost:4321/; then
+              echo "preview ready after ${i}s"
+              break
+            fi
+            if [ "$i" -eq 60 ]; then
+              echo "preview server never answered on :4321 after 60s"
+              cat /tmp/preview.log
+              exit 1
+            fi
+            sleep 1
+          done
+      - name: Test UI behavior (headless Chromium)
+        run: node scripts/ui_test.mjs http://localhost:4321
+      # Browser suites fail for timing reasons as well as real ones. If this job
+      # goes red, read this before touching the assertions: a server that never
+      # came up, or Pagefind's parallel chunk fetches stalling, look nothing like
+      # a genuine regression.
+      - name: Preview server log (on failure)
+        if: failure()
+        run: cat /tmp/preview.log || true
