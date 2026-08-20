@@ -349,7 +349,7 @@ const datasetLd: Record<string, any> = {
       return pfReady;
     }
 
-    // (throwaway: exercising the PR-only UI suite; this branch is not merged)
+    // (throwaway: second run, exercising the warm-cache path; not merged)
     function facetSort(f, keys) {
       if (f === 'year') return keys.sort((a, b) => b.localeCompare(a));
       if (f === 'status') {
