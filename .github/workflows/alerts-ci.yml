@@ -67,6 +67,12 @@ jobs:
       - name: Test the alerts log
         run: node scripts/alerts_log_test.mjs
 
+      # scripts/alerts_ui_test.mjs is deliberately NOT run here, though the path
+      # filter above matches its name. It drives a real browser against a built
+      # site, which needs Playwright, Chromium and two site builds — everything
+      # this workflow's header promises to stay clear of. It runs in
+      # pr-build-check.yml instead, where the site is already built.
+
       # The Worker cannot read data/*.yml at runtime, so its id allowlist is a
       # generated file. Drift means a new conference is silently unsubscribable.
       - name: Check alerts/ids.json matches data/conferences.yml + data/topics.yml

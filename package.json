@@ -8,7 +8,8 @@
     "validate": "node scripts/validate.mjs",
     "fetch:openreview": "node scripts/fetch_openreview.mjs",
     "stale": "node scripts/stale_check.mjs",
-    "test:ui": "node scripts/ui_test.mjs"
+    "test:ui": "node scripts/ui_test.mjs",
+    "test:alerts-ui": "node scripts/alerts_ui_test.mjs"
   },
   "dependencies": {
     "ajv": "^8.17.1",
