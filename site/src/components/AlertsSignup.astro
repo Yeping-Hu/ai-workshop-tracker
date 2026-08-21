@@ -16,7 +16,7 @@
  * has been linked for sync.
  */
 import { conferences, topics } from '../lib/data';
-import { ALERTS_API, TURNSTILE_SITE_KEY, href } from '../lib/site';
+import { ALERTS_API, ALERTS_FROM, TURNSTILE_SITE_KEY, href } from '../lib/site';
 
 interface Props {
   /** Headline above the form. The homepage and /saved/ frame it differently. */
@@ -122,6 +122,19 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
         </details>
       </div>
 
+      {/* Said before submitting rather than after. The Worker answers every
+          /subscribe with one invariant sentence — the same words whether a
+          confirmation was sent, a sign-in link was sent, or nothing was sent at
+          all — because any variation is an account-enumeration oracle. So a
+          "look for mail from …" line in the reply would be false on two of the
+          three paths, while here it is true unconditionally. It also front-runs
+          the "newly registered domain" banner some mail filters still attach to
+          a young sending domain. */}
+      <p class="muted small alerts-hint">
+        Confirmation comes from <strong>{ALERTS_FROM}</strong> — check spam if it
+        does not arrive. Nothing is sent until you click its link.
+      </p>
+
       <fieldset class="alerts-cadence">
         <legend class="alerts-legend">What you hear about</legend>
         <label class="check">
@@ -220,6 +233,27 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
         status.className = `alerts-status is-${kind}`;
       };
 
+      // A sent confirmation is a state, not just a line of text. The preference
+      // controls are answered questions once the mail is out, and the button no
+      // longer means the same thing: for an unconfirmed row the Worker refreshes
+      // the preferences and re-sends, which is the only in-page recovery from a
+      // typo or an undelivered mail — so it is relabelled, never disabled.
+      //
+      // The status <p> lives inside the <form>, so hiding the form would hide
+      // the confirmation with it; CSS hides the answered controls instead.
+      const emailInput = form.querySelector('#alertsEmail');
+      const summaryHint = box?.querySelector('.alerts-summary-hint');
+      const summaryPitch = summaryHint?.textContent;
+      const done = (on) => {
+        box?.toggleAttribute('data-sent', on);
+        submit.textContent = on ? 'Send it again' : 'Subscribe';
+        // The one line still visible while a collapsed box is shut, so three of
+        // the four placements stop reverting to an unmet offer.
+        if (summaryHint) summaryHint.textContent = on ? 'check your inbox to confirm' : summaryPitch;
+      };
+      // Editing the address makes this a new signup, not a resend.
+      emailInput.addEventListener('input', () => done(false));
+
       // Summaries mirror the homepage facet dropdowns: they always state the
       // current selection, so a collapsed picker is never ambiguous.
       const picked = (name) => [...form.querySelectorAll(`input[name="${name}"]:checked`)].map((i) => i.value);
@@ -259,7 +293,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = form.querySelector('#alertsEmail').value.trim();
+        const email = emailInput.value.trim();
         if (!email || !email.includes('@')) return say('Please enter a valid email address.', 'err');
         // The Worker rejects this too; catching it here explains it sooner.
         if (!picked('notify').length) return say('Pick at least one thing to be sent.', 'err');
@@ -296,8 +330,14 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
           const body = await res.json().catch(() => ({}));
 
           if (body.ok) {
-            say(body.message || 'Check your inbox to confirm.', 'ok');
-            form.querySelector('#alertsEmail').value = '';
+            // Echo the address the browser already has. The server sentence
+            // cannot name it without becoming an enumeration oracle, so without
+            // this a mistyped address produces exactly this green line and then
+            // permanent silence — the unconfirmed row is deleted when its token
+            // expires. The field keeps its value for the same reason (and the
+            // manage form never clears its input either).
+            say(`${body.message || 'Check your inbox to confirm.'} Sent to ${email}.`, 'ok');
+            done(true);
           } else if (body.error === 'list_full') {
             say(body.message || 'The alert list is full right now — please try again in a while.', 'err');
           } else if (body.error === 'rate_limited') {
@@ -421,6 +461,13 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
   .alerts-status.is-err { color: var(--urgent); }
   .alerts-status.is-busy { color: var(--muted); }
   .alerts-privacy { margin-top: 0.85rem !important; max-width: 46rem; }
+  /* Sent state: the questions are answered, so only the address, the status
+     line and the button that re-sends still matter. .cf-turnstile is
+     deliberately left alone — the submit handler resets the widget, which does
+     not work inside a display:none parent. */
+  .alerts-signup[data-sent] .alerts-cadence,
+  .alerts-signup[data-sent] .alerts-row .dd,
+  .alerts-signup[data-sent] .alerts-hint { display: none; }
   .alerts-sr {
     position: absolute;
     width: 1px;

@@ -33,6 +33,15 @@ export const ALERTS_API = (import.meta.env.PUBLIC_ALERTS_API || '').replace(/\/+
  *  ALERTS_API; without it the form cannot pass the Worker's captcha check. */
 export const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
 
+/**
+ * The address alerts are sent from, shown before signup so people know what to
+ * look for and can tell it from a lookalike. Must match MAIL_FROM in
+ * alerts/worker/wrangler.toml. Stated in both places rather than derived: the
+ * site is a static build with no view of the Worker's vars, and this is display
+ * copy, so a drift misleads a reader rather than breaking a send.
+ */
+export const ALERTS_FROM = 'alerts@mail.aiworkshoptracker.com';
+
 /** Prefix an absolute path with the configured base (for GitHub project pages). */
 const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
 export const href = (p: string) => `${base}${p.startsWith('/') ? p : '/' + p}`;
