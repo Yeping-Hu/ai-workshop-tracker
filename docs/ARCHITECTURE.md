@@ -606,6 +606,27 @@ OpenReview forum id and suppressed for the ~8% of papers with no PDF via
 `/api/papers-without-pdf.json`. GoatCounter star events are the only signal
 collected, to gauge whether the feature ever justifies real accounts.
 
+Stars appear on every workshop list — the board, search and filter results,
+conference listings, and each workshop page. They are always rendered rather than
+revealed on hover, because most of the traffic is phones and hover does not exist
+there.
+
+### Two renderers for one row
+
+The board renders a row server-side from `WorkshopRow.astro`; `/saved/` renders
+the same row in the browser, because only the browser knows what a visitor saved.
+Two implementations of one row drift, and this one did: the saved list quietly
+lacked the location, the topic chips and the deadline-change note, and printed the
+raw stored deadline where the board printed a formatted one. Three of those could
+not be fixed client-side at all — they are whole-corpus or history derivations —
+which is why the API publishes them.
+
+`scripts/row_parity_test.mjs` (in `validate.yml`) now guards it: every field the
+board displays must have an equivalent in the saved renderer, with a short
+exempt list. It is a structural check, not a pixel one — it cannot prove the
+output matches, but it catches the common case of a field added to one renderer
+and forgotten in the other.
+
 Paper snapshots store a stable id (OpenReview forum id where available), the
 title, the workshop slug, and the exact PDF url when known. A pre-2026 snapshot
 shape (with a `url` field) still renders, so no migration is needed.
@@ -750,6 +771,15 @@ two-stage fields: `abstract_deadline` and `abstract_deadline_utc` (null for
 single-stage venues), plus `next_stage_utc` and `next_stage_is_abstract` — the
 instant the site's countdown targets and which stage that is. `deadline_history`
 is intentionally *not* published yet; it is a site-internal derivation for now.
+
+It also publishes the derivations a client cannot compute from a single row:
+`location_label` and `location_distinguishes` (whether that conference-year runs
+in more than one place — a whole-corpus count), `deadline_change` (the note the
+board prints, derived from the entry's history), and `deadline_wall_clock` /
+`abstract_deadline_wall_clock` (the formatted strings the board displays, so a
+client renders "Sep 26, 2026, 12:59 UTC" rather than re-printing the raw stored
+value). These exist for the saved list, which renders rows in the browser; see
+"Two renderers for one row" below.
 
 It also carries `short_name` and `track_label` — the site's own one-line identity
 for the entry (see "A workshop's one-line identity"). These exist because
