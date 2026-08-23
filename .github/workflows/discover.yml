@@ -55,9 +55,11 @@ jobs:
         env:
           DEADLINE_CHANGELOG: ${{ github.workspace }}/.deadline-changes.md
           OPENREVIEW_UNVERIFIED: ${{ github.workspace }}/.unverified.tsv
+          FAILED_CYCLES: ${{ github.workspace }}/.failed-cycles.tsv
         run: |
           Y=$(date -u +%Y)
           failed=""
+          : > "$FAILED_CYCLES"
           for c in icml iclr neurips icra iros cvpr corl colm eccv; do
             for y in "$Y" "$((Y + 1))"; do
               # One bad cycle must not abort the crawl — a throttled or renamed
@@ -68,6 +70,10 @@ jobs:
               if ! node scripts/discover_openreview.mjs --conf "$c" --year "$y"; then
                 echo "::warning::discovery failed for $c $y — remaining venues in that cycle were skipped"
                 failed="$failed $c-$y"
+                # Recorded for the retry step below. The venue-level re-check
+                # can't cover this case: the unverified list is written at the
+                # END of a cycle, so a cycle that throws never appears in it.
+                printf '%s\t%s\n' "$c" "$y" >> "$FAILED_CYCLES"
               fi
               # Space conferences out so OpenReview's rate budget recovers between
               # them — otherwise the burst from the first conference throttles the
@@ -76,8 +82,7 @@ jobs:
             done
           done
           if [ -n "$failed" ]; then
-            echo "failed_cycles=$failed" >> "$GITHUB_OUTPUT"
-            echo "::error::discovery did not complete for:$failed"
+            echo "::warning::first pass did not complete for:$failed — will retry once"
           fi
       # OpenReview allows 20 requests per 60s and says so in every response, so
       # lib/openreview.mjs paces against the advertised budget and 429s should
@@ -104,6 +109,36 @@ jobs:
             node scripts/discover_openreview.mjs --conf "$c" --year "$y" || true
             sleep 20
           done
+
+      - name: Retry conference-years that did not complete
+        id: cycle_retry
+        env:
+          DEADLINE_CHANGELOG: ${{ github.workspace }}/.deadline-changes.md
+          OPENREVIEW_UNVERIFIED: ${{ github.workspace }}/.unverified-2.tsv
+          FAILED_CYCLES: ${{ github.workspace }}/.failed-cycles.tsv
+        run: |
+          # A cycle that threw — usually OpenReview answering 429 to the venue
+          # listing — is retried once here rather than failing the week. By this
+          # point the whole crawl and the venue re-check have run, so the rate
+          # budget has had time to recover; on 2026-08-23 icra-2026 failed this
+          # way and succeeded immediately on a manual re-run.
+          [ -s "$FAILED_CYCLES" ] || { echo "Every conference-year completed on the first pass."; exit 0; }
+          still=""
+          while IFS=$'\t' read -r c y; do
+            [ -n "$c" ] || continue
+            echo "=== retrying $c $y ==="
+            if node scripts/discover_openreview.mjs --conf "$c" --year "$y"; then
+              echo "  recovered on retry"
+            else
+              echo "::warning::$c $y failed twice — venues in that cycle were skipped this week"
+              still="$still $c-$y"
+            fi
+            sleep 20
+          done < "$FAILED_CYCLES"
+          if [ -n "$still" ]; then
+            echo "failed_cycles=$still" >> "$GITHUB_OUTPUT"
+            echo "::error::discovery did not complete for:$still"
+          fi
 
       - name: Validate
         run: node scripts/validate.mjs
@@ -233,7 +268,7 @@ jobs:
       # published above, then the job goes red so a partial crawl is visible
       # instead of passing as green.
       - name: Fail if any conference-year did not complete
-        if: steps.crawl.outputs.failed_cycles != ''
+        if: steps.cycle_retry.outputs.failed_cycles != ''
         run: |
-          echo "Discovery skipped venues in:${{ steps.crawl.outputs.failed_cycles }}"
+          echo "Discovery skipped venues in:${{ steps.cycle_retry.outputs.failed_cycles }} (failed on two separate passes)"
           exit 1

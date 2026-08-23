@@ -74,9 +74,17 @@ throttled conference, a renamed venue — doesn't cost the other seventeen. It u
 to do that with `|| true`, which also swallowed real crashes: a missing import
 introduced on 2026-08-04 went unnoticed until 08-11, when the run finished **15 of
 18** cycles and still reported success. Failures are now collected, warned about
-per cycle, and the job fails at the end — *after* validating and publishing
-whatever the crawl did find, so a partial result still ships rather than being
-thrown away.
+per cycle, retried once, and the job fails at the end only if a cycle failed
+*twice* — and always *after* validating and publishing whatever the crawl did
+find, so a partial result still ships rather than being thrown away.
+
+The retry is cycle-level, and complements the venue-level one next to it rather
+than duplicating it. The unverified list a venue lands on is written at the END of
+a cycle, so a cycle that *throws* — usually OpenReview answering 429 to the venue
+listing — never appears in it and was never retried. That is what turned
+2026-08-23 red for `icra-2026`, which then succeeded immediately on a manual
+re-run. The cycle retry runs after the whole crawl and the venue re-check, by
+which point the rate budget has recovered.
 
 The class of bug that hid there is also checked directly now:
 `scripts/imports_test.mjs` (run in `validate.yml`) fails if a module calls one of
