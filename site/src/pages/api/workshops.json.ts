@@ -29,9 +29,23 @@ export const GET: APIRoute = () => {
       year: w.year,
       website: w.website,
       topics: w.topics ?? [],
+      // Whole-corpus derivations. A client cannot work these out from one row:
+      // `location_distinguishes` depends on how many places the whole
+      // conference-year runs in, and `deadline_change` on the entry's history.
+      // Published so the saved list can render exactly what the board renders,
+      // instead of drifting into a thinner second implementation of the row.
+      location: w.location ?? null,
+      location_label: w.locationLabel ?? null,
+      location_distinguishes: !!w.locationDistinguishes,
+      deadline_change: w.deadlineChange ?? null,
       submission_deadline: w.submission_deadline ?? null,
       timezone: w.timezone ?? null,
       deadline_utc: w.deadlineIso,
+      // The formatted strings the board prints. Published so a client rendering
+      // a row shows "Sep 26, 2026, 12:59 UTC" rather than re-printing the raw
+      // stored value, which is the same instant written a different way.
+      deadline_wall_clock: w.deadlineWallClock ?? null,
+      abstract_deadline_wall_clock: w.abstractDeadlineWallClock ?? null,
       // Two-stage venues only: the mandatory abstract registration that gates
       // the paper deadline above (always UTC). `submission_deadline` remains the
       // paper deadline; `next_stage_utc` is whichever of the two is next.

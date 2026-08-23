@@ -47,6 +47,8 @@ jobs:
         run: node scripts/deadline_history_test.mjs
       - name: Check our own helpers are imported where they're called
         run: node scripts/imports_test.mjs
+      - name: Check the saved list renders the same row as the board
+        run: node scripts/row_parity_test.mjs
       - name: Test Markdown export formatting
         run: node scripts/markdown_test.mjs
       - name: Test imminent-deadline re-check selection (band, freeze-on-touch)

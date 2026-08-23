@@ -1,12 +1,14 @@
 ---
 import Base from '../components/Base.astro';
 import AlertsSignup from '../components/AlertsSignup.astro';
-import { conferences } from '../lib/data';
+import { conferences, topics as allTopics } from '../lib/data';
 import { ALERTS_API, href } from '../lib/site';
 
 // Conference id -> {name, color} so saved rows get the same badges as the
 // board. Tiny (~10 entries), embedded at build time.
 const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.name, color: c.color }]));
+// Topic ids -> labels, so a saved row can show the same chips the board does.
+const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, t.label]));
 ---
 
 <Base
@@ -63,12 +65,14 @@ const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.
   </p>
 
   <script type="application/json" id="awt-conf" set:html={JSON.stringify(confMap)} />
+  <script type="application/json" id="awt-topics" set:html={JSON.stringify(topicMap)} />
 
   <script>
     import { favWorkshops, favPapers } from '../scripts/favorites.js';
 
     const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
     const CONF = JSON.parse(document.getElementById('awt-conf')!.textContent || '{}');
+    const TOPIC = JSON.parse(document.getElementById('awt-topics')!.textContent || '{}');
     const $ = (s: string) => document.querySelector(s) as HTMLElement;
     const esc = (s: unknown) =>
       String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -103,6 +107,23 @@ const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.
       return [3, -(w.year ?? 0)];
     }
 
+    // Mirrors the board's note exactly (WorkshopRow.astro): same classes, same
+    // wording, same tooltip. The saved list renders rows in the browser, so any
+    // difference here shows up as the two pages disagreeing about one workshop.
+    function dlChangeHtml(w: any) {
+      const c = w.deadline_change;
+      if (!c) return '';
+      const d = c.days === 1 ? 'day' : 'days';
+      const body =
+        c.kind === 'extended' ? `→ Extended ${c.days} ${d}`
+        : c.kind === 'earlier' ? `△ Moved ${c.days} ${d} earlier`
+        : c.kind === 'announced' ? 'Deadline just announced'
+        : '';
+      if (!body) return '';
+      const title = `Recorded ${esc(c.recorded)} — the date we observed this value, not necessarily when the organizers changed it.`;
+      return `<div class="dl-change dl-${esc(c.kind)}" title="${title}">${body}</div>`;
+    }
+
     function wsRow(w: any) {
       const conf = CONF[w.conference] ?? { name: w.conference, color: '#888' };
       const ms = w.deadline_utc ? Date.parse(w.deadline_utc) : null;
@@ -124,19 +145,21 @@ const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.
             ${w.acronym ? `<span class="mono">${esc(w.acronym)}</span>` : ''}
             <span>${esc(conf.name)} ${esc(w.year)}</span>
             <span class="pill ${esc(w.status)}">${esc(w.status_label)}</span>
+            ${w.location_distinguishes && w.location_label ? `<span class="ws-where">${esc(w.location_label)}</span>` : ''}
+            ${(w.topics ?? []).map((id) => `<span class="chip">${esc(TOPIC[id] ?? id)}</span>`).join('')}
           </div>
         </div>
         <div class="ws-deadline">
           ${
             ms != null
-              ? `<div class="wall">${esc(w.submission_deadline)}${w.timezone ? ' ' + esc(w.timezone) : ''}</div>
+              ? `<div class="wall">${esc(w.deadline_wall_clock ?? (w.submission_deadline + (w.timezone ? ' ' + w.timezone : '')))}</div>
                  <div class="local js-local" data-iso="${esc(w.deadline_utc)}"></div>${
                    w.abstract_deadline
                      ? `<div class="abs-stage small">${absOpen
-                         ? `<span class="abs-open">Abstract due ${esc(w.abstract_deadline)} UTC</span>`
-                         : `<span class="muted">Abstract closed ${esc(w.abstract_deadline)} UTC</span>`}<div class="local js-local" data-iso="${esc(w.abstract_deadline_utc ?? '')}"></div></div>`
+                         ? `<span class="abs-open">Abstract due ${esc(w.abstract_deadline_wall_clock ?? (w.abstract_deadline + ' UTC'))}</span>`
+                         : `<span class="muted">Abstract closed ${esc(w.abstract_deadline_wall_clock ?? (w.abstract_deadline + ' UTC'))}</span>`}<div class="local js-local" data-iso="${esc(w.abstract_deadline_utc ?? '')}"></div></div>`
                      : ''
-                 }`
+                 }${dlChangeHtml(w)}`
               : `<div class="muted">${upcoming ? 'Deadline TBA' : '—'}</div>`
           }
         </div>
