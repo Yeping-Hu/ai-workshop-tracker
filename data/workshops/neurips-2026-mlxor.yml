@@ -11,6 +11,8 @@ timezone: UTC
 deadline_notes: OpenReview-synced 2026-09-01 11:59 UTC (as of 2026-07-28) — extensions on OpenReview are applied automatically; verify on the website.
 openreview_venue_id: NeurIPS.cc/2026/Workshop/MLxOR
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
+notes: Topics were auto-suggested and may be imprecise — edits welcome. Kept our name over OpenReview's on review — upstream truncated the title; ours describes the workshop.
 added: '2026-07-28'
 location: Atlanta, USA
+review_ack:
+  name: NeurIPS 2026 Second Workshop on MLxOR

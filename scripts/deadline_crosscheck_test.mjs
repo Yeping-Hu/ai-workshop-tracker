@@ -162,6 +162,27 @@ check('acked website ignores trailing slash',
 check('acked acronym stays quiet', acronymDrift('OURS', 'THEIRS', 'THEIRS'), null);
 check('a different later acronym re-flags', acronymDrift('OURS', 'NEWONE', 'THEIRS') !== null, true);
 
+// The production path passes a venue context (since #31, both sides are
+// normalised at comparison time). Acks record the RAW upstream value, so the
+// ack must be normalised too — without that, cleaning the upstream side
+// silently invalidates every ack ever recorded.
+{
+  const venue = { confName: 'CVPR', confFullName: 'IEEE/CVF Conference on Computer Vision and Pattern Recognition', year: 2026, conf: 'cvpr' };
+  const ours = 'AI for Creative Visual Content - Extended Abstract Track';
+  const ackedRaw = 'CVPR 2026 Workshop, AI for Creative VisualContent - Extended Abstract Track';
+  const upstreamNow = 'AI for Creative VisualContent - Extended Abstract Track'; // as upstreamIdentity() cleans it
+  check('acked title stays quiet through the venue context',
+    titleDrift(ours, upstreamNow, 'cvpr', ackedRaw, venue), null);
+  check('a genuinely new upstream title resurfaces despite the ack',
+    titleDrift(ours, 'Something Upstream Renamed It To', 'cvpr', ackedRaw, venue) !== null, true);
+
+  const av = { confName: 'NeurIPS', confFullName: 'Conference on Neural Information Processing Systems', year: 2026, conf: 'neurips' };
+  check('acked acronym stays quiet through the venue context',
+    acronymDrift('MLxOR', 'MLxOR', 'NeurIPS 2026 MLxOR', av), null);
+  check('a genuinely new upstream acronym resurfaces despite the ack',
+    acronymDrift('MLxOR', 'MLOR', 'NeurIPS 2026 MLxOR', av) !== null, true);
+}
+
 // An acknowledgement never hides a value we DO match, and never invents drift.
 check('ack is irrelevant when we already agree', titleDrift('Same Title', 'Same Title', 'iros', 'Whatever'), null);
 

@@ -10,5 +10,7 @@ timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/CVEU_Extended_Abstract_Track
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+notes: Topics were auto-suggested and may be imprecise — edits welcome. Kept our name over OpenReview's on review — upstream still has the missing-space typo we corrected.
+added: '2026-06-10'
+review_ack:
+  name: CVPR 2026 Workshop, AI for Creative VisualContent Generation Editing andUnderstanding - Extended Abstract Track
