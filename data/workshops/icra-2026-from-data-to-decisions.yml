@@ -1,5 +1,5 @@
 name: 'From Data to Decisions: VLA Pipelines for Real Robots'
-acronym: "ICRA 2026: From Data to Decisions"
+acronym: 'ICRA 2026: From Data to Decisions'
 conference: icra
 year: 2026
 website: https://icra2026vlapipeline.github.io/
@@ -11,4 +11,5 @@ deadline_notes: OpenReview-synced 2026-04-22 00:00 UTC (as of 2026-06-23) — ex
 openreview_venue_id: IEEE.org/ICRA/2026/Workshop/From_Data_to_Decisions
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'
+location: Vienna, Austria
