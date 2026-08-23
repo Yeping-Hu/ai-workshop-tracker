@@ -1,4 +1,4 @@
-name: "I Can't Believe It's Not Better: Where Large Language Models Need to Improve"
+name: 'I Can''t Believe It''s Not Better: Where Large Language Models Need to Improve'
 acronym: ICLR 2026 Workshop ICBINB
 conference: iclr
 year: 2026
@@ -8,7 +8,8 @@ topics:
 openreview_venue_id: ICLR.cc/2026/Workshop/ICBINB
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'
 submission_deadline: 2026-02-01 11:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-02-01 11:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.
+location: Rio de Janeiro, Brazil

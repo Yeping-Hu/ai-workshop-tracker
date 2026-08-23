@@ -1,4 +1,4 @@
-name: "The Second Workshop on Multimodal Foundation Models for Biomedicine: Challenges and Opportunities"
+name: 'The Second Workshop on Multimodal Foundation Models for Biomedicine: Challenges and Opportunities'
 acronym: MMFM-BIOMED 2026
 conference: cvpr
 year: 2026
@@ -13,4 +13,5 @@ deadline_notes: OpenReview-synced 2026-05-05 23:59 UTC (as of 2026-06-23) — ex
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/MMFM-BIOMED
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'
+location: Denver, Colorado, United States

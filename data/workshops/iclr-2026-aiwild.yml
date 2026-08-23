@@ -1,4 +1,4 @@
-name: "Agents in the Wild: Safety, Security, and Beyond"
+name: 'Agents in the Wild: Safety, Security, and Beyond'
 acronym: ICLR 2026 AIWILD
 conference: iclr
 year: 2026
@@ -10,7 +10,8 @@ topics:
 openreview_venue_id: ICLR.cc/2026/Workshop/AIWILD
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'
 submission_deadline: 2026-02-13 12:00
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-02-13 12:00 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.
+location: Rio de Janeiro, Brazil

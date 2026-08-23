@@ -1,4 +1,4 @@
-name: "The 2nd Workshop on Advances in Financial AI Workshop: Towards Agentic and Responsible Systems"
+name: 'The 2nd Workshop on Advances in Financial AI Workshop: Towards Agentic and Responsible Systems'
 acronym: AFA
 conference: iclr
 year: 2026
@@ -13,4 +13,5 @@ deadline_notes: OpenReview-synced 2026-02-05 23:59 UTC (as of 2026-06-23) — ex
 openreview_venue_id: ICLR.cc/2026/Workshop/AFA
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'
+location: Rio de Janeiro, Brazil

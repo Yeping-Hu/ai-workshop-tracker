@@ -1,4 +1,4 @@
-name: "MMFM5: The 5th Workshop on What is Next in Multimodal Foundation Models?"
+name: 'MMFM5: The 5th Workshop on What is Next in Multimodal Foundation Models?'
 acronym: MMFM5
 conference: cvpr
 year: 2026
@@ -12,4 +12,5 @@ deadline_notes: OpenReview-synced 2026-03-15 12:59 UTC (as of 2026-06-23) — ex
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/MMFM5
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'
+location: Denver, Colorado, United States

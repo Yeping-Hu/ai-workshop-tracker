@@ -1,4 +1,4 @@
-name: "Decision-Making from Offline Datasets to Online Adaptation: Black-Box Optimization to Reinforcement Learning"
+name: 'Decision-Making from Offline Datasets to Online Adaptation: Black-Box Optimization to Reinforcement Learning'
 acronym: DEMO 2026
 conference: icml
 year: 2026
@@ -13,4 +13,5 @@ deadline_notes: OpenReview-synced 2026-05-09 23:59 UTC (as of 2026-06-23) — ex
 openreview_venue_id: ICML.cc/2026/Workshop/DEMO
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'
+location: Seoul, Korea

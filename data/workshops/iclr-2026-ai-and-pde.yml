@@ -1,4 +1,4 @@
-name: "AI&PDE: ICLR 2026 Workshop on AI and Partial Differential Equations"
+name: 'AI&PDE: ICLR 2026 Workshop on AI and Partial Differential Equations'
 acronym: AI&PDE
 conference: iclr
 year: 2026
@@ -11,4 +11,5 @@ deadline_notes: OpenReview-synced 2026-02-11 23:59 UTC (as of 2026-06-23) — ex
 openreview_venue_id: ICLR.cc/2026/Workshop/AI_and_PDE
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'
+location: Rio de Janeiro, Brazil
