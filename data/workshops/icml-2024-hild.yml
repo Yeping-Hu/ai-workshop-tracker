@@ -1,5 +1,5 @@
-name: "High-dimensional Learning Dynamics 2024: The Emergence of Structure and Reasoning"
-acronym: HiLD at ICML 2024
+name: 'High-dimensional Learning Dynamics 2024: The Emergence of Structure and Reasoning'
+acronym: HiLD
 conference: icml
 year: 2024
 website: https://sites.google.com/corp/view/hidimlearning/home
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICML.cc/2024/Workshop/HiLD
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

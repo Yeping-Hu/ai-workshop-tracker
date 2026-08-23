@@ -1,5 +1,4 @@
-name: "OPT 2024: Optimization for Machine Learning"
-acronym: NeurIPS 2024 Workshop
+name: 'OPT 2024: Optimization for Machine Learning'
 conference: neurips
 year: 2024
 website: https://opt-ml.org/
@@ -11,4 +10,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2024/Workshop/OPT
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

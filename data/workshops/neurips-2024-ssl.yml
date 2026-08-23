@@ -1,5 +1,5 @@
 name: Self-Supervised Learning - Theory and Practice
-acronym: NeurIPS 2024 Workshop SSL
+acronym: SSL
 conference: neurips
 year: 2024
 website: https://sslneurips2024.github.io/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2024/Workshop/SSL
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

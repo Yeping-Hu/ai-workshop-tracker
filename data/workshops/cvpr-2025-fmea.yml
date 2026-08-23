@@ -1,5 +1,5 @@
 name: Workshop on Foundation Models Meet Embodied Agents
-acronym: FMEA @ CVPR 2025
+acronym: FMEA
 conference: cvpr
 year: 2025
 website: https://foundation-models-meet-embodied-agents.github.io/cvpr2025
@@ -13,4 +13,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: thecvf.com/CVPR/2025/Workshop/FMEA
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

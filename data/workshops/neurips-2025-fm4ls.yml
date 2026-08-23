@@ -1,5 +1,5 @@
 name: 2nd Workshop on Multi-modal Foundation Models and Large Language Models for Life Sciences
-acronym: NeurIPS 2025 2nd Workshop FM4LS
+acronym: 2nd Workshop FM4LS
 conference: neurips
 year: 2025
 website: https://nips2025fm4ls.github.io
@@ -13,4 +13,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/FM4LS
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

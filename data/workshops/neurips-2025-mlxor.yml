@@ -1,5 +1,5 @@
 name: 'MLxOR: Mathematical Foundations and Operational Integration of Machine Learning for Uncertainty-Aware Decision-Making'
-acronym: NeurIPS 2025 Workshop MLxOR
+acronym: MLxOR
 conference: neurips
 year: 2025
 website: https://mlxor-workshop.github.io/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/MLxOR
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

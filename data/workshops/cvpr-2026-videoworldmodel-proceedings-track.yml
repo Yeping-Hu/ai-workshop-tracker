@@ -1,5 +1,5 @@
-name: "1st Workshop on Video World Models: Interaction, Memory, Efficiency (Proceedings Track)"
-acronym: CVPR 2026 Workshop VideoWorldModel
+name: '1st Workshop on Video World Models: Interaction, Memory, Efficiency (Proceedings Track)'
+acronym: VideoWorldModel
 conference: cvpr
 year: 2026
 website: https://videoworldmodel-workshop.github.io/
@@ -9,7 +9,7 @@ topics:
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/VideoWorldModel_Proceedings_Track
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'
 submission_deadline: 2026-03-02 14:30
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-03-02 14:30 UTC (as of 2026-07-02) — extensions on OpenReview are applied automatically; verify on the website.

@@ -1,5 +1,5 @@
 name: Third Workshop on Deep Learning for Code
-acronym: DL4C @ ICLR 2025
+acronym: DL4C
 conference: iclr
 year: 2025
 website: https://dl4c.github.io/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICLR.cc/2025/Workshop/DL4C
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

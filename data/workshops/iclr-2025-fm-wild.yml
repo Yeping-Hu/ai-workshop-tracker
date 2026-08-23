@@ -1,5 +1,5 @@
 name: Foundation Models in the Wild
-acronym: ICLR 2025 FM-Wild Workshop
+acronym: FM-Wild
 conference: iclr
 year: 2025
 website: https://fm-wild-community.github.io
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICLR.cc/2025/Workshop/FM-Wild
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

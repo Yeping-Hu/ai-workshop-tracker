@@ -1,5 +1,5 @@
 name: 'Imageomics: Discovering Biological Knowledge from Images Using AI'
-acronym: NeurIPS 2025 Workshop Imageomics
+acronym: Imageomics
 conference: neurips
 year: 2025
 website: https://imageomics.github.io/Imageomics-NeurIPS-2025/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/Imageomics
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

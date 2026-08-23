@@ -1,5 +1,5 @@
-name: "RoboGen: 3D World Generation for Robot Learning and Autonomous Systems"
-acronym: IROS 2025 RoboGen
+name: 'RoboGen: 3D World Generation for Robot Learning and Autonomous Systems'
+acronym: RoboGen
 conference: iros
 year: 2025
 website: https://robogen-iros.github.io/
@@ -13,4 +13,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: IEEE.org/IROS/2025/Workshop/RoboGen
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

@@ -1,5 +1,5 @@
 name: 'IEEE IROS 2026 Workshop Why Rust for Robotics: A Perspective From Industry'
-acronym: IROS 2026 R4R Workshop
+acronym: R4R
 conference: iros
 year: 2026
 website: https://rust-for-robotics.github.io/iros2026/

@@ -1,5 +1,5 @@
 name: '5th Workshop on RObotic MAnipulation of Deformable Objects: holistic approaches and challenges forward'
-acronym: IROS 2025 Workshop ROMADO
+acronym: ROMADO
 conference: iros
 year: 2025
 website: https://romado-workshop.github.io/ROMADO2025.github.io/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: IEEE.org/IROS/2025/Workshop/ROMADO
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

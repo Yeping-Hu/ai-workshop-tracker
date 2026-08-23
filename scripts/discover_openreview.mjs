@@ -39,7 +39,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, loadConferences, stripVenueFromName, cleanAcronym } from '../lib/workshops.mjs';
+import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, loadConferences, stripVenueFromName, cleanAcronym, normalizeAcronym } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 import { openreviewFetch, recordUnverified, getUnverified } from '../lib/openreview.mjs';
 
@@ -705,7 +705,12 @@ async function main({ conf, year, dryRun }) {
     });
     let acronym = String(val(c, 'subtitle') || tail).trim();
     if (acronym.length > 40 || acronym === title) acronym = tail.slice(0, 40);
-    acronym = cleanAcronym(acronym, conf, year);
+    acronym = normalizeAcronym(acronym, {
+      confName: confMeta.name ?? conf,
+      confFullName: confMeta.full_name,
+      year,
+      conf,
+    });
     let website = websiteFromContent(c);
     let deadline = parseGroupDeadline(val(c, 'date')) || (await deadlineFromInvitation(g));
     let tracks = [];

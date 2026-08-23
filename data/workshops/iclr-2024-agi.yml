@@ -1,5 +1,5 @@
 name: How Far Are We From AGI
-acronym: ICLR 2024 AGI Workshop
+acronym: AGI
 conference: iclr
 year: 2024
 website: https://agiworkshop.github.io/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICLR.cc/2024/Workshop/AGI
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

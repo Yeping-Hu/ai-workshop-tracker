@@ -1,5 +1,5 @@
 name: Intrinsically-Motivated and Open-Ended Learning Workshop
-acronym: NeurIPS 2024 Workshop IMOL
+acronym: IMOL
 conference: neurips
 year: 2024
 website: http://imol-workshop.github.io/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2024/Workshop/IMOL
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

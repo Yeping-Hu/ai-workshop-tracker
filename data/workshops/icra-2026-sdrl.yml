@@ -1,5 +1,5 @@
 name: Synthetic Data for Robot Learning
-acronym: ICRA 2026 Workshop SDRL
+acronym: SDRL
 conference: icra
 year: 2026
 website: https://sites.google.com/view/icra-2026-sdrl-workshop/home
@@ -11,4 +11,4 @@ deadline_notes: OpenReview-synced 2026-04-17 23:59 UTC (as of 2026-06-23) — ex
 openreview_venue_id: IEEE.org/ICRA/2026/Workshop/SDRL
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

@@ -1,5 +1,5 @@
 name: Machine Learning Multiscale Processes – Irreproducible Results Track
-acronym: ICLR 2025 Workshop MLMP IRT
+acronym: MLMP IRT
 conference: iclr
 year: 2025
 website: https://multiscale-ai.github.io/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICLR.cc/2025/Workshop/MLMP-IRT
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

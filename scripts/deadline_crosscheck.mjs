@@ -29,7 +29,7 @@
  *   node scripts/deadline_crosscheck.mjs --strict                      # exit 1 if anything to review
  */
 import fs from 'node:fs';
-import { listWorkshopFiles, readWorkshopFile, loadConferences, stripVenueFromName, cleanAcronym } from '../lib/workshops.mjs';
+import { listWorkshopFiles, readWorkshopFile, loadConferences, stripVenueFromName, cleanAcronym, normalizeAcronym } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 export { normalizeWebsite } from './discover_openreview.mjs';
 import {
@@ -229,14 +229,20 @@ export function normalizeVenueText(text, conference = '') {
  *  entries, so it is quiet enough to be worth a human's attention every week —
  *  MPLR-FM was retitled to "Privacy in the Era of Large Opaque Models" and only
  *  came to light because its website moved at the same time. */
-export function titleDrift(storedName, openreviewTitle, conference = '', acked = null) {
-  const a = normalizeVenueText(storedName, conference);
+export function titleDrift(storedName, openreviewTitle, conference = '', acked = null, venue = null) {
+  // Both sides through the importer's rules before diffing. upstreamIdentity()
+  // already cleans OpenReview's; a STORED value written before those rules
+  // existed ("ICLR 2025 Workshop on X") is not a rename either.
+  const a = normalizeVenueText(venue ? stripVenueFromName(storedName, venue) : storedName, conference);
   const b = normalizeVenueText(openreviewTitle, conference);
   if (!a || !b || a === b) return null;
   // Already reviewed and declined? Stay quiet only while OpenReview still says
   // the same thing. The acknowledgement records the VALUE that was rejected, not
   // a blanket "ignore this entry", so a later, different rename is reported again.
-  if (acked && normalizeVenueText(acked, conference) === b) return null;
+  // The acknowledgement records what OpenReview said when the call was made,
+  // raw. Normalise it the same way, or cleaning the upstream side silently
+  // invalidates every ack ever recorded.
+  if (acked && normalizeVenueText(venue ? stripVenueFromName(acked, venue) : acked, conference) === b) return null;
   return { stored: storedName, openreview: openreviewTitle };
 }
 
@@ -245,10 +251,15 @@ export function titleDrift(storedName, openreviewTitle, conference = '', acked =
  *  and comparing against those produced a 4.9% false-positive rate. So this only
  *  compares when the subtitle is acronym-shaped, which cuts it to zero across the
  *  dataset while still catching a real rename (MPLR-FM -> PriLOM). */
-export function acronymDrift(storedAcronym, openreviewSubtitle, acked = null) {
+export function acronymDrift(storedAcronym, openreviewSubtitle, acked = null, venue = null) {
   const sub = String(openreviewSubtitle ?? '').trim();
   if (!storedAcronym || !sub || /\s/.test(sub) || sub.length > 15) return null;
-  const norm = (x) => String(x ?? '').split('@')[0].toLowerCase().replace(/[^a-z0-9]+/g, '');
+  // Same rules on the stored side: "CVPR 2025 Workshop PVUW" and "PVUW" are one
+  // acronym written two ways, not a rename — that shape alone accounted for ~150
+  // rows. Case is folded, because upstream flattens it ("ICARE" for "iCARE") and
+  // ours is the better value of the two.
+  const pre = (x) => (venue ? normalizeAcronym(x, venue) : x);
+  const norm = (x) => String(pre(x) ?? '').split('@')[0].toLowerCase().replace(/[^a-z0-9]+/g, '');
   const a = norm(storedAcronym);
   const b = norm(sub);
   if (!a || !b || a === b) return null;
@@ -274,7 +285,7 @@ export function upstreamIdentity(content, { conference, year }, conferences = lo
   const title = String(val(content, 'title') ?? '').trim();
   return {
     name: title ? stripVenueFromName(title, venue) : '',
-    acronym: cleanAcronym(stripVenueFromName(val(content, 'subtitle') ?? '', venue), conference, year),
+    acronym: normalizeAcronym(val(content, 'subtitle') ?? '', { ...venue, conf: conference }),
   };
 }
 
@@ -389,6 +400,7 @@ async function main() {
   // matters whenever it happens, so identity checks run over EVERY entry with a
   // venue. Listings are per conference-year, so covering the whole dataset costs
   // ~24 requests rather than one per entry.
+  const confMetaById = new Map(loadConferences().map((x) => [x.id, x]));
   const identityEntries = slug ? allEntries.filter((e) => e.slug === slug) : allEntries;
   const prefixes = [
     ...new Set(identityEntries.map((e) => venuePrefix(e.raw.openreview_venue_id)).filter(Boolean)),
@@ -507,9 +519,11 @@ async function main() {
     const wd = websiteDrift(raw.website, websiteFromContent(c), ack.website);
     if (wd) { drift.push({ ...meta, ...wd }); console.log(`•  WEBSITE   ${s2}: ours ${wd.stored} vs OpenReview ${wd.openreview}`); }
     const up = upstreamIdentity(c, raw);
-    const td = titleDrift(raw.name, up.name, raw.conference, ack.name);
+    const cm = confMetaById.get(raw.conference) ?? {};
+    const venueCtx = { confName: cm.name ?? raw.conference, confFullName: cm.full_name, year: raw.year, conf: raw.conference };
+    const td = titleDrift(raw.name, up.name, raw.conference, ack.name, venueCtx);
     if (td) { renames.push({ ...meta, field: 'name', ...td }); console.log(`•  NAME      ${s2}: ours "${td.stored}" vs OpenReview "${td.openreview}"`); }
-    const ad = acronymDrift(raw.acronym, up.acronym, ack.acronym);
+    const ad = acronymDrift(raw.acronym, up.acronym, ack.acronym, venueCtx);
     if (ad) { renames.push({ ...meta, field: 'acronym', ...ad }); console.log(`•  ACRONYM   ${s2}: ours "${ad.stored}" vs OpenReview "${ad.openreview}"`); }
   }
 

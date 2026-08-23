@@ -1,5 +1,5 @@
 name: Workshop on Responsibly Building the Next Generation of Multimodal Foundational Models
-acronym: NeurIPS 2024 Workshop RBFM
+acronym: RBFM
 conference: neurips
 year: 2024
 website: https://asu-apg.github.io/rbfm/
@@ -13,4 +13,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2024/Workshop/RBFM
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

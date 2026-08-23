@@ -1,5 +1,5 @@
 name: DriveX - 1st Workshop on Foundation Models for V2X-based Cooperative Autonomous Driving
-acronym: CVPR 2025 (DriveX)
+acronym: DriveX
 conference: cvpr
 year: 2025
 website: https://drivex-workshop.github.io/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: thecvf.com/CVPR/2025/Workshop/DriveX
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

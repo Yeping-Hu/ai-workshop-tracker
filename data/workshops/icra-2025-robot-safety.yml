@@ -1,5 +1,5 @@
 name: Robot Safety under Uncertainty from “Intangible” Specifications
-acronym: ICRA 2025 Workshop Robot Safety
+acronym: Robot Safety
 conference: icra
 year: 2025
 website: https://iscicra25.github.io/
@@ -12,4 +12,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: IEEE.org/ICRA/2025/Workshop/Robot_Safety
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

@@ -1,5 +1,5 @@
-name: "Deep Learning for Code: Towards Human-Centered Coding Agents"
-acronym: ICML 2026 Workshop DL4C
+name: 'Deep Learning for Code: Towards Human-Centered Coding Agents'
+acronym: DL4C
 conference: icml
 year: 2026
 website: https://dl4c.github.io/
@@ -11,4 +11,4 @@ deadline_notes: OpenReview-synced 2026-05-20 12:00 UTC (as of 2026-06-23) — ex
 openreview_venue_id: ICML.cc/2026/Workshop/DL4C
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

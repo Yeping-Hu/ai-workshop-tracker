@@ -1,5 +1,5 @@
 name: The First Workshop on Populating Empty Cities -- Virtual Humans for Robotics and Autonomous Driving
-acronym: CVPR 2024 Workshop POETS
+acronym: POETS
 conference: cvpr
 year: 2024
 website: https://poets2024.github.io/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: thecvf.com/CVPR/2024/Workshop/POETS
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

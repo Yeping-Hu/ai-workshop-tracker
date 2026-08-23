@@ -1,5 +1,5 @@
-name: "Audio Imagination: NeurIPS 2024 Workshop AI-Driven Speech, Music, and Sound Generation"
-acronym: "Audio Imagination: NeurIPS 2024 Workshop"
+name: 'Audio Imagination: NeurIPS 2024 Workshop AI-Driven Speech, Music, and Sound Generation'
+acronym: 'Audio Imagination: NeurIPS 2024'
 conference: neurips
 year: 2024
 website: https://www.audio-imagination.com/
@@ -12,4 +12,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2024/Workshop/Audio_Imagination
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

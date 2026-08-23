@@ -1,5 +1,5 @@
 name: Large Language Model (LLM) Agents
-acronym: LLMAgents @ ICLR 2024
+acronym: LLMAgents
 conference: iclr
 year: 2024
 website: https://llmagents.github.io/
@@ -12,4 +12,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICLR.cc/2024/Workshop/LLMAgents
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

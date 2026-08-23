@@ -1,5 +1,5 @@
 name: Reliable ML from Unreliable Data
-acronym: NeurIPS 2025 - Reliable ML Workshop
+acronym: Reliable ML
 conference: neurips
 year: 2025
 website: https://reliablemlworkshop.github.io/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/Reliable_ML
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'
