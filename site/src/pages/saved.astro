@@ -142,9 +142,11 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
             <button class="star-btn" type="button" data-star-ws="${esc(w.slug)}" aria-pressed="true" aria-label="Remove ${name} from saved">★</button>
           </div>
           <div class="ws-meta">
+            ${/* No status pill here, unlike the board: this list already says it
+                  twice over — the countdown column reads "passed" or "TBA", and a
+                  concluded row is greyed via .row-passed. */ ''}
             ${w.acronym ? `<span class="mono">${esc(w.acronym)}</span>` : ''}
             <span>${esc(conf.name)} ${esc(w.year)}</span>
-            <span class="pill ${esc(w.status)}">${esc(w.status_label)}</span>
             ${w.location_distinguishes && w.location_label ? `<span class="ws-where">${esc(w.location_label)}</span>` : ''}
             ${(w.topics ?? []).map((id) => `<span class="chip">${esc(TOPIC[id] ?? id)}</span>`).join('')}
           </div>

@@ -41,7 +41,12 @@ const EQUIV = {
 // short and justified — every entry is a place the two pages disagree.
 const EXEMPT = new Set([
   'slug',   // used for the link on both, spelled differently
-  'status', // both render it, via status_label on the saved side
+  'status', // saved uses it to pick .row-passed rather than to print a pill
+  // The saved list deliberately drops the status pill. It would say a third time
+  // what the row already says twice: the countdown column reads "passed" or
+  // "TBA", and a concluded row is greyed by .row-passed. The board keeps the
+  // pill because it is scanned against hundreds of other rows.
+  'statusLabel',
 ]);
 
 const used = (src) => new Set([...src.matchAll(/w\.([a-zA-Z_]+)/g)].map((m) => m[1]));

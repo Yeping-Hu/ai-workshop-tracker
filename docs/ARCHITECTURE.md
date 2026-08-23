@@ -623,7 +623,11 @@ which is why the API publishes them.
 
 `scripts/row_parity_test.mjs` (in `validate.yml`) now guards it: every field the
 board displays must have an equivalent in the saved renderer, with a short
-exempt list. It is a structural check, not a pixel one — it cannot prove the
+exempt list. One entry on that list is deliberate rather than accidental: the
+saved list drops the **status pill**, because the row already says it twice —
+the countdown column reads `passed` or `TBA`, and a concluded row is greyed by
+`.row-passed`. The board keeps the pill, where a row is scanned against hundreds
+of others. It is a structural check, not a pixel one — it cannot prove the
 output matches, but it catches the common case of a field added to one renderer
 and forgotten in the other.
 
