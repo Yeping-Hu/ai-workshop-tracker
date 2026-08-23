@@ -334,7 +334,17 @@ if (firstStar) {
   await page.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
   await page.waitForSelector(`[data-saved-ws="${starredSlug}"]`, { timeout: 8000 });
   check('saved page lists the starred workshop', true);
-  check('saved row carries a status pill', (await page.$(`[data-saved-ws="${starredSlug}"] .pill`)) !== null);
+  // The saved list deliberately has no status pill — the countdown column and the
+  // greyed row already say it. What matters is that status is still legible, so
+  // assert the countdown carries it rather than asserting the pill is gone.
+  check('saved row shows no status pill', (await page.$(`[data-saved-ws="${starredSlug}"] .pill`)) === null);
+  check(
+    'saved row still states its status via the countdown',
+    /^(T−|T-)?\s*[\d]|^(passed|TBA)$/i.test(
+      (await page.$eval(`[data-saved-ws="${starredSlug}"] .countdown`, (el) => el.textContent.trim())) || '',
+    ),
+    await page.$eval(`[data-saved-ws="${starredSlug}"] .countdown`, (el) => el.textContent.trim()),
+  );
   if (paperWs) {
     const savedPaper = await page.$eval('.saved-papers li a, .saved-papers li', (el) => el.textContent.trim());
     check('saved page lists the starred paper by title', savedPaper.includes(paperTitle.slice(0, 30)), savedPaper);
