@@ -1,5 +1,5 @@
 name: AI for Nucleic Acids
-acronym: ICLR 2025 AI4NA
+acronym: AI4NA
 conference: iclr
 year: 2025
 website: https://ai4na-workshop.github.io/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICLR.cc/2025/Workshop/AI4NA
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

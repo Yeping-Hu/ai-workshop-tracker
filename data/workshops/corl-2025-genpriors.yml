@@ -1,5 +1,5 @@
 name: Generalizable Priors for Robot Manipulation
-acronym: CoRL 2025 GenPriors Workshop
+acronym: GenPriors
 conference: corl
 year: 2025
 website: https://corl25-genpriors.github.io/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: robot-learning.org/CoRL/2025/Workshop/GenPriors
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

@@ -1,5 +1,5 @@
 name: AI for Science Workshop
-acronym: ICML2024-AI4Science
+acronym: AI4Science
 conference: icml
 year: 2024
 website: https://ai4sciencecommunity.github.io/icml24.html
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICML.cc/2024/Workshop/AI4Science
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

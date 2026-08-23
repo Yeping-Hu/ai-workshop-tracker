@@ -1,5 +1,5 @@
 name: 'Evaluating the Evolving LLM Lifecycle: Benchmarks, Emergent Abilities, and Scaling'
-acronym: NeurIPS 2025 LLM Evaluation Workshop
+acronym: LLM Evaluation
 conference: neurips
 year: 2025
 website: https://sites.google.com/corp/view/llm-eval-workshop
@@ -12,4 +12,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/LLM_Evaluation
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

@@ -1,5 +1,5 @@
 name: 'Workshop TS-LIMITS @NeurIPS 2026 -- Generalization for Time Series in Tight Settings: Latency, Inference, Memory, prIvacy and susTainability'
-acronym: NeurIPS 2026 Workshop TS-LIMITS
+acronym: TS-LIMITS
 conference: neurips
 year: 2026
 website: https://ts-limits.github.io/

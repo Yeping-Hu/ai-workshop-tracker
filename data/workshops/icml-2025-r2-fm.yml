@@ -1,5 +1,5 @@
 name: Reliable and Responsible Foundation Models
-acronym: ICML 2025 R2-FM Workshop
+acronym: R2-FM
 conference: icml
 year: 2025
 website: https://r2-fm.github.io/
@@ -12,4 +12,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICML.cc/2025/Workshop/R2-FM
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

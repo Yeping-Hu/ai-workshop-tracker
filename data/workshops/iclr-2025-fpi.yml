@@ -1,5 +1,5 @@
-name: "Frontiers in Probabilistic Inference: Learning meets Sampling"
-acronym: FPI-ICLR2025
+name: 'Frontiers in Probabilistic Inference: Learning meets Sampling'
+acronym: FPI
 conference: iclr
 year: 2025
 website: https://sites.google.com/view/fpiworkshop/about
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICLR.cc/2025/Workshop/FPI
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

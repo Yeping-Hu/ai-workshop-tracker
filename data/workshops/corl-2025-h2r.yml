@@ -1,5 +1,5 @@
-name: "Human to Robot: Workshop on Sensorizing, Modeling, and Learning from Humans"
-acronym: H2R CoRL 2025 Workshop
+name: 'Human to Robot: Workshop on Sensorizing, Modeling, and Learning from Humans'
+acronym: H2R CoRL 2025
 conference: corl
 year: 2025
 website: https://sites.google.com/view/h2r-corl2025
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: robot-learning.org/CoRL/2025/Workshop/H2R
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

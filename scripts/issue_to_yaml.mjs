@@ -12,7 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { WORKSHOPS_DIR, recordDeadlineObservation, loadConferences, stripVenueFromName, cleanAcronym } from '../lib/workshops.mjs';
+import { WORKSHOPS_DIR, recordDeadlineObservation, loadConferences, stripVenueFromName, cleanAcronym, normalizeAcronym } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs, isValidTimezone, assembleDeadline } from '../lib/dates.mjs';
 import { parseTopics } from '../lib/issue_form.mjs';
 
@@ -81,7 +81,7 @@ const slugify = (s) =>
 const confMeta = loadConferences().find((c) => c.id === conference) ?? {};
 const venue = { confName: confMeta.name ?? conference, confFullName: confMeta.full_name, year: Number(yearStr) };
 const name = stripVenueFromName(rawName, venue);
-const acronym = cleanAcronym(stripVenueFromName(get('Acronym'), venue), conference, Number(yearStr));
+const acronym = normalizeAcronym(get('Acronym'), { ...venue, conf: conference });
 const slugBase = slugify(acronym || name);
 let filename = `${conference}-${yearStr}-${slugBase}.yml`;
 let i = 2;

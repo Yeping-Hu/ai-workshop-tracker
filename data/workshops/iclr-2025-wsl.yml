@@ -1,5 +1,5 @@
 name: Workshop on Neural Network Weights as a New Data Modality
-acronym: ICLR 2025 Workshop Weight Space Learning
+acronym: Weight Space Learning
 conference: iclr
 year: 2025
 website: https://weight-space-learning.github.io/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICLR.cc/2025/Workshop/WSL
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

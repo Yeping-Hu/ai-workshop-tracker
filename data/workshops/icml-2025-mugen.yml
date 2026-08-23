@@ -1,5 +1,5 @@
 name: Machine Unlearning for Generative AI
-acronym: MUGen @ ICML 2025
+acronym: MUGen
 conference: icml
 year: 2025
 website: https://mugenworkshop.github.io/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICML.cc/2025/Workshop/MUGen
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

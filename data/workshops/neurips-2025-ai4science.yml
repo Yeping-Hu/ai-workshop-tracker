@@ -1,5 +1,5 @@
 name: AI for Science Workshop
-acronym: NeurIPS2025-AI4Science
+acronym: AI4Science
 conference: neurips
 year: 2025
 website: https://ai4sciencecommunity.github.io/neurips25.html
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/AI4Science
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

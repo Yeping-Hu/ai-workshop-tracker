@@ -1,5 +1,5 @@
 name: Foundation Models and Neuro-Symbolic AI for Robotics
-acronym: ICRA 2025 FMNS
+acronym: FMNS
 conference: icra
 year: 2025
 website: https://sairlab.org/icra25/
@@ -13,4 +13,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: IEEE.org/ICRA/2025/Workshop/FMNS
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

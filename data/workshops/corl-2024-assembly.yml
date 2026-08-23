@@ -1,5 +1,5 @@
 name: 'A World Built by Robots: Workshop on Learning Robotic Assembly of Industrial and Everyday Objects'
-acronym: CoRL 2024 Workshop Assembly
+acronym: Assembly
 conference: corl
 year: 2024
 website: https://roboassembly.github.io/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: robot-learning.org/CoRL/2024/Workshop/Assembly
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

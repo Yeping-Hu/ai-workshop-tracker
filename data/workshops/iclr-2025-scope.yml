@@ -1,5 +1,5 @@
 name: First Workshop on Scalable Optimization for Efficient and Adaptive Foundation Models
-acronym: SCOPE - ICLR 2025
+acronym: SCOPE
 conference: iclr
 year: 2025
 website: https://scope-workshop.github.io/
@@ -13,4 +13,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICLR.cc/2025/Workshop/SCOPE
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

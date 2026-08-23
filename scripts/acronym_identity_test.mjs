@@ -163,5 +163,18 @@ check('acronym that is only the venue', at('neurips-2025-aiforanimalcomms').full
 // TRACK_SUFFIX is the mechanism the failure message points at; keep it honest.
 check('venueFamily reads the suffix', venueFamily('colmweb.org/COLM/2026/Workshop/Social_Sim_Shared_Task').suffixLabel, 'Shared Task');
 
+// Non-CVEU sibling pairs. The sweep left several pairs sharing a bare acronym
+// that previously differed only by leftover venue noise ("CVPR 2026 Workshop
+// VideoWorldModel" vs "VideoWorldModel"), so the derived track label is now the
+// only thing telling them apart — on the page title and in the saved list alike.
+check('proceedings sibling labelled', at('cvpr-2026-videoworldmodel-proceedings-track').full,
+  'VideoWorldModel (Proceedings Track)');
+check('non-proceedings sibling labelled', at('cvpr-2026-videoworldmodel-non-proceedings-track').full,
+  'VideoWorldModel (Non Proceedings Track)');
+check('archival sibling labelled', at('eccv-2026-drivex-archival').full, 'DriveX (Archival)');
+check('non-archival sibling labelled', at('eccv-2026-drivex-non-archival').full, 'DriveX (Non Archival)');
+check('the pair does not collide',
+  at('eccv-2026-drivex-archival').full !== at('eccv-2026-drivex-non-archival').full, true);
+
 console.log(failed ? `\n${failed} check(s) failed` : '\nAll short-name identity checks passed');
 process.exit(failed ? 1 : 0);

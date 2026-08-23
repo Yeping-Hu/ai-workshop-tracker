@@ -1,5 +1,5 @@
 name: 'Rust for Robotics: Building Robust Foundations for Tomorrow''s Autonomous Systems'
-acronym: ICRA 2025 Workshop R4R
+acronym: R4R
 conference: icra
 year: 2025
 website: https://icra25.rust-for-robotics.com/
@@ -12,4 +12,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: IEEE.org/ICRA/2025/Workshop/R4R
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

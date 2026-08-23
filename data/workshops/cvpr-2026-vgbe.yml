@@ -1,5 +1,5 @@
 name: 'Video Generative Models: Benchmarks and Evaluation'
-acronym: CVPR 2026 Workshop VGBE
+acronym: VGBE
 conference: cvpr
 year: 2026
 website: https://vidgen-bench-eval.github.io/

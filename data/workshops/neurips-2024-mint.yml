@@ -1,5 +1,5 @@
-name: "🍃 MINT: Foundation Model Interventions"
-acronym: MINT@NeurIPS2024
+name: '🍃 MINT: Foundation Model Interventions'
+acronym: MINT
 conference: neurips
 year: 2024
 website: https://sites.google.com/view/mint-2024
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2024/Workshop/MINT
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

@@ -1,5 +1,5 @@
 name: Multi-modal Foundation Model meets Embodied AI Workshop
-acronym: MFM-EAI@ICML2024
+acronym: MFM-EAI
 conference: icml
 year: 2024
 website: https://icml-mfm-eai.github.io/
@@ -13,4 +13,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICML.cc/2024/Workshop/MFM-EAI
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

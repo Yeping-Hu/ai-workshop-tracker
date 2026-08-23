@@ -1,5 +1,5 @@
-name: "2nd edition of Frontiers in Probabilistic Inference: Learning meets Sampling"
-acronym: FPI-NEURIPS2025
+name: '2nd edition of Frontiers in Probabilistic Inference: Learning meets Sampling'
+acronym: FPI
 conference: neurips
 year: 2025
 website: http://fpiworkshop.org
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/FPI
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

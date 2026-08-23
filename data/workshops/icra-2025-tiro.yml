@@ -1,5 +1,5 @@
 name: Thermal Infrared in Robotics (TIRO) workshop
-acronym: TIRO at ICRA 2025
+acronym: TIRO
 conference: icra
 year: 2025
 website: https://sites.google.com/view/tiro25/
@@ -11,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: IEEE.org/ICRA/2025/Workshop/TIRO
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'
