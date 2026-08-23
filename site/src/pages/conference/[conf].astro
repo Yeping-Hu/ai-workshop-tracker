@@ -177,6 +177,17 @@ const statusLines = (w: any): string[] =>
             <span class={`pill ${statusPill(w)}`}>{statusLines(w).map((line, i) => <Fragment>{i > 0 && <br />}{line}</Fragment>)}</span>
             <div class="ws-head">
               <a href={href(`/workshop/${w.slug}/`)}>{workshopShortName(w, confName).full}</a>
+              {/* Same control as the board and the workshop page — this list was
+                  the only place a visitor could not save without opening the
+                  entry first. Always rendered, never hover-revealed: most of the
+                  traffic here is phones, where there is no hover. */}
+              <button
+                class="star-btn"
+                type="button"
+                data-star-ws={w.slug}
+                aria-pressed="false"
+                aria-label={`Save ${workshopShortName(w, confName).full}`}
+              >☆</button>
               {w.deadlineWallClock && (
                 <span class="muted mono small">{w.statusLabel === 'Open call' ? 'due ' : ''}{w.deadlineWallClock}</span>
               )}

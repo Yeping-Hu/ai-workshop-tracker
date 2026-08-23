@@ -483,6 +483,12 @@ details.dd .dd-panel label.check { white-space: nowrap; }
 .star-btn-labeled.is-on::after { content: " Saved"; }
 .star-btn-labeled:hover { border-color: var(--accent); }
 .paper .star-btn { margin-left: -0.3rem; }
+/* Conference lists are far denser than the board — 236 rows on NeurIPS 2026 —
+   so the star sits tighter and quieter there. Always visible rather than shown
+   on hover: this page is mostly read on phones, which have no hover. */
+.conf-ws-list .star-btn { font-size: 0.92rem; padding: 0 0.18rem; opacity: 0.55; }
+.conf-ws-list .star-btn:hover, .conf-ws-list .star-btn:focus-visible { opacity: 1; }
+.conf-ws-list .star-btn.is-on { opacity: 1; }
 .star-demo { color: var(--accent); }
 .nav-count {
   font-family: var(--font-mono); font-size: 0.68rem; font-weight: 600;
