@@ -6,11 +6,18 @@ website: https://neurips.cc/Conferences/2026
 topics:
   - systems
   - robustness
-submission_deadline: 2026-08-30 12:29
+submission_deadline: 2026-09-13 12:29
 timezone: UTC
-deadline_notes: OpenReview-synced 2026-08-30 12:29 UTC (as of 2026-07-17) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_notes: OpenReview-synced 2026-09-13 12:29 UTC (as of 2026-08-24) — extensions on OpenReview are applied automatically; verify on the website.
 openreview_venue_id: NeurIPS.cc/2026/Workshop/EvoRobust
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
 added: '2026-07-17'
 location: Sydney, Australia
+deadline_history:
+  - value: 2026-08-30 12:29
+    recorded: '2026-07-17'
+    timezone: UTC
+  - value: 2026-09-13 12:29
+    recorded: '2026-08-24'
+    timezone: UTC
