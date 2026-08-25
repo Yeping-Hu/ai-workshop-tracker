@@ -31,6 +31,7 @@
 import fs from 'node:fs';
 import { listWorkshopFiles, readWorkshopFile, loadConferences, stripVenueFromName, cleanAcronym, normalizeAcronym } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
+import { isAcronymShaped } from '../lib/identity.mjs';
 export { normalizeWebsite } from './discover_openreview.mjs';
 import {
   deadlineFromInvitation,
@@ -253,7 +254,10 @@ export function titleDrift(storedName, openreviewTitle, conference = '', acked =
  *  dataset while still catching a real rename (MPLR-FM -> PriLOM). */
 export function acronymDrift(storedAcronym, openreviewSubtitle, acked = null, venue = null) {
   const sub = String(openreviewSubtitle ?? '').trim();
-  if (!storedAcronym || !sub || /\s/.test(sub) || sub.length > 15) return null;
+  // The shape test lives in lib/identity.mjs, which the digest renderer and the
+  // /changes/ page also call. One definition: two copies drift, and then the
+  // reviewer and the renderer disagree about what counts as an acronym.
+  if (!storedAcronym || !isAcronymShaped(sub)) return null;
   // Same rules on the stored side: "CVPR 2025 Workshop PVUW" and "PVUW" are one
   // acronym written two ways, not a rename — that shape alone accounted for ~150
   // rows. Case is folded, because upstream flattens it ("ICARE" for "iCARE") and

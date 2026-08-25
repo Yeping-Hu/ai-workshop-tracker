@@ -117,7 +117,7 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
       const body =
         c.kind === 'extended' ? `→ Extended ${c.days} ${d}`
         : c.kind === 'earlier' ? `△ Moved ${c.days} ${d} earlier`
-        : c.kind === 'announced' ? 'Deadline just announced'
+        : c.kind === 'announced' ? 'First deadline posted'
         : '';
       if (!body) return '';
       const title = `Recorded ${esc(c.recorded)} — the date we observed this value, not necessarily when the organizers changed it.`;

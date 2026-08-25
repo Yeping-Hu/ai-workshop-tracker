@@ -1,0 +1,41 @@
+{
+  "generated_at": "2026-08-25T06:30:00.000Z",
+  "since": "2026-08-18",
+  "events": [
+    {
+      "slug": "corl-2026-agentic-robotics",
+      "kind": "extended",
+      "days": 5,
+      "old_utc": null,
+      "new_utc": null
+    },
+    {
+      "slug": "eccv-2026-dexhand-non-proceedings",
+      "kind": "earlier",
+      "days": 2,
+      "old_utc": null,
+      "new_utc": null
+    },
+    {
+      "slug": "iros-2026-ai-meets-autonomy",
+      "kind": "deadline_announced",
+      "days": null,
+      "old_utc": null,
+      "new_utc": null
+    },
+    {
+      "slug": "neurips-2026-aaba4et",
+      "kind": "announced",
+      "days": null,
+      "old_utc": null,
+      "new_utc": null
+    },
+    {
+      "slug": "corl-2026-contact-rich-loco-manipulation",
+      "kind": "extended",
+      "days": 5,
+      "old_utc": null,
+      "new_utc": null
+    }
+  ]
+}

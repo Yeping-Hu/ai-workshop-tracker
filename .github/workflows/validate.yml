@@ -49,6 +49,12 @@ jobs:
         run: node scripts/imports_test.mjs
       - name: Check stored names and acronyms are already normalised
         run: node scripts/identity_fixed_point_test.mjs
+      - name: Test the display-acronym rule (one shape predicate, not two)
+        run: node scripts/display_acronym_test.mjs
+      - name: Check one event has one name across every surface
+        run: node scripts/vocabulary_test.mjs
+      - name: Check the facet URL contract (one parser, board included)
+        run: node scripts/facet_params_test.mjs
       - name: Check the saved list renders the same row as the board
         run: node scripts/row_parity_test.mjs
       - name: Test Markdown export formatting

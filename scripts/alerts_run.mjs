@@ -19,8 +19,9 @@
  *   3. classify events -> POST them -> PUT the new snapshot (in that order:
  *      a snapshot written before its events would lose them forever)
  *   4. urgent pass (every run)
- *   5. weekly pass (UTC Monday, or FORCE_WEEKLY)
- *   6. maintenance
+ *   5. fetch this week's events and write data/changes.json (every run)
+ *   6. weekly pass (UTC Monday, or FORCE_WEEKLY) — reuses step 5's events
+ *   7. maintenance
  *
  * NEVER log an address, a message body, or anything that reveals the size of
  * the list — the workflow log is public on a public repo. Dataset facts
@@ -193,6 +194,46 @@ function starredImminent(sub, workshops) {
 
 /* --------------------------------------------------------------------- main */
 
+/**
+ * Write the public /changes/ feed: this week's events, as a committed file the
+ * static site build can read.
+ *
+ * The site cannot reach D1 — it is a static build with no credentials, and the
+ * events live nowhere else — so the alternative to a committed artifact is the
+ * page recomputing its own diff from git history. That would be a SECOND
+ * computation, and the page and the email would then be free to disagree about
+ * what happened this week, which is the one thing this must not do.
+ *
+ * Only events are written, not workshop projections: the site already has every
+ * workshop in data/, so the page joins on slug and takes names from the same
+ * corpus the rest of the site uses. That keeps the file small and means a
+ * workshop cannot be named one way here and another way three pages later.
+ *
+ * Written on every run, including quiet ones — an empty `events` array is the
+ * honest state for a quiet week, and skipping the write would leave last week's
+ * changes on the page claiming to be this week's.
+ */
+function writeChangesArtifact({ since, events }) {
+  const out = {
+    generated_at: new Date(NOW_MS).toISOString(),
+    since,
+    events: events.map((e) => ({
+      slug: e.slug,
+      kind: e.kind,
+      days: e.days ?? null,
+      old_utc: e.old_utc ?? null,
+      new_utc: e.new_utc ?? null,
+    })),
+  };
+  const file = path.join(ROOT, 'data', 'changes.json');
+  if (DRY_RUN) {
+    log(`   [dry-run] would write ${path.relative(ROOT, file)} (${out.events.length} event(s))`);
+    return;
+  }
+  fs.writeFileSync(file, `${JSON.stringify(out, null, 2)}\n`);
+  log(`   wrote ${path.relative(ROOT, file)} (${out.events.length} event(s))`);
+}
+
 async function main() {
   log(`alerts run ${NOW.toISOString()}${DRY_RUN ? '  [DRY RUN]' : ''}`);
 
@@ -327,13 +368,24 @@ async function main() {
     log(`4b. saved-workshop changes: nothing to report (${priv(changeSubs.length)} subscriber(s) opted in)`);
   }
 
-  /* 5. weekly pass (Mondays) ---------------------------------------------- */
+  /* 5. this week's events — ONE fetch, two consumers ------------------------
+   *
+   * The public /changes/ page and the Monday digest must never disagree about
+   * what happened this week, and the only way to guarantee that is for them to
+   * read the same array. So the fetch happens on every run, not inside the
+   * Monday branch: the artifact is rewritten daily (the page says "this week",
+   * and a page that only moved on Mondays would be six days stale by Sunday),
+   * and the digest below reuses it rather than asking again.
+   */
+  const since = new Date(NOW_MS - 7 * 86_400_000).toISOString().slice(0, 10);
+  const { events } = await admin(`/admin/events?since=${since}`);
+  log(`5. this week: ${events.length} event(s) since ${since}`);
+  writeChangesArtifact({ since, events });
+
+  /* 6. weekly pass (Mondays) ---------------------------------------------- */
   const isWeeklyDay = NOW.getUTCDay() === WEEKLY_DOW;
   let digestsSent = 0;
   if (isWeeklyDay || FORCE_WEEKLY) {
-    const since = new Date(NOW_MS - 7 * 86_400_000).toISOString().slice(0, 10);
-    const { events } = await admin(`/admin/events?since=${since}`);
-    log(`5. weekly: ${events.length} event(s) since ${since}`);
 
     const messages = [];
     // `starred_changes` subscribers opted out of a scheduled summary entirely.
@@ -364,12 +416,12 @@ async function main() {
     log(`5. weekly: not today (UTC day ${NOW.getUTCDay()}, weekly day is ${WEEKLY_DOW})`);
   }
 
-  /* 6. maintenance -------------------------------------------------------- */
+  /* 7. maintenance -------------------------------------------------------- */
   if (!DRY_RUN) {
     const m = await admin('/admin/maintenance', { method: 'POST' });
-    log(`6. maintenance: ${priv(m.rate_limit_rows)} rate-limit row(s), ${m.events_pruned} old event(s), ${priv(m.unconfirmed_pruned)} abandoned signup(s)`);
+    log(`7. maintenance: ${priv(m.rate_limit_rows)} rate-limit row(s), ${m.events_pruned} old event(s), ${priv(m.unconfirmed_pruned)} abandoned signup(s)`);
   } else {
-    log('6. [dry-run] maintenance skipped');
+    log('7. [dry-run] maintenance skipped');
   }
 
   log(`done — ${priv(urgentSent)} urgent, ${priv(changeSent)} saved-change, ${priv(digestsSent)} digest(s)${DRY_RUN ? ' (dry run: nothing was sent)' : ''}`);

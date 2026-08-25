@@ -14,6 +14,10 @@ on:
     branches: [main]
     paths:
       - 'alerts/**'
+      # render.mjs imports this, so it is inside the Worker bundle. Without it
+      # here, a change to the display rule would ship to the site and leave the
+      # digest running the old one.
+      - 'lib/identity.mjs'
       - '.github/workflows/alerts-worker-deploy.yml'
   workflow_dispatch:
 

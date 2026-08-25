@@ -59,6 +59,15 @@ check('formatWorkshop formats bold OpenReview link', output, '- **OpenReview:** 
 check('formatWorkshop formats Deadline History as a list item', output, '- **Deadline History:** Extended by 5 days (previously Aug 24, 2026 23:59 UTC)');
 check('formatWorkshop excludes auto-suggested maintenance notes from Description', output.includes('Description'), false);
 
+// The 'announced' branch had no coverage at all, which is how it kept the old
+// wording while the digest moved on. Rendered, not asserted by string surgery.
+const announcedOut = formatWorkshop(
+  { ...sampleWs, deadlineChange: { kind: 'announced', days: null, fromWallClock: null } },
+  'NeurIPS',
+);
+check('a first-published deadline renders the shared vocabulary',
+  announcedOut, '- **Deadline History:** First deadline posted');
+
 // 3. Test custom notes inclusion
 const wsWithCustomNotes = {
   ...sampleWs,

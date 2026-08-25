@@ -1,0 +1,272 @@
+---
+/**
+ * /changes/ — what moved in the tracker this week, as a public page.
+ *
+ * The same week the Monday digest reports, from the same array of events. The
+ * events live in D1 and a static build cannot read them, so the alerts Action
+ * commits `data/changes.json` on every run and this page renders it. That is
+ * what makes "one diff computation, two consumers" true: the alternative — the
+ * page deriving its own diff from git history — would let the page and the
+ * email disagree about what happened, which is the one thing they must not do.
+ *
+ * Current week only, deliberately. No archive: `/changes/?week=…` would be a
+ * second, slower way to ask what the workshop pages already answer per entry,
+ * and the events table is pruned anyway.
+ *
+ * First run, and quiet weeks: the file may not exist (a fork, a fresh clone, or
+ * before the Action has run once) and may legitimately contain zero events. Both
+ * render the empty state; neither fails the build. A fork with no alerts
+ * satellite at all still builds this page — it just says nothing changed.
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import Base from '../components/Base.astro';
+import AlertsSignup from '../components/AlertsSignup.astro';
+import { workshops, conferenceById, topicById } from '../lib/data';
+import { href } from '../lib/site';
+// @ts-ignore — shared plain-JS module at the repo root
+import { displayLabel } from '../../../lib/identity.mjs';
+
+const ROOT = path.resolve(process.cwd(), '..');
+const FEED = path.join(ROOT, 'data', 'changes.json');
+
+let feed: any = { generated_at: null, since: null, events: [] };
+try {
+  if (fs.existsSync(FEED)) feed = JSON.parse(fs.readFileSync(FEED, 'utf8'));
+} catch {
+  // A malformed feed renders the empty state rather than breaking the build:
+  // this page is a nice-to-have, the rest of the site is not.
+  feed = { generated_at: null, since: null, events: [] };
+}
+
+const bySlug = new Map(workshops.map((w: any) => [w.slug, w]));
+
+/** Prose register of the shared vocabulary — the same words the site uses. */
+function leadFor(e: any) {
+  const d = e.days === 1 ? 'day' : 'days';
+  if (e.kind === 'extended') return `Extended ${e.days} ${d}`;
+  if (e.kind === 'earlier') return `Moved ${e.days} ${d} earlier`;
+  return 'First deadline posted';
+}
+
+const CHANGE_KINDS = new Set(['extended', 'earlier', 'deadline_announced']);
+
+const rows = (Array.isArray(feed.events) ? feed.events : [])
+  .map((e: any) => {
+    const w: any = bySlug.get(e.slug);
+    if (!w) return null; // a workshop removed since the event was recorded
+    const conf = conferenceById.get(w.conference);
+    return {
+      slug: w.slug,
+      kind: e.kind,
+      lead: leadFor(e),
+      label: displayLabel(w.name, w.acronym, {
+        conference: conf?.name ?? w.conference,
+        year: w.year,
+        trackLabel: w.trackLabel ?? null,
+      }),
+      conference: conf?.name ?? w.conference,
+      color: conf?.color ?? null,
+      topics: (w.topics ?? []).map((t: string) => topicById.get(t)?.label ?? t).filter(Boolean),
+      whenIso: e.new_utc ?? w.deadlineUtc ?? null,
+      status: w.status ?? null,
+      url: href(`/workshop/${w.slug}/`),
+    };
+  })
+  .filter(Boolean) as any[];
+
+// Same section semantics as the digest: a first-published deadline IS a deadline
+// change, and "new this week" is a workshop appearing at all. Past editions are
+// not news, exactly as the digest filters them.
+const changes = rows.filter((r) => CHANGE_KINDS.has(r.kind));
+const added = rows.filter((r) => r.kind === 'announced' && r.status !== 'past');
+
+// Grouped by conference, alphabetically — the digest does the same, for the same
+// reason: a flat wall of rows from nine conferences is harder to scan.
+function groupByConference(list: any[]) {
+  const m = new Map<string, any[]>();
+  for (const r of list) {
+    if (!m.has(r.conference)) m.set(r.conference, []);
+    m.get(r.conference)!.push(r);
+  }
+  return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+}
+
+const changeGroups = groupByConference(changes);
+const addedGroups = groupByConference(added);
+const total = changes.length + added.length;
+
+const weekOf = feed.since
+  ? new Date(`${feed.since}T00:00:00Z`).toLocaleDateString('en-GB', {
+      day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
+    })
+  : null;
+---
+
+<Base
+  title="What changed this week"
+  description="Deadline extensions, first deadlines posted and workshops added to the AI Workshop Tracker in the last seven days."
+>
+  <section class="masthead">
+    <p class="eyebrow">This week</p>
+    <h1>What changed</h1>
+    <p class="muted">
+      {total > 0
+        ? `${changes.length} deadline change${changes.length === 1 ? '' : 's'} and ${added.length} new workshop${added.length === 1 ? '' : 's'} since ${weekOf}.`
+        : 'Nothing has changed in the last seven days.'}
+      {' '}All times UTC.
+    </p>
+    <p class="changes-cta">
+      <a href={href('/alerts/')}>Get this page, filtered to your selection, in your inbox every Monday →</a>
+    </p>
+  </section>
+
+  {total > 0 && (
+    <section class="changes-filters" data-changes-filters hidden>
+      <p class="muted small">
+        <span data-changes-count></span>
+        <button type="button" class="btn-quiet" data-changes-clear hidden>Clear filters</button>
+      </p>
+    </section>
+  )}
+
+  {changeGroups.length > 0 && (
+    <section class="changes-block">
+      <h2>Deadline changes</h2>
+      {changeGroups.map(([conf, list]) => (
+        <div class="changes-group" data-changes-group>
+          <h3>{conf}</h3>
+          <ul class="changes-list">
+            {list.map((r) => (
+              <li
+                class="changes-row"
+                data-changes-row
+                data-slug={r.slug}
+                data-conference={r.conference}
+                data-topic={r.topics.join(',')}
+              >
+                <span class="changes-lead">{r.lead}</span>
+                <a href={r.url}>{r.label}</a>
+                {r.whenIso && <span class="muted"> · {r.whenIso.slice(0, 10)}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
+  )}
+
+  {addedGroups.length > 0 && (
+    <section class="changes-block">
+      <h2>New this week</h2>
+      <p class="muted small">workshops added to the tracker this week</p>
+      {addedGroups.map(([conf, list]) => (
+        <div class="changes-group" data-changes-group>
+          <h3>{conf}</h3>
+          <ul class="changes-list">
+            {list.map((r) => (
+              <li
+                class="changes-row"
+                data-changes-row
+                data-slug={r.slug}
+                data-conference={r.conference}
+                data-topic={r.topics.join(',')}
+              >
+                <span class="changes-lead">New</span>
+                <a href={r.url}>{r.label}</a>
+                {r.whenIso && <span class="muted"> · {r.whenIso.slice(0, 10)}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
+  )}
+
+  {total === 0 && (
+    <section class="changes-block">
+      <p class="muted">
+        Quiet weeks happen, and the tracker does not pad them. The
+        <a href={href('/')}>board</a> lists every open call.
+      </p>
+    </section>
+  )}
+
+  <AlertsSignup
+    heading="Get this weekly, by email"
+    blurb="One message on Mondays, filtered to the conferences and topics you pick."
+    compact
+  />
+</Base>
+
+<script>
+  import { readFacets, matchesFacets } from '../scripts/facet-params.js';
+
+  // Facets come from the board's own URL contract, so a link built there — or
+  // by the digest's "and N more" — filters this page the same way.
+  const sel = readFacets(location.search, ['conference', 'topic']);
+  const rows = [...document.querySelectorAll('[data-changes-row]')];
+
+  // Saved rows are highlighted from the same localStorage key the board reads.
+  // Read defensively: a corrupt value must not blank the page.
+  let saved = new Set<string>();
+  try {
+    const raw = JSON.parse(localStorage.getItem('awt-fav-workshops') || '[]');
+    if (Array.isArray(raw)) saved = new Set(raw);
+  } catch {}
+
+  let shown = 0;
+  for (const el of rows) {
+    const row = {
+      conference: el.getAttribute('data-conference') || '',
+      topic: (el.getAttribute('data-topic') || '').split(',').filter(Boolean),
+    };
+    const ok = matchesFacets(row, sel, ['conference', 'topic']);
+    (el as HTMLElement).hidden = !ok;
+    if (ok) shown += 1;
+    if (saved.has(el.getAttribute('data-slug') || '')) el.classList.add('is-saved');
+  }
+
+  // A conference subheading with every row filtered out is a heading for
+  // nothing, so the whole group goes with them.
+  for (const g of document.querySelectorAll('[data-changes-group]')) {
+    const any = [...g.querySelectorAll('[data-changes-row]')].some((r) => !(r as HTMLElement).hidden);
+    (g as HTMLElement).hidden = !any;
+  }
+
+  const active = ['conference', 'topic'].filter((f) => sel[f] && sel[f].size);
+  const bar = document.querySelector('[data-changes-filters]');
+  if (bar && active.length) {
+    (bar as HTMLElement).hidden = false;
+    const count = bar.querySelector('[data-changes-count]');
+    if (count) {
+      count.textContent = `Showing ${shown} of ${rows.length}, filtered by ${active
+        .map((f) => `${f}: ${[...sel[f]].join(', ')}`)
+        .join(' · ')}. `;
+    }
+    const clear = bar.querySelector('[data-changes-clear]');
+    if (clear) {
+      (clear as HTMLElement).hidden = false;
+      clear.addEventListener('click', () => { location.search = ''; });
+    }
+  }
+</script>
+
+<style is:inline>
+  .changes-cta { margin-top: 0.5rem; font-size: 0.95rem; }
+  .changes-block { margin-top: 2rem; }
+  .changes-block h2 { font-size: 1.15rem; margin: 0 0 0.4rem; }
+  .changes-group h3 {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.1rem 0 0.3rem;
+  }
+  .changes-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.45rem; }
+  .changes-row { line-height: 1.45; }
+  .changes-row.is-saved::before { content: '★ '; color: var(--accent); }
+  .changes-lead { font-weight: 600; margin-right: 0.4rem; }
+  .changes-filters { margin-top: 1.2rem; }
+</style>

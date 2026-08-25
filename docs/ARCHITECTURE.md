@@ -559,7 +559,7 @@ Three deliberate constraints:
   deltas, so a timezone re-read never renders as "extended by 0 days".
 
 The board shows one line (`→ Extended N days` / `△ Moved N days earlier` /
-`Deadline just announced`); the workshop page adds a callout and a collapsed
+`First deadline posted`); the workshop page adds a callout and a collapsed
 history. Everything here is a read-only derivation — status, feeds and the JSON API
 are untouched. Pinned by `scripts/deadline_history_test.mjs`.
 
@@ -794,6 +794,61 @@ siblings, which the payload never exposed. Without them every consumer either
 mislabels those pairs or reimplements `venueFamily()`. This project's own alerts
 digest was the first casualty: it built email subjects from `acronym || name`,
 so two different workshops produced byte-identical "Deadline update: CVEU".
+
+Both the digest and the site now name a workshop through one shared rule in
+`lib/identity.mjs` (`displayAcronym` / `displayLabel`), rather than each
+composing a label inline. It shows an acronym only when the stored value really
+is one — the same `isAcronymShaped` predicate `acronymDrift` uses, so the
+reviewer and the renderer cannot disagree about what an acronym is — after
+stripping a venue year the label already carries. Over the corpus that is 566
+workshops showing an acronym and 355 not, and it is what stops a stem like
+`NeurReps_Extended_Abstracts` reaching an inbox as though it were one. The rule
+is pure and lives in `lib/` because the Worker bundles it and the site imports
+it; `alerts-worker-deploy.yml` therefore triggers on that file as well as
+`alerts/**`.
+
+### `/changes/` — the same week, as a public page
+
+`data/changes.json` is the week's events, committed by the alerts Action on
+every run and rendered by `site/src/pages/changes.astro`. The site is a static
+build with no D1 credentials and the events live nowhere else, so the
+alternative would be the page deriving its own diff from git history — a second
+computation, free to disagree with the email about what happened. One array,
+two consumers.
+
+Only events are written, never workshop projections: the site already has every
+workshop in `data/`, so the page joins on slug and takes names from the same
+corpus (and the same `displayLabel`) as everything else. Current week only —
+there is no archive, and the `events` table is pruned anyway.
+
+The file is rewritten daily rather than weekly, because a page headed "this
+week" that only moved on Mondays would be six days stale by Sunday. It may be
+absent (a fork, a fresh clone, before the first run) or legitimately empty (a
+quiet week); both render the empty state and neither fails the build.
+
+Filtering reuses the board's own facet URL contract
+(`site/src/scripts/facet-params.js`, `?conference=…&topic=…` carrying display
+labels), which is also what the digest's "and N more →" links are built against
+— so a link made in one place filters the same way in another. The board's own
+copy of that parsing is still inline in `index.astro` because its script is
+`is:inline` with `define:vars` and cannot import a module;
+`scripts/facet_params_test.mjs` asserts structurally that it still speaks the
+same contract.
+
+### What the weekly digest looks like
+
+Four sections in reader-priority order — **Your saved workshops** (never capped;
+`SECTION_CAP` applies to every other section), **Deadline changes this week**
+(grouped by conference), **New this week**, **Closing in the next 7 days**. A
+summary strip under the h1 counts the week per subscriber, zero-count clauses
+dropped. Each change carries an inline-styled badge (`EXTENDED +5d`, `EARLIER
+−2d`, `FIRST DEADLINE`, `NEW`, `CLOSES TODAY`) whose words also appear in the
+plaintext part — a parity check pins them together. Deadlines render as a
+relative annotation and an absolute anchor ("in 12 days · 6 Sep 2026, 23:59")
+with the timezone stated once, under whichever section leads, rather than on
+every row; the urgent and saved-change alerts keep their per-subscriber local
+reading, being single-deadline messages. A footer line gives the median
+extension for the week, omitted entirely in a week with no extensions.
 
 ## Build-time Markdown exports
 

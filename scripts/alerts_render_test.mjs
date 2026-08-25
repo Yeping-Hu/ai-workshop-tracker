@@ -57,7 +57,10 @@ const iso = (days, h = 12) => new Date(NOW + days * 86_400_000 + h * 3_600_000).
 
 const ws = (slug, over = {}) => ({
   slug,
-  name: `The ${slug} Workshop`,
+  // Deliberately does NOT embed the acronym: a name that contains it makes
+  // displayAcronym suppress the acronym (correctly), which would mean these
+  // fixtures silently stopped exercising the acronym path at all.
+  name: 'Workshop on Applied Machine Learning',
   acronym: slug.split('-').pop().toUpperCase(),
   conference: 'neurips',
   year: 2026,
@@ -133,10 +136,10 @@ const sub = (over = {}) =>
   // dropped entirely rather than rendered as "0 new workshops".
   check('the subject counts changes and drops zero clauses',
     /^2 deadline changes in your areas — AI Workshop Tracker$/.test(out.subject), out.subject);
-  check('an extension is described with its day count', /Extended 5 days/.test(out.html));
-  check('a newly published deadline is described', /Deadline just announced/.test(out.html));
+  check('an extension is described with its day count', /EXTENDED \+5d/.test(out.html));
+  check('a newly published deadline is described', /FIRST DEADLINE/.test(out.html));
   check('a workshop announced but already Past is not listed as new',
-    !/Newly announced/.test(out.html));
+    !/New this week/.test(out.html));
   check('items link to the workshop page',
     out.html.includes('https://aiworkshoptracker.com/workshop/neurips-2026-alpha/'));
   check('the saved-workshops section is present', /Your saved workshops/.test(out.html));
@@ -144,6 +147,150 @@ const sub = (over = {}) =>
   check('an abstract stage is labelled', /\(abstract\)/.test(out.html));
   check('the closing-soon section lists the imminent workshops',
     /Closing in the next 7 days/.test(out.html));
+
+  // --- section order and the saved section's exemption from the cap --------
+  // Order is the reader's priority: what they chose to follow, then what
+  // changed, then what is new, then what is merely closing.
+  // Its own fixture: the digest above deliberately has no *live* announced
+  // workshop (the only one is Past), so all four sections never coexist there.
+  const allFour = renderDigest({
+    sub: sub({ starred_ws: '["neurips-2026-gamma"]' }),
+    events: [
+      { slug: 'neurips-2026-alpha', kind: 'extended', days: 5, old_utc: iso(25), new_utc: iso(30) },
+      { slug: 'neurips-2026-delta', kind: 'announced', days: null, old_utc: null, new_utc: iso(40) },
+    ],
+    workshops: {
+      ...workshops,
+      'neurips-2026-delta': ws('neurips-2026-delta', { deadline_utc: iso(40), next_stage_utc: iso(40) }),
+    },
+    nowMs: NOW,
+    ids,
+  });
+  const order = ['Your saved workshops', 'Deadline changes this week', 'New this week', 'Closing in the next 7 days']
+    .map((h) => allFour.html.indexOf(h));
+  check('sections render in reader-priority order',
+    order.every((at, i) => at >= 0 && (i === 0 || at > order[i - 1])), JSON.stringify(order));
+  check('the new-this-week section carries its subtitle',
+    allFour.html.includes('workshops added to the tracker this week'));
+
+  // --- badge parity -------------------------------------------------------
+  // A chip visible only to HTML readers is a regression. Every badge that
+  // reaches the html must reach the plaintext in the same words.
+  const badgesIn = (t) => (t.match(/EXTENDED \+\d+d|EARLIER \u2212\d+d|FIRST DEADLINE|NEW|CLOSES TODAY/g) || []).sort();
+  check('every badge in the html also appears in the plaintext',
+    badgesIn(allFour.html), badgesIn(allFour.text));
+  check('the plaintext brackets its badges', /\[EXTENDED \+\d+d\] /.test(allFour.text), true);
+  check('badges carry no images', !/<img/i.test(allFour.html));
+
+  // --- summary strip, grouping, footer stat --------------------------------
+  const rich = renderDigest({
+    sub: sub({ starred_ws: '["neurips-2026-gamma"]' }),
+    events: [
+      { slug: 'neurips-2026-alpha', kind: 'extended', days: 3, old_utc: iso(27), new_utc: iso(30) },
+      { slug: 'neurips-2026-beta', kind: 'extended', days: 11, old_utc: iso(-8), new_utc: iso(3) },
+      { slug: 'cvpr-2026-delta', kind: 'extended', days: 5, old_utc: iso(35), new_utc: iso(40) },
+      { slug: 'neurips-2026-eps', kind: 'announced', days: null, old_utc: null, new_utc: iso(40) },
+    ],
+    workshops: {
+      ...workshops,
+      'cvpr-2026-delta': ws('cvpr-2026-delta', { conference: 'cvpr', deadline_utc: iso(40), next_stage_utc: iso(40) }),
+      'neurips-2026-eps': ws('neurips-2026-eps', { deadline_utc: iso(40), next_stage_utc: iso(40) }),
+    },
+    nowMs: NOW, ids,
+  });
+  check('the summary strip counts changes and new workshops',
+    /3 deadline changes · 1 new workshop/.test(rich.html), rich.html.slice(0, 0));
+  check('the summary strip reaches the plaintext', rich.text.includes('3 deadline changes · 1 new workshop'));
+  check('deadline changes are grouped by conference',
+    rich.html.includes('>CVPR<') && rich.html.includes('>NeurIPS<'));
+  check('conference groups are alphabetical',
+    rich.html.indexOf('>CVPR<') < rich.html.indexOf('>NeurIPS<'));
+  check('the group subheadings reach the plaintext',
+    /\nCVPR\n/.test(rich.text) && /\nNeurIPS\n/.test(rich.text));
+  // Median of 3, 5, 11 is 5 — a mean would be 6.3 and match no real extension.
+  check('the footer states the median extension',
+    /Median extension this week: 5 days\./.test(rich.html), '');
+  check('the median reaches the plaintext', rich.text.includes('Median extension this week: 5 days.'));
+
+  // A week with no extensions must omit the line, not print NaN or "0 days".
+  const noExt = renderDigest({
+    sub: sub(), events: [{ slug: 'neurips-2026-eps', kind: 'announced', days: null, old_utc: null, new_utc: iso(40) }],
+    workshops: { ...workshops, 'neurips-2026-eps': ws('neurips-2026-eps', { deadline_utc: iso(40), next_stage_utc: iso(40) }) },
+    nowMs: NOW, ids,
+  });
+  check('no extensions -> no median line at all', !/Median extension/.test(noExt.html));
+  check('and certainly no NaN', !/NaN/.test(noExt.html) && !/NaN/.test(noExt.text));
+
+  // "K of your saved close within 48h" — only when some actually do.
+  const soon = renderDigest({
+    sub: sub({ starred_ws: '["neurips-2026-soon"]' }),
+    events: [],
+    workshops: { 'neurips-2026-soon': ws('neurips-2026-soon', { deadline_utc: iso(1), next_stage_utc: iso(1) }) },
+    nowMs: NOW, ids,
+  });
+  check('the strip counts saved workshops closing within 48h',
+    /1 of your saved closes within 48h/.test(soon.html), '');
+  const notSoon = renderDigest({
+    sub: sub({ starred_ws: '["neurips-2026-far"]' }),
+    events: [],
+    workshops: { 'neurips-2026-far': ws('neurips-2026-far', { deadline_utc: iso(5), next_stage_utc: iso(5) }) },
+    nowMs: NOW, ids,
+  });
+  check('a saved deadline beyond 48h is not counted as closing',
+    !/of your saved close/.test(notSoon.html));
+
+  // --- size: Gmail clips a message past ~102 KB ---------------------------
+  // Clipping is silent and lands mid-digest, so the unsubscribe link and the
+  // accuracy caveat — both required on every bulk message — are exactly what
+  // disappears. The heaviest realistic digest is an all/all subscriber with a
+  // long saved list, because that is the one section with no cap.
+  const heavyWs = {};
+  const heavyEvents = [];
+  const heavySaved = [];
+  for (let i = 0; i < 60; i++) {
+    const slug = `neurips-2026-heavy${i}`;
+    heavyWs[slug] = ws(slug, {
+      name: 'A Workshop With A Deliberately Long Name About Foundation Models And Their Applications',
+      deadline_utc: iso(1 + (i % 6)), next_stage_utc: iso(1 + (i % 6)),
+    });
+    heavySaved.push(slug);
+    heavyEvents.push({ slug, kind: i % 2 ? 'extended' : 'announced', days: i % 2 ? 4 : null, old_utc: iso(i), new_utc: iso(1 + (i % 6)) });
+  }
+  const heavy = renderDigest({
+    sub: sub({ starred_ws: JSON.stringify(heavySaved) }),
+    events: heavyEvents, workshops: heavyWs, nowMs: NOW, ids,
+  });
+  const heavyBytes = Buffer.byteLength(heavy.html, 'utf8');
+  check(`the heaviest digest stays well under Gmail's clip (${(heavyBytes / 1024).toFixed(1)} KB)`,
+    heavyBytes < 70 * 1024, `${heavyBytes} bytes`);
+  check('a same-day deadline is badged CLOSES TODAY',
+    renderDigest({
+      sub: sub({ starred_ws: '["neurips-2026-today"]' }),
+      events: [],
+      workshops: { 'neurips-2026-today': ws('neurips-2026-today', { deadline_utc: iso(0, 20), next_stage_utc: iso(0, 20) }) },
+      nowMs: NOW, ids,
+    }).html.includes('CLOSES TODAY'));
+  check('the subtitle reaches the plaintext part too',
+    allFour.text.includes('workshops added to the tracker this week'));
+
+  // Someone who starred forty workshops asked for forty. SECTION_CAP applies to
+  // every other section and must not apply to this one.
+  const lots = {};
+  const slugs = [];
+  for (let i = 0; i < SECTION_CAP + 6; i++) {
+    const slug = `neurips-2026-s${i}`;
+    lots[slug] = ws(slug, { deadline_utc: iso(10 + i), next_stage_utc: iso(10 + i) });
+    slugs.push(slug);
+  }
+  const savedOut = renderDigest({
+    sub: sub({ starred_ws: JSON.stringify(slugs) }),
+    events: [], workshops: lots, nowMs: NOW, ids,
+  });
+  const savedListed = slugs.filter((sl) => savedOut.html.includes(`/workshop/${sl}/`)).length;
+  check(`the saved section is never capped (${SECTION_CAP + 6} starred, all listed)`,
+    savedListed === SECTION_CAP + 6, String(savedListed));
+  check('an uncapped saved section offers no "and N more" link',
+    !/and \d+ more/.test(savedOut.html.split('Deadline changes this week')[0]));
 
   // Required on every bulk message. Under the placeholder design the renderer
   // cannot emit a real URL — it holds no HMAC secret — so what it guarantees is
@@ -180,6 +327,16 @@ const sub = (over = {}) =>
   const out = renderDigest({ sub: sub(), events, workshops, nowMs: NOW, ids });
   const listed = (out.html.match(/<li /g) || []).length;
   check(`at most SECTION_CAP (${SECTION_CAP}) items are listed`, listed === SECTION_CAP, String(listed));
+  // The changes/new sections overflow to /changes/ — the page that shows
+  // exactly what they are an excerpt of — carrying the subscriber's own facets.
+  // "Closing in 7 days" is not a change, so it still overflows to the board.
+  check('a capped changes section links on to /changes/',
+    out.html.includes('https://aiworkshoptracker.com/changes/'), '');
+  const facetOut = renderDigest({
+    sub: sub({ conferences: '["neurips"]' }), events, workshops, nowMs: NOW, ids,
+  });
+  check('the overflow link carries the subscriber facets',
+    facetOut.html.includes('/changes/?conference=NeurIPS'), '');
   check('the overflow is linked as "and N more"', /and 7 more →/.test(out.html));
   check('the plaintext overflow line is present too', /and 7 more:/.test(out.text));
 }
@@ -259,7 +416,7 @@ const sub = (over = {}) =>
   // editions (the same acronym recurs each year) and across sibling tracks.
   check('the subject names the workshop and its edition',
     /^Deadline update: ALPHA \(NeurIPS 2026\) — AI Workshop Tracker$/.test(one.subject), one.subject);
-  check('it describes the extension', /Extended 6 days/.test(one.html));
+  check('it describes the extension', /EXTENDED \+6d/.test(one.html));
   check('it links the workshop page', one.html.includes('https://aiworkshoptracker.com/workshop/neurips-2026-alpha/'));
 
   const two = renderStarredChanges({
@@ -272,12 +429,12 @@ const sub = (over = {}) =>
   });
   check('several changes are counted in the subject',
     /^2 deadline updates on your saved workshops — AI Workshop Tracker$/.test(two.subject), two.subject);
-  check('a moved-earlier deadline is described', /Moved 2 days earlier/.test(two.html));
+  check('a moved-earlier deadline is described', /EARLIER \u22122d/.test(two.html));
 
   // It is deliberately narrow: this cadence exists to REPLACE a weekly summary,
   // so padding it with "closing soon" would defeat the point.
   check('it carries no closing-soon section', !/Closing in the next/.test(two.html));
-  check('it carries no newly-announced section', !/Newly announced/.test(two.html));
+  check('it carries no newly-announced section', !/New this week/.test(two.html));
 
   // Same rules as every other bulk message.
   check('nothing to report renders null',
@@ -367,7 +524,13 @@ const sub = (over = {}) =>
     workshops, nowMs: NOW, ids,
   });
   check('the digest shows the full name too', d.html.includes('LLM for Scientific Discovery'));
-  check('the digest shows local time too', d.html.includes('PDT'));
+  // ONE timezone in the digest now: no local conversion per row, a bare stamp
+  // with a relative annotation, and the zone stated once under the first
+  // heading. renderUrgent and renderStarredChanges keep the local reading.
+  check('the digest does not print a local zone per row', !/PDT|PST/.test(d.html));
+  check('the digest states its timezone exactly once',
+    (d.html.match(/All times UTC/g) || []).length === 1, String((d.html.match(/All times UTC/g) || []).length));
+  check('a deadline carries a relative annotation', /in \d+ days · /.test(d.html), d.html.slice(0, 0));
 }
 
 /* --------------------------------------------- no internal jargon reaches a reader */
@@ -395,27 +558,28 @@ const sub = (over = {}) =>
 // track, InfPriv vs its fast track...). The subject used to be built from
 // `acronym || name`, so a subscriber who saved one track received a mail naming
 // the other one just as accurately and could not tell which deadline had moved.
-// The feed now carries the site's own `short_name`; this holds that it is used.
+// The feed carries `track_label`; displayAcronym appends it when the name does
+// not already say it, which is what keeps the two subjects apart.
 {
   const ids = { conferences: [{ id: 'cvpr', name: 'CVPR' }], topics: [] };
-  const mk = (slug, short_name) => ({
+  const mk = (slug, track_label) => ({
     slug, name: 'AI for Creative Visual Content Generation Editing and Understanding',
-    acronym: 'CVEU', short_name, conference: 'cvpr', year: 2026,
+    acronym: 'CVEU', track_label, conference: 'cvpr', year: 2026,
     deadline_utc: iso(9), status: 'upcoming', topics: [],
   });
-  const subjectFor = (slug, short_name) =>
+  const subjectFor = (slug, track_label) =>
     renderStarredChanges({
       events: [{ slug, kind: 'extended', days: 2, new_utc: iso(9) }],
-      workshops: { [slug]: mk(slug, short_name) }, ids,
+      workshops: { [slug]: mk(slug, track_label) }, ids,
     })?.subject ?? '';
 
-  const base = subjectFor('cvpr-2026-cveu', 'CVEU');
-  const track = subjectFor('cvpr-2026-cveu-extended-abstract-track', 'CVEU (Extended Abstract Track)');
+  const base = subjectFor('cvpr-2026-cveu', null);
+  const track = subjectFor('cvpr-2026-cveu-extended-abstract-track', 'Extended Abstract Track');
   check('sibling tracks get distinct subjects', base !== track, `${base} === ${track}`);
   check('the track subject names its track', /Extended Abstract Track/.test(track), track);
-  // A snapshot written before short_name existed must still render something.
+  // A snapshot written before track_label existed must still render something.
   const legacy = subjectFor('cvpr-2026-cveu', undefined);
-  check('falls back to the acronym without short_name', /CVEU/.test(legacy), legacy);
+  check('falls back to the acronym without a track label', /CVEU/.test(legacy), legacy);
 }
 
 console.log(failed === 0 ? '\nRendering OK.' : `\n${failed} test(s) failed.`);
