@@ -26,6 +26,8 @@ import { workshops, conferenceById, topicById } from '../lib/data';
 import { href } from '../lib/site';
 // @ts-ignore — shared plain-JS module at the repo root
 import { displayLabel } from '../../../lib/identity.mjs';
+// @ts-ignore — shared plain-JS module at the repo root
+import { mergeEventsBySlug } from '../../../lib/events.mjs';
 
 const ROOT = path.resolve(process.cwd(), '..');
 const FEED = path.join(ROOT, 'data', 'changes.json');
@@ -74,7 +76,7 @@ const TONE: Record<string, string> = {
   announced: 'new',
 };
 
-const rows = (Array.isArray(feed.events) ? feed.events : [])
+const rows = mergeEventsBySlug(Array.isArray(feed.events) ? feed.events : [])
   .map((e: any) => {
     const w: any = bySlug.get(e.slug);
     if (!w) return null; // a workshop removed since the event was recorded
@@ -116,7 +118,6 @@ const rows = (Array.isArray(feed.events) ? feed.events : [])
 // an unrelated reason would silently change what the week is said to contain.
 // The window start is fixed by the feed, so the page is stable for as long as
 // the feed is.
-const NOW_MS = Date.now();
 const windowStartMs = feed.since ? Date.parse(`${feed.since}T00:00:00Z`) : null;
 const withinWindow = (r: any) => {
   if (!r.whenIso || windowStartMs == null || !Number.isFinite(windowStartMs)) return true;
@@ -148,34 +149,26 @@ const withinWindow = (r: any) => {
 // reads as +1d against its current date, not +8d. Summing them would be a
 // derivation the event store never recorded, and this page does not invent
 // values.
-const lastPerSlug = (list: any[]) => {
-  const m = new Map<string, any>();
-  for (const r of list) m.set(r.slug, r); // later wins
-  return [...m.values()];
-};
-
-const added = lastPerSlug(rows.filter((r) => r.kind === 'announced' && r.status !== 'past').filter(withinWindow));
+const added = rows.filter((r) => r.kind === 'announced' && r.status !== 'past').filter(withinWindow);
 const isNew = new Set(added.map((r) => r.slug));
-const changes = lastPerSlug(
-  rows.filter((r) => CHANGE_KINDS.has(r.kind)).filter(withinWindow).filter((r) => !isNew.has(r.slug)),
-);
+const changes = rows.filter((r) => CHANGE_KINDS.has(r.kind)).filter(withinWindow).filter((r) => !isNew.has(r.slug));
 
 // Grouped by conference, alphabetically — the digest does the same, for the same
 // reason: a flat wall of rows from nine conferences is harder to scan.
-// Within a conference, soonest deadline first — the board's own order, and the
-// only one a reader can act on. The feed arrives in observation order, which is
-// the pipeline's business and looks arbitrary on the page: IROS read 31 Aug,
-// 31 Aug, 24 Aug, 21 Aug, 29 Aug, 11 Sep before this.
+// Within a conference, earliest deadline first. The feed arrives in observation
+// order, which is the pipeline's business and looks arbitrary here.
 //
-// Deadlines that have already passed sink to the end of their group rather than
-// floating to the top. They are kept on the page on purpose — they moved inside
-// the reported window, so they are part of its story — but they are the one
-// thing here nobody can act on, and ascending order alone would put them first.
-// Rows with no date at all go last: nothing to sort them by.
+// Nothing in this sort reads the clock. This page is a record of one week, and
+// it must say the same thing on Tuesday as it did on the Friday it was written
+// — a rank that partitioned past from future would silently re-order the page
+// as the days passed, and two people opening the same URL would see different
+// pages with nothing to explain why. The only clock this page obeys is the
+// feed's own window.
+//
+// Rows with no date go last, having nothing to sort by.
 function deadlineRank(r: any) {
-  const ms = r.whenIso ? Date.parse(r.whenIso) : NaN;
-  if (!Number.isFinite(ms)) return [2, 0];
-  return ms >= NOW_MS ? [0, ms] : [1, -ms];
+  const t = r.whenIso ? Date.parse(r.whenIso) : NaN;
+  return Number.isFinite(t) ? [0, t] : [1, 0];
 }
 
 function groupByConference(list: any[]) {

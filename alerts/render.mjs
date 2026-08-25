@@ -25,6 +25,10 @@ import { SECTION_CAP, SITE_ORIGIN } from './config.mjs';
 // The display rule lives in lib/ because the site imports it too, and it is
 // pure so that bundling it into the Worker stays safe. See lib/identity.mjs.
 import { displayAcronym, displayLabel } from '../lib/identity.mjs';
+// One row per workshop, carrying the net change across the week — the same rule
+// /changes/ applies, so the email and the page cannot disagree about how many
+// times a workshop moved.
+import { mergeEventsBySlug } from '../lib/events.mjs';
 
 export const MANAGE_PLACEHOLDER = '{{MANAGE_URL}}';
 export const UNSUB_PLACEHOLDER = '{{UNSUB_URL}}';
@@ -447,7 +451,10 @@ export function renderDigest({
 
   // 1. Deadline changes this week.
   const changeKinds = new Set(['extended', 'earlier', 'deadline_announced']);
-  const changeRows = events
+  // Merge first: a deadline that moved twice this week is one line reporting the
+  // net, not two lines with different numbers.
+  const merged = mergeEventsBySlug(events);
+  const changeRows = merged
     .filter((e) => changeKinds.has(e.kind) && workshops[e.slug])
     .map((e) => ({
       conf: confLabel(ids, workshops[e.slug].conference),
@@ -468,7 +475,7 @@ export function renderDigest({
 
   // 2. New this week — but not ones that are already Past by the time the
   //    digest goes out (a back-filled 2024 edition is not news).
-  const announced = events
+  const announced = merged
     .filter((e) => e.kind === 'announced' && workshops[e.slug] && workshops[e.slug].status !== 'past')
     .map((e) => announcedItem(workshops[e.slug], ids, tz, at));
 
