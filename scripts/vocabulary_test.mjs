@@ -34,13 +34,21 @@ const RETIRED = [
   { was: 'Newly announced', now: 'New this week' },
 ];
 
-/** Every surface that renders the shared vocabulary, and what it must contain. */
+/**
+ * Every surface that renders the shared vocabulary, and what it must contain.
+ *
+ * Two registers of the same vocabulary, deliberately. The site renders prose in
+ * a sentence ("First deadline posted"); the digest renders a chip, which is
+ * uppercase and clipped to fit ("FIRST DEADLINE"). That is a typographic
+ * difference, not a second name for the event — what must never happen is one
+ * surface calling it something else entirely, which is what this guards.
+ */
 const SURFACES = [
   ['site/src/components/WorkshopRow.astro', 'First deadline posted'],
   ['site/src/pages/saved.astro', 'First deadline posted'],
   ['site/src/lib/markdown.ts', 'First deadline posted'],
   ['site/src/pages/workshop/[slug].astro', 'First deadline posted'],
-  ['alerts/render.mjs', 'First deadline posted'],
+  ['alerts/render.mjs', 'FIRST DEADLINE'],
   ['alerts/render.mjs', 'New this week'],
 ];
 

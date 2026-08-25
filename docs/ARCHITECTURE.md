@@ -795,6 +795,33 @@ mislabels those pairs or reimplements `venueFamily()`. This project's own alerts
 digest was the first casualty: it built email subjects from `acronym || name`,
 so two different workshops produced byte-identical "Deadline update: CVEU".
 
+Both the digest and the site now name a workshop through one shared rule in
+`lib/identity.mjs` (`displayAcronym` / `displayLabel`), rather than each
+composing a label inline. It shows an acronym only when the stored value really
+is one — the same `isAcronymShaped` predicate `acronymDrift` uses, so the
+reviewer and the renderer cannot disagree about what an acronym is — after
+stripping a venue year the label already carries. Over the corpus that is 566
+workshops showing an acronym and 355 not, and it is what stops a stem like
+`NeurReps_Extended_Abstracts` reaching an inbox as though it were one. The rule
+is pure and lives in `lib/` because the Worker bundles it and the site imports
+it; `alerts-worker-deploy.yml` therefore triggers on that file as well as
+`alerts/**`.
+
+### What the weekly digest looks like
+
+Four sections in reader-priority order — **Your saved workshops** (never capped;
+`SECTION_CAP` applies to every other section), **Deadline changes this week**
+(grouped by conference), **New this week**, **Closing in the next 7 days**. A
+summary strip under the h1 counts the week per subscriber, zero-count clauses
+dropped. Each change carries an inline-styled badge (`EXTENDED +5d`, `EARLIER
+−2d`, `FIRST DEADLINE`, `NEW`, `CLOSES TODAY`) whose words also appear in the
+plaintext part — a parity check pins them together. Deadlines render as a
+relative annotation and an absolute anchor ("in 12 days · 6 Sep 2026, 23:59")
+with the timezone stated once, under whichever section leads, rather than on
+every row; the urgent and saved-change alerts keep their per-subscriber local
+reading, being single-deadline messages. A footer line gives the median
+extension for the week, omitted entirely in a week with no extensions.
+
 ## Build-time Markdown exports
 
 `/exports/<conference>-<year>-workshops.md` is regenerated on every deploy by

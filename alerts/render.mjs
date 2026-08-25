@@ -239,6 +239,54 @@ function textFooter({ manageUrl, unsubUrl, showManage = true }) {
   return lines.join('\n');
 }
 
+/* -------------------------------------------------------------------- badges */
+
+/**
+ * A change badge — the small chip that replaced the arrow prose ("→ Extended 5
+ * days"). Arrows carried no meaning a screen reader or a plaintext part could
+ * use, and the kind of change was buried mid-sentence; a chip puts it first,
+ * where the eye lands.
+ *
+ * Inline styles only, because that is the one thing every mail client agrees
+ * on, and mid-tone colours on a bordered pill rather than white-on-colour: a
+ * client that inverts for dark mode flips the background but keeps the border
+ * and text legible either way. No images, so nothing to block and nothing to
+ * mistake for a tracking pixel.
+ *
+ * Every caller must emit `badgeText()` into the plaintext part. The two are
+ * pinned together by a parity check in scripts/alerts_render_test.mjs — a badge
+ * visible only to HTML readers is a regression, not a nicety.
+ */
+const BADGE_TONE = {
+  extended: '#0f766e',
+  earlier: '#9a3412',
+  first: '#3730a3',
+  new: '#3f6212',
+  closing: '#9f1239',
+};
+
+function badge(text, tone) {
+  const c = BADGE_TONE[tone] ?? '#585c63';
+  return (
+    `<span style="display:inline-block;padding:1px 7px;margin-right:6px;border:1px solid ${c};` +
+    `border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:0.04em;color:${c};` +
+    `white-space:nowrap;">${esc(text)}</span>`
+  );
+}
+
+/** The plaintext equivalent, in the same position the chip occupies. */
+function badgeText(text) {
+  return `[${text}] `;
+}
+
+/** What a change event's chip says. U+2212 for the minus: a hyphen reads as a
+ *  line break in some clients' plaintext wrapping. */
+function changeBadge(ev) {
+  if (ev.kind === 'extended') return { text: `EXTENDED +${ev.days}d`, tone: 'extended' };
+  if (ev.kind === 'earlier') return { text: `EARLIER \u2212${ev.days}d`, tone: 'earlier' };
+  return { text: 'FIRST DEADLINE', tone: 'first' };
+}
+
 /* ------------------------------------------------------------------ sections */
 
 /**
@@ -246,17 +294,43 @@ function textFooter({ manageUrl, unsubUrl, showManage = true }) {
  * more, an "and N more →" link into the site with the subscriber's own facets
  * prefilled.
  */
-function section({ heading, subtitle = '', note = '', items, moreUrl, cap = SECTION_CAP }) {
-  if (!items.length) return { html: '', text: '' };
+function section({ heading, subtitle = '', note = '', items = [], groups = null, moreUrl, cap = SECTION_CAP }) {
+  // `groups` is [{label, items}] — used by the deadline-changes section, where
+  // a flat list of forty rows from nine conferences is harder to scan than nine
+  // short lists. The cap is spent across the groups in order, so a capped
+  // section never shows a subheading with nothing under it.
+  const all = groups ? groups.flatMap((g) => g.items) : items;
+  if (!all.length) return { html: '', text: '' };
   // `cap: Infinity` is the saved section. Someone who starred forty workshops
   // asked for all forty; truncating their own list to fifteen and offering a
   // link is the one place the cap would be answering a question nobody asked.
-  const shown = Number.isFinite(cap) ? items.slice(0, cap) : items.slice();
-  const extra = items.length - shown.length;
+  const limit = Number.isFinite(cap) ? cap : all.length;
+  const extra = Math.max(0, all.length - limit);
 
-  const li = shown
-    .map((it) => `<li style="margin:0 0 10px;">${it.html}</li>`)
-    .join('\n');
+  const ul = (list) =>
+    `<ul style="margin:0;padding-left:20px;">\n` +
+    list.map((it) => `<li style="margin:0 0 10px;">${it.html}</li>`).join('\n') +
+    `\n</ul>`;
+
+  let body = '';
+  let bodyText = '';
+  if (groups) {
+    let budget = limit;
+    for (const g of groups) {
+      if (budget <= 0) break;
+      const take = g.items.slice(0, budget);
+      budget -= take.length;
+      body +=
+        `<h3 style="margin:16px 0 6px;font-size:13px;letter-spacing:0.04em;` +
+        `text-transform:uppercase;${MUTED}">${esc(g.label)}</h3>` + ul(take);
+      bodyText += `\n${g.label}\n` + take.map((it) => `* ${it.text}`).join('\n') + '\n';
+    }
+  } else {
+    const shown = all.slice(0, limit);
+    body = ul(shown);
+    bodyText = shown.map((it) => `* ${it.text}`).join('\n') + '\n';
+  }
+
   const more = extra
     ? `<p style="margin:10px 0 0;font-size:14px;"><a href="${esc(moreUrl)}" style="${LINK}">and ${extra} more →</a></p>`
     : '';
@@ -268,14 +342,14 @@ function section({ heading, subtitle = '', note = '', items, moreUrl, cap = SECT
   const html =
     `<h2 style="margin:26px 0 ${blurb ? '4px' : '10px'};font-size:17px;line-height:1.3;">${esc(heading)}</h2>` +
     sub +
-    `<ul style="margin:0;padding-left:20px;">\n${li}\n</ul>${more}`;
+    body +
+    more;
 
   const text =
     `\n${heading}\n${'-'.repeat(heading.length)}\n` +
     (blurb ? `${blurb}\n` : '') +
-    shown.map((it) => `* ${it.text}`).join('\n') +
-    (extra ? `\nand ${extra} more: ${moreUrl}` : '') +
-    '\n';
+    bodyText +
+    (extra ? `and ${extra} more: ${moreUrl}\n` : '');
 
   return { html, text };
 }
@@ -285,19 +359,16 @@ function changeItem(ev, w, ids, tz, fmt = null) {
   const title = wsTitle(w, ids, { full: true });
   const link = wsUrl(w.slug);
   const when = ev.new_utc ? (fmt ? fmt(ev.new_utc) : fmtWhen(ev.new_utc, tz)) : '';
-  let lead;
-  if (ev.kind === 'extended') lead = `→ Extended ${ev.days} day${ev.days === 1 ? '' : 's'}`;
-  else if (ev.kind === 'earlier') lead = `△ Moved ${ev.days} day${ev.days === 1 ? '' : 's'} earlier`;
-  else lead = 'First deadline posted';
+  const chip = changeBadge(ev);
   // Separator is a middot, not an em dash: displayLabel already uses an em dash
   // for a workshop with no acronym ("Name — NeurIPS 2026"), and two of them in
   // one row read as a single run-on. The old "now" prefix went with it — the
   // lead already says the deadline moved, so "now in 12 days" only stuttered.
   return {
     html:
-      `<strong>${esc(lead)}</strong> · <a href="${link}" style="${LINK}">${esc(title)}</a>` +
-      (when ? ` · ${esc(when)}` : ''),
-    text: `${lead} · ${title}${when ? ` · ${when}` : ''}\n  ${link}`,
+      `${badge(chip.text, chip.tone)}<a href="${link}" style="${LINK}">${esc(title)}</a>` +
+      (when ? `<span style="${MUTED}"> · ${esc(when)}</span>` : ''),
+    text: `${badgeText(chip.text)}${title}${when ? ` · ${when}` : ''}\n  ${link}`,
   };
 }
 
@@ -309,21 +380,31 @@ function announcedItem(w, ids, tz, fmt = null) {
   // what these are, and "deadline closes today" says it twice.
   const when = at ? ` · ${at}` : ' · deadline not yet announced';
   return {
-    html: `<a href="${link}" style="${LINK}">${esc(title)}</a><span style="${MUTED}">${esc(when)}</span>`,
-    text: `${title}${when}\n  ${link}`,
+    html:
+      `${badge('NEW', 'new')}<a href="${link}" style="${LINK}">${esc(title)}</a>` +
+      `<span style="${MUTED}">${esc(when)}</span>`,
+    text: `${badgeText('NEW')}${title}${when}\n  ${link}`,
   };
 }
 
-function closingItem(w, ids, savedSet, tz, fmt = null) {
+function closingItem(w, ids, savedSet, tz, fmt = null, nowMs = null) {
   const title = wsTitle(w, ids, { full: true });
   const link = wsUrl(w.slug);
   const star = savedSet.has(w.slug) ? '★ ' : '';
   const stage = w.next_stage_is_abstract ? ' (abstract)' : '';
   const iso = w.next_stage_utc || w.deadline_utc;
-  const when = fmt ? fmt(iso) : fmtWhen(iso, tz);
+  // Only the day itself earns a chip. Badging everything in a section called
+  // "closing in the next 7 days" would say nothing the heading has not.
+  const today = nowMs != null && fmtRelative(iso, nowMs) === 'closes today';
+  const chip = today ? badge('CLOSES TODAY', 'closing') : '';
+  const chipText = today ? badgeText('CLOSES TODAY') : '';
+  // The chip has already said "closes today", so the row drops the relative
+  // annotation and keeps only the anchor. Otherwise every same-day row reads
+  // "[CLOSES TODAY] … · closes today · 25 Aug".
+  const when = today ? fmtStamp(iso) : fmt ? fmt(iso) : fmtWhen(iso, tz);
   return {
-    html: `${star}<a href="${link}" style="${LINK}">${esc(title)}</a><span style="${MUTED}"> · ${esc(when)}${esc(stage)}</span>`,
-    text: `${star}${title} · ${when}${stage}\n  ${link}`,
+    html: `${star}${chip}<a href="${link}" style="${LINK}">${esc(title)}</a><span style="${MUTED}"> · ${esc(when)}${esc(stage)}</span>`,
+    text: `${star}${chipText}${title} · ${when}${stage}\n  ${link}`,
   };
 }
 
@@ -362,9 +443,24 @@ export function renderDigest({
 
   // 1. Deadline changes this week.
   const changeKinds = new Set(['extended', 'earlier', 'deadline_announced']);
-  const changes = events
+  const changeRows = events
     .filter((e) => changeKinds.has(e.kind) && workshops[e.slug])
-    .map((e) => changeItem(e, workshops[e.slug], ids, tz, at));
+    .map((e) => ({
+      conf: confLabel(ids, workshops[e.slug].conference),
+      item: changeItem(e, workshops[e.slug], ids, tz, at),
+    }));
+  const changes = changeRows.map((r) => r.item);
+  // Grouped by conference: forty rows from nine conferences is a wall, nine
+  // short lists under their own subheading is a scan. Alphabetical, because any
+  // other order would need a rule nobody asked for.
+  const byConf = new Map();
+  for (const r of changeRows) {
+    if (!byConf.has(r.conf)) byConf.set(r.conf, []);
+    byConf.get(r.conf).push(r.item);
+  }
+  const changeGroups = [...byConf.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([label, items]) => ({ label, items }));
 
   // 2. New this week — but not ones that are already Past by the time the
   //    digest goes out (a back-filled 2024 edition is not news).
@@ -382,10 +478,10 @@ export function renderDigest({
     })
     .filter((x) => x && x.ms >= nowMs && x.ms < nowMs + weekMs)
     .sort((a, b) => a.ms - b.ms)
-    .map(({ w }) => closingItem(w, ids, saved, tz, at));
+    .map(({ w }) => closingItem(w, ids, saved, tz, at, nowMs));
 
   // 4. Your saved workshops — next deadlines. Ignores the filters (top 5).
-  const savedNext = [...saved]
+  const savedRows = [...saved]
     .map((slug) => workshops[slug])
     .filter(Boolean)
     .map((w) => {
@@ -394,8 +490,9 @@ export function renderDigest({
       return Number.isFinite(ms) && ms >= nowMs ? { w, ms } : null;
     })
     .filter(Boolean)
-    .sort((a, b) => a.ms - b.ms)
-    .map(({ w }) => closingItem(w, ids, saved, tz, at));
+    .sort((a, b) => a.ms - b.ms);
+  const savedNext = savedRows.map(({ w }) => closingItem(w, ids, saved, tz, at, nowMs));
+  const savedSoon = savedRows.filter(({ ms }) => ms < nowMs + 48 * 3_600_000).length;
 
   if (!changes.length && !announced.length && !closing.length && !savedNext.length) return null;
 
@@ -409,7 +506,7 @@ export function renderDigest({
       moreUrl: `${SITE_ORIGIN}/saved/`,
       cap: Infinity,
     },
-    { heading: 'Deadline changes this week', items: changes, moreUrl: more },
+    { heading: 'Deadline changes this week', groups: changeGroups, moreUrl: more },
     {
       heading: 'New this week',
       subtitle: 'workshops added to the tracker this week',
@@ -420,7 +517,7 @@ export function renderDigest({
   ];
   // Stated once, on whichever section actually leads — a quiet week can drop
   // any of them, and the note has to follow the first one that survives.
-  const lead = specs.find((x) => x.items.length);
+  const lead = specs.find((x) => (x.groups ? x.groups.some((g) => g.items.length) : x.items.length));
   if (lead) lead.note = 'All times UTC.';
   const secs = specs.map(section);
 
@@ -434,15 +531,48 @@ export function renderDigest({
   if (!clauses.length) clauses.push('your saved workshops');
   const subject = `${clauses.join(', ')} in your areas — AI Workshop Tracker`;
 
+  // Summary strip — the whole week in one line, before any scrolling. Counted
+  // per subscriber from what THIS digest contains, and zero-count clauses are
+  // dropped exactly as the subject line already drops them: "0 new workshops"
+  // is noise, not information.
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const strip = [];
+  if (changes.length) strip.push(plural(changes.length, 'deadline change', 'deadline changes'));
+  if (announced.length) strip.push(plural(announced.length, 'new workshop', 'new workshops'));
+  if (savedSoon) {
+    strip.push(`${savedSoon} of your saved close${savedSoon === 1 ? 's' : ''} within 48h`);
+  }
+  const stripLine = strip.join(' · ');
+
+  // Median extension this week. Omitted entirely when nothing was extended —
+  // an empty median is not zero days, and printing NaN or "0 days" would both
+  // be lies. Median rather than mean: one workshop moving six months would drag
+  // an average somewhere no individual extension actually is.
+  const extDays = events
+    .filter((e) => e.kind === 'extended' && Number.isFinite(e.days))
+    .map((e) => e.days)
+    .sort((a, b) => a - b);
+  let medianLine = '';
+  if (extDays.length) {
+    const mid = Math.floor(extDays.length / 2);
+    const med = extDays.length % 2 ? extDays[mid] : (extDays[mid - 1] + extDays[mid]) / 2;
+    const shown = Number.isInteger(med) ? String(med) : med.toFixed(1);
+    medianLine = `Median extension this week: ${shown} ${med === 1 ? 'day' : 'days'}.`;
+  }
+
   const bodyHtml =
     `<h1 style="margin:0 0 6px;font-size:21px;line-height:1.25;">This week in AI workshops</h1>` +
+    (stripLine ? `<p style="margin:0 0 4px;font-size:14.5px;font-weight:600;">${esc(stripLine)}</p>` : '') +
     `<p style="margin:0;font-size:14px;${MUTED}">Your selection, for the week ending ${esc(fmtUtc(new Date(nowMs).toISOString()).split(',')[0])}.</p>` +
-    secs.map((s) => s.html).join('');
+    secs.map((s) => s.html).join('') +
+    (medianLine ? `<p style="margin:24px 0 0;font-size:13px;${MUTED}">${esc(medianLine)}</p>` : '');
 
   const text =
     `This week in AI workshops\n` +
+    (stripLine ? `${stripLine}\n` : '') +
     `Your selection, for the week ending ${fmtUtc(new Date(nowMs).toISOString()).split(',')[0]}.\n` +
     secs.map((s) => s.text).join('') +
+    (medianLine ? `\n${medianLine}\n` : '') +
     textFooter({ manageUrl, unsubUrl });
 
   return { subject, html: shell({ title: subject, bodyHtml, manageUrl, unsubUrl }), text };
