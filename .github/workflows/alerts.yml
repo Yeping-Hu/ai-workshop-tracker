@@ -79,6 +79,19 @@ jobs:
       # `-A` — so a stray file written by any future step can never ride along
       # into an automated commit. A quiet week rewrites the same content, git
       # reports no diff, and the step exits without committing.
+      # Validate BEFORE committing, the way discover.yml does — and for a
+      # reason specific to how this job pushes. A push made with GITHUB_TOKEN
+      # does not trigger `on: push`, so validate.yml never runs on the commit
+      # below: the feed would reach main and the live page without the schema
+      # check that scripts/validate_changes_feed.mjs exists to apply. Running it
+      # here is the only place it can gate this path.
+      #
+      # A failure fails the job with nothing committed, which is the right
+      # outcome: a malformed feed is worse than a stale one, and the page
+      # renders the previous window until the next run fixes it.
+      - name: Validate before publishing
+        run: node scripts/validate.mjs
+
       # Runs on a dry run too. A dry run mails nobody — every send in
       # alerts_run.mjs funnels through one `send()` helper that returns early
       # when DRY_RUN is set — but the feed it computed is still true, so
