@@ -748,14 +748,36 @@ if (allRows.length === 0) {
   const none = await page.$$eval('[data-changes-row]', (els) => els.filter((e) => !e.hidden).length);
   check('an unmatched facet hides every row', none === 0, String(none));
 
-  // Saved-row highlighting, from the board's own localStorage key.
+  // Saved state comes from the board's own star button — favorites.js, loaded
+  // site-wide, hydrates [data-star-ws] from localStorage through one delegated
+  // listener. The page reads nothing itself, so these assert the shared
+  // mechanism rather than a copy of it.
+  check('every row carries a star, so the column never shifts',
+    (await page.$$eval('[data-changes-row] [data-star-ws]', (e) => e.length)) === allRows.length);
+
   const savedSlug = allRows[0].slug;
   await page.evaluate((sl) => localStorage.setItem('awt-fav-workshops', JSON.stringify([sl])), savedSlug);
   await page.goto(`${BASE}/changes/`, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(250);
-  const marked = await page.$$eval('[data-changes-row].is-saved', (els) => els.map((e) => e.getAttribute('data-slug')));
-  check('a saved workshop is highlighted', marked.includes(savedSlug), JSON.stringify(marked));
-  check('unsaved workshops are not highlighted', marked.length === 1, String(marked.length));
+  await page.waitForTimeout(300);
+  const pressed = await page.$$eval('[data-star-ws][aria-pressed="true"]', (els) => els.map((e) => e.dataset.starWs));
+  check('a saved workshop shows a pressed star', pressed.includes(savedSlug), JSON.stringify(pressed));
+  check('unsaved workshops do not', pressed.length === 1, String(pressed.length));
+
+  // Starring from THIS page must work, and must work signed out — the whole
+  // point is that saving needs no account.
+  const other = allRows.find((r) => r.slug !== savedSlug)?.slug;
+  if (other) {
+    await page.click(`[data-star-ws="${other}"]`);
+    await page.waitForTimeout(200);
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('awt-fav-workshops') || '[]'));
+    check('starring on /changes/ saves it, with no account', stored.includes(other), JSON.stringify(stored));
+    check('the clicked star reports itself pressed',
+      (await page.getAttribute(`[data-star-ws="${other}"]`, 'aria-pressed')) === 'true');
+    await page.click(`[data-star-ws="${other}"]`);
+    await page.waitForTimeout(200);
+    const after = await page.evaluate(() => JSON.parse(localStorage.getItem('awt-fav-workshops') || '[]'));
+    check('clicking again unsaves it', !after.includes(other), JSON.stringify(after));
+  }
   await page.evaluate(() => localStorage.removeItem('awt-fav-workshops'));
 
   // A corrupt value must not blank the page.

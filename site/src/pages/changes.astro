@@ -41,12 +41,25 @@ try {
 
 const bySlug = new Map(workshops.map((w: any) => [w.slug, w]));
 
-/** Prose register of the shared vocabulary — the same words the site uses. */
+/** Prose register of the shared vocabulary — the same words the site uses.
+ *  Carried on the badge's `title`, so the full sentence is still available on
+ *  hover and to assistive tech even though the chip itself is terse. */
 function leadFor(e: any) {
   const d = e.days === 1 ? 'day' : 'days';
   if (e.kind === 'extended') return `Extended ${e.days} ${d}`;
   if (e.kind === 'earlier') return `Moved ${e.days} ${d} earlier`;
   return 'First deadline posted';
+}
+
+/** What the chip actually shows. A row is scanned, not read: at 45 rows the
+ *  words "Extended" and "days" repeat on nearly every line and carry no
+ *  information the colour and the sign do not already give. The direction lives
+ *  in the sign, the magnitude in the number, the kind in the tone. */
+function badgeFor(e: any) {
+  if (e.kind === 'extended') return `+${e.days}d`;
+  if (e.kind === 'earlier') return `\u2212${e.days}d`;
+  if (e.kind === 'deadline_announced') return 'First deadline';
+  return 'New';
 }
 
 const CHANGE_KINDS = new Set(['extended', 'earlier', 'deadline_announced']);
@@ -70,7 +83,9 @@ const rows = (Array.isArray(feed.events) ? feed.events : [])
       slug: w.slug,
       kind: e.kind,
       lead: leadFor(e),
+      badge: badgeFor(e),
       tone: TONE[e.kind] ?? 'new',
+      name: w.name,
       label: displayLabel(w.name, w.acronym, {
         conference: conf?.name ?? w.conference,
         year: w.year,
@@ -161,6 +176,7 @@ const weekOf = feed.since
     heading="Get this weekly, by email"
     blurb="This page, filtered to the conferences and topics you pick, in your inbox every Monday."
     compact
+    tight
     collapsed
     summary="Get this weekly, by email"
   />
@@ -189,9 +205,19 @@ const weekOf = feed.since
                 data-conference={r.conference}
                 data-topic={r.topics.join(',')}
               >
-                <span class={`changes-badge is-${r.tone}`}>{r.lead}</span>
-                <a href={r.url}>{r.label}</a>
-                {r.whenIso && <span class="muted"> · {r.whenIso.slice(0, 10)}</span>}
+                <button
+                  class="star-btn"
+                  type="button"
+                  data-star-ws={r.slug}
+                  aria-pressed="false"
+                  aria-label={`Save ${r.name} to your list`}
+                  title="Save for later (stays in this browser)"
+                >☆</button>
+                <span class={`changes-badge is-${r.tone}`} title={r.lead}>{r.badge}</span>
+                <span class="changes-text">
+                  <a href={r.url}>{r.label}</a>
+                  {r.whenIso && <span class="muted"> · {r.whenIso.slice(0, 10)}</span>}
+                </span>
               </li>
             ))}
           </ul>
@@ -216,9 +242,19 @@ const weekOf = feed.since
                 data-conference={r.conference}
                 data-topic={r.topics.join(',')}
               >
-                <span class="changes-badge is-new">New</span>
-                <a href={r.url}>{r.label}</a>
-                {r.whenIso && <span class="muted"> · {r.whenIso.slice(0, 10)}</span>}
+                <button
+                  class="star-btn"
+                  type="button"
+                  data-star-ws={r.slug}
+                  aria-pressed="false"
+                  aria-label={`Save ${r.name} to your list`}
+                  title="Save for later (stays in this browser)"
+                >☆</button>
+                <span class="changes-badge is-new" title="Added to the tracker this week">New</span>
+                <span class="changes-text">
+                  <a href={r.url}>{r.label}</a>
+                  {r.whenIso && <span class="muted"> · {r.whenIso.slice(0, 10)}</span>}
+                </span>
               </li>
             ))}
           </ul>
@@ -246,13 +282,11 @@ const weekOf = feed.since
   const sel = readFacets(location.search, ['conference', 'topic']);
   const rows = [...document.querySelectorAll('[data-changes-row]')];
 
-  // Saved rows are highlighted from the same localStorage key the board reads.
-  // Read defensively: a corrupt value must not blank the page.
-  let saved = new Set<string>();
-  try {
-    const raw = JSON.parse(localStorage.getItem('awt-fav-workshops') || '[]');
-    if (Array.isArray(raw)) saved = new Set(raw);
-  } catch {}
+  // Saved state is NOT read here. Every row carries the board's own
+  // `data-star-ws` button, and scripts/favorites.js — loaded site-wide by
+  // Base.astro — hydrates it from localStorage and handles clicks through one
+  // delegated listener. A second reader here would be a parallel system that
+  // could disagree with the board about what is saved.
 
   let shown = 0;
   for (const el of rows) {
@@ -263,7 +297,6 @@ const weekOf = feed.since
     const ok = matchesFacets(row, sel, ['conference', 'topic']);
     (el as HTMLElement).hidden = !ok;
     if (ok) shown += 1;
-    if (saved.has(el.getAttribute('data-slug') || '')) el.classList.add('is-saved');
   }
 
   // A conference subheading with every row filtered out is a heading for
@@ -298,9 +331,9 @@ const weekOf = feed.since
      values hold up on a dark ground. The words stay in the site's prose
      register; only the treatment is shared. */
   .changes-badge {
+    flex: none;
     display: inline-block;
     padding: 0.05rem 0.45rem;
-    margin-right: 0.4rem;
     border: 1px solid currentColor;
     border-radius: 999px;
     font-size: 0.72rem;
@@ -333,8 +366,21 @@ const weekOf = feed.since
     color: var(--muted);
     margin: 1.1rem 0 0.3rem;
   }
-  .changes-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.45rem; }
-  .changes-row { line-height: 1.45; }
-  .changes-row.is-saved::before { content: '★ '; color: var(--accent); }
+  .changes-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+  /* star | badge | text. The text is its own flex cell, so a title that wraps
+     hangs under its own first line instead of returning to the row's left edge
+     and reading as a new entry. `min-width: 0` is what actually allows it to
+     wrap inside a flex child rather than overflow. */
+  .changes-row {
+    line-height: 1.45;
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+  }
+  .changes-text { flex: 1 1 auto; min-width: 0; }
+  /* Every row carries a star, so the column is always the same width and the
+     indentation never shifts between a saved row and an unsaved one — which is
+     what the old ::before star did. */
+  .changes-row .star-btn { flex: none; }
   .changes-filters { margin-top: 1.2rem; }
 </style>
