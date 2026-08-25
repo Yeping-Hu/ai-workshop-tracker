@@ -79,8 +79,13 @@ jobs:
       # `-A` — so a stray file written by any future step can never ride along
       # into an automated commit. A quiet week rewrites the same content, git
       # reports no diff, and the step exits without committing.
+      # Runs on a dry run too. A dry run mails nobody — every send in
+      # alerts_run.mjs funnels through one `send()` helper that returns early
+      # when DRY_RUN is set — but the feed it computed is still true, so
+      # publishing it is how /changes/ gets refreshed on demand without
+      # touching a subscriber. The guard that used to sit here made a dry run
+      # compute the right answer and then throw it away.
       - name: Commit this week's changes feed
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
