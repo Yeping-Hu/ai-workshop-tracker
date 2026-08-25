@@ -116,6 +116,7 @@ const rows = (Array.isArray(feed.events) ? feed.events : [])
 // an unrelated reason would silently change what the week is said to contain.
 // The window start is fixed by the feed, so the page is stable for as long as
 // the feed is.
+const NOW_MS = Date.now();
 const windowStartMs = feed.since ? Date.parse(`${feed.since}T00:00:00Z`) : null;
 const withinWindow = (r: any) => {
   if (!r.whenIso || windowStartMs == null || !Number.isFinite(windowStartMs)) return true;
@@ -161,11 +162,34 @@ const changes = lastPerSlug(
 
 // Grouped by conference, alphabetically — the digest does the same, for the same
 // reason: a flat wall of rows from nine conferences is harder to scan.
+// Within a conference, soonest deadline first — the board's own order, and the
+// only one a reader can act on. The feed arrives in observation order, which is
+// the pipeline's business and looks arbitrary on the page: IROS read 31 Aug,
+// 31 Aug, 24 Aug, 21 Aug, 29 Aug, 11 Sep before this.
+//
+// Deadlines that have already passed sink to the end of their group rather than
+// floating to the top. They are kept on the page on purpose — they moved inside
+// the reported window, so they are part of its story — but they are the one
+// thing here nobody can act on, and ascending order alone would put them first.
+// Rows with no date at all go last: nothing to sort them by.
+function deadlineRank(r: any) {
+  const ms = r.whenIso ? Date.parse(r.whenIso) : NaN;
+  if (!Number.isFinite(ms)) return [2, 0];
+  return ms >= NOW_MS ? [0, ms] : [1, -ms];
+}
+
 function groupByConference(list: any[]) {
   const m = new Map<string, any[]>();
   for (const r of list) {
     if (!m.has(r.conference)) m.set(r.conference, []);
     m.get(r.conference)!.push(r);
+  }
+  for (const rows of m.values()) {
+    rows.sort((a, b) => {
+      const [ga, va] = deadlineRank(a);
+      const [gb, vb] = deadlineRank(b);
+      return ga !== gb ? ga - gb : va - vb;
+    });
   }
   return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 }
