@@ -205,9 +205,12 @@ function textFooter({ manageUrl, unsubUrl, showManage = true }) {
  * more, an "and N more →" link into the site with the subscriber's own facets
  * prefilled.
  */
-function section({ heading, items, moreUrl }) {
+function section({ heading, subtitle = '', items, moreUrl, cap = SECTION_CAP }) {
   if (!items.length) return { html: '', text: '' };
-  const shown = items.slice(0, SECTION_CAP);
+  // `cap: Infinity` is the saved section. Someone who starred forty workshops
+  // asked for all forty; truncating their own list to fifteen and offering a
+  // link is the one place the cap would be answering a question nobody asked.
+  const shown = Number.isFinite(cap) ? items.slice(0, cap) : items.slice();
   const extra = items.length - shown.length;
 
   const li = shown
@@ -217,12 +220,17 @@ function section({ heading, items, moreUrl }) {
     ? `<p style="margin:10px 0 0;font-size:14px;"><a href="${esc(moreUrl)}" style="${LINK}">and ${extra} more →</a></p>`
     : '';
 
+  const sub = subtitle
+    ? `<p style="margin:0 0 10px;font-size:13.5px;${MUTED}">${esc(subtitle)}</p>`
+    : '';
   const html =
-    `<h2 style="margin:26px 0 10px;font-size:17px;line-height:1.3;">${esc(heading)}</h2>` +
+    `<h2 style="margin:26px 0 ${subtitle ? '4px' : '10px'};font-size:17px;line-height:1.3;">${esc(heading)}</h2>` +
+    sub +
     `<ul style="margin:0;padding-left:20px;">\n${li}\n</ul>${more}`;
 
   const text =
     `\n${heading}\n${'-'.repeat(heading.length)}\n` +
+    (subtitle ? `${subtitle}\n` : '') +
     shown.map((it) => `* ${it.text}`).join('\n') +
     (extra ? `\nand ${extra} more: ${moreUrl}` : '') +
     '\n';
@@ -238,7 +246,7 @@ function changeItem(ev, w, ids, tz) {
   let lead;
   if (ev.kind === 'extended') lead = `→ Extended ${ev.days} day${ev.days === 1 ? '' : 's'}`;
   else if (ev.kind === 'earlier') lead = `△ Moved ${ev.days} day${ev.days === 1 ? '' : 's'} earlier`;
-  else lead = '→ Deadline just announced';
+  else lead = 'First deadline posted';
   return {
     html:
       `<strong>${esc(lead)}</strong> · <a href="${link}" style="${LINK}">${esc(title)}</a>` +
@@ -330,16 +338,28 @@ export function renderDigest({
     })
     .filter(Boolean)
     .sort((a, b) => a.ms - b.ms)
-    .slice(0, 5)
     .map(({ w }) => closingItem(w, ids, saved, tz));
 
   if (!changes.length && !announced.length && !closing.length && !savedNext.length) return null;
 
+  // Order is the reader's priority, not the pipeline's. What they chose to
+  // follow comes before what merely happened, and "closing" — the only section
+  // that repeats workshops named above — comes last.
   const secs = [
+    section({
+      heading: 'Your saved workshops — next deadlines',
+      items: savedNext,
+      moreUrl: `${SITE_ORIGIN}/saved/`,
+      cap: Infinity,
+    }),
     section({ heading: 'Deadline changes this week', items: changes, moreUrl: more }),
-    section({ heading: 'Newly announced', items: announced, moreUrl: more }),
+    section({
+      heading: 'New this week',
+      subtitle: 'workshops added to the tracker this week',
+      items: announced,
+      moreUrl: more,
+    }),
     section({ heading: 'Closing in the next 7 days', items: closing, moreUrl: more }),
-    section({ heading: 'Your saved workshops — next deadlines', items: savedNext, moreUrl: `${SITE_ORIGIN}/saved/` }),
   ];
 
   // Subject drops zero-count clauses rather than saying "0 changes".

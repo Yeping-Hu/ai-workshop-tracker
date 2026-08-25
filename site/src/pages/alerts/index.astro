@@ -44,10 +44,11 @@ const enabled = !!ALERTS_API;
     <h3>The weekly digest</h3>
     <p>Every Monday, one message with four short sections, filtered to your selection:</p>
     <ul>
+      <li><strong>Your saved workshops</strong> — the next deadlines on your saved list, whatever your
+        filters say, and never truncated.</li>
       <li><strong>Deadline changes this week</strong> — extensions and any date that moved earlier.</li>
-      <li><strong>Newly announced</strong> — workshops that appeared in the tracker this week.</li>
+      <li><strong>New this week</strong> — workshops added to the tracker this week.</li>
       <li><strong>Closing in the next 7 days</strong> — sorted by whichever stage is next.</li>
-      <li><strong>Your starred</strong> — the next deadlines on your saved list, whatever your filters say.</li>
     </ul>
     <p>
       <strong>Quiet weeks send nothing.</strong> If none of your areas moved, there is no email —
@@ -70,19 +71,24 @@ const enabled = !!ALERTS_API;
     <h2>A sample</h2>
     <pre class="alerts-sample"><code>{`This week in AI workshops
 
+Your saved workshops — next deadlines
+-------------------------------------
+* ★ AGENTIC (ICML 2026) — 18 Aug 2026, 23:59 UTC
+
 Deadline changes this week
 --------------------------
 * → Extended 5 days · MARINE (ECCV 2026) — now 19 Sep 2026, 23:59 UTC
-* → Deadline just announced · AI4MAT (NeurIPS 2026) — now 3 Oct 2026, 23:59 UTC
+* First deadline posted · AI4MAT (NeurIPS 2026) — now 3 Oct 2026, 23:59 UTC
+
+New this week
+-------------
+workshops added to the tracker this week
+* SAFEGEN (NeurIPS 2026) — deadline 20 Aug 2026, 07:59 UTC
 
 Closing in the next 7 days
 --------------------------
 * ★ AGENTIC (ICML 2026) — 18 Aug 2026, 23:59 UTC
-*   SAFEGEN (NeurIPS 2026) — 20 Aug 2026, 07:59 UTC (abstract)
-
-Your starred — next deadlines
------------------------------
-* ★ AGENTIC (ICML 2026) — 18 Aug 2026, 23:59 UTC`}</code></pre>
+*   SAFEGEN (NeurIPS 2026) — 20 Aug 2026, 07:59 UTC (abstract)`}</code></pre>
   </div>
 
   <AlertsSignup

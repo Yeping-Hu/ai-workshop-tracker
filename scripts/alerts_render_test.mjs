@@ -134,9 +134,9 @@ const sub = (over = {}) =>
   check('the subject counts changes and drops zero clauses',
     /^2 deadline changes in your areas — AI Workshop Tracker$/.test(out.subject), out.subject);
   check('an extension is described with its day count', /Extended 5 days/.test(out.html));
-  check('a newly published deadline is described', /Deadline just announced/.test(out.html));
+  check('a newly published deadline is described', /First deadline posted/.test(out.html));
   check('a workshop announced but already Past is not listed as new',
-    !/Newly announced/.test(out.html));
+    !/New this week/.test(out.html));
   check('items link to the workshop page',
     out.html.includes('https://aiworkshoptracker.com/workshop/neurips-2026-alpha/'));
   check('the saved-workshops section is present', /Your saved workshops/.test(out.html));
@@ -144,6 +144,52 @@ const sub = (over = {}) =>
   check('an abstract stage is labelled', /\(abstract\)/.test(out.html));
   check('the closing-soon section lists the imminent workshops',
     /Closing in the next 7 days/.test(out.html));
+
+  // --- section order and the saved section's exemption from the cap --------
+  // Order is the reader's priority: what they chose to follow, then what
+  // changed, then what is new, then what is merely closing.
+  // Its own fixture: the digest above deliberately has no *live* announced
+  // workshop (the only one is Past), so all four sections never coexist there.
+  const allFour = renderDigest({
+    sub: sub({ starred_ws: '["neurips-2026-gamma"]' }),
+    events: [
+      { slug: 'neurips-2026-alpha', kind: 'extended', days: 5, old_utc: iso(25), new_utc: iso(30) },
+      { slug: 'neurips-2026-delta', kind: 'announced', days: null, old_utc: null, new_utc: iso(40) },
+    ],
+    workshops: {
+      ...workshops,
+      'neurips-2026-delta': ws('neurips-2026-delta', { deadline_utc: iso(40), next_stage_utc: iso(40) }),
+    },
+    nowMs: NOW,
+    ids,
+  });
+  const order = ['Your saved workshops', 'Deadline changes this week', 'New this week', 'Closing in the next 7 days']
+    .map((h) => allFour.html.indexOf(h));
+  check('sections render in reader-priority order',
+    order.every((at, i) => at >= 0 && (i === 0 || at > order[i - 1])), JSON.stringify(order));
+  check('the new-this-week section carries its subtitle',
+    allFour.html.includes('workshops added to the tracker this week'));
+  check('the subtitle reaches the plaintext part too',
+    allFour.text.includes('workshops added to the tracker this week'));
+
+  // Someone who starred forty workshops asked for forty. SECTION_CAP applies to
+  // every other section and must not apply to this one.
+  const lots = {};
+  const slugs = [];
+  for (let i = 0; i < SECTION_CAP + 6; i++) {
+    const slug = `neurips-2026-s${i}`;
+    lots[slug] = ws(slug, { deadline_utc: iso(10 + i), next_stage_utc: iso(10 + i) });
+    slugs.push(slug);
+  }
+  const savedOut = renderDigest({
+    sub: sub({ starred_ws: JSON.stringify(slugs) }),
+    events: [], workshops: lots, nowMs: NOW, ids,
+  });
+  const savedListed = slugs.filter((sl) => savedOut.html.includes(`/workshop/${sl}/`)).length;
+  check(`the saved section is never capped (${SECTION_CAP + 6} starred, all listed)`,
+    savedListed === SECTION_CAP + 6, String(savedListed));
+  check('an uncapped saved section offers no "and N more" link',
+    !/and \d+ more/.test(savedOut.html.split('Deadline changes this week')[0]));
 
   // Required on every bulk message. Under the placeholder design the renderer
   // cannot emit a real URL — it holds no HMAC secret — so what it guarantees is
@@ -277,7 +323,7 @@ const sub = (over = {}) =>
   // It is deliberately narrow: this cadence exists to REPLACE a weekly summary,
   // so padding it with "closing soon" would defeat the point.
   check('it carries no closing-soon section', !/Closing in the next/.test(two.html));
-  check('it carries no newly-announced section', !/Newly announced/.test(two.html));
+  check('it carries no newly-announced section', !/New this week/.test(two.html));
 
   // Same rules as every other bulk message.
   check('nothing to report renders null',
