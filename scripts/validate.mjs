@@ -26,6 +26,7 @@ import {
   loadEditions,
 } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs, parseDateUtcMs, isValidTimezone, DAY_MS } from '../lib/dates.mjs';
+import { validateChangesFeed } from './validate_changes_feed.mjs';
 
 const reportFlag = process.argv.indexOf('--report');
 const reportPath = reportFlag !== -1 ? process.argv[reportFlag + 1] : null;
@@ -261,6 +262,40 @@ for (const filePath of listWorkshopFiles()) {
       });
     }
   }
+}
+
+// ---- data/changes.json: the published /changes/ feed ----
+//
+// Shape only. It cannot know whether an extension was really 5 days — the
+// workshop's own deadline_history says that — but it can refuse a row claiming
+// a deadline moved without the two dates it moved between, which is what the
+// retracted hand-authored feed looked like on every row.
+{
+  const rel = 'data/changes.json';
+  const abs = path.join(REPO_ROOT, rel);
+  if (fs.existsSync(abs)) {
+    let feed = null;
+    try {
+      feed = JSON.parse(fs.readFileSync(abs, 'utf8'));
+    } catch (e) {
+      errors.push({ file: rel, msg: `JSON does not parse: ${e.message.split('\n')[0]}` });
+    }
+    if (feed !== null) {
+      const slugs = new Set();
+      const addedBySlug = new Map();
+      for (const f of listWorkshopFiles()) {
+        const slug = path.basename(f, '.yml');
+        slugs.add(slug);
+        try {
+          const { raw } = readWorkshopFile(f);
+          if (raw?.added) addedBySlug.set(slug, String(raw.added));
+        } catch { /* unparseable files are reported above */ }
+      }
+      for (const msg of validateChangesFeed(feed, { slugs, addedBySlug })) errors.push({ file: rel, msg });
+    }
+  }
+  // Absent is fine: a fork, a fresh clone, or the period before the alerts
+  // pipeline has run once. /changes/ renders its empty state.
 }
 
 // ---- Report ----
