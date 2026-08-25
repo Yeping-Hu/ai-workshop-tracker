@@ -5,11 +5,18 @@ year: 2026
 website: https://www.fllmpt-work.shop/
 topics:
   - llms
-submission_deadline: 2026-08-23 11:00
+submission_deadline: 2026-09-05 22:00
 timezone: UTC
-deadline_notes: OpenReview-synced 2026-08-23 11:00 UTC (as of 2026-08-04) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_notes: OpenReview-synced 2026-09-05 22:00 UTC (as of 2026-08-25) — extensions on OpenReview are applied automatically; verify on the website.
 openreview_venue_id: NeurIPS.cc/2026/Workshop/FLLMPT
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
 added: '2026-08-04'
 location: NeurIPS Paris 2026
+deadline_history:
+  - value: 2026-08-23 11:00
+    recorded: '2026-08-04'
+    timezone: UTC
+  - value: 2026-09-05 22:00
+    recorded: '2026-08-25'
+    timezone: UTC
