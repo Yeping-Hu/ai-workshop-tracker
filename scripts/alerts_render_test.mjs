@@ -57,7 +57,10 @@ const iso = (days, h = 12) => new Date(NOW + days * 86_400_000 + h * 3_600_000).
 
 const ws = (slug, over = {}) => ({
   slug,
-  name: `The ${slug} Workshop`,
+  // Deliberately does NOT embed the acronym: a name that contains it makes
+  // displayAcronym suppress the acronym (correctly), which would mean these
+  // fixtures silently stopped exercising the acronym path at all.
+  name: 'Workshop on Applied Machine Learning',
   acronym: slug.split('-').pop().toUpperCase(),
   conference: 'neurips',
   year: 2026,
@@ -413,7 +416,13 @@ const sub = (over = {}) =>
     workshops, nowMs: NOW, ids,
   });
   check('the digest shows the full name too', d.html.includes('LLM for Scientific Discovery'));
-  check('the digest shows local time too', d.html.includes('PDT'));
+  // ONE timezone in the digest now: no local conversion per row, a bare stamp
+  // with a relative annotation, and the zone stated once under the first
+  // heading. renderUrgent and renderStarredChanges keep the local reading.
+  check('the digest does not print a local zone per row', !/PDT|PST/.test(d.html));
+  check('the digest states its timezone exactly once',
+    (d.html.match(/All times UTC/g) || []).length === 1, String((d.html.match(/All times UTC/g) || []).length));
+  check('a deadline carries a relative annotation', /in \d+ days · /.test(d.html), d.html.slice(0, 0));
 }
 
 /* --------------------------------------------- no internal jargon reaches a reader */
@@ -441,27 +450,28 @@ const sub = (over = {}) =>
 // track, InfPriv vs its fast track...). The subject used to be built from
 // `acronym || name`, so a subscriber who saved one track received a mail naming
 // the other one just as accurately and could not tell which deadline had moved.
-// The feed now carries the site's own `short_name`; this holds that it is used.
+// The feed carries `track_label`; displayAcronym appends it when the name does
+// not already say it, which is what keeps the two subjects apart.
 {
   const ids = { conferences: [{ id: 'cvpr', name: 'CVPR' }], topics: [] };
-  const mk = (slug, short_name) => ({
+  const mk = (slug, track_label) => ({
     slug, name: 'AI for Creative Visual Content Generation Editing and Understanding',
-    acronym: 'CVEU', short_name, conference: 'cvpr', year: 2026,
+    acronym: 'CVEU', track_label, conference: 'cvpr', year: 2026,
     deadline_utc: iso(9), status: 'upcoming', topics: [],
   });
-  const subjectFor = (slug, short_name) =>
+  const subjectFor = (slug, track_label) =>
     renderStarredChanges({
       events: [{ slug, kind: 'extended', days: 2, new_utc: iso(9) }],
-      workshops: { [slug]: mk(slug, short_name) }, ids,
+      workshops: { [slug]: mk(slug, track_label) }, ids,
     })?.subject ?? '';
 
-  const base = subjectFor('cvpr-2026-cveu', 'CVEU');
-  const track = subjectFor('cvpr-2026-cveu-extended-abstract-track', 'CVEU (Extended Abstract Track)');
+  const base = subjectFor('cvpr-2026-cveu', null);
+  const track = subjectFor('cvpr-2026-cveu-extended-abstract-track', 'Extended Abstract Track');
   check('sibling tracks get distinct subjects', base !== track, `${base} === ${track}`);
   check('the track subject names its track', /Extended Abstract Track/.test(track), track);
-  // A snapshot written before short_name existed must still render something.
+  // A snapshot written before track_label existed must still render something.
   const legacy = subjectFor('cvpr-2026-cveu', undefined);
-  check('falls back to the acronym without short_name', /CVEU/.test(legacy), legacy);
+  check('falls back to the acronym without a track label', /CVEU/.test(legacy), legacy);
 }
 
 console.log(failed === 0 ? '\nRendering OK.' : `\n${failed} test(s) failed.`);
