@@ -86,23 +86,35 @@ const rows = (Array.isArray(feed.events) ? feed.events : [])
   })
   .filter(Boolean) as any[];
 
-// A deadline that has already passed is not actionable, and reads oddly beside
-// a badge announcing it moved — "Moved 26 days earlier … 21 Jul 2026" is true
-// and useless. So a change row survives only while its deadline is still ahead.
-// Rows with no date at all are kept: an announcement without a deadline has
-// nothing to have passed.
-const NOW_MS = Date.now();
-const stillOpen = (r: any) => {
-  if (!r.whenIso) return true;
+// Drop rows whose deadline had already passed when the reported window OPENED
+// — not when the page was built.
+//
+// The distinction matters. This page is a record of one week, so a deadline
+// that closed *during* that week is part of the story: it moved, then it
+// arrived, and both happened inside the window being reported. What does not
+// belong is a deadline that was already in the past before the window began —
+// "Moved 26 days earlier … 21 Jul 2026" in a page covering 18–25 August is an
+// event recorded late, not news, and reads as a mistake.
+//
+// Filtering on build time instead would quietly re-cut the page every deploy:
+// the same week would lose rows as the day wore on, and a rebuild triggered for
+// an unrelated reason would silently change what the week is said to contain.
+// The window start is fixed by the feed, so the page is stable for as long as
+// the feed is.
+const windowStartMs = feed.since ? Date.parse(`${feed.since}T00:00:00Z`) : null;
+const withinWindow = (r: any) => {
+  if (!r.whenIso || windowStartMs == null || !Number.isFinite(windowStartMs)) return true;
   const ms = Date.parse(r.whenIso);
-  return !Number.isFinite(ms) || ms >= NOW_MS;
+  // Rows with no date, or an unparseable one, are kept: an announcement without
+  // a deadline has nothing to have passed.
+  return !Number.isFinite(ms) || ms >= windowStartMs;
 };
 
 // Same section semantics as the digest: a first-published deadline IS a deadline
 // change, and "new this week" is a workshop appearing at all. Past editions are
 // not news, exactly as the digest filters them.
-const changes = rows.filter((r) => CHANGE_KINDS.has(r.kind)).filter(stillOpen);
-const added = rows.filter((r) => r.kind === 'announced' && r.status !== 'past').filter(stillOpen);
+const changes = rows.filter((r) => CHANGE_KINDS.has(r.kind)).filter(withinWindow);
+const added = rows.filter((r) => r.kind === 'announced' && r.status !== 'past').filter(withinWindow);
 
 // Grouped by conference, alphabetically — the digest does the same, for the same
 // reason: a flat wall of rows from nine conferences is harder to scan.
