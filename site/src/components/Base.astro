@@ -23,6 +23,14 @@ const pageTitle = title
   : `${SITE_NAME} — AI workshop deadlines & papers`;
 const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : undefined;
 
+// /changes/ is deliberately NOT here. It is the published edition of the weekly
+// digest, and a nav entry would offer the newsletter's content as a destination
+// on the site — which risks answering "should I subscribe?" with "no need".
+// It stays reachable from the digest's own overflow links, and crawlable via the
+// sitemap, so subscribers and search both find it; the site does not advertise
+// it. Reconsider only alongside copy that states what the page withholds — it
+// carries neither the 72h alerts nor the same-day ones, and is up to six days
+// old by design.
 const nav = [
   { label: 'Home', path: '/' },
   { label: 'Saved', path: '/saved/' },
