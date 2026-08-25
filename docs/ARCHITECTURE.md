@@ -821,10 +821,33 @@ workshop in `data/`, so the page joins on slug and takes names from the same
 corpus (and the same `displayLabel`) as everything else. Current week only —
 there is no archive, and the `events` table is pruned anyway.
 
-The file is rewritten daily rather than weekly, because a page headed "this
-week" that only moved on Mondays would be six days stale by Sunday. It may be
-absent (a fork, a fresh clone, before the first run) or legitimately empty (a
-quiet week); both render the empty state and neither fails the build.
+The file is rewritten **on the weekly pass only** — the page is the published
+edition of the digest, not a live feed. The CTA on it says as much ("this page,
+in your inbox every Monday"), and the digest's "and N more" links point at it as
+the fuller version of the mail just received. A subscriber who opens Monday's
+digest saying "45 deadline changes" and clicks through on Thursday has to land
+on those 45, not on a page that has rolled forward to a different week and a
+different count. To republish between Mondays, dispatch the workflow with
+`dry_run` **and** `force_weekly`: that rebuilds the edition and commits it
+without mailing anyone.
+
+That is the same principle the page follows internally. Neither its
+passed-deadline filter nor its ordering reads the clock — both key off the
+feed's own window — so a record of one week reads identically whenever it is
+opened. An artifact rewritten daily could not honour that however the page
+rendered it.
+
+The file may be absent (a fork, a fresh clone, before the first run) or
+legitimately empty (a quiet week); both render the empty state and neither fails
+the build.
+
+Both surfaces apply one set of rules, and share the code for the parts that
+matter: `lib/events.mjs` collapses a week's events to one row per workshop
+carrying the **net** change (extended 7 days then 1 more is `+8d`, not two
+rows), and both drop deadlines that had already passed when the window opened
+and order what remains by deadline. A row present in the email and absent from
+the page, or ordered differently, would give a reader two accounts of the same
+seven days.
 
 Filtering reuses the board's own facet URL contract
 (`site/src/scripts/facet-params.js`, `?conference=…&topic=…` carrying display

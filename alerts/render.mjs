@@ -448,18 +448,36 @@ export function renderDigest({
   // annotation. `renderUrgent` and `renderStarredChanges` keep the local
   // conversion: those are single-deadline messages where it costs one line.
   const at = (iso) => fmtDeadline(iso, nowMs);
+  const weekMs = 7 * 86_400_000;
 
   // 1. Deadline changes this week.
   const changeKinds = new Set(['extended', 'earlier', 'deadline_announced']);
   // Merge first: a deadline that moved twice this week is one line reporting the
   // net, not two lines with different numbers.
   const merged = mergeEventsBySlug(events);
+  // The window this digest reports — the same seven days the pipeline asked the
+  // event store for, and the same `since` that lands in data/changes.json. A
+  // deadline already in the past when the window opened is not news: it was
+  // recorded late, and reporting it puts an unactionable row at the top of a
+  // conference. /changes/ drops these; so does this.
+  const windowStartMs = nowMs - weekMs;
   const changeRows = merged
     .filter((e) => changeKinds.has(e.kind) && workshops[e.slug])
-    .map((e) => ({
-      conf: confLabel(ids, workshops[e.slug].conference),
-      item: changeItem(e, workshops[e.slug], ids, tz, at),
-    }));
+    .map((e) => {
+      const w = workshops[e.slug];
+      const iso = e.new_utc || w.next_stage_utc || w.deadline_utc;
+      const ms = iso ? Date.parse(iso) : NaN;
+      return { conf: confLabel(ids, w.conference), ms, item: changeItem(e, w, ids, tz, at) };
+    })
+    .filter((r) => !Number.isFinite(r.ms) || r.ms >= windowStartMs)
+    // Earliest deadline first, matching the page. Nothing here compares against
+    // "now": a digest is a record of one week and must read the same whenever it
+    // is opened, which is the whole reason /changes/ stopped reading the clock.
+    .sort((a, b) => {
+      const av = Number.isFinite(a.ms) ? a.ms : Infinity;
+      const bv = Number.isFinite(b.ms) ? b.ms : Infinity;
+      return av - bv;
+    });
   const changes = changeRows.map((r) => r.item);
   // Grouped by conference: forty rows from nine conferences is a wall, nine
   // short lists under their own subheading is a scan. Alphabetical, because any
@@ -480,7 +498,6 @@ export function renderDigest({
     .map((e) => announcedItem(workshops[e.slug], ids, tz, at));
 
   // 3. Closing in the next 7 days, from the live projection (not events).
-  const weekMs = 7 * 86_400_000;
   const closing = Object.values(workshops)
     .map((w) => {
       const iso = w.next_stage_utc || w.deadline_utc;

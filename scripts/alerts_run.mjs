@@ -19,9 +19,10 @@
  *   3. classify events -> POST them -> PUT the new snapshot (in that order:
  *      a snapshot written before its events would lose them forever)
  *   4. urgent pass (every run)
- *   5. fetch this week's events and write data/changes.json (every run)
- *   6. weekly pass (UTC Monday, or FORCE_WEEKLY) — reuses step 5's events
- *   7. maintenance
+ *   5. weekly pass (UTC Monday, or FORCE_WEEKLY): fetch the week's events,
+ *      write data/changes.json, send the digests. The page is the published
+ *      edition of the mail, so both come from that one fetch.
+ *   6. maintenance
  *
  * NEVER log an address, a message body, or anything that reveals the size of
  * the list — the workflow log is public on a public repo. Dataset facts
@@ -211,9 +212,9 @@ function starredImminent(sub, workshops) {
  * corpus the rest of the site uses. That keeps the file small and means a
  * workshop cannot be named one way here and another way three pages later.
  *
- * Written on every run, including quiet ones — an empty `events` array is the
- * honest state for a quiet week, and skipping the write would leave last week's
- * changes on the page claiming to be this week's.
+ * Written on every WEEKLY pass, including quiet ones — an empty `events` array
+ * is the honest state for a quiet week, and skipping the write would leave the
+ * previous edition on the page claiming to be the current one.
  */
 function writeChangesArtifact({ since, events }) {
   const out = {
@@ -229,13 +230,13 @@ function writeChangesArtifact({ since, events }) {
   };
   // Written on a dry run too. DRY_RUN means "mail nobody and mutate nothing
   // upstream" — no send, no snapshot, no event POST, no urgent-log write. A
-  // local file is none of those, and the feed it holds is a true statement
-  // about the trailing seven days either way: it comes from /admin/events,
-  // which a dry run reads but never changes.
+  // local file is none of those, and the edition it holds is a true statement
+  // about its window either way: it comes from /admin/events, which a dry run
+  // reads but never changes.
   //
-  // That distinction is what makes the public feed refreshable on demand
-  // without mailing anyone — to recover from a bad feed, or to publish before
-  // the next cron, dispatch the workflow with dry_run.
+  // That is what makes the page republishable without mailing anyone. Since the
+  // write now lives in the weekly pass, an off-Monday republish needs
+  // force_weekly as well: dispatch with dry_run AND force_weekly.
   const file = path.join(ROOT, 'data', 'changes.json');
   fs.writeFileSync(file, `${JSON.stringify(out, null, 2)}\n`);
   log(`   ${DRY_RUN ? '[dry-run] ' : ''}wrote ${path.relative(ROOT, file)} (${out.events.length} event(s))`);
@@ -375,24 +376,37 @@ async function main() {
     log(`4b. saved-workshop changes: nothing to report (${priv(changeSubs.length)} subscriber(s) opted in)`);
   }
 
-  /* 5. this week's events — ONE fetch, two consumers ------------------------
+  /* 5. weekly pass (Mondays) — the digest, and the page that mirrors it ------
    *
-   * The public /changes/ page and the Monday digest must never disagree about
-   * what happened this week, and the only way to guarantee that is for them to
-   * read the same array. So the fetch happens on every run, not inside the
-   * Monday branch: the artifact is rewritten daily (the page says "this week",
-   * and a page that only moved on Mondays would be six days stale by Sunday),
-   * and the digest below reuses it rather than asking again.
+   * ONE fetch, two consumers, and deliberately inside this branch rather than
+   * above it.
+   *
+   * /changes/ is not a live feed of the last seven days. It is the published
+   * edition of the digest — the CTA on it says so ("this page, in your inbox
+   * every Monday"), and the digest's own "and N more" links point at it as the
+   * fuller version of the mail just received. So it must change when the mail
+   * changes, and not otherwise: a subscriber who opens Monday's digest saying
+   * "45 deadline changes" and clicks through on Thursday has to land on those
+   * 45, not on a page that has since rolled forward to a different week and a
+   * different count. Rewriting it daily made the email's own numbers wrong by
+   * Tuesday.
+   *
+   * It is the same principle the page itself now follows in its filter and its
+   * sort: a record of one week reads the same whenever it is opened. An
+   * artifact rewritten daily cannot honour that no matter how the page renders
+   * it.
+   *
+   * To republish between Mondays — after a bad feed, or to pick up a rendering
+   * fix — dispatch with dry_run AND force_weekly: that rebuilds the edition and
+   * commits it without mailing anyone.
    */
-  const since = new Date(NOW_MS - 7 * 86_400_000).toISOString().slice(0, 10);
-  const { events } = await admin(`/admin/events?since=${since}`);
-  log(`5. this week: ${events.length} event(s) since ${since}`);
-  writeChangesArtifact({ since, events });
-
-  /* 6. weekly pass (Mondays) ---------------------------------------------- */
   const isWeeklyDay = NOW.getUTCDay() === WEEKLY_DOW;
   let digestsSent = 0;
   if (isWeeklyDay || FORCE_WEEKLY) {
+    const since = new Date(NOW_MS - 7 * 86_400_000).toISOString().slice(0, 10);
+    const { events } = await admin(`/admin/events?since=${since}`);
+    log(`5. weekly: ${events.length} event(s) since ${since}`);
+    writeChangesArtifact({ since, events });
 
     const messages = [];
     // `starred_changes` subscribers opted out of a scheduled summary entirely.
@@ -423,12 +437,12 @@ async function main() {
     log(`5. weekly: not today (UTC day ${NOW.getUTCDay()}, weekly day is ${WEEKLY_DOW})`);
   }
 
-  /* 7. maintenance -------------------------------------------------------- */
+  /* 6. maintenance -------------------------------------------------------- */
   if (!DRY_RUN) {
     const m = await admin('/admin/maintenance', { method: 'POST' });
-    log(`7. maintenance: ${priv(m.rate_limit_rows)} rate-limit row(s), ${m.events_pruned} old event(s), ${priv(m.unconfirmed_pruned)} abandoned signup(s)`);
+    log(`6. maintenance: ${priv(m.rate_limit_rows)} rate-limit row(s), ${m.events_pruned} old event(s), ${priv(m.unconfirmed_pruned)} abandoned signup(s)`);
   } else {
-    log('7. [dry-run] maintenance skipped');
+    log('6. [dry-run] maintenance skipped');
   }
 
   log(`done — ${priv(urgentSent)} urgent, ${priv(changeSent)} saved-change, ${priv(digestsSent)} digest(s)${DRY_RUN ? ' (dry run: nothing was sent)' : ''}`);
