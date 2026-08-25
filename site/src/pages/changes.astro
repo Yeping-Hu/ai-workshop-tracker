@@ -58,7 +58,7 @@ function leadFor(e: any) {
 function badgeFor(e: any) {
   if (e.kind === 'extended') return `+${e.days}d`;
   if (e.kind === 'earlier') return `\u2212${e.days}d`;
-  if (e.kind === 'deadline_announced') return 'First deadline';
+  if (e.kind === 'deadline_announced') return 'ddl posted';
   return 'New';
 }
 
@@ -369,6 +369,20 @@ const weekOf = feed.since
     letter-spacing: 0.03em;
     white-space: nowrap;
     vertical-align: 0.06em;
+  }
+  /* The day-count chips take a common width so the title that follows starts at
+     the same x on every row — "+7d" and "+26d" are different lengths, and left
+     to themselves they shift the text a few pixels line to line, which reads as
+     a ragged edge down a list of forty. Tabular figures keep the digits from
+     doing the same thing inside the chip.
+     "ddl posted" and "New" are deliberately excluded: they are words, not
+     measurements, and padding them to match would open a gap rather than close
+     one. */
+  .changes-badge.is-extended,
+  .changes-badge.is-earlier {
+    min-width: 3rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
   }
   .changes-badge.is-extended { color: #0f766e; }
   .changes-badge.is-earlier  { color: #9a3412; }
