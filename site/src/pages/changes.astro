@@ -128,8 +128,36 @@ const withinWindow = (r: any) => {
 // Same section semantics as the digest: a first-published deadline IS a deadline
 // change, and "new this week" is a workshop appearing at all. Past editions are
 // not news, exactly as the digest filters them.
-const changes = rows.filter((r) => CHANGE_KINDS.has(r.kind)).filter(withinWindow);
-const added = rows.filter((r) => r.kind === 'announced' && r.status !== 'past').filter(withinWindow);
+// One row per workshop, in two senses.
+//
+// ACROSS sections: a workshop that appeared this week and published its first
+// deadline in the same week generates two events — `announced` and
+// `deadline_announced` — and would otherwise be listed twice, badged New in one
+// section and First deadline in the other. That is one piece of news. The
+// workshop is new; having a deadline is part of being new, not a separate
+// development, so the New row wins and the change row is dropped.
+//
+// WITHIN a section: a deadline can move more than once in seven days, and each
+// move is its own event. Listing them all repeats the same workshop down the
+// page with different numbers. The last event for a slug wins, because the feed
+// is written in observation order and the row's date column shows the current
+// deadline — so the badge should describe the hop that produced it.
+//
+// This loses the intermediate hops: a workshop extended 7 days and then 1 more
+// reads as +1d against its current date, not +8d. Summing them would be a
+// derivation the event store never recorded, and this page does not invent
+// values.
+const lastPerSlug = (list: any[]) => {
+  const m = new Map<string, any>();
+  for (const r of list) m.set(r.slug, r); // later wins
+  return [...m.values()];
+};
+
+const added = lastPerSlug(rows.filter((r) => r.kind === 'announced' && r.status !== 'past').filter(withinWindow));
+const isNew = new Set(added.map((r) => r.slug));
+const changes = lastPerSlug(
+  rows.filter((r) => CHANGE_KINDS.has(r.kind)).filter(withinWindow).filter((r) => !isNew.has(r.slug)),
+);
 
 // Grouped by conference, alphabetically — the digest does the same, for the same
 // reason: a flat wall of rows from nine conferences is harder to scan.
@@ -157,7 +185,7 @@ const weekOf = feed.since
   title="What changed this week"
   description="Deadline extensions, first deadlines posted and workshops added to the AI Workshop Tracker in the last seven days."
 >
-  <section class="masthead">
+  <section class="masthead changes-masthead">
     <p class="eyebrow">This week</p>
     <h1>What changed</h1>
     <p class="muted">
@@ -356,6 +384,10 @@ const weekOf = feed.since
   :root[data-theme='dark'] .changes-badge.is-earlier  { color: #e0925f; }
   :root[data-theme='dark'] .changes-badge.is-first    { color: #9aa2f0; }
   :root[data-theme='dark'] .changes-badge.is-new      { color: #a3c264; }
+  /* The global masthead carries 1.4rem of bottom padding, and the signup adds
+     0.6rem on top of it — 2rem of white between the summary line and the box.
+     `tight` on the component only addressed its half. */
+  .changes-masthead { padding-bottom: 0.4rem; }
   .changes-block { margin-top: 2rem; }
   .changes-block h2 { font-size: 1.15rem; margin: 0 0 0.4rem; }
   .changes-group h3 {
