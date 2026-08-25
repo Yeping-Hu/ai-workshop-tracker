@@ -32,6 +32,11 @@ permissions:
   # static site build cannot read from D1. Nothing else in this job writes to
   # the repo, and the commit step below is pinned to that one path.
   contents: write
+  # A push made with GITHUB_TOKEN does not trigger `on: push`, so the commit
+  # below has to kick deploy.yml explicitly or the new feed sits on main
+  # unbuilt until the next daily deploy — a ~23h lag on a page headed "this
+  # week". Same reason discover.yml holds this permission.
+  actions: write
 
 concurrency:
   group: alerts
@@ -76,6 +81,8 @@ jobs:
       # reports no diff, and the step exits without committing.
       - name: Commit this week's changes feed
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ -z "$(git status --porcelain data/changes.json)" ]; then
             echo "no change to data/changes.json — nothing to commit"
@@ -85,7 +92,19 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/changes.json
           git commit -m "data: this week's changes feed (auto-published)"
-          # Rebase rather than force: the daily data workflows commit to main
-          # too, and this run started before theirs may have landed.
-          git pull --rebase --autostash origin main
-          git push origin HEAD:main
+          # Push with rebase-retry, the same shape discover.yml uses: the daily
+          # data workflows also commit to main, and one can land between this
+          # job's checkout and its push. Rebase onto whatever arrived rather
+          # than failing with the work already done.
+          for attempt in 1 2 3; do
+            git push origin HEAD:main && break
+            if [ "$attempt" = 3 ]; then
+              echo "::error::push failed after 3 attempts (main kept moving)" && exit 1
+            fi
+            git fetch origin main && git rebase origin/main || exit 1
+            sleep $((attempt * 5))
+          done
+          # A push made with GITHUB_TOKEN does not trigger `on: push`, so the
+          # site would not rebuild until the next daily deploy — up to ~23h
+          # later, on a page headed "this week". Kick it explicitly.
+          gh workflow run deploy.yml --ref main
