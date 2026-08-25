@@ -32,7 +32,9 @@
  *   ALERTS_API_BASE     required, e.g. https://api.aiworkshoptracker.com
  *   ALERTS_ADMIN_TOKEN  required, bearer for /admin/*
  *   WORKSHOPS_JSON_URL  optional override of the feed (tests)
- *   DRY_RUN=1           do everything except send, log urgents, write snapshot
+ *   DRY_RUN=1           do everything except send, log urgents, write snapshot.
+ *                       data/changes.json IS still written: it is a local file, not
+ *                       a message, and the feed is true either way.
  *   FORCE_WEEKLY=1      run the weekly pass on a non-Monday
  *   ALERTS_VERBOSE=1    exact counts and per-recipient lines. Local use only —
  *                       never set this in a workflow, the logs are public
@@ -225,13 +227,18 @@ function writeChangesArtifact({ since, events }) {
       new_utc: e.new_utc ?? null,
     })),
   };
+  // Written on a dry run too. DRY_RUN means "mail nobody and mutate nothing
+  // upstream" — no send, no snapshot, no event POST, no urgent-log write. A
+  // local file is none of those, and the feed it holds is a true statement
+  // about the trailing seven days either way: it comes from /admin/events,
+  // which a dry run reads but never changes.
+  //
+  // That distinction is what makes the public feed refreshable on demand
+  // without mailing anyone — to recover from a bad feed, or to publish before
+  // the next cron, dispatch the workflow with dry_run.
   const file = path.join(ROOT, 'data', 'changes.json');
-  if (DRY_RUN) {
-    log(`   [dry-run] would write ${path.relative(ROOT, file)} (${out.events.length} event(s))`);
-    return;
-  }
   fs.writeFileSync(file, `${JSON.stringify(out, null, 2)}\n`);
-  log(`   wrote ${path.relative(ROOT, file)} (${out.events.length} event(s))`);
+  log(`   ${DRY_RUN ? '[dry-run] ' : ''}wrote ${path.relative(ROOT, file)} (${out.events.length} event(s))`);
 }
 
 async function main() {
