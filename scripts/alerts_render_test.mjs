@@ -327,6 +327,16 @@ const sub = (over = {}) =>
   const out = renderDigest({ sub: sub(), events, workshops, nowMs: NOW, ids });
   const listed = (out.html.match(/<li /g) || []).length;
   check(`at most SECTION_CAP (${SECTION_CAP}) items are listed`, listed === SECTION_CAP, String(listed));
+  // The changes/new sections overflow to /changes/ — the page that shows
+  // exactly what they are an excerpt of — carrying the subscriber's own facets.
+  // "Closing in 7 days" is not a change, so it still overflows to the board.
+  check('a capped changes section links on to /changes/',
+    out.html.includes('https://aiworkshoptracker.com/changes/'), '');
+  const facetOut = renderDigest({
+    sub: sub({ conferences: '["neurips"]' }), events, workshops, nowMs: NOW, ids,
+  });
+  check('the overflow link carries the subscriber facets',
+    facetOut.html.includes('/changes/?conference=NeurIPS'), '');
   check('the overflow is linked as "and N more"', /and 7 more →/.test(out.html));
   check('the plaintext overflow line is present too', /and 7 more:/.test(out.text));
 }

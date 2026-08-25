@@ -807,6 +807,34 @@ is pure and lives in `lib/` because the Worker bundles it and the site imports
 it; `alerts-worker-deploy.yml` therefore triggers on that file as well as
 `alerts/**`.
 
+### `/changes/` — the same week, as a public page
+
+`data/changes.json` is the week's events, committed by the alerts Action on
+every run and rendered by `site/src/pages/changes.astro`. The site is a static
+build with no D1 credentials and the events live nowhere else, so the
+alternative would be the page deriving its own diff from git history — a second
+computation, free to disagree with the email about what happened. One array,
+two consumers.
+
+Only events are written, never workshop projections: the site already has every
+workshop in `data/`, so the page joins on slug and takes names from the same
+corpus (and the same `displayLabel`) as everything else. Current week only —
+there is no archive, and the `events` table is pruned anyway.
+
+The file is rewritten daily rather than weekly, because a page headed "this
+week" that only moved on Mondays would be six days stale by Sunday. It may be
+absent (a fork, a fresh clone, before the first run) or legitimately empty (a
+quiet week); both render the empty state and neither fails the build.
+
+Filtering reuses the board's own facet URL contract
+(`site/src/scripts/facet-params.js`, `?conference=…&topic=…` carrying display
+labels), which is also what the digest's "and N more →" links are built against
+— so a link made in one place filters the same way in another. The board's own
+copy of that parsing is still inline in `index.astro` because its script is
+`is:inline` with `define:vars` and cannot import a module;
+`scripts/facet_params_test.mjs` asserts structurally that it still speaks the
+same contract.
+
 ### What the weekly digest looks like
 
 Four sections in reader-priority order — **Your saved workshops** (never capped;

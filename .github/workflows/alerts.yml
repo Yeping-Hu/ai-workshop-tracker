@@ -28,7 +28,10 @@ on:
         default: false
 
 permissions:
-  contents: read
+  # write, only to commit data/changes.json — the week's events, which the
+  # static site build cannot read from D1. Nothing else in this job writes to
+  # the repo, and the commit step below is pinned to that one path.
+  contents: write
 
 concurrency:
   group: alerts
@@ -61,3 +64,28 @@ jobs:
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}
           FORCE_WEEKLY: ${{ inputs.force_weekly && '1' || '0' }}
         run: node scripts/alerts_run.mjs
+
+      # The public /changes/ page reads this file at build time. Committing it
+      # is what makes "one diff computation, two consumers" true: the page and
+      # the Monday digest render the same array rather than each deriving its
+      # own idea of what changed.
+      #
+      # Scoped to the single path on purpose — `git add data/changes.json`, not
+      # `-A` — so a stray file written by any future step can never ride along
+      # into an automated commit. A quiet week rewrites the same content, git
+      # reports no diff, and the step exits without committing.
+      - name: Commit this week's changes feed
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        run: |
+          if [ -z "$(git status --porcelain data/changes.json)" ]; then
+            echo "no change to data/changes.json — nothing to commit"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/changes.json
+          git commit -m "data: this week's changes feed (auto-published)"
+          # Rebase rather than force: the daily data workflows commit to main
+          # too, and this run started before theirs may have landed.
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main

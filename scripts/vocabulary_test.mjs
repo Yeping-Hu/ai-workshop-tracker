@@ -48,6 +48,8 @@ const SURFACES = [
   ['site/src/pages/saved.astro', 'First deadline posted'],
   ['site/src/lib/markdown.ts', 'First deadline posted'],
   ['site/src/pages/workshop/[slug].astro', 'First deadline posted'],
+  ['site/src/pages/changes.astro', 'First deadline posted'],
+  ['site/src/pages/changes.astro', 'New this week'],
   ['alerts/render.mjs', 'FIRST DEADLINE'],
   ['alerts/render.mjs', 'New this week'],
 ];

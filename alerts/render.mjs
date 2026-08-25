@@ -175,14 +175,14 @@ function wsTitle(w, ids, { full = false } = {}) {
  * labels**, not ids (`?conference=NeurIPS&topic=Agents`), so ids are mapped
  * back through the vocabulary before they go into a link.
  */
-export function facetUrl(sub, ids) {
+export function facetUrl(sub, ids, path = '/') {
   const p = new URLSearchParams();
   const confs = (sub.conferences ?? []).map((id) => confLabel(ids, id));
   const tops = (sub.topics ?? []).map((id) => ids?.topics?.find((t) => t.id === id)?.label ?? id);
   if (confs.length) p.set('conference', confs.join(','));
   if (tops.length) p.set('topic', tops.join(','));
   const qs = p.toString();
-  return qs ? `${SITE_ORIGIN}/?${qs}` : `${SITE_ORIGIN}/`;
+  return qs ? `${SITE_ORIGIN}${path}?${qs}` : `${SITE_ORIGIN}${path}`;
 }
 
 /* -------------------------------------------------------------- chrome/shell */
@@ -432,7 +432,11 @@ export function renderDigest({
   unsubUrl = UNSUB_PLACEHOLDER,
 }) {
   const saved = new Set(sub.starred_ws ?? []);
-  const more = facetUrl(sub, ids);
+  // Two destinations, one facet-building rule. The changes and new sections
+  // overflow to /changes/, which shows exactly what they are excerpts of;
+  // "closing in 7 days" is not a change, so it still overflows to the board.
+  const more = facetUrl(sub, ids, '/changes/');
+  const moreBoard = facetUrl(sub, ids);
   // ONE timezone. The digest previously printed every deadline twice — the
   // subscriber's local reading and the canonical UTC one — which doubled the
   // width of every row to say the same thing. It now states the zone once,
@@ -513,7 +517,7 @@ export function renderDigest({
       items: announced,
       moreUrl: more,
     },
-    { heading: 'Closing in the next 7 days', items: closing, moreUrl: more },
+    { heading: 'Closing in the next 7 days', items: closing, moreUrl: moreBoard },
   ];
   // Stated once, on whichever section actually leads — a quiet week can drop
   // any of them, and the note has to follow the first one that survives.

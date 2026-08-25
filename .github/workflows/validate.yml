@@ -53,6 +53,8 @@ jobs:
         run: node scripts/display_acronym_test.mjs
       - name: Check one event has one name across every surface
         run: node scripts/vocabulary_test.mjs
+      - name: Check the facet URL contract (one parser, board included)
+        run: node scripts/facet_params_test.mjs
       - name: Check the saved list renders the same row as the board
         run: node scripts/row_parity_test.mjs
       - name: Test Markdown export formatting

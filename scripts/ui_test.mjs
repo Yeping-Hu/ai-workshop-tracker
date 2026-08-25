@@ -703,6 +703,70 @@ await page.unroute('**/pagefind*/**');
 const addedErrs = errors.splice(errsBefore0);
 for (const e of addedErrs) if (!/pagefind|fetch|404|load/i.test(e)) errors.push(e);
 
+/* ------------------------------------------------------------- /changes/ ---
+ * The public weekly-changes page. It filters by the board's OWN facet URL
+ * contract, so a link built on the board — or by the digest's "and N more →" —
+ * has to work here unchanged. Saved rows are highlighted from the same
+ * localStorage key the board reads.
+ *
+ * Tolerant of an empty feed on purpose: data/changes.json is rewritten by the
+ * alerts Action, and a genuinely quiet week is a valid state that must render
+ * the empty message rather than fail this suite.
+ */
+console.log('— /changes/: the public weekly changes page —');
+await page.goto(`${BASE}/changes/`, { waitUntil: 'domcontentloaded' });
+const allRows = await page.$$eval('[data-changes-row]', (els) =>
+  els.map((e) => ({ slug: e.getAttribute('data-slug'), conf: e.getAttribute('data-conference') })));
+check('the page renders', (await page.title()).length > 0);
+
+if (allRows.length === 0) {
+  check('an empty week renders the quiet-week message, not an error',
+    await page.locator('text=Nothing has changed').count() > 0);
+} else {
+  check(`the page lists this week's changes (${allRows.length} rows)`, allRows.length > 0);
+
+  // Facet filtering via the board's param format.
+  const conf = allRows[0].conf;
+  await page.goto(`${BASE}/changes/?conference=${encodeURIComponent(conf)}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(250);
+  const visible = await page.$$eval('[data-changes-row]', (els) =>
+    els.filter((e) => !e.hidden).map((e) => e.getAttribute('data-conference')));
+  check('?conference= filters the rows', visible.length > 0 && visible.every((c) => c === conf),
+    JSON.stringify(visible.slice(0, 4)));
+  check('rows from other conferences are hidden', visible.length <= allRows.length);
+  check('a filtered page says what it is filtered by',
+    await page.locator('[data-changes-count]').innerText().then((t) => t.includes(conf)));
+
+  // A conference subheading with every row filtered out must go too.
+  const emptyGroups = await page.$$eval('[data-changes-group]', (els) =>
+    els.filter((g) => !g.hidden && [...g.querySelectorAll('[data-changes-row]')].every((r) => r.hidden)).length);
+  check('no subheading is left over an empty group', emptyGroups === 0, String(emptyGroups));
+
+  // A facet that matches nothing hides everything without breaking the page.
+  await page.goto(`${BASE}/changes/?conference=NoSuchConference`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(250);
+  const none = await page.$$eval('[data-changes-row]', (els) => els.filter((e) => !e.hidden).length);
+  check('an unmatched facet hides every row', none === 0, String(none));
+
+  // Saved-row highlighting, from the board's own localStorage key.
+  const savedSlug = allRows[0].slug;
+  await page.evaluate((sl) => localStorage.setItem('awt-fav-workshops', JSON.stringify([sl])), savedSlug);
+  await page.goto(`${BASE}/changes/`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(250);
+  const marked = await page.$$eval('[data-changes-row].is-saved', (els) => els.map((e) => e.getAttribute('data-slug')));
+  check('a saved workshop is highlighted', marked.includes(savedSlug), JSON.stringify(marked));
+  check('unsaved workshops are not highlighted', marked.length === 1, String(marked.length));
+  await page.evaluate(() => localStorage.removeItem('awt-fav-workshops'));
+
+  // A corrupt value must not blank the page.
+  await page.evaluate(() => localStorage.setItem('awt-fav-workshops', '{not json'));
+  await page.goto(`${BASE}/changes/`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(250);
+  check('a corrupt saved list still renders the rows',
+    (await page.$$eval('[data-changes-row]', (els) => els.length)) === allRows.length);
+  await page.evaluate(() => localStorage.removeItem('awt-fav-workshops'));
+}
+
 check('no page/console errors during the whole run', errors.length === 0, errors.slice(0, 3).join(' | '));
 
 await browser.close();
