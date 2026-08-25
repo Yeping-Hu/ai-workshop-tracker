@@ -57,6 +57,8 @@ jobs:
         run: node scripts/facet_params_test.mjs
       - name: Test the changes-feed schema (rejects the fabricated file)
         run: node scripts/changes_feed_test.mjs
+      - name: Test net-change merging (one row per workshop, both surfaces)
+        run: node scripts/events_merge_test.mjs
       - name: Check the saved list renders the same row as the board
         run: node scripts/row_parity_test.mjs
       - name: Test Markdown export formatting

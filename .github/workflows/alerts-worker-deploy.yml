@@ -18,6 +18,8 @@ on:
       # here, a change to the display rule would ship to the site and leave the
       # digest running the old one.
       - 'lib/identity.mjs'
+      # render.mjs imports this too — same reason as above.
+      - 'lib/events.mjs'
       - '.github/workflows/alerts-worker-deploy.yml'
   workflow_dispatch:
 
