@@ -51,6 +51,16 @@ function leadFor(e: any) {
 
 const CHANGE_KINDS = new Set(['extended', 'earlier', 'deadline_announced']);
 
+/** Badge tone per kind — the same five the digest uses (alerts/render.mjs
+ *  BADGE_TONE), so a reader who gets the email recognises the page. The words
+ *  stay in the site's prose register; only the treatment is shared. */
+const TONE: Record<string, string> = {
+  extended: 'extended',
+  earlier: 'earlier',
+  deadline_announced: 'first',
+  announced: 'new',
+};
+
 const rows = (Array.isArray(feed.events) ? feed.events : [])
   .map((e: any) => {
     const w: any = bySlug.get(e.slug);
@@ -60,6 +70,7 @@ const rows = (Array.isArray(feed.events) ? feed.events : [])
       slug: w.slug,
       kind: e.kind,
       lead: leadFor(e),
+      tone: TONE[e.kind] ?? 'new',
       label: displayLabel(w.name, w.acronym, {
         conference: conf?.name ?? w.conference,
         year: w.year,
@@ -75,11 +86,35 @@ const rows = (Array.isArray(feed.events) ? feed.events : [])
   })
   .filter(Boolean) as any[];
 
+// Drop rows whose deadline had already passed when the reported window OPENED
+// — not when the page was built.
+//
+// The distinction matters. This page is a record of one week, so a deadline
+// that closed *during* that week is part of the story: it moved, then it
+// arrived, and both happened inside the window being reported. What does not
+// belong is a deadline that was already in the past before the window began —
+// "Moved 26 days earlier … 21 Jul 2026" in a page covering 18–25 August is an
+// event recorded late, not news, and reads as a mistake.
+//
+// Filtering on build time instead would quietly re-cut the page every deploy:
+// the same week would lose rows as the day wore on, and a rebuild triggered for
+// an unrelated reason would silently change what the week is said to contain.
+// The window start is fixed by the feed, so the page is stable for as long as
+// the feed is.
+const windowStartMs = feed.since ? Date.parse(`${feed.since}T00:00:00Z`) : null;
+const withinWindow = (r: any) => {
+  if (!r.whenIso || windowStartMs == null || !Number.isFinite(windowStartMs)) return true;
+  const ms = Date.parse(r.whenIso);
+  // Rows with no date, or an unparseable one, are kept: an announcement without
+  // a deadline has nothing to have passed.
+  return !Number.isFinite(ms) || ms >= windowStartMs;
+};
+
 // Same section semantics as the digest: a first-published deadline IS a deadline
 // change, and "new this week" is a workshop appearing at all. Past editions are
 // not news, exactly as the digest filters them.
-const changes = rows.filter((r) => CHANGE_KINDS.has(r.kind));
-const added = rows.filter((r) => r.kind === 'announced' && r.status !== 'past');
+const changes = rows.filter((r) => CHANGE_KINDS.has(r.kind)).filter(withinWindow);
+const added = rows.filter((r) => r.kind === 'announced' && r.status !== 'past').filter(withinWindow);
 
 // Grouped by conference, alphabetically — the digest does the same, for the same
 // reason: a flat wall of rows from nine conferences is harder to scan.
@@ -116,10 +151,19 @@ const weekOf = feed.since
         : 'Nothing has changed in the last seven days.'}
       {' '}All times UTC.
     </p>
-    <p class="changes-cta">
-      <a href={href('/alerts/')}>Get this page, filtered to your selection, in your inbox every Monday →</a>
-    </p>
   </section>
+
+  {/* The signup is the point of the page for anyone not already subscribed, so
+      it leads rather than trailing forty rows behind a link to another page
+      that only says the same thing again. It hides itself once this browser is
+      linked, and renders nothing at all when the alerts satellite is off. */}
+  <AlertsSignup
+    heading="Get this weekly, by email"
+    blurb="This page, filtered to the conferences and topics you pick, in your inbox every Monday."
+    compact
+    collapsed
+    summary="Get this weekly, by email"
+  />
 
   {total > 0 && (
     <section class="changes-filters" data-changes-filters hidden>
@@ -145,7 +189,7 @@ const weekOf = feed.since
                 data-conference={r.conference}
                 data-topic={r.topics.join(',')}
               >
-                <span class="changes-lead">{r.lead}</span>
+                <span class={`changes-badge is-${r.tone}`}>{r.lead}</span>
                 <a href={r.url}>{r.label}</a>
                 {r.whenIso && <span class="muted"> · {r.whenIso.slice(0, 10)}</span>}
               </li>
@@ -172,7 +216,7 @@ const weekOf = feed.since
                 data-conference={r.conference}
                 data-topic={r.topics.join(',')}
               >
-                <span class="changes-lead">New</span>
+                <span class="changes-badge is-new">New</span>
                 <a href={r.url}>{r.label}</a>
                 {r.whenIso && <span class="muted"> · {r.whenIso.slice(0, 10)}</span>}
               </li>
@@ -192,11 +236,6 @@ const weekOf = feed.since
     </section>
   )}
 
-  <AlertsSignup
-    heading="Get this weekly, by email"
-    blurb="One message on Mondays, filtered to the conferences and topics you pick."
-    compact
-  />
 </Base>
 
 <script>
@@ -253,7 +292,37 @@ const weekOf = feed.since
 </script>
 
 <style is:inline>
-  .changes-cta { margin-top: 0.5rem; font-size: 0.95rem; }
+  /* Badges. The five tones are the digest's own (alerts/render.mjs BADGE_TONE),
+     so someone who reads the email recognises the page — mid-tone text on a
+     bordered pill rather than white-on-colour, which is what lets the same
+     values hold up on a dark ground. The words stay in the site's prose
+     register; only the treatment is shared. */
+  .changes-badge {
+    display: inline-block;
+    padding: 0.05rem 0.45rem;
+    margin-right: 0.4rem;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    vertical-align: 0.06em;
+  }
+  .changes-badge.is-extended { color: #0f766e; }
+  .changes-badge.is-earlier  { color: #9a3412; }
+  .changes-badge.is-first    { color: #3730a3; }
+  .changes-badge.is-new      { color: #3f6212; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) .changes-badge.is-extended { color: #5ac0b4; }
+    :root:not([data-theme='light']) .changes-badge.is-earlier  { color: #e0925f; }
+    :root:not([data-theme='light']) .changes-badge.is-first    { color: #9aa2f0; }
+    :root:not([data-theme='light']) .changes-badge.is-new      { color: #a3c264; }
+  }
+  :root[data-theme='dark'] .changes-badge.is-extended { color: #5ac0b4; }
+  :root[data-theme='dark'] .changes-badge.is-earlier  { color: #e0925f; }
+  :root[data-theme='dark'] .changes-badge.is-first    { color: #9aa2f0; }
+  :root[data-theme='dark'] .changes-badge.is-new      { color: #a3c264; }
   .changes-block { margin-top: 2rem; }
   .changes-block h2 { font-size: 1.15rem; margin: 0 0 0.4rem; }
   .changes-group h3 {
@@ -267,6 +336,5 @@ const weekOf = feed.since
   .changes-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.45rem; }
   .changes-row { line-height: 1.45; }
   .changes-row.is-saved::before { content: '★ '; color: var(--accent); }
-  .changes-lead { font-weight: 600; margin-right: 0.4rem; }
   .changes-filters { margin-top: 1.2rem; }
 </style>
