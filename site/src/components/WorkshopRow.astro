@@ -85,7 +85,7 @@ const countdownName = isAbstractStage ? `${rowName} (abstract)` : rowName;
             {w.deadlineChange.kind === 'earlier' && (
               <>△ Moved {w.deadlineChange.days} {w.deadlineChange.days === 1 ? 'day' : 'days'} earlier</>
             )}
-            {w.deadlineChange.kind === 'announced' && <>Deadline just announced</>}
+            {w.deadlineChange.kind === 'announced' && <>First deadline posted</>}
           </div>
         )}
       </>

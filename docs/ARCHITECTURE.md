@@ -559,7 +559,7 @@ Three deliberate constraints:
   deltas, so a timezone re-read never renders as "extended by 0 days".
 
 The board shows one line (`→ Extended N days` / `△ Moved N days earlier` /
-`Deadline just announced`); the workshop page adds a callout and a collapsed
+`First deadline posted`); the workshop page adds a callout and a collapsed
 history. Everything here is a read-only derivation — status, feeds and the JSON API
 are untouched. Pinned by `scripts/deadline_history_test.mjs`.
 

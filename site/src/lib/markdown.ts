@@ -70,7 +70,7 @@ export function formatWorkshop(w: any, confName?: string): string {
     } else if (w.deadlineChange.kind === 'earlier') {
       parts.push(`- **Deadline History:** Moved ${w.deadlineChange.days} ${w.deadlineChange.days === 1 ? 'day' : 'days'} earlier (previously ${w.deadlineChange.fromWallClock})`);
     } else if (w.deadlineChange.kind === 'announced') {
-      parts.push(`- **Deadline History:** Deadline just announced`);
+      parts.push(`- **Deadline History:** First deadline posted`);
     }
   } else if (Array.isArray(w.deadlineHistoryView) && w.deadlineHistoryView.length > 1) {
     const historyLines = w.deadlineHistoryView.map((h: any, i: number) => {

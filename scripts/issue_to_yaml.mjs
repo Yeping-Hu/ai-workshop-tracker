@@ -133,7 +133,7 @@ if (notes) record.notes = notes;
 // Seed the observation log so a contributed workshop starts with the same
 // provenance a bot-discovered one gets: one entry for the value as submitted, in
 // the zone it is stored in. Without this the log would only begin at the first
-// later bot observation, and the board's "just announced" note would appear for
+// later bot observation, and the board's "first deadline posted" note would appear for
 // discovered workshops but not contributed ones.
 record.added = new Date().toISOString().slice(0, 10);
 // Set directly rather than via recordDeadlineObservation(): that helper seeds

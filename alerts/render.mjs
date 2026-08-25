@@ -366,7 +366,7 @@ export function renderDigest({
     .filter((e) => changeKinds.has(e.kind) && workshops[e.slug])
     .map((e) => changeItem(e, workshops[e.slug], ids, tz, at));
 
-  // 2. Newly announced — but not ones that are already Past by the time the
+  // 2. New this week — but not ones that are already Past by the time the
   //    digest goes out (a back-filled 2024 edition is not news).
   const announced = events
     .filter((e) => e.kind === 'announced' && workshops[e.slug] && workshops[e.slug].status !== 'past')
