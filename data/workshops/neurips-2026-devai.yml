@@ -5,11 +5,18 @@ year: 2026
 website: https://sites.google.com/view/devai-workshop-2026/
 topics:
   - other
-submission_deadline: 2026-08-30 12:59
+submission_deadline: 2026-09-07 12:59
 timezone: UTC
-deadline_notes: OpenReview-synced 2026-08-30 12:59 UTC (as of 2026-08-04) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_notes: OpenReview-synced 2026-09-07 12:59 UTC (as of 2026-08-26) — extensions on OpenReview are applied automatically; verify on the website.
 openreview_venue_id: NeurIPS.cc/2026/Workshop/DevAI
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
 added: '2026-08-04'
 location: Atlanta, USA
+deadline_history:
+  - value: 2026-08-30 12:59
+    recorded: '2026-08-04'
+    timezone: UTC
+  - value: 2026-09-07 12:59
+    recorded: '2026-08-26'
+    timezone: UTC
