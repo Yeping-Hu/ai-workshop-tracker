@@ -207,6 +207,48 @@ const sub = (over = {}) =>
     rich.html.indexOf('>CVPR<') < rich.html.indexOf('>NeurIPS<'));
   check('the group subheadings reach the plaintext',
     /\nCVPR\n/.test(rich.text) && /\nNeurIPS\n/.test(rich.text));
+
+  // --- the digest applies the SAME rules as /changes/ ----------------------
+  // Both surfaces render the same week; a row present in one and absent from
+  // the other, or ordered differently, means a reader who gets the email and
+  // clicks through sees two different accounts of the same seven days.
+  const parity = renderDigest({
+    sub: sub(),
+    events: [
+      // deadline already in the past when the window opened — must be dropped
+      { slug: 'neurips-2026-stale', kind: 'extended', days: 2, old_utc: iso(-40), new_utc: iso(-30) },
+      // three live ones, deliberately out of deadline order
+      { slug: 'neurips-2026-c', kind: 'extended', days: 2, old_utc: iso(18), new_utc: iso(20) },
+      { slug: 'neurips-2026-a', kind: 'extended', days: 2, old_utc: iso(3), new_utc: iso(5) },
+      { slug: 'neurips-2026-b', kind: 'extended', days: 2, old_utc: iso(8), new_utc: iso(10) },
+    ],
+    workshops: {
+      'neurips-2026-stale': ws('neurips-2026-stale', { deadline_utc: iso(-30), next_stage_utc: iso(-30) }),
+      'neurips-2026-c': ws('neurips-2026-c', { deadline_utc: iso(20), next_stage_utc: iso(20) }),
+      'neurips-2026-a': ws('neurips-2026-a', { deadline_utc: iso(5), next_stage_utc: iso(5) }),
+      'neurips-2026-b': ws('neurips-2026-b', { deadline_utc: iso(10), next_stage_utc: iso(10) }),
+    },
+    nowMs: NOW, ids,
+  });
+  check('a deadline that passed before the window is not reported',
+    !parity.html.includes('/workshop/neurips-2026-stale/'));
+  const byDeadline = ['a', 'b', 'c'].map((k) => parity.html.indexOf(`/workshop/neurips-2026-${k}/`));
+  check('changes are ordered by deadline, earliest first',
+    byDeadline.every((at, i) => at >= 0 && (i === 0 || at > byDeadline[i - 1])), JSON.stringify(byDeadline));
+
+  // Netting is shared with the page through lib/events.mjs: two hops, one row.
+  const netted = renderDigest({
+    sub: sub(),
+    events: [
+      { slug: 'neurips-2026-net', kind: 'extended', days: 6, old_utc: iso(2), new_utc: iso(8) },
+      { slug: 'neurips-2026-net', kind: 'extended', days: 4, old_utc: iso(8), new_utc: iso(12) },
+    ],
+    workshops: { 'neurips-2026-net': ws('neurips-2026-net', { deadline_utc: iso(12), next_stage_utc: iso(12) }) },
+    nowMs: NOW, ids,
+  });
+  check('two hops render as one row', (netted.html.match(/\/workshop\/neurips-2026-net\//g) || []).length === 1,
+    String((netted.html.match(/\/workshop\/neurips-2026-net\//g) || []).length));
+  check('and report the net, not the last hop', /EXTENDED \+10d/.test(netted.html));
   // Median of 3, 5, 11 is 5 — a mean would be 6.3 and match no real extension.
   check('the footer states the median extension',
     /Median extension this week: 5 days\./.test(rich.html), '');
