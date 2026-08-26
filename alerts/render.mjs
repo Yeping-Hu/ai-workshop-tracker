@@ -283,6 +283,12 @@ function badgeText(text) {
   return `[${text}] `;
 }
 
+/** How close an urgent deadline is, as a chip. Same vocabulary as the digest's
+ *  CLOSES TODAY, so a reader who gets both recognises the treatment. */
+function urgency(iso, nowMs) {
+  return fmtRelative(iso, nowMs).toUpperCase() || 'CLOSING';
+}
+
 /** What a change event's chip says. U+2212 for the minus: a hyphen reads as a
  *  line break in some clients' plaintext wrapping. */
 function changeBadge(ev) {
@@ -629,7 +635,9 @@ export function renderStarredChanges({
   manageUrl = MANAGE_PLACEHOLDER,
   unsubUrl = UNSUB_PLACEHOLDER,
 }) {
-  const items = events
+  // Merged for the same reason the digest merges: a deadline that moved twice
+  // is one row reporting the net, not two rows with different numbers.
+  const items = mergeEventsBySlug(events)
     .filter((e) => workshops[e.slug])
     .map((e) => changeItem(e, workshops[e.slug], ids, tz));
   if (!items.length) return null;
@@ -690,12 +698,13 @@ export function renderUrgent({
       return {
         html:
           `<div style="margin:0 0 16px;padding:12px 14px;border:1px solid #dfe2e6;border-radius:8px;">` +
+          badge(urgency(iso, nowMs), 'closing') +
           `<a href="${wsUrl(w.slug)}" style="${LINK}font-weight:600;">${esc(wsTitle(w, ids, { full: true }))}</a><br />` +
           `<span style="${MUTED}">${esc(fmtWhen(iso, tz))}${esc(stage)} · in ${hoursUntil(iso, nowMs)}h</span>` +
           (w.website ? `<br /><a href="${esc(w.website)}" style="${LINK}font-size:14px;">Official page</a>` : '') +
           `</div>`,
         text:
-          `${wsTitle(w, ids, { full: true })}\n  ${fmtWhen(iso, tz)}${stage} · in ${hoursUntil(iso, nowMs)}h\n  ${wsUrl(w.slug)}` +
+          `${badgeText(urgency(iso, nowMs))}${wsTitle(w, ids, { full: true })}\n  ${fmtWhen(iso, tz)}${stage} · in ${hoursUntil(iso, nowMs)}h\n  ${wsUrl(w.slug)}` +
           (w.website ? `\n  ${w.website}` : ''),
       };
     });

@@ -249,6 +249,25 @@ const sub = (over = {}) =>
   check('two hops render as one row', (netted.html.match(/\/workshop\/neurips-2026-net\//g) || []).length === 1,
     String((netted.html.match(/\/workshop\/neurips-2026-net\//g) || []).length));
   check('and report the net, not the last hop', /EXTENDED \+10d/.test(netted.html));
+
+  // The daily mail carries the same treatment as the weekly one.
+  const urg = renderUrgent({
+    sub: sub(), items: [ws('neurips-2026-soon', { deadline_utc: iso(0, 20), next_stage_utc: iso(0, 20) })],
+    nowMs: NOW, ids,
+  });
+  check('an urgent alert badges its urgency', /CLOSES TODAY/.test(urg.html), '');
+  check('and carries it in the plaintext too', urg.text.includes('[CLOSES TODAY]'));
+  const twice = renderStarredChanges({
+    sub: sub({ starred_ws: '["neurips-2026-alpha"]' }),
+    events: [
+      { slug: 'neurips-2026-alpha', kind: 'extended', days: 3, old_utc: iso(20), new_utc: iso(23) },
+      { slug: 'neurips-2026-alpha', kind: 'extended', days: 2, old_utc: iso(23), new_utc: iso(25) },
+    ],
+    workshops, ids,
+  });
+  check('a saved-change alert reports one row per workshop',
+    (twice.html.match(/\/workshop\/neurips-2026-alpha\//g) || []).length === 1);
+  check('and nets the hops like the digest', /EXTENDED \+5d/.test(twice.html), '');
   // Median of 3, 5, 11 is 5 — a mean would be 6.3 and match no real extension.
   check('the footer states the median extension',
     /Median extension this week: 5 days\./.test(rich.html), '');
