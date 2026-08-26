@@ -79,6 +79,17 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
           option. Subscribing also lets your saved list follow you to another device; starring by
           itself still never leaves your browser.
         </p>
+        {/* The one place on the site that points at /changes/. It sits here, and
+            not in the nav, on purpose: this is where somebody is already
+            deciding whether the digest is worth their address, so a back issue
+            reads as evidence rather than as a reason not to bother. The sentence
+            says what the page withholds for the same reason. */}
+        <p>
+          Want to see one before subscribing? The latest digest is published at
+          <a href={href('/changes/')}> what changed this week</a> — last Monday's edition, covering
+          every conference rather than the ones you pick, and without the 72-hour warnings and
+          same-day change alerts, which only ever arrive by email.
+        </p>
       </>
     )}
     {/* "Calendar feeds" — hidden for now. Remove this comment wrapper to restore.

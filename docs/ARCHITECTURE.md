@@ -865,7 +865,7 @@ Four sections in reader-priority order — **Your saved workshops** (never cappe
 (grouped by conference), **New this week**, **Closing in the next 7 days**. A
 summary strip under the h1 counts the week per subscriber, zero-count clauses
 dropped. Each change carries an inline-styled badge (`EXTENDED +5d`, `EARLIER
-−2d`, `FIRST DEADLINE`, `NEW`, `CLOSES TODAY`) whose words also appear in the
+−2d`, `DEADLINE POSTED`, `NEW`, `CLOSES TODAY`) whose words also appear in the
 plaintext part — a parity check pins them together. Deadlines render as a
 relative annotation and an absolute anchor ("in 12 days · 6 Sep 2026, 23:59")
 with the timezone stated once, under whichever section leads, rather than on
