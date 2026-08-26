@@ -137,7 +137,7 @@ const sub = (over = {}) =>
   check('the subject counts changes and drops zero clauses',
     /^2 deadline changes in your areas — AI Workshop Tracker$/.test(out.subject), out.subject);
   check('an extension is described with its day count', /EXTENDED \+5d/.test(out.html));
-  check('a newly published deadline is described', /FIRST DEADLINE/.test(out.html));
+  check('a newly published deadline is described', /DEADLINE POSTED/.test(out.html));
   check('a workshop announced but already Past is not listed as new',
     !/New this week/.test(out.html));
   check('items link to the workshop page',
@@ -176,7 +176,7 @@ const sub = (over = {}) =>
   // --- badge parity -------------------------------------------------------
   // A chip visible only to HTML readers is a regression. Every badge that
   // reaches the html must reach the plaintext in the same words.
-  const badgesIn = (t) => (t.match(/EXTENDED \+\d+d|EARLIER \u2212\d+d|FIRST DEADLINE|NEW|CLOSES TODAY/g) || []).sort();
+  const badgesIn = (t) => (t.match(/EXTENDED \+\d+d|EARLIER \u2212\d+d|DEADLINE POSTED|NEW|CLOSES TODAY/g) || []).sort();
   check('every badge in the html also appears in the plaintext',
     badgesIn(allFour.html), badgesIn(allFour.text));
   check('the plaintext brackets its badges', /\[EXTENDED \+\d+d\] /.test(allFour.text), true);

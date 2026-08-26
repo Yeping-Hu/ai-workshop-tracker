@@ -294,7 +294,7 @@ function urgency(iso, nowMs) {
 function changeBadge(ev) {
   if (ev.kind === 'extended') return { text: `EXTENDED +${ev.days}d`, tone: 'extended' };
   if (ev.kind === 'earlier') return { text: `EARLIER \u2212${ev.days}d`, tone: 'earlier' };
-  return { text: 'FIRST DEADLINE', tone: 'first' };
+  return { text: 'DEADLINE POSTED', tone: 'first' };
 }
 
 /* ------------------------------------------------------------------ sections */

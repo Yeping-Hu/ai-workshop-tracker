@@ -32,16 +32,25 @@ function check(label, got, expect) {
 const RETIRED = [
   { was: 'Deadline just announced', now: 'First deadline posted' },
   { was: 'Newly announced', now: 'New this week' },
+  { was: 'FIRST DEADLINE', now: 'DEADLINE POSTED' },
 ];
 
 /**
  * Every surface that renders the shared vocabulary, and what it must contain.
  *
- * Two registers of the same vocabulary, deliberately. The site renders prose in
- * a sentence ("First deadline posted"); the digest renders a chip, which is
- * uppercase and clipped to fit ("FIRST DEADLINE"). That is a typographic
- * difference, not a second name for the event — what must never happen is one
- * surface calling it something else entirely, which is what this guards.
+ * THREE registers of one statement, deliberately — the same sentence at three
+ * lengths, set by how much room the surface has:
+ *
+ *   prose   "First deadline posted"  board, workshop page, saved list, export,
+ *                                    and the title on both chips
+ *   email   "DEADLINE POSTED"        a chip, uppercase, with a full line to sit on
+ *   page    "ddl posted"             a chip on a row already carrying a long name
+ *
+ * Typography, not three names. What must never happen is a surface calling the
+ * event something else — "Deadline just announced" beside a section headed
+ * "Newly announced" was exactly that, and is what this guards. The email said
+ * FIRST DEADLINE while the page said ddl posted, which is the same drift in
+ * miniature: two chips, two vocabularies.
  */
 const SURFACES = [
   ['site/src/components/WorkshopRow.astro', 'First deadline posted'],
@@ -49,8 +58,9 @@ const SURFACES = [
   ['site/src/lib/markdown.ts', 'First deadline posted'],
   ['site/src/pages/workshop/[slug].astro', 'First deadline posted'],
   ['site/src/pages/changes.astro', 'First deadline posted'],
+  ['site/src/pages/changes.astro', 'ddl posted'],
   ['site/src/pages/changes.astro', 'New this week'],
-  ['alerts/render.mjs', 'FIRST DEADLINE'],
+  ['alerts/render.mjs', 'DEADLINE POSTED'],
   ['alerts/render.mjs', 'New this week'],
 ];
 
