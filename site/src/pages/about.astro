@@ -23,7 +23,7 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
     <p>
       Every workshop is a small YAML file in a <a href={REPO_URL}>public GitHub repository</a>,
       maintained by the community — organizers and submitters add and fix entries via pull
-      requests or a simple form. Submission deadlines and accepted-paper lists are fetched automatically from the
+      requests or a simple form. Submission deadlines and accepted-paper lists are fetched automatically from the{' '}
       <a href="https://openreview.net" rel="noopener">OpenReview</a> API for workshops hosted there
       (deadlines come from the venue record or its submission invitation); other workshops link to
       their own proceedings pages, and missing deadlines are filled in by contributors.
@@ -38,7 +38,7 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
     <h2>Licensing &amp; reuse</h2>
     <p>
       The workshop data and paper caches are <a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC-BY-4.0</a>;
-      the site code is MIT. A machine-readable dump of everything is at
+      the site code is MIT. A machine-readable dump of everything is at{' '}
       <a href={href('/api/workshops.json')}><code>/api/workshops.json</code></a>, and new entries are
       announced in an <a href={href('/rss.xml')}>RSS feed</a>.
     </p>
@@ -55,7 +55,7 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
     <h2>Saving workshops &amp; papers</h2>
     <p>
       Star <span class="star-demo">☆</span> any workshop or paper, whether on the deadline board,
-      in search results, or on a workshop page, and it appears on
+      in search results, or on a workshop page, and it appears on{' '}
       <a href={href('/saved/')}>your saved list</a>. Saved items are stored only in your browser
       (localStorage). There's no account, no cookies, and nothing sent to a server, which also means
       the list doesn't follow you across devices and is erased if you clear this site's data.
@@ -72,10 +72,10 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
           genuinely don't know whether you opened one.
         </p>
         <p>
-          You confirm by clicking a link before anything is ever sent, and
-          <strong> unsubscribing deletes your record</strong> rather than deactivating it — every
-          email has a one-click unsubscribe, and the
-          <a href={href('/alerts/manage/')}> manage page</a> has the same button plus a pause
+          You confirm by clicking a link before anything is ever sent, and{' '}
+          <strong>unsubscribing deletes your record</strong> rather than deactivating it — every
+          email has a one-click unsubscribe, and the{' '}
+          <a href={href('/alerts/manage/')}>manage page</a> has the same button plus a pause
           option. Subscribing also lets your saved list follow you to another device; starring by
           itself still never leaves your browser.
         </p>
@@ -85,10 +85,11 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
             reads as evidence rather than as a reason not to bother. The sentence
             says what the page withholds for the same reason. */}
         <p>
-          Want to see one before subscribing? The latest digest is published at
-          <a href={href('/changes/')}> what changed this week</a> — last Monday's edition, covering
-          every conference rather than the ones you pick, and without the 72-hour warnings and
-          same-day change alerts, which only ever arrive by email.
+          Want to see one before subscribing? The latest digest is always available on{' '}
+          <a href={href('/changes/')}>What Changed This Week</a>, but it's a snapshot of last
+          Monday's updates across all conferences. Sign up for the newsletter to get updates
+          tailored to the conferences and topics you follow, plus 72-hour deadline reminders and
+          same-day alerts when deadlines change.
         </p>
       </>
     )}
@@ -106,8 +107,8 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
         <p>
           The tracker is free, open source, and ad-free, and the data is openly licensed —
           see the <a href={`${REPO_URL}/blob/main/CONTRIBUTOR_TERMS.md`}>contributor terms</a>.
-          If it saved you during deadline week, you can
-          <a href={SUPPORT_URL}> chip in for its upkeep</a>; contributions go toward the
+          If it saved you during deadline week, you can{' '}
+          <a href={SUPPORT_URL}>chip in for its upkeep</a>; contributions go toward the
           domain and keeping the data fresh.
         </p>
       </>

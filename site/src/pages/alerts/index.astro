@@ -29,7 +29,7 @@ const enabled = !!ALERTS_API;
   {!enabled && (
     <p class="muted">
       Email alerts are not enabled on this build of the site. The tracker itself works exactly the
-      same without them — everything on the <a href={href('/')}>deadline board</a> and your
+      same without them — everything on the <a href={href('/')}>deadline board</a> and your{' '}
       <a href={href('/saved/')}>saved list</a> is unaffected.
     </p>
   )}
@@ -52,7 +52,7 @@ const enabled = !!ALERTS_API;
     </ul>
     <p>
       A summary line at the top counts the week in one glance, and every change carries a small
-      badge — <strong>EXTENDED +5d</strong>, <strong>DEADLINE POSTED</strong>,
+      badge — <strong>EXTENDED +5d</strong>, <strong>DEADLINE POSTED</strong>,{' '}
       <strong>CLOSES TODAY</strong> — so what happened is the first thing you read rather than
       something buried mid-sentence. All times are UTC, stated once.
     </p>
@@ -118,21 +118,21 @@ Median extension this week: 5 days.`}</code></pre>
     <h3>Is the data guaranteed correct?</h3>
     <p>
       No, and the emails say so. Dates are when <em>we</em> recorded a value, not necessarily when
-      organizers changed it, and some entries are unverified imports.
+      organizers changed it, and some entries are unverified imports.{' '}
       <strong>Always confirm on the official workshop page</strong> before you plan a submission.
     </p>
 
     <h3>Do I need an account?</h3>
     <p>
       No. There is no password and no profile — your email address plus a signed link is the whole
-      system. To change anything later, request a sign-in link on the
+      system. To change anything later, request a sign-in link on the{' '}
       <a href={href('/alerts/manage/')}>manage page</a>.
     </p>
 
     <h3>What do you store, and how do I delete it?</h3>
     <p>
       Your address, the conferences and topics you picked, your starred items, and your cadence.
-      Nothing else — no open tracking, no click redirects, no third-party sharing. Unsubscribing
+      Nothing else — no open tracking, no click redirects, no third-party sharing. Unsubscribing{' '}
       <strong>deletes the row entirely</strong>, immediately: there is no "inactive" state to sit in.
       Every email has a one-click unsubscribe link, and the manage page has the same button.
     </p>
