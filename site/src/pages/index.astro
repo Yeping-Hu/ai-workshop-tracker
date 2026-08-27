@@ -753,7 +753,7 @@ const datasetLd: Record<string, any> = {
                 const pt = String(sr.title).replace(/^[\s☆★]+/, '');
                 const ppid = (String(sr.url).match(/#p-([^#?]+)/) || [])[1] || '';
                 return `
-              <li>${ppid ? `<button type="button" class="star-btn" data-star-paper="${esc(ppid)}" data-title="${esc(pt)}" data-ws="${esc(slug)}" data-wsname="${esc(wsLabel)}" aria-pressed="false" aria-label="Save paper: ${esc(pt)}">☆</button>` : ''}<a class="pf-ptitle" href="${esc(ppid ? `${g.url}#p-${ppid}` : sr.url)}">${esc(pt)}</a><p class="pf-excerpt">${stripLeadingTitle(sr.excerpt, pt)}</p></li>`;
+              <li class="pf-paper">${ppid ? `<button type="button" class="star-btn" data-star-paper="${esc(ppid)}" data-title="${esc(pt)}" data-ws="${esc(slug)}" data-wsname="${esc(wsLabel)}" aria-pressed="false" aria-label="Save paper: ${esc(pt)}">☆</button>` : ''}<a class="pf-ptitle" href="${esc(ppid ? `${g.url}#p-${ppid}` : sr.url)}">${esc(pt)}</a><p class="pf-excerpt">${stripLeadingTitle(sr.excerpt, pt)}</p></li>`;
               })()).join('') +
             (subs.length > SUBS_PER_WS
               ? `<li class="pf-more"><a href="${esc(g.url)}#papers">…${subs.length - SUBS_PER_WS} more matching papers →</a></li>`

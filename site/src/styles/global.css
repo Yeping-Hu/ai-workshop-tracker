@@ -436,6 +436,18 @@ details.tba-section > summary { cursor: pointer; color: var(--muted); font-size:
 .hero .facetbar { justify-content: center; margin: 0.9rem auto 0.2rem; }
 .pf-papers { list-style: none; margin: 0.6rem 0 0.2rem; padding: 0.15rem 0 0 0.95rem; border-left: 2px solid var(--line); }
 .pf-papers > li { padding: 0.3rem 0; }
+/* Same two columns as .paper on a workshop page: star, then everything else,
+   so the author line starts under the title rather than under the star. Scoped
+   to the paper rows — the subhead, the "N more" link and the cross-fallback
+   row are plain text and must not be split into columns. A row without a star
+   (no anchor id) simply leaves column 1 empty and keeps its edge. */
+.pf-paper {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+}
+.pf-paper > .star-btn { grid-column: 1; grid-row: 1; }
+.pf-paper > :not(.star-btn) { grid-column: 2; }
 .pf-subhead { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding-bottom: 0.1rem; }
 .pf-ptitle { font-size: 0.95rem; font-weight: 600; font-family: var(--font-body); color: var(--ink); text-decoration: none; }
 .pf-ptitle:hover { color: var(--accent); text-decoration: underline; }

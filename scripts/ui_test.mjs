@@ -384,6 +384,10 @@ const pap = await page.$eval('#results .pf-papers li:has(.pf-ptitle)', (li) => (
   excerpt: li.querySelector('.pf-excerpt')?.textContent.trim() ?? '',
   href: li.querySelector('.pf-ptitle')?.getAttribute('href') ?? '',
   emptyMarks: [...li.querySelectorAll('.pf-excerpt mark')].filter((m) => !m.textContent).length,
+  // Left edges of the title and the author line: the star sits in its own grid
+  // column so the two start together, as they do on a workshop page.
+  titleLeft: Math.round(li.querySelector('.pf-ptitle').getBoundingClientRect().left),
+  excerptLeft: Math.round(li.querySelector('.pf-excerpt').getBoundingClientRect().left),
 }));
 check('paper line 1 has a real star button', pap.hasStar);
 check('paper line 1 carries no leaked star glyph', !/[☆★]/.test(pap.title), pap.title.slice(0, 40));
@@ -395,6 +399,7 @@ check('paper line 2 does not open on the block separator', !/^[·.]/.test(pap.ex
 check('paper line 2 drops the trailing PDF link text', !/·?\s*PDF\.?$/.test(pap.excerpt), pap.excerpt.slice(-30));
 check('paper line 2 leaves no empty <mark> behind', pap.emptyMarks === 0, `${pap.emptyMarks} empty mark(s)`);
 check('a paper result links to its anchor on the workshop page', /\/workshop\/[^/]+\/#p-/.test(pap.href), pap.href);
+check('paper line 2 starts where line 1 does', pap.titleLeft === pap.excerptLeft, `title ${pap.titleLeft} vs excerpt ${pap.excerptLeft}`);
 
 // Star one paper from the results, then a second paper of the SAME workshop
 // from its page — both must land in one group on /saved/.
