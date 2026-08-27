@@ -1,0 +1,92 @@
+# Checks the live site after it deploys, and once a day regardless.
+#
+# The other suites drive an artefact built inside their own job, so they stop
+# seeing anything the moment `npm run build` succeeds. This one drives what a
+# reader actually gets, which is the only way to catch a half-published Pages
+# deploy, a Pagefind index that shipped stale or mis-scoped, a data commit that
+# emptied the board, or a certificate that lapsed.
+#
+# It also covers the schedule, not just pushes: most editions of this site are
+# published by a cron with no commit behind them (deploy.yml rebuilds daily so
+# time-derived statuses stay fresh), and those deploys had nothing checking them
+# at all.
+#
+# On failure it opens — or updates — a single tracking issue, because a red run
+# in the Actions tab is easy not to look at, and the whole point is to not find
+# out about a silent breakage weeks later from a reader.
+name: Live smoke test
+
+on:
+  workflow_run:
+    workflows: ['Build & deploy site']
+    types: [completed]
+  schedule:
+    - cron: '43 6 * * *' # daily, well after deploy.yml's 05:17 has settled
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    # A deploy that itself failed has nothing worth smoke-testing; the schedule
+    # and manual runs carry no conclusion to check.
+    if: >-
+      github.repository_owner == 'Yeping-Hu' &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Resolve the Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('./node_modules/playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache the browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - run: npx playwright install --with-deps chromium
+
+      # A fresh deploy can take a moment to be served everywhere. One retry
+      # keeps a propagation lag from reading as an outage.
+      - name: Smoke the live site
+        id: smoke
+        run: |
+          for attempt in 1 2; do
+            if node scripts/smoke_test.mjs https://aiworkshoptracker.com 2>&1 | tee /tmp/smoke.log; then
+              exit 0
+            fi
+            if [ "$attempt" = 1 ]; then
+              echo "--- first attempt failed; retrying in 60s in case a deploy is still propagating ---"
+              sleep 60
+            fi
+          done
+          exit 1
+
+      - name: Open or update the tracking issue
+        if: failure() && steps.smoke.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TITLE="Live smoke test is failing"
+          BODY=$(printf 'The live site failed its smoke checks.\n\n**Run:** %s\n\n```\n%s\n```\n' \
+            "$RUN_URL" "$(tail -40 /tmp/smoke.log)")
+          EXISTING=$(gh issue list --state open --label smoke --json number --jq '.[0].number' || true)
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh label create smoke --description "Live site smoke test" --color B60205 2>/dev/null || true
+            gh issue create --title "$TITLE" --label smoke --body "$BODY"
+          fi

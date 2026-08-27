@@ -1,12 +1,20 @@
-# Runs the same install / validate / build steps as the deploy workflow, but on
-# every pull request — without deploying. This catches breakages (dependency
-# bumps, build errors) before they reach main, which the deploy-only build can't
-# do since it never runs on PRs. See validate.yml for the data-focused checks
-# that run on data/** PRs; this one specifically guards the site build.
-name: PR build check
+# Runs the same install / validate / build steps as the deploy workflow, but
+# without deploying — and runs the browser suites, which nothing else does.
+# See validate.yml for the data-focused checks; this one guards the site build
+# and the site's runtime behaviour.
+#
+# It runs on pushes to main as well as on pull requests, because work lands here
+# by pushing straight to main and a PR-only trigger meant the browser suites
+# never ran at all: a push touching only site/** got validate.mjs and a build,
+# and not one assertion about the page it shipped. deploy.yml publishes in
+# parallel rather than waiting on this, so a red run does not hold the site up;
+# it tells you to look, which is the part that was missing.
+name: Build check
 
 on:
   pull_request:
+    branches: [main]
+  push:
     branches: [main]
 
 permissions:
@@ -134,6 +142,15 @@ jobs:
           done
       - name: Test the alerts signup's sent state (headless Chromium)
         run: node scripts/alerts_ui_test.mjs http://localhost:4321
+      # Everything ui_test.mjs structurally cannot see. It drives the fork build,
+      # where PUBLIC_ALERTS_API is empty and Base.astro therefore emits none of
+      # the alerts scripts — so a <head> script that breaks every page on the
+      # real site is, in that artefact, not present to break anything. That is
+      # how a blanket fragment-clear in alerts-session.js killed every #p-<paper>
+      # deep link for twelve days with this job green. Runs against the
+      # alerts-configured build above rather than adding a third one.
+      - name: Test behaviour only the configured build has (headless Chromium)
+        run: node scripts/shipped_ui_test.mjs http://localhost:4321
       # Browser suites fail for timing reasons as well as real ones. If this job
       # goes red, read this before touching the assertions: a server that never
       # came up, or Pagefind's parallel chunk fetches stalling, look nothing like

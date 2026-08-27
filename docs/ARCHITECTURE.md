@@ -997,14 +997,40 @@ footer link, breadcrumbs, and entries in the `Dataset` keywords and `llms.txt` o
 the next build. Because statuses are derived at build time (above), the daily
 rebuild keeps every derived value current.
 
-## The UI behavior suite runs on every PR
+## The UI behavior suite runs on every PR and every push to main
 
 `scripts/ui_test.mjs` is a headless-browser suite that locks the homepage's
 runtime behavior — the dual-index search and its merge-immune counts, the
 deterministic result order, the external-vs-internal link rule, the back/forward
-restore, and the deploy-staleness heal. 124 checks. It runs in
-`pr-build-check.yml`, which already builds the site with the production
-environment, so the suite drives the artefact that would actually ship.
+restore, and the deploy-staleness heal. It runs in `pr-build-check.yml`, which
+already builds the site with the production environment.
+
+That last clause used to read "so the suite drives the artefact that would
+actually ship", and it was not true. `pr-build-check.yml` builds twice, and this
+suite drives the *fork* build, where `PUBLIC_ALERTS_API` is empty — and
+`Base.astro` emits the alerts scripts only when it is set. So every script that
+reaches aiworkshoptracker.com but not a fork is, to `ui_test.mjs`, simply absent:
+it can assert whatever it likes about them and pass, because the code that could
+break them was never in the artefact it drove.
+
+That is how a blanket `if (location.hash)` in `alerts-session.js` — a `<head>`
+script on every page — wiped `#p-<paper>` and `#papers` for twelve days
+(`527c480` → `942dd16`), silently sending every paper deep link and every link a
+subscriber had been mailed to the top of the page instead of the row. This suite
+has asserted `:target` highlighting the whole time and stayed green throughout.
+Nobody noticed until a reader clicked one.
+
+`scripts/shipped_ui_test.mjs` closes that hole. It runs against the second,
+alerts-configured build, and its remit is exactly the shape of bug that hid
+there: anything a `<head>` script on every page could break, and anything whose
+only failure mode is the presence of the alerts scripts. Whenever behaviour
+depends on a script the fork build does not carry, the assertion belongs there
+and not here.
+
+It runs on pushes as well as pull requests. A PR-only trigger was a real hole
+rather than a theoretical one: work lands on this repo by pushing straight to
+`main`, so a push touching only `site/**` got `validate.mjs` and a build, and not
+one assertion about the page it published.
 
 This was a documented gap for a long time, and worth being explicit about why it
 mattered here specifically. Data and content changes cannot reach the code these

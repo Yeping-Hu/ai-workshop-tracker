@@ -15,7 +15,8 @@ for human review, as do dependency updates.
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `validate.yml` | PRs & pushes touching data | Schema + sanity checks; comments fixes on the PR |
-| `pr-build-check.yml` | PRs | Builds the site as a visible (non-required) check, so a PR that breaks the build is obvious before merge |
+| `pr-build-check.yml` | PRs & pushes to `main` | Builds the site, then runs the three browser suites — `ui_test.mjs` on the fork build, `alerts_ui_test.mjs` and `shipped_ui_test.mjs` on the alerts-configured one. The only job that asserts anything about the page it ships; it runs on pushes because work lands here without a PR |
+| `smoke.yml` | after each deploy, daily, manual | Runs `scripts/smoke_test.mjs` against the **live** site — the only check that sees what a reader gets rather than a locally built artefact. Opens or updates a `smoke`-labelled issue on failure |
 | `deploy.yml` | push to `main`, daily, manual | Build & deploy (daily run refreshes derived statuses) |
 | `discover.yml` | weekly | Discovers new workshops/venues/deadlines from OpenReview, backfills a `website`/deadline/tracks that organizers published after the venue was imported, and syncs extensions (later-only) → commits to `main` |
 | `recheck-imminent.yml` | daily | Re-checks only deadlines within `[−7d, +14d]` for extensions (one lookup each, later-only) → commits to `main` |

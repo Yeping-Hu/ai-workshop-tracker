@@ -92,8 +92,13 @@ const WORKFLOWS = [
   '.github/workflows/validate.yml',
   '.github/workflows/alerts-ci.yml',
   // ui_test.mjs lives here: it needs a built site and a server, both of which
-  // this job already has.
+  // this job already has. shipped_ui_test.mjs too, on the second (alerts-
+  // configured) build, since that is the only artefact carrying the scripts it
+  // is written to catch.
   '.github/workflows/pr-build-check.yml',
+  // smoke_test.mjs lives here: it needs a deployed site rather than a built
+  // one, so it cannot run in any of the jobs above.
+  '.github/workflows/smoke.yml',
 ];
 // Empty on purpose. Anything added here needs a reason in the comment, because
 // an allowlist is where a guard goes to stop guarding quietly.

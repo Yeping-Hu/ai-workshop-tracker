@@ -110,10 +110,10 @@ than something for you to fix — please say so on the issue.
 actually applies those rules to the name, the acronym *and* the slug, rather
 than leaving them to be caught here.
 
-The separate `PR build check` workflow builds the site and then runs
-`scripts/ui_test.mjs`, a 124-check headless-browser suite over the homepage's
-search, links and back/forward behaviour. It runs on every pull request, so a
-data-only change waits on it too — a couple of minutes, and nothing you need to
+The separate `Build check` workflow builds the site and then runs
+`scripts/ui_test.mjs`, a headless-browser suite over the homepage's
+search, links and back/forward behaviour. It runs on every pull request and on
+every push to `main`, so a data-only change waits on it too — a couple of minutes, and nothing you need to
 do anything about. If it is the only thing red on a workshop submission, that is
 a bug on our side, not in your entry.
 
