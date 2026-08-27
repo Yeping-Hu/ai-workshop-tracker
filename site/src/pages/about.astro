@@ -1,5 +1,6 @@
 ---
 import Base from '../components/Base.astro';
+import { workshops, conferences, paperCount } from '../lib/data';
 import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
 ---
 
@@ -7,111 +8,219 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
   <section class="masthead">
     <p class="eyebrow">About this site</p>
     <h1>Why this exists</h1>
+    <p class="lede">
+      This site is that missing board, where every workshop deadline and every workshop paper
+      become searchable in one place.
+    </p>
+    <div class="statline">
+      <span><strong>{workshops.length}</strong> workshop editions</span>
+      <span><strong>{paperCount.toLocaleString('en-US')}</strong> papers</span>
+      <span><strong>{conferences.length}</strong> conferences</span>
+    </div>
   </section>
 
-  <div class="prose">
-    <p>
+  <div class="about">
+    <p class="about-intro">
       AI/ML/Robotics conferences each host dozens of workshops a year, and every one has its own website, its own
       (often extended) deadline, and its own way of publishing accepted papers. Two things have
       never had a home. Conference deadline trackers exist, but <em>workshop</em> deadlines have
       never had one. The accepted papers are just as scattered, spread across hundreds of separate
-      workshop pages and proceedings sites, with no way to search across all of them at once. This
-      site is that missing board, where every workshop deadline and every workshop paper become
-      searchable in one place.
+      workshop pages and proceedings sites, with no way to search across all of them at once.
     </p>
-    <h2>Where the data comes from</h2>
-    <p>
-      Every workshop is a small YAML file in a <a href={REPO_URL}>public GitHub repository</a>,
-      maintained by the community — organizers and submitters add and fix entries via pull
-      requests or a simple form. Submission deadlines and accepted-paper lists are fetched automatically from the{' '}
-      <a href="https://openreview.net" rel="noopener">OpenReview</a> API for workshops hosted there
-      (deadlines come from the venue record or its submission invitation); other workshops link to
-      their own proceedings pages, and missing deadlines are filled in by contributors.
-    </p>
-    <h2>Accuracy</h2>
-    <p>
-      Deadlines get extended, pages move, and some entries are unverified estimates (marked as
-      such). <strong>Always confirm details on the official workshop website before planning a
-      submission.</strong> Found something wrong? Every page has an “Edit” link that opens a short
-      pre-filled form — most fixes take under a minute.
-    </p>
-    <h2>Licensing &amp; reuse</h2>
-    <p>
-      The workshop data and paper caches are <a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC-BY-4.0</a>;
-      the site code is MIT. A machine-readable dump of everything is at{' '}
-      <a href={href('/api/workshops.json')}><code>/api/workshops.json</code></a>, and new entries are
-      announced in an <a href={href('/rss.xml')}>RSS feed</a>.
-    </p>
-    <h2>Add or fix a workshop</h2>
-    <p>
-      <a class="btn" href={`${REPO_URL}/issues/new?template=add-workshop.yml`}>Open the 2-minute form</a>
-    </p>
-    <p>
-      Fill in what you know and a bot turns it into a validated pull request — no Git needed.
-      Updating an existing entry? Every workshop page has a <strong>✎ Edit</strong> link that opens
-      the same kind of pre-filled form, and <a href={`${REPO_URL}/blob/main/CONTRIBUTING.md`}>CONTRIBUTING.md</a> documents the
-      data format. Data you submit is published under CC-BY-4.0.
-    </p>
-    <h2>Saving workshops &amp; papers</h2>
-    <p>
-      Star <span class="star-demo">☆</span> any workshop or paper, whether on the deadline board,
-      in search results, or on a workshop page, and it appears on{' '}
-      <a href={href('/saved/')}>your saved list</a>. Saved items are stored only in your browser
-      (localStorage). There's no account, no cookies, and nothing sent to a server, which also means
-      the list doesn't follow you across devices and is erased if you clear this site's data.
-    </p>
+
+    <section class="about-sec">
+      <h2>Where the data comes from</h2>
+      <div class="about-body prose">
+        <p>
+          Every workshop is a small YAML file in a <a href={REPO_URL}>public GitHub repository</a>,
+          maintained by the community — organizers and submitters add and fix entries via pull
+          requests or a simple form. Submission deadlines and accepted-paper lists are fetched automatically from the{' '}
+          <a href="https://openreview.net" rel="noopener">OpenReview</a> API for workshops hosted there
+          (deadlines come from the venue record or its submission invitation); other workshops link to
+          their own proceedings pages, and missing deadlines are filled in by contributors.
+        </p>
+      </div>
+    </section>
+
+    <section class="about-sec">
+      <h2>Accuracy</h2>
+      <div class="about-body prose">
+        <p>
+          Deadlines get extended, pages move, and some entries are unverified estimates (marked as
+          such).
+        </p>
+        {/* The single most consequential sentence on the page, so it is lifted out
+            of the paragraph it used to sit inside and given the same warning
+            treatment an unverified workshop entry gets. */}
+        <p class="seednote">
+          <strong>Always confirm details on the official workshop website before planning a
+          submission.</strong>
+        </p>
+        <p>
+          Found something wrong? Every page has an “Edit” link that opens a short
+          pre-filled form — most fixes take under a minute.
+        </p>
+      </div>
+    </section>
+
+    <section class="about-sec">
+      <h2>Licensing &amp; reuse</h2>
+      <div class="about-body prose">
+        <p>
+          The workshop data and paper caches are <a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC-BY-4.0</a>;
+          the site code is MIT. A machine-readable dump of everything is at{' '}
+          <a href={href('/api/workshops.json')}><code>/api/workshops.json</code></a>, and new entries are
+          announced in an <a href={href('/rss.xml')}>RSS feed</a>.
+        </p>
+      </div>
+    </section>
+
+    <section class="about-sec">
+      <h2>Add or fix a workshop</h2>
+      <div class="about-body prose">
+        {/* The button sits beside the sentence that explains it rather than
+            floating alone above the explanation, which is the same pairing the
+            homepage banner uses. */}
+        <aside class="cta">
+          <p>
+            Fill in what you know and a bot turns it into a validated pull request — no Git needed.
+          </p>
+          <span>
+            <a class="btn" href={`${REPO_URL}/issues/new?template=add-workshop.yml`}>Open the 2-minute form</a>
+          </span>
+        </aside>
+        <p>
+          Updating an existing entry? Every workshop page has a <strong>✎ Edit</strong> link that opens
+          the same kind of pre-filled form, and <a href={`${REPO_URL}/blob/main/CONTRIBUTING.md`}>CONTRIBUTING.md</a> documents the
+          data format. Data you submit is published under CC-BY-4.0.
+        </p>
+      </div>
+    </section>
+
+    <section class="about-sec">
+      <h2>Saving workshops &amp; papers</h2>
+      <div class="about-body prose">
+        <p>
+          Star <span class="star-demo">☆</span> any workshop or paper, whether on the deadline board,
+          in search results, or on a workshop page, and it appears on{' '}
+          <a href={href('/saved/')}>your saved list</a>. Saved items are stored only in your browser
+          (localStorage). There's no account, no cookies, and nothing sent to a server, which also means
+          the list doesn't follow you across devices and is erased if you clear this site's data.
+        </p>
+      </div>
+    </section>
+
     {ALERTS_API && (
-      <>
+      <section class="about-sec">
         <h2>Email alerts &amp; your privacy</h2>
-        <p>
-          <a href={href('/alerts/')}>Email alerts</a> are entirely optional, and the site works the
-          same whether or not you use them. If you subscribe, we store your address, the
-          conferences and topics you picked, your starred items, and how often you want to hear
-          from us — nothing else. No password, no profile, no cookies for it, no third-party
-          sharing, and no tracking pixels or click-redirects in the emails, which means we
-          genuinely don't know whether you opened one.
-        </p>
-        <p>
-          You confirm by clicking a link before anything is ever sent, and{' '}
-          <strong>unsubscribing deletes your record</strong> rather than deactivating it — every
-          email has a one-click unsubscribe, and the{' '}
-          <a href={href('/alerts/manage/')}>manage page</a> has the same button plus a pause
-          option. Subscribing also lets your saved list follow you to another device; starring by
-          itself still never leaves your browser.
-        </p>
-        {/* The one place on the site that points at /changes/. It sits here, and
-            not in the nav, on purpose: this is where somebody is already
-            deciding whether the digest is worth their address, so a back issue
-            reads as evidence rather than as a reason not to bother. The sentence
-            says what the page withholds for the same reason. */}
-        <p>
-          Want to see one before subscribing? The latest digest is always available on{' '}
-          <a href={href('/changes/')}>What Changed This Week</a>, but it's a snapshot of last
-          Monday's updates across all conferences. Sign up for the newsletter to get updates
-          tailored to the conferences and topics you follow, plus 72-hour deadline reminders and
-          same-day alerts when deadlines change.
-        </p>
-      </>
+        <div class="about-body prose">
+          <p>
+            <a href={href('/alerts/')}>Email alerts</a> are entirely optional, and the site works the
+            same whether or not you use them. If you subscribe, we store your address, the
+            conferences and topics you picked, your starred items, and how often you want to hear
+            from us — nothing else. No password, no profile, no cookies for it, no third-party
+            sharing, and no tracking pixels or click-redirects in the emails, which means we
+            genuinely don't know whether you opened one.
+          </p>
+          <p>
+            You confirm by clicking a link before anything is ever sent, and{' '}
+            <strong>unsubscribing deletes your record</strong> rather than deactivating it — every
+            email has a one-click unsubscribe, and the{' '}
+            <a href={href('/alerts/manage/')}>manage page</a> has the same button plus a pause
+            option. Subscribing also lets your saved list follow you to another device; starring by
+            itself still never leaves your browser.
+          </p>
+          {/* The one place on the site that points at /changes/. It sits here, and
+              not in the nav, on purpose: this is where somebody is already
+              deciding whether the digest is worth their address, so a back issue
+              reads as evidence rather than as a reason not to bother. The sentence
+              says what the page withholds for the same reason. */}
+          <p>
+            Want to see one before subscribing? The latest digest is always available on{' '}
+            <a href={href('/changes/')}>What Changed This Week</a>, but it's a snapshot of last
+            Monday's updates across all conferences. Sign up for the newsletter to get updates
+            tailored to the conferences and topics you follow, plus 72-hour deadline reminders and
+            same-day alerts when deadlines change.
+          </p>
+        </div>
+      </section>
     )}
+
     {/* "Calendar feeds" — hidden for now. Remove this comment wrapper to restore.
-    <h2>Calendar feeds</h2>
-    <p>
-      Subscribable <code>.ics</code> deadline feeds exist but are paused while imported dates are
-      being verified — a wrong deadline in your calendar is worse than none. They'll return once
-      the data is vetted.
-    </p>
-    */}
-    {SUPPORT_URL && (
-      <>
-        <h2>Support this project</h2>
+    <section class="about-sec">
+      <h2>Calendar feeds</h2>
+      <div class="about-body prose">
         <p>
-          The tracker is free, open source, and ad-free, and the data is openly licensed —
-          see the <a href={`${REPO_URL}/blob/main/CONTRIBUTOR_TERMS.md`}>contributor terms</a>.
-          If it saved you during deadline week, you can{' '}
-          <a href={SUPPORT_URL}>chip in for its upkeep</a>; contributions go toward the
-          domain and keeping the data fresh.
+          Subscribable <code>.ics</code> deadline feeds exist but are paused while imported dates are
+          being verified — a wrong deadline in your calendar is worse than none. They'll return once
+          the data is vetted.
         </p>
-      </>
+      </div>
+    </section>
+    */}
+
+    {SUPPORT_URL && (
+      <section class="about-sec">
+        <h2>Support this project</h2>
+        <div class="about-body prose">
+          <p>
+            The tracker is free, open source, and ad-free, and the data is openly licensed —
+            see the <a href={`${REPO_URL}/blob/main/CONTRIBUTOR_TERMS.md`}>contributor terms</a>.
+            If it saved you during deadline week, you can{' '}
+            <a href={SUPPORT_URL}>chip in for its upkeep</a>; contributions go toward the
+            domain and keeping the data fresh.
+          </p>
+        </div>
+      </section>
     )}
   </div>
 </Base>
+
+<style>
+  /* The page is a set of answers to separate questions, but as a single 44rem
+     column of left-aligned h2-then-paragraph it read as one undifferentiated
+     wall. On a wide screen each section name moves into its own rail column, so
+     the headings line up as an index down the left and the body text starts at a
+     second, consistent edge. Below 900px the rail would leave too little room
+     for prose, so it collapses back to one column and the rules between sections
+     carry the structure on their own. */
+  .about { max-width: 60rem; }
+  .about-intro {
+    max-width: 46rem;
+    margin: 0 0 0.6rem;
+    font-size: 1.02rem;
+  }
+  .about-sec {
+    display: grid;
+    grid-template-columns: 12.5rem minmax(0, 44rem);
+    gap: 0.35rem 2.6rem;
+    padding: 1.9rem 0;
+    border-top: 1px solid var(--line);
+  }
+  /* Overrides the global h2 rhythm, which is built for a single column and
+     would push the heading out of line with the body it labels. */
+  .about-sec > h2 {
+    margin: 0;
+    font-size: 1.16rem;
+    line-height: 1.3;
+    align-self: start;
+  }
+  .about-body > :first-child { margin-top: 0; }
+  .about-body > :last-child { margin-bottom: 0; }
+  /* .seednote is sized for a footnote on a workshop page; here it carries the
+     page's one real warning, so it matches the prose around it. */
+  .about-body .seednote { margin: 0.9rem 0; font-size: 0.95rem; }
+  .about-body .seednote strong { font-weight: 600; }
+  /* The shared banner leads a page; nested in a section it only needs to sit
+     between two paragraphs. */
+  .about-body .cta { margin: 0.9rem 0; padding: 1rem 1.15rem; }
+
+  @media (max-width: 900px) {
+    .about-sec {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+      padding: 1.6rem 0;
+    }
+    .about-sec > h2 { font-size: 1.3rem; }
+  }
+</style>
