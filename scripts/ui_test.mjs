@@ -382,11 +382,19 @@ const pap = await page.$eval('#results .pf-papers li:has(.pf-ptitle)', (li) => (
   hasStar: !!li.querySelector(':scope > [data-star-paper]'),
   title: li.querySelector('.pf-ptitle')?.textContent.trim() ?? '',
   excerpt: li.querySelector('.pf-excerpt')?.textContent.trim() ?? '',
+  href: li.querySelector('.pf-ptitle')?.getAttribute('href') ?? '',
+  emptyMarks: [...li.querySelectorAll('.pf-excerpt mark')].filter((m) => !m.textContent).length,
 }));
 check('paper line 1 has a real star button', pap.hasStar);
 check('paper line 1 carries no leaked star glyph', !/[☆★]/.test(pap.title), pap.title.slice(0, 40));
 check('paper line 2 no longer repeats the title', !pap.excerpt.toLowerCase().startsWith(pap.title.slice(0, 25).toLowerCase()), pap.excerpt.slice(0, 60));
 check('paper line 2 carries no star glyphs', !/[☆★]/.test(pap.excerpt), pap.excerpt.slice(0, 60));
+// Pagefind writes "Title. Authors · PDF." for a paper region. Stripping the
+// title used to leave all three of these behind on screen.
+check('paper line 2 does not open on the block separator', !/^[·.]/.test(pap.excerpt), pap.excerpt.slice(0, 60));
+check('paper line 2 drops the trailing PDF link text', !/·?\s*PDF\.?$/.test(pap.excerpt), pap.excerpt.slice(-30));
+check('paper line 2 leaves no empty <mark> behind', pap.emptyMarks === 0, `${pap.emptyMarks} empty mark(s)`);
+check('a paper result links to its anchor on the workshop page', /\/workshop\/[^/]+\/#p-/.test(pap.href), pap.href);
 
 // Star one paper from the results, then a second paper of the SAME workshop
 // from its page — both must land in one group on /saved/.

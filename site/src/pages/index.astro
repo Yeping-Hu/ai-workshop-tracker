@@ -241,15 +241,41 @@ const datasetLd: Record<string, any> = {
           i++; j++;
         }
         if (i >= want.length) {
-          node.nodeValue = t.slice(j).replace(/^[\s·]+/, '');
+          node.nodeValue = t.slice(j);
           break;
         }
         node.nodeValue = ''; // node fully consumed by the title
       }
       if (i < want.length) return excerptHtml; // excerpt shorter than the title
-      // The region's trailing "· PDF" link text adds nothing here.
+
+      // Whatever follows the title opens with the separator pagefind writes
+      // between the heading block and the author line — a "." here, sometimes
+      // a "·". It lands in the node the title ended in, or in the next one when
+      // the title ended exactly on a node boundary (which is what a <mark> on
+      // the title's last word does), so scan for the first surviving text
+      // rather than assuming which node holds it.
+      for (const node of nodes) {
+        if (!node.nodeValue) continue;
+        node.nodeValue = node.nodeValue.replace(/^[\s·.]+/, '');
+        if (node.nodeValue) break;
+      }
+
+      // The region's trailing "· PDF" link text adds nothing here. Pagefind
+      // closes the block with a "." too, so that has to come off first or the
+      // end-anchored match never fires and "· PDF." is left on screen.
       for (let k = nodes.length - 1; k >= 0; k--) {
-        if (nodes[k].nodeValue.trim()) { nodes[k].nodeValue = nodes[k].nodeValue.replace(/\s*·?\s*PDF\s*$/, ''); break; }
+        if (!nodes[k].nodeValue.trim()) continue;
+        nodes[k].nodeValue = nodes[k].nodeValue
+          .replace(/\s*\.\s*$/, '')
+          .replace(/\s*·?\s*PDF\s*$/, '');
+        break;
+      }
+
+      // A <mark> whose whole text belonged to the title is now an empty
+      // highlight, which paints as a bare swatch of background colour before
+      // the authors. Nothing left to highlight, so drop the element.
+      for (const m of tpl.content.querySelectorAll('mark')) {
+        if (!m.textContent) m.remove();
       }
       return tpl.innerHTML;
     }

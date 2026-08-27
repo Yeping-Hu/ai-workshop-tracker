@@ -77,7 +77,12 @@ export async function adoptFromUrl() {
 
   // Clear it before any await: a slow network must not leave the token sitting
   // in the address bar while the page is on screen.
-  if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+  //
+  // Only when the fragment is ours, though. This module runs in <head> on every
+  // page, and clearing *any* hash cancelled the browser's jump to it — so a
+  // paper anchor (#p-<id>, which is what a search result links to) and #papers
+  // both landed at the top of the workshop page instead of at the row.
+  if (token || email) history.replaceState(null, '', location.pathname + location.search);
 
   if (!token || !base) return session();
 

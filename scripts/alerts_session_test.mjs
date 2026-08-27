@@ -69,6 +69,13 @@ const session = files.find(([f]) => f === SESSION);
   check('it clears the fragment before any await',
     src.indexOf('history.replaceState') < src.indexOf('await fetch'),
     'a token must not sit in the address bar while the network is slow');
+  // The module loads in <head> on every page, so a blanket `if (location.hash)`
+  // wipes anchors it has no business touching: #p-<paper> (what a search result
+  // links to) and #papers both stopped scrolling anywhere.
+  check('...and clears it only when the fragment is actually ours',
+    !/if\s*\(\s*location\.hash\s*\)\s*history\.replaceState/.test(src)
+      && /history\.replaceState/.test(src),
+    'guard the clear on the parsed token, not on the presence of any hash');
   check('it exchanges a one-shot magic token for the durable one',
     /me\.manage_token/.test(src));
   check('it unlinks on a 401 rather than leaving a dead token',
