@@ -184,16 +184,28 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
      second, consistent edge. Below 900px the rail would leave too little room
      for prose, so it collapses back to one column and the rules between sections
      carry the structure on their own. */
-  .about { max-width: 60rem; }
+  /* The rail's three measurements live here and nowhere else, so the section
+     rules, the intro and every section body are laid out from one source and
+     cannot drift into separate right edges. */
+  .about {
+    --rail: 12.5rem;
+    --rail-gap: 2.6rem;
+    --measure: 44rem;
+    max-width: calc(var(--rail) + var(--rail-gap) + var(--measure));
+  }
+  /* Indented into the body column rather than hung off the page's left edge:
+     it is the first paragraph of the same column every section body sits in,
+     and at the container's full width it wrapped to a visibly different line
+     length from the text directly beneath it. */
   .about-intro {
-    max-width: 46rem;
-    margin: 0 0 0.6rem;
+    margin: 0 0 0.2rem calc(var(--rail) + var(--rail-gap));
+    max-width: var(--measure);
     font-size: 1.02rem;
   }
   .about-sec {
     display: grid;
-    grid-template-columns: 12.5rem minmax(0, 44rem);
-    gap: 0.35rem 2.6rem;
+    grid-template-columns: var(--rail) minmax(0, var(--measure));
+    gap: 0.35rem var(--rail-gap);
     padding: 1.9rem 0;
     border-top: 1px solid var(--line);
   }
@@ -216,6 +228,12 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
   .about-body .cta { margin: 0.9rem 0; padding: 1rem 1.15rem; }
 
   @media (max-width: 900px) {
+    /* Without the rail the container is wider than the text it holds, which
+       would leave every section rule running past the paragraph above it. */
+    .about { max-width: var(--measure); }
+    /* One column, so the indent that lined the intro up with the rail has
+       nothing left to line up with. */
+    .about-intro { margin-left: 0; }
     .about-sec {
       grid-template-columns: 1fr;
       gap: 0.5rem;
