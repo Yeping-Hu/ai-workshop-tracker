@@ -193,13 +193,12 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
     --measure: 44rem;
     max-width: calc(var(--rail) + var(--rail-gap) + var(--measure));
   }
-  /* Indented into the body column rather than hung off the page's left edge:
-     it is the first paragraph of the same column every section body sits in,
-     and at the container's full width it wrapped to a visibly different line
-     length from the text directly beneath it. */
+  /* Spans the rail and the body column together, so it is the full width of
+     the section rule beneath it rather than a narrower block inset from one
+     edge or the other. Nothing labels it, so nothing needs the rail here. */
   .about-intro {
-    margin: 0 0 0.2rem calc(var(--rail) + var(--rail-gap));
-    max-width: var(--measure);
+    margin: 0 0 0.2rem;
+    max-width: none;
     font-size: 1.02rem;
   }
   .about-sec {
@@ -231,9 +230,6 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
     /* Without the rail the container is wider than the text it holds, which
        would leave every section rule running past the paragraph above it. */
     .about { max-width: var(--measure); }
-    /* One column, so the indent that lined the intro up with the rail has
-       nothing left to line up with. */
-    .about-intro { margin-left: 0; }
     .about-sec {
       grid-template-columns: 1fr;
       gap: 0.5rem;
