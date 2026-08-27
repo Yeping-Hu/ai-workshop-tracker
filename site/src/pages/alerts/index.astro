@@ -21,7 +21,7 @@ const enabled = !!ALERTS_API;
     <p class="eyebrow">Optional</p>
     <h1>Deadline alerts by email</h1>
     <p class="lede">
-      Deadline extensions, new calls, and the workshops you saved — covering only the conferences
+      Deadline extensions, new calls, and the workshops you saved, covering only the conferences
       and topics you choose, with nothing sent in a quiet week.
     </p>
   </section>
@@ -29,7 +29,7 @@ const enabled = !!ALERTS_API;
   {!enabled && (
     <p class="muted">
       Email alerts are not enabled on this build of the site. The tracker itself works exactly the
-      same without them — everything on the <a href={href('/')}>deadline board</a> and your{' '}
+      same without them. Everything on the <a href={href('/')}>deadline board</a> and your{' '}
       <a href={href('/saved/')}>saved list</a> is unaffected.
     </p>
   )}
@@ -37,34 +37,34 @@ const enabled = !!ALERTS_API;
   <div class="prose">
     <h2>What arrives</h2>
     <p>
-      Three things, and you tick which of them you want. They are independent — take all three,
+      Three things, and you tick which of them you want. They are independent: take all three,
       or just one.
     </p>
 
     <h3>The weekly digest</h3>
     <p>Every Monday, one message with four short sections, filtered to your selection:</p>
     <ul>
-      <li><strong>Your saved workshops</strong> — the next deadlines on your saved list, whatever your
+      <li><strong>Your saved workshops</strong>: the next deadlines on your saved list, whatever your
         filters say, and never truncated.</li>
-      <li><strong>Deadline changes this week</strong> — extensions and any date that moved earlier, grouped by conference.</li>
-      <li><strong>New this week</strong> — workshops added to the tracker this week.</li>
-      <li><strong>Closing in the next 7 days</strong> — sorted by whichever stage is next.</li>
+      <li><strong>Deadline changes this week</strong>: extensions and any date that moved earlier, grouped by conference.</li>
+      <li><strong>New this week</strong>: workshops added to the tracker this week.</li>
+      <li><strong>Closing in the next 7 days</strong>: sorted by whichever stage is next.</li>
     </ul>
     <p>
       A summary line at the top counts the week in one glance, and every change carries a small
-      badge — <strong>EXTENDED +5d</strong>, <strong>DEADLINE POSTED</strong>,{' '}
-      <strong>CLOSES TODAY</strong> — so what happened is the first thing you read rather than
+      badge (<strong>EXTENDED +5d</strong>, <strong>DEADLINE POSTED</strong>,{' '}
+      <strong>CLOSES TODAY</strong>), so what happened is the first thing you read rather than
       something buried mid-sentence. All times are UTC, stated once.
     </p>
     <p>
-      <strong>Quiet weeks send nothing.</strong> If none of your areas moved, there is no email —
-      the digest is skipped rather than padded.
+      <strong>Quiet weeks send nothing.</strong> If none of your areas moved, there is no email.
+      The digest is skipped rather than padded.
     </p>
 
     <h3>A deadline you follow is close</h3>
     <p>
-      One alert when a workshop you saved is within 72 hours of closing. Sent once per deadline —
-      if the organizers then extend it, the new date re-arms it.
+      One alert when a workshop you saved is within 72 hours of closing. Sent once per deadline.
+      If the organizers then extend it, the new date re-arms it.
     </p>
 
     <h3>A deadline you follow moved</h3>
@@ -108,7 +108,7 @@ Median extension this week: 5 days.`}</code></pre>
 
   <AlertsSignup
     heading="Subscribe"
-    blurb="Double opt-in — you'll get one confirmation email, and nothing else until you click it."
+    blurb="Double opt-in: you'll get one confirmation email, and nothing else until you click it."
     compact
   />
 
@@ -124,7 +124,7 @@ Median extension this week: 5 days.`}</code></pre>
 
     <h3>Do I need an account?</h3>
     <p>
-      No. There is no password and no profile — your email address plus a signed link is the whole
+      No. There is no password and no profile: your email address plus a signed link is the whole
       system. To change anything later, request a sign-in link on the{' '}
       <a href={href('/alerts/manage/')}>manage page</a>.
     </p>
@@ -132,7 +132,7 @@ Median extension this week: 5 days.`}</code></pre>
     <h3>What do you store, and how do I delete it?</h3>
     <p>
       Your address, the conferences and topics you picked, your starred items, and your cadence.
-      Nothing else — no open tracking, no click redirects, no third-party sharing. Unsubscribing{' '}
+      Nothing else: no open tracking, no click redirects, no third-party sharing. Unsubscribing{' '}
       <strong>deletes the row entirely</strong>, immediately: there is no "inactive" state to sit in.
       Every email has a one-click unsubscribe link, and the manage page has the same button.
     </p>
@@ -140,7 +140,7 @@ Median extension this week: 5 days.`}</code></pre>
     <h3>Does my saved list still work without this?</h3>
     <p>
       Completely. Starring writes to your own browser and always has. Subscribing simply lets that
-      list follow you to another device — see <a href={href('/saved/')}>your saved list</a>.
+      list follow you to another device. See <a href={href('/saved/')}>your saved list</a>.
     </p>
 
     <h3>Can I just use a calendar or the RSS feed instead?</h3>

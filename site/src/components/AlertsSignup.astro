@@ -131,7 +131,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
           the "newly registered domain" banner some mail filters still attach to
           a young sending domain. */}
       <p class="muted small alerts-hint">
-        Confirmation comes from <strong>{ALERTS_FROM}</strong> — check spam if it
+        Confirmation comes from <strong>{ALERTS_FROM}</strong>. Check spam if it
         does not arrive. Nothing is sent until you click its link.
       </p>
 
@@ -339,7 +339,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
             say(`${body.message || 'Check your inbox to confirm.'} Sent to ${email}.`, 'ok');
             done(true);
           } else if (body.error === 'list_full') {
-            say(body.message || 'The alert list is full right now — please try again in a while.', 'err');
+            say(body.message || 'The alert list is full right now. Please try again in a while.', 'err');
           } else if (body.error === 'rate_limited') {
             say('Too many attempts from here. Please try again in an hour.', 'err');
           } else if (body.error === 'captcha_failed') {

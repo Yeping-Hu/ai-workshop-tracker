@@ -33,7 +33,7 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
       <div class="about-body prose">
         <p>
           Every workshop is a small YAML file in a <a href={REPO_URL}>public GitHub repository</a>,
-          maintained by the community — organizers and submitters add and fix entries via pull
+          maintained by the community: organizers and submitters add and fix entries via pull
           requests or a simple form. Submission deadlines and accepted-paper lists are fetched automatically from the{' '}
           <a href="https://openreview.net" rel="noopener">OpenReview</a> API for workshops hosted there
           (deadlines come from the venue record or its submission invitation); other workshops link to
@@ -58,7 +58,7 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
         </p>
         <p>
           Found something wrong? Every page has an “Edit” link that opens a short
-          pre-filled form — most fixes take under a minute.
+          pre-filled form. Most fixes take under a minute.
         </p>
       </div>
     </section>
@@ -83,7 +83,7 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
             homepage banner uses. */}
         <aside class="cta">
           <p>
-            Fill in what you know and a bot turns it into a validated pull request — no Git needed.
+            Fill in what you know and a bot turns it into a validated pull request. No Git needed.
           </p>
           <span>
             <a class="btn" href={`${REPO_URL}/issues/new?template=add-workshop.yml`}>Open the 2-minute form</a>
@@ -118,13 +118,13 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
             <a href={href('/alerts/')}>Email alerts</a> are entirely optional, and the site works the
             same whether or not you use them. If you subscribe, we store your address, the
             conferences and topics you picked, your starred items, and how often you want to hear
-            from us — nothing else. No password, no profile, no cookies for it, no third-party
+            from us. Nothing else. No password, no profile, no cookies for it, no third-party
             sharing, and no tracking pixels or click-redirects in the emails, which means we
             genuinely don't know whether you opened one.
           </p>
           <p>
             You confirm by clicking a link before anything is ever sent, and{' '}
-            <strong>unsubscribing deletes your record</strong> rather than deactivating it — every
+            <strong>unsubscribing deletes your record</strong> rather than deactivating it. Every
             email has a one-click unsubscribe, and the{' '}
             <a href={href('/alerts/manage/')}>manage page</a> has the same button plus a pause
             option. Subscribing also lets your saved list follow you to another device; starring by
@@ -152,7 +152,7 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
       <div class="about-body prose">
         <p>
           Subscribable <code>.ics</code> deadline feeds exist but are paused while imported dates are
-          being verified — a wrong deadline in your calendar is worse than none. They'll return once
+          being verified, because a wrong deadline in your calendar is worse than none. They'll return once
           the data is vetted.
         </p>
       </div>
@@ -164,8 +164,8 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
         <h2>Support this project</h2>
         <div class="about-body prose">
           <p>
-            The tracker is free, open source, and ad-free, and the data is openly licensed —
-            see the <a href={`${REPO_URL}/blob/main/CONTRIBUTOR_TERMS.md`}>contributor terms</a>.
+            The tracker is free, open source, and ad-free, and the data is openly licensed.
+            See the <a href={`${REPO_URL}/blob/main/CONTRIBUTOR_TERMS.md`}>contributor terms</a>.
             If it saved you during deadline week, you can{' '}
             <a href={SUPPORT_URL}>chip in for its upkeep</a>; contributions go toward the
             domain and keeping the data fresh.
