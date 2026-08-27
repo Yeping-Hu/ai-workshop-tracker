@@ -303,7 +303,19 @@ details.dd .dd-panel {
 
 /* papers */
 .paper-list { list-style: none; margin: 1rem 0 0; padding: 0; }
-.paper { padding: 0.8rem 0; border-bottom: 1px solid var(--line); }
+/* Two columns: the star, then everything else. The title, the author line and
+   the abstract then share one left edge instead of the authors sitting under
+   the star. The button keeps its -0.3rem pull (below), so column 2 begins
+   exactly where the title already began and only the lines under it move. */
+.paper {
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+}
+.paper > .star-btn { grid-column: 1; grid-row: 1; }
+.paper > :not(.star-btn) { grid-column: 2; }
 .paper .p-title { font-family: var(--font-display); font-weight: 600; font-size: 1rem; }
 .paper .p-title a { color: var(--ink); text-decoration: none; }
 .paper .p-title a:hover { color: var(--accent); text-decoration: underline; }

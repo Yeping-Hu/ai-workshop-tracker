@@ -424,23 +424,28 @@ const metaDesc = [70, 55].reduce((out, n) => (out.length <= 160 ? out : describe
           Fetched from OpenReview ({cache.source_api}) on {cache.fetched_at?.slice(0, 10)}.
           {cache.caveat && ` Note: ${cache.caveat}.`}
         </p>
+        {/* The star is a sibling of the title, not a child of it: .paper is a
+            two-column grid, and keeping the button in its own column is what lets
+            the authors and the abstract start at the title's edge instead of
+            under the star. It also keeps a control out of a heading, which is
+            where it never belonged. */}
         <ol class="paper-list">
           {cache.papers.map((p: any, i: number) => (
             <li class="paper">
+              <button
+                class="star-btn"
+                type="button"
+                data-pagefind-ignore
+                data-star-paper={paperId(p, i)}
+                data-title={p.title}
+                data-pdf={p.pdf_url || ''}
+                data-ws={w.slug}
+                data-wsname={wsLabel}
+                aria-pressed="false"
+                aria-label={`Save paper: ${p.title}`}
+                title="Save for later (stays in this browser)"
+              >☆</button>
               <h3 class="p-title" id={`p-${paperId(p, i)}`}>
-                <button
-                  class="star-btn"
-                  type="button"
-                  data-pagefind-ignore
-                  data-star-paper={paperId(p, i)}
-                  data-title={p.title}
-                  data-pdf={p.pdf_url || ''}
-                  data-ws={w.slug}
-                  data-wsname={wsLabel}
-                  aria-pressed="false"
-                  aria-label={`Save paper: ${p.title}`}
-                  title="Save for later (stays in this browser)"
-                >☆</button>
                 {p.forum_url ? <a href={p.forum_url} rel="noopener">{p.title}</a> : p.title}
               </h3>
               <div class="p-authors">
