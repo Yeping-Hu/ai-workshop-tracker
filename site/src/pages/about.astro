@@ -184,15 +184,22 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
      second, consistent edge. Below 900px the rail would leave too little room
      for prose, so it collapses back to one column and the rules between sections
      carry the structure on their own. */
-  /* The rail's three measurements live here and nowhere else, so the section
-     rules, the intro and every section body are laid out from one source and
-     cannot drift into separate right edges. */
+  /* The rail's measurements live here and nowhere else, so the lede, the
+     intro, the section rules and every section body are laid out from one
+     source and cannot drift into separate edges. Declared on both blocks
+     because the masthead is a sibling of .about, not an ancestor. */
+  .masthead,
   .about {
     --rail: 12.5rem;
     --rail-gap: 2.6rem;
     --measure: 44rem;
-    max-width: calc(var(--rail) + var(--rail-gap) + var(--measure));
+    --content: calc(var(--rail) + var(--rail-gap) + var(--measure));
   }
+  .about { max-width: var(--content); }
+  /* Site-wide a lede is a short standfirst under the headline, but here it is
+     the page's opening sentence sitting directly above body text at the
+     content width, where the shorter default read as a third edge. */
+  .masthead p.lede { max-width: var(--content); }
   /* Spans the rail and the body column together, so it is the full width of
      the section rule beneath it rather than a narrower block inset from one
      edge or the other. Nothing labels it, so nothing needs the rail here. */
@@ -229,7 +236,8 @@ import { REPO_URL, ALERTS_API, SUPPORT_URL, href } from '../lib/site';
   @media (max-width: 900px) {
     /* Without the rail the container is wider than the text it holds, which
        would leave every section rule running past the paragraph above it. */
-    .about { max-width: var(--measure); }
+    .about,
+    .masthead p.lede { max-width: var(--measure); }
     .about-sec {
       grid-template-columns: 1fr;
       gap: 0.5rem;
