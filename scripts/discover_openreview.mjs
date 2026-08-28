@@ -183,8 +183,25 @@ export function websiteFromContent(content) {
   // URL and leave any refinement to a human edit. Split on ';' and whitespace
   // only — commas occur inside legitimate URLs — then drop trailing punctuation
   // left behind by a comma- or period-separated list.
-  const first = (raw.split(/[;\s]+/).find((t) => /^https?:\/\/\S+$/.test(t)) || '').replace(/[.,;]+$/, '');
-  return /^https?:\/\/\S/.test(first) ? first.slice(0, 500) : null;
+  const tokens = raw.split(/[;\s]+/).map((t) => t.replace(/[.,;]+$/, '')).filter(Boolean);
+
+  const withScheme = tokens.find((t) => /^https?:\/\/\S+$/.test(t));
+  if (withScheme) return withScheme.slice(0, 500);
+
+  // Organizers often type the host alone — "ttcl-agents.github.io",
+  // "theagenticweb.ai". That is a website, just missing its scheme, and
+  // rejecting it left six current workshops with no link while OpenReview had
+  // one all along. Accept it only when it is unambiguously host-shaped, because
+  // this same field also carries "N/A", "-" and "to be announced", and
+  // prefixing those would publish a broken link.
+  const HOSTNAME = /^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+\.?(\/\S*)?$/i;
+  const TLD = /\.([a-z]{2,63})\.?(\/|$)/i;
+  const host = tokens.find((t) => {
+    if (t.includes('@') || t.startsWith('/')) return false; // an email, or protocol-relative
+    const justHost = t.split('/')[0];
+    return HOSTNAME.test(t) && TLD.test(justHost + '/');
+  });
+  return host ? `https://${host}`.slice(0, 500) : null;
 }
 
 /** Map a venue title/subtitle to topic ids via keywords (fallback: other).
