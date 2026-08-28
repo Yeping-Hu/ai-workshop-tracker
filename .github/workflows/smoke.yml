@@ -62,6 +62,14 @@ jobs:
       # keeps a propagation lag from reading as an outage.
       - name: Smoke the live site
         id: smoke
+        # `shell: bash` rather than the default, which is `bash -e` WITHOUT
+        # pipefail — so the `| tee` below returned tee's status and the suite's
+        # own exit code was discarded. The step passed unconditionally: the
+        # retry was unreachable, `if: failure()` never fired, and the tracking
+        # issue could never open. A watchdog that always reports green is worse
+        # than no watchdog, so this line is the whole job's load-bearing part.
+        # Pinned by the workflow-lint check in scripts/docs_sync_test.mjs.
+        shell: bash
         run: |
           for attempt in 1 2; do
             if node scripts/smoke_test.mjs https://aiworkshoptracker.com 2>&1 | tee /tmp/smoke.log; then

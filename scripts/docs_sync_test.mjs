@@ -118,6 +118,34 @@ if (unwired.length) {
   console.log(`✓ every test script runs in CI (${testFiles.length} wired, ${NOT_IN_CI_ON_PURPOSE.size} allowlisted)`);
 }
 
+// --- third drift: a workflow step whose exit code is thrown away -----------
+// GitHub's default `run:` shell is `bash -e {0}` — no pipefail — so a step that
+// pipes a command into `tee` reports tee's status and passes whatever the
+// command did. smoke.yml shipped that way and would have reported the live site
+// healthy under any failure, which is the exact shape of bug it exists to
+// catch. `shell: bash` is GitHub's own opt-in (`bash --noprofile --norc -eo
+// pipefail`), so requiring it wherever a step pipes is the general rule.
+{
+  const wfDir = path.join(ROOT, '.github', 'workflows');
+  const offenders = [];
+  for (const f of fs.readdirSync(wfDir).filter((n) => n.endsWith('.yml'))) {
+    const src = fs.readFileSync(path.join(wfDir, f), 'utf8');
+    // Steps are `- name:`-separated; good enough to attribute a pipe to a step.
+    for (const step of src.split(/\n(?=\s*- (?:name|uses|run):)/)) {
+      if (!/\|\s*tee\b/.test(step)) continue;
+      if (/^\s*shell:\s*bash\s*$/m.test(step) || /set -o pipefail/.test(step)) continue;
+      offenders.push(`${f}: ${(step.match(/- name: (.+)/) ?? [, '(unnamed step)'])[1]}`);
+    }
+  }
+  if (offenders.length) {
+    failed = true;
+    console.log(`✗ workflow step(s) piping into tee without pipefail: ${offenders.join('; ')}`);
+    console.log('  Add `shell: bash` to the step, or the pipe swallows the command\'s exit code.');
+  } else {
+    console.log('✓ no workflow throws away an exit code through a pipe');
+  }
+}
+
 console.log(
   failed
     ? '\nDocs/CI are out of sync. Update the files above, then re-run.'

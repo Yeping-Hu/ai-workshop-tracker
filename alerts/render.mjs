@@ -638,7 +638,7 @@ export function renderStarredChanges({
 }) {
   // Merged for the same reason the digest merges: a deadline that moved twice
   // is one row reporting the net, not two rows with different numbers.
-  const items = mergeEventsBySlug(events)
+  const kept = mergeEventsBySlug(events)
     .filter((e) => workshops[e.slug])
     // A deadline that has already passed is not news, and saying it "moved"
     // is worse than saying nothing: the only way a closed date changes is a
@@ -653,12 +653,16 @@ export function renderStarredChanges({
       const at = e.new_utc || w.next_stage_utc || w.deadline_utc;
       const ms = at ? Date.parse(at) : NaN;
       return !Number.isFinite(ms) || ms >= nowMs;
-    })
-    .map((e) => changeItem(e, workshops[e.slug], ids, tz));
+    });
+  const items = kept.map((e) => changeItem(e, workshops[e.slug], ids, tz));
   if (!items.length) return null;
 
   const one = items.length === 1;
-  const first = workshops[events[0].slug];
+  // `kept`, not `events`: the guard above can drop the leading event, and this
+  // used to read events[0] — which named the dropped workshop in the subject
+  // while the body listed the one that survived. The two lists were identical
+  // until the guard existed, which is exactly why it went unnoticed.
+  const first = workshops[kept[0].slug];
   const subject = one
     ? `Deadline update: ${wsTitle(first, ids)} — AI Workshop Tracker`
     : `${items.length} deadline updates on your saved workshops — AI Workshop Tracker`;

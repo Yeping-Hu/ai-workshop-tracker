@@ -518,6 +518,20 @@ const sub = (over = {}) =>
     check('...and with no clock supplied the guard stays out of the way',
       renderStarredChanges({ sub: s, events: past, workshops, ids }) !== null,
       'opt-in, so every caller that should filter is pinned below rather than here');
+
+    // The subject is built from the FIRST surviving event, not the first
+    // submitted one. Until the guard existed the two lists were identical, so
+    // reading events[0] was harmless; with it, a dropped leading event put a
+    // passed workshop in the subject line and a different one in the body.
+    const mixed = [
+      { slug: 'neurips-2026-alpha', kind: 'extended', days: 10, new_utc: iso(-30) },
+      { slug: 'neurips-2026-beta', kind: 'extended', days: 3, new_utc: iso(9) },
+    ];
+    const m = renderStarredChanges({ sub: s, events: mixed, workshops, ids, nowMs: NOW });
+    check('a dropped leading event does not title the mail',
+      /BETA/.test(m.subject) && !/ALPHA/.test(m.subject), m.subject);
+    check('...and the subject agrees with the one row in the body',
+      /^Deadline update:/.test(m.subject) && /BETA/.test(m.html) && !/ALPHA/.test(m.html), m.subject);
   }
   check('it carries the unsubscribe placeholder', two.html.includes(UNSUB_PLACEHOLDER));
   check('it carries the manage placeholder', two.html.includes(MANAGE_PLACEHOLDER));
