@@ -1,15 +1,26 @@
-# Weekly: cross-checks OpenReview-backed deadlines against their live duedates
+# Daily: cross-checks OpenReview-backed deadlines against their live duedates
 # and keeps exactly ONE consolidated issue up to date with the cases the
 # auto-sync will NOT fix on its own — deadlines a human edited that now disagree
 # with OpenReview, and bot-managed deadlines OpenReview moved *earlier* (declined
 # by the later-only rule). The maintainer resolves each by re-syncing (trust
-# OpenReview) or leaving it (keep the stored value). Runs after the Sunday
-# discovery so it reflects the freshly-synced state.
+# OpenReview) or leaving it (keep the stored value).
+#
+# Daily, not weekly, because this is the ONLY job that ever looks at a
+# human-edited deadline: freeze-on-touch removes such an entry from the daily
+# re-check, the track sync and the weekly auto-sync alike, so on a weekly cadence
+# a hand-curated deadline carried up to 7 days of staleness against ~24h for a
+# bot-managed one. It also means a conference-year listing that gets throttled is
+# retried tomorrow rather than next week.
 name: Deadline review
 
 on:
   schedule:
-    - cron: '23 5 * * 3' # Wednesdays 05:23 UTC
+    # 05:53 UTC — after the day's writers (imminent re-check 04:41, backfill
+    # 05:11, track sync 05:31) so the review always reflects what they committed,
+    # and so the four jobs are not spending the same OpenReview budget at once.
+    # The limiter in lib/openreview.mjs is per-process; staggering is what keeps
+    # concurrent jobs apart.
+    - cron: '53 5 * * *'
   workflow_dispatch:
 
 permissions:
@@ -26,6 +37,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Entries OpenReview could not answer for are named in this job's log and
+      # in a "Could not be checked this run" section of the issue itself, so the
+      # review owns its own reporting rather than writing into the TSV that
+      # discovery's "venues not verified" issue is built from — two workflows
+      # maintaining one issue would just take turns closing it.
       - run: node scripts/deadline_crosscheck.mjs --recent --report deadline-review.md
       - name: Create/update the consolidated issue
         uses: actions/github-script@v9
@@ -56,12 +72,33 @@ jobs:
               return;
             }
             if (existing) {
+              // Editing an issue body sends NO notification, so a workshop could
+              // appear here and sit unread until someone happened to open the
+              // issue — which is exactly how a deadline conflict went unseen for
+              // nine days. Diff the entry files named by the old body against the
+              // new one and comment on whatever is genuinely new; the comment is
+              // the part that actually reaches anyone.
+              const named = (text) =>
+                new Set((String(text || '').match(/data\/workshops\/[\w.-]+\.yml/g) || []));
+              const before = named(existing.body);
+              const added = [...named(report)].filter((f) => !before.has(f));
               await github.rest.issues.update({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: existing.number,
                 body: report,
               });
+              if (added.length) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body:
+                    `New since the last run — ${added.length} entr${added.length === 1 ? 'y' : 'ies'}:\n\n` +
+                    added.map((f) => `- \`${f}\``).join('\n') +
+                    '\n\nSee the issue body above for the stored vs OpenReview values and the re-sync command.',
+                });
+              }
             } else {
               await github.rest.issues.create({
                 owner: context.repo.owner,

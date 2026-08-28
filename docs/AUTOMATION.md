@@ -26,7 +26,7 @@ for human review, as do dependency updates.
 | `issue-to-pr.yml` | "Add a workshop" issue form | Converts the form to a YAML file + PR, validates, reports back |
 | `edit-to-pr.yml` | "Edit a workshop" issue form | Applies the edit to the existing YAML + PR (timezone-safe), validates, reports back |
 | `resync-deadline.yml` | manual | Re-pull one workshop's deadline from OpenReview's duedate (either direction) |
-| `deadline-review.yml` | weekly | One consolidated issue listing deadlines that need a human decision Also reports a `website` that changed on OpenReview (reported, never applied). |
+| `deadline-review.yml` | daily | One consolidated issue listing deadlines that need a human decision — daily because it is the only job that ever looks at a **human-edited** deadline, which freeze-on-touch excludes from every automatic sync. Comments when a workshop first appears, since editing an issue body notifies nobody. Also reports a `website` that changed on OpenReview (reported, never applied), and names any entry OpenReview could not answer for rather than counting it. |
 | `stale-check.yml` | weekly | One consolidated issue listing entries needing follow-up |
 | `link-check.yml` | monthly | One consolidated issue listing broken URLs Before running, `scripts/lychee_exclusions.mjs` appends every `review_ack.website` to `.lycheeignore`, so a URL deliberately removed as dead is not re-reported each month. |
 | `alerts.yml` | daily, manual | `scripts/alerts_run.mjs` — diffs `/api/workshops.json` against yesterday's snapshot, records events, sends urgent starred-deadline alerts, and on Mondays the weekly digests. Commits nothing. |

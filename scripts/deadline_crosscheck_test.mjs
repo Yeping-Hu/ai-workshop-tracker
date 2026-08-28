@@ -8,7 +8,7 @@
  *
  * Run: node scripts/deadline_crosscheck_test.mjs
  */
-import { classifyDeadlineDiff, reviewCategory, isWithinReviewWindow, websiteDrift, normalizeWebsite, titleDrift, acronymDrift } from './deadline_crosscheck.mjs';
+import { classifyDeadlineDiff, reviewCategory, isWithinReviewWindow, websiteDrift, normalizeWebsite, titleDrift, acronymDrift, needsDirectLookup, buildReport } from './deadline_crosscheck.mjs';
 import { syncNote, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
 
 let failed = 0;
@@ -194,6 +194,60 @@ check('ack is irrelevant when we already agree', titleDrift('Same Title', 'Same 
   const asMs = (v) => Date.parse(v.replace(' ', 'T') + 'Z');
   check('acked deadline matches an equal instant', asMs(acked) === asMs('2026-08-07 20:59'), true);
   check('a different later deadline does not match', asMs(acked) === asMs('2026-08-05 10:00'), false);
+}
+
+// --- needsDirectLookup -------------------------------------------------------
+// The batch answers only for the ids it was asked about. Reading a miss on an id
+// nobody requested as "this venue has no submission invitation" is what silently
+// dropped a fifth of the review scope every week whenever a conference-year
+// listing was throttled: the fallback fetched the group, found an empty `date`
+// line, missed in a map that had never been asked, and skipped the entry.
+{
+  const INV = 'IEEE.org/IROS/2026/Workshop/X/-/Submission';
+  const withValue = new Map([[INV, 1788177600000]]);
+  const empty = new Map();
+  const asked = new Set([INV]);
+  const notAsked = new Set();
+
+  check('a duedate we already have needs no lookup',
+    needsDirectLookup(INV, withValue, true, asked), false);
+  check('asked for, absent, all batches complete -> genuinely no invitation',
+    needsDirectLookup(INV, empty, true, asked), false);
+  check('NEVER asked for -> must look up, absence proves nothing',
+    needsDirectLookup(INV, empty, true, notAsked), true);
+  check('a throttled batch makes even an asked-for id inconclusive',
+    needsDirectLookup(INV, empty, false, asked), true);
+  check('never asked AND batches incomplete -> must look up',
+    needsDirectLookup(INV, empty, false, notAsked), true);
+  // The map wins over everything: a value in hand is never re-fetched.
+  check('a held value beats an incomplete batch',
+    needsDirectLookup(INV, withValue, false, notAsked), false);
+}
+
+// --- the unchecked section ---------------------------------------------------
+// Entries OpenReview could not answer for are NAMED, not counted — but they must
+// not keep the issue alive on their own, or a throttled day would stop it ever
+// auto-closing.
+{
+  const unchecked = [{
+    file: 'data/workshops/x-2026-y.yml', name: 'Some Workshop', conf: 'IROS', year: 2026,
+    venueId: 'IEEE.org/IROS/2026/Workshop/Y', reason: 'venue group could not be fetched',
+  }];
+  const item = [{
+    kind: 'human-conflict', slug: 'x-2026-y', file: 'data/workshops/x-2026-y.yml',
+    name: 'Some Workshop', conf: 'IROS', year: 2026,
+    stored: '2026-08-24 11:59', fetched: '2026-08-31 12:00', label: 'differs by 7.00d',
+  }];
+
+  check('unchecked entries alone do NOT keep the report alive',
+    buildReport([], [], [], unchecked), '');
+  const withBoth = buildReport(item, [], [], unchecked);
+  check('a real item renders the unchecked section too',
+    withBoth.includes('### Could not be checked this run'), true);
+  check('the unchecked entry is named, not counted',
+    withBoth.includes('IEEE.org/IROS/2026/Workshop/Y'), true);
+  check('a clean run renders no unchecked section',
+    buildReport(item, [], [], []).includes('Could not be checked'), false);
 }
 
 console.log(failed === 0 ? '\nDeadline cross-check logic OK.' : `\n${failed} test(s) failed.`);

@@ -52,6 +52,7 @@ import {
   LEGACY_IMPORT_NOTE,
 } from './discover_openreview.mjs';
 import { fetchGroupById } from './recheck_imminent.mjs';
+import { retryUnverified, writeUnverified } from '../lib/openreview.mjs';
 
 const ALLOW_EARLIER = false; // later-only, same default as the single-deadline sync
 const TWO_YEARS_MS = 2 * 366 * 86_400_000;
@@ -95,13 +96,12 @@ async function main({ slug, dryRun }) {
   let updated = 0, frozen = 0, skipped = 0;
   const changes = [];
 
-  for (const { f: fp, raw } of files) {
-    if (!isBotManaged(raw)) {
-      frozen++;
-      continue; // a human curated this entry — never touch it (no network call)
-    }
+  // Factored out so the retry pass below re-runs the WHOLE check, not just the
+  // fetch: a venue recovered on a second attempt has to be able to apply its
+  // track moves, or the retry only quiets the warning.
+  const checkOne = async ({ f: fp, raw }) => {
     const g = await fetchGroupById(raw.openreview_venue_id);
-    if (!g) { skipped++; continue; } // transient/missing — a later run is the backstop
+    if (!g) return false; // recorded as unverified when it was a failed lookup
 
     const sub = await subTrackInfo(g, fetchGroups);
     // subTrackInfo returns [] for a venue that isn't (any longer) genuinely
@@ -122,7 +122,7 @@ async function main({ slug, dryRun }) {
     });
 
     const { tracks: newTracks, changes: trackChanges } = mergeTracks(raw.tracks, orTracks, { allowEarlier: ALLOW_EARLIER });
-    if (!trackChanges.length) { skipped++; continue; } // nothing moved — no write
+    if (!trackChanges.length) { skipped++; return true; } // nothing moved — no write
 
     raw.tracks = newTracks;
     // Re-derive the headline + re-stamp so provenance (and the freeze control)
@@ -140,17 +140,39 @@ async function main({ slug, dryRun }) {
     if (!dryRun) fs.writeFileSync(fp, yaml.dump(raw, { lineWidth: 200, quotingType: '"' }));
     updated++;
     for (const c of trackChanges) changes.push(`${raw.conference} ${raw.year} · ${path.basename(fp)} · ${c}`);
+    return true;
+  };
+
+  for (const entry of files) {
+    if (!isBotManaged(entry.raw)) {
+      frozen++;
+      continue; // a human curated this entry — never touch it (no network call)
+    }
+    await checkOne(entry);
   }
+
+  // Second pass over whatever could not be reached, once the budget has
+  // recovered, then name what is still missing.
+  const byVenue = new Map(files.map((e) => [e.raw.openreview_venue_id, e]));
+  const ownerOf = (id) => byVenue.get(id) ?? byVenue.get(String(id).split('/-/')[0]);
+  const missed = await retryUnverified(async (id) => {
+    const e = ownerOf(id);
+    return e && isBotManaged(e.raw) ? checkOne(e) : false;
+  });
 
   if (changes.length && process.env.DEADLINE_CHANGELOG) {
     fs.appendFileSync(process.env.DEADLINE_CHANGELOG, changes.map((c) => `- ${c}`).join('\n') + '\n');
   }
   console.log(
     `Checked ${files.length} multi-track workshop(s) — ${updated} updated` +
-    `${frozen ? `, ${frozen} human-frozen` : ''}${skipped ? `, ${skipped} unchanged/unavailable` : ''}` +
+    `${frozen ? `, ${frozen} human-frozen` : ''}${skipped ? `, ${skipped} unchanged` : ''}` +
+    `${missed.length ? `, ${missed.length} UNVERIFIED` : ''}` +
     `${dryRun ? '  (dry-run — no files written)' : ''}.`,
   );
   for (const c of changes) console.log(`    ↳ ${c}`);
+  writeUnverified(
+    missed.map((m) => ({ ...m, conf: ownerOf(m.id)?.raw.conference, year: ownerOf(m.id)?.raw.year })),
+  );
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

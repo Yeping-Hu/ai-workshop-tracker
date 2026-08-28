@@ -21,6 +21,8 @@ import {
   openreviewFetch,
   recordUnverified,
   getUnverified,
+  clearUnverified,
+  retryUnverified,
   rateState,
   __resetForTests,
 } from '../lib/openreview.mjs';
@@ -126,21 +128,60 @@ const fake = ({ status = 200, remaining = 19, limit = 20, reset = 60 } = {}) => 
   check('...with the id and the reason', /FLMSec/.test(u[0].id) && /429/.test(u[0].reason));
 }
 
+/* ------------------------------------------- unverified is retried, once -- */
+{
+  // Discovery has had a second pass since its first 429s; every other job
+  // recorded its failures and dropped them at process exit, which is how a
+  // throttled lookup stayed indistinguishable from a venue with nothing to say.
+  __resetForTests();
+  clearUnverified();
+  recordUnverified('a', 'group lookup: HTTP 429');
+  recordUnverified('b', 'group lookup: HTTP 429');
+  const tried = [];
+  const left = await retryUnverified(async (id) => {
+    tried.push(id);
+    return id === 'a'; // 'a' settles on the retry, 'b' does not
+  });
+  check('every recorded id is retried exactly once', tried.join(',') === 'a,b', tried.join(','));
+  check('an id that settles on the retry is dropped', !left.some((e) => e.id === 'a'));
+  check('an id that does not settle survives, with its reason', left.length === 1 && /429/.test(left[0].reason));
+  check('and the surviving id is what the list now holds', getUnverified().map((e) => e.id).join(',') === 'b');
+}
+
+{
+  // A retry that fails a NEW way must not be lost, and a clean run must not
+  // invent work.
+  __resetForTests();
+  clearUnverified();
+  check('nothing recorded -> no retry attempted', (await retryUnverified(async () => { throw new Error('never'); })).length === 0);
+
+  recordUnverified('c', 'group lookup: HTTP 429');
+  const left = await retryUnverified(async () => { throw new Error('still down'); });
+  check('a throwing retry keeps the entry rather than swallowing it', left.length === 1);
+  check('...and says what happened on the second attempt', /still down/.test(left[0].reason), left[0].reason);
+}
+
 globalThis.fetch = realFetch;
 
 /* ------------------------------- nothing may reach OpenReview un-paced ----- */
 {
   // The limiter is worthless if a future call site bypasses it, and a bare
   // fetch is exactly how this got into trouble the first time.
+  // Scoped to the FILE, not a window around the call. This check used to read a
+  // ±4-line context, and every bare fetch it was meant to catch declared its URL
+  // five lines up — so it passed for months while three call sites (the shared
+  // fetchGroupById and both cross-check fetchers) went around the limiter and
+  // spent budget it believed it still had. A guard that cannot fail on the real
+  // defect is worse than none, because it reads as proof.
   const files = fs.readdirSync(path.join(ROOT, 'scripts')).filter((f) => f.endsWith('.mjs'));
   const offenders = [];
   for (const f of files) {
     const src = fs.readFileSync(path.join(ROOT, 'scripts', f), 'utf8');
+    // Only OpenReview traffic is rate-limited; other hosts are not this module's business.
+    if (!/openreview\.net/.test(src)) continue;
     src.split('\n').forEach((line, i) => {
       if (/\bfetch\(/.test(line) && !/openreviewFetch|globalThis\.fetch|realFetch|const fake/.test(line)) {
-        // Only OpenReview traffic is rate-limited; other hosts are not this module's business.
-        const ctx = src.split('\n').slice(Math.max(0, i - 4), i + 3).join('\n');
-        if (/api2\.openreview\.net|openreview\.net/.test(ctx)) offenders.push(`${f}:${i + 1}`);
+        offenders.push(`${f}:${i + 1}`);
       }
     });
   }

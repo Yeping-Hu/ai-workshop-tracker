@@ -17,10 +17,13 @@
  * and legacy "imported from OpenReview…" entries are skipped (discovery adopts
  * then syncs them) — so neither is fetched here, keeping call volume down.
  *
- * `--report <file>` writes a markdown summary for the weekly `deadline-review`
+ * `--report <file>` writes a markdown summary for the daily `deadline-review`
  * workflow to keep ONE self-maintaining issue up to date (empty report => the
  * workflow closes the issue). Network-tolerant: a venue whose duedate can't be
- * fetched (404 / 429 / down) is skipped, never failing the run.
+ * fetched (404 / 429 / down) never fails the run — but it is retried once after
+ * the rate budget recovers and then NAMED, in the log and in the issue. It used
+ * to be counted instead, and a run reporting "147 checked, 37 unfetchable" read
+ * exactly like one that had checked all 184.
  *
  * Usage:
  *   node scripts/deadline_crosscheck.mjs --recent                      # upcoming + recently-passed only
@@ -43,6 +46,7 @@ import {
   LEGACY_IMPORT_NOTE,
 } from './discover_openreview.mjs';
 import { fetchGroupById } from './recheck_imminent.mjs';
+import { openreviewFetch, recordUnverified, writeUnverified, getUnverified, clearUnverified } from '../lib/openreview.mjs';
 
 // OpenReview wraps some content values as { value: … }; unwrap if so.
 const val = (c, k) => {
@@ -56,15 +60,12 @@ const DAY = 86_400_000;
 const OFFSET_STEPS_MIN = [60, 30, 15]; // whole, half, quarter hour
 const NEAR_MS = 90_000;                // 90s tolerance for "lands on" an offset
 const MAX_OFFSET_H = 14;               // largest real-world tz magnitude
-// Gentle spacing between venue fetches. Each entry now costs a group lookup
-// (for the authoritative `date` line) plus, only when that line has no
-// deadline, an invitation lookup — so pacing is a little wider than when this
-// job read invitations alone, to stay inside OpenReview's rate budget across
-// ~200 entries. A throttled entry is warned about and skipped, never fatal.
-const PACE_MS = 600;
+// Pacing is lib/openreview.mjs's job: it spends the budget OpenReview advertises
+// on every response instead of guessing at a flat delay. A fixed sleep on top of
+// that only slows a run that has room, and guessing is what let 24 listing
+// requests go out inside 6 seconds against a ceiling of 20 per 60.
 const REVIEW_PAST_GRACE_MS = 14 * DAY; // keep reviewing a deadline until ~2 weeks past it
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const UA = 'ai-workshop-tracker/1.0 (open-source workshop aggregator; github)';
 
@@ -84,12 +85,12 @@ async function fetchSubmissionDuedates(invitationIds) {
   for (let i = 0; i < invitationIds.length; i += CHUNK) {
     const chunk = invitationIds.slice(i, i + CHUNK);
     const url = `https://api2.openreview.net/invitations?ids=${encodeURIComponent(chunk.join(','))}&expired=true`;
-    const MAX = 5;
+    const MAX = 3;
     let ok = false;
     for (let attempt = 0; attempt < MAX; attempt++) {
       try {
-        await new Promise((r) => setTimeout(r, 250 + attempt * attempt * 1000));
-        const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+        if (attempt) await new Promise((r) => setTimeout(r, attempt * attempt * 1000));
+        const res = await openreviewFetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
         if (res.status === 429 || res.status >= 500) {
           if (attempt < MAX - 1) continue;
           throw new Error(`rate-limited (HTTP ${res.status}) after ${MAX} attempts`);
@@ -103,6 +104,7 @@ async function fetchSubmissionDuedates(invitationIds) {
         break;
       } catch (err) {
         if (attempt < MAX - 1) continue;
+        for (const id of chunk) recordUnverified(id, `duedate batch: ${err.message}`);
         console.warn(`  ⚠ duedate batch failed (${chunk.length} venue(s)): ${err.message}`);
       }
     }
@@ -127,11 +129,11 @@ export function venuePrefix(venueId) {
  *  rather than silently treating those venues as unfetchable. */
 async function fetchVenueGroupsByPrefix(prefix) {
   const url = `https://api2.openreview.net/groups?prefix=${encodeURIComponent(prefix)}&limit=1000`;
-  const MAX = 5;
+  const MAX = 3;
   for (let attempt = 0; attempt < MAX; attempt++) {
     try {
-      await new Promise((r) => setTimeout(r, 250 + attempt * attempt * 1000)); // pace, then escalating backoff
-      const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+      if (attempt) await new Promise((r) => setTimeout(r, attempt * attempt * 1000)); // escalating backoff
+      const res = await openreviewFetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
       if (res.status === 429 || res.status >= 500) {
         if (attempt < MAX - 1) continue;
         throw new Error(`rate-limited (HTTP ${res.status}) after ${MAX} attempts`);
@@ -145,6 +147,9 @@ async function fetchVenueGroupsByPrefix(prefix) {
       return groups;
     } catch (err) {
       if (attempt < MAX - 1) continue;
+      // A dead listing takes a whole conference-year's venues with it, which is
+      // how a fifth of the review scope used to vanish from one 429.
+      recordUnverified(prefix, `venue listing: ${err.message}`);
       console.warn(`  ⚠ venue listing failed for ${prefix}: ${err.message}`);
       return null;
     }
@@ -197,6 +202,25 @@ export function reviewCategory({ notes, storedValue, storedMs, fetchedMs }) {
   }
   // Not legacy and not a matching bot stamp => a human curated this deadline.
   return { kind: 'human-conflict', diff };
+}
+
+/**
+ * Does this venue still need its own invitation lookup, given the batched
+ * prefetch?
+ *
+ * The batch answers for the ids it was ASKED about: for one of those, absence
+ * from the map really does mean "no submission invitation, or no duedate", and
+ * costs no request. For anything else absence proves nothing — and the entries
+ * that reach the per-entry fallback are exactly the ones the prefix listing
+ * could not answer, so their invitation ids were never in the batch at all.
+ * Treating those two cases alike is how a throttled conference-year listing
+ * turned into ~37 entries a week silently filed as "nothing to compare": the
+ * fallback fetched the group, found no `date` line, missed in a map that had
+ * never been asked, and skipped. Pure + exported for tests.
+ */
+export function needsDirectLookup(invId, duedates, complete, requested) {
+  if (duedates.has(invId)) return false;
+  return !complete || !requested.has(invId);
 }
 
 /**
@@ -306,7 +330,10 @@ export function websiteDrift(stored, openreview, acked = null) {
   return { stored, openreview };
 }
 
-function buildReport(items, drift = [], renames = []) {
+export function buildReport(items, drift = [], renames = [], unchecked = []) {
+  // `unchecked` deliberately does NOT keep the report alive: it is a statement
+  // about the run, not a review item, and letting it do so would stop the issue
+  // from ever auto-closing on a throttled day.
   if (!items.length && !drift.length && !renames.length) return '';
   const human = items.filter((i) => i.kind === 'human-conflict');
   const earlier = items.filter((i) => i.kind === 'bot-earlier');
@@ -358,7 +385,18 @@ function buildReport(items, drift = [], renames = []) {
     }
     out.push('');
   }
-  out.push('_This issue is updated automatically by the weekly `deadline-review` workflow._');
+  if (unchecked.length) {
+    out.push(
+      '### Could not be checked this run',
+      '_A lookup for these did not complete, twice — OpenReview was throttling or down, so we do not know whether their deadlines still agree. They are listed rather than counted because a run reporting "147 checked, 37 unfetchable" reads exactly like one that checked all 184. Nothing is known to be wrong with the data, and the next run normally settles them. Venues that simply publish no deadline are not listed here._',
+      '',
+    );
+    for (const u of unchecked) {
+      out.push(`- \`${u.file}\` — **${u.name}** (${u.conf} ${u.year}) — \`${u.venueId}\` — ${u.reason}`);
+    }
+    out.push('');
+  }
+  out.push('_This issue is updated automatically by the daily `deadline-review` workflow._');
   return out.join('\n') + '\n';
 }
 
@@ -429,6 +467,9 @@ async function main() {
     ),
   ];
   const { duedates, complete } = await fetchSubmissionDuedates(needInvitation);
+  // What the batch actually asked about — the authority for reading a miss as
+  // "this venue has no submission invitation".
+  const requested = new Set(needInvitation);
   console.log(
     `Prefetched ${duedates.size} submission duedate(s) for ${needInvitation.length} venue(s) ` +
       `in ${Math.ceil(needInvitation.length / 40)} batched request(s).\n`,
@@ -437,10 +478,10 @@ async function main() {
   const items = [];
   const drift = [];
   const renames = [];
-  let checked = 0, skipped = 0;
+  let checked = 0;
+  const unchecked = [];
   for (const { slug: s, file, raw } of toCheck) {
     let dl = null;
-    let hitNetwork = false;
     let group = null; // hoisted: the website check below needs it after the try
     try {
       // Same value precedence as every write path (discovery, recheck,
@@ -460,32 +501,37 @@ async function main() {
         // Not in the listing: a renamed/moved venue, or the listing itself was
         // throttled. One targeted lookup keeps this entry reviewable.
         g = await fetchGroupById(raw.openreview_venue_id);
-        hitNetwork = true;
       }
       group = g;
       if (g) {
         dl = parseGroupDeadline(val(g.content ?? {}, 'date'));
         if (!dl) {
-          const due = duedates.get(invitationIdOf(g));
+          const invId = invitationIdOf(g);
+          const due = duedates.get(invId);
           if (due) {
             dl = msToDeadline(due);
-          } else if (!complete) {
-            // A batch was throttled, so absence here is inconclusive — ask
-            // directly rather than reporting this venue as unfetchable.
+          } else if (needsDirectLookup(invId, duedates, complete, requested)) {
+            // Either a batch was throttled, or this id was never in one because
+            // its listing failed. Both make absence inconclusive — ask directly
+            // rather than filing the venue as having nothing to compare.
             dl = await deadlineFromInvitation(g);
-            hitNetwork = true;
           }
-          // else: batches all succeeded and this venue has no submission
-          // invitation (or no duedate) — nothing to compare, no request needed.
+          // else: this id WAS asked about and came back empty — the venue really
+          // has no submission invitation (or no duedate). No request needed.
         }
       }
     } catch {
       dl = null; // network / rate-limit / no invitation: skip, never fail
     }
-    // Only pace when this entry actually hit the network; venues answered from
-    // the prefetched listing cost nothing and need no delay.
-    if (hitNetwork) await sleep(PACE_MS);
-    if (!dl) { skipped++; continue; }
+    if (!dl) {
+      unchecked.push({
+        slug: s, file, name: raw.name,
+        conf: String(raw.conference || '').toUpperCase(), year: raw.year,
+        venueId: raw.openreview_venue_id,
+        reason: group ? 'submission invitation could not be read' : 'venue group could not be fetched',
+      });
+      continue;
+    }
     checked++;
     const storedMs = resolveDeadlineUtcMs(raw.submission_deadline, raw.timezone || 'UTC');
     const fetchedMs = resolveDeadlineUtcMs(dl.submission_deadline, 'UTC');
@@ -513,6 +559,66 @@ async function main() {
     console.log(`${tag} ${s}: stored ${item.stored} vs OpenReview ${item.fetched} UTC — ${item.label}`);
   }
 
+  // Second pass over whatever could not be reached. The rate budget has had the
+  // whole main loop to recover, so a lookup throttled early usually settles here.
+  // Discovery has had this since its first 429s; the review never did, which is
+  // why a dead conference-year listing quietly cost a fifth of the scope.
+  if (unchecked.length) {
+    console.log(`\nSecond pass over ${unchecked.length} entry/entries that could not be read…`);
+    // Only failures recorded from HERE decide what stays unchecked, so an entry
+    // that failed in the main loop and settled on the retry is not still counted
+    // against the run.
+    clearUnverified();
+    const stillUnchecked = [];
+    for (const u of unchecked) {
+      const entry = toCheck.find((e) => e.slug === u.slug);
+      let dl = null;
+      try {
+        const g = await fetchGroupById(u.venueId);
+        if (g) {
+          dl = parseGroupDeadline(val(g.content ?? {}, 'date')) || (await deadlineFromInvitation(g));
+        }
+      } catch {
+        dl = null;
+      }
+      if (!dl || !entry) { stillUnchecked.push(u); continue; }
+      checked++;
+      const raw = entry.raw;
+      const storedMs = resolveDeadlineUtcMs(raw.submission_deadline, raw.timezone || 'UTC');
+      const fetchedMs = resolveDeadlineUtcMs(dl.submission_deadline, 'UTC');
+      const ackedDeadline = raw.review_ack?.submission_deadline;
+      if (ackedDeadline && resolveDeadlineUtcMs(ackedDeadline, 'UTC') === fetchedMs) continue;
+      const cat = reviewCategory({
+        notes: raw.deadline_notes,
+        storedValue: raw.submission_deadline,
+        storedMs,
+        fetchedMs,
+      });
+      if (!cat) continue;
+      const item = {
+        kind: cat.kind, slug: u.slug, file: u.file,
+        name: raw.name, conf: u.conf, year: u.year,
+        stored: raw.submission_deadline, fetched: dl.submission_deadline, label: cat.diff.label,
+      };
+      items.push(item);
+      const tag = cat.kind === 'human-conflict' ? '⚠ CONFLICT  ' : '•  EARLIER   ';
+      console.log(`${tag} ${u.slug}: stored ${item.stored} vs OpenReview ${item.fetched} UTC — ${item.label} (second pass)`);
+    }
+    // "Could not be verified" and "has nothing to say" are different facts, and
+    // collapsing them is the same mistake that started this: a venue whose
+    // lookups all COMPLETED and simply published no submission invitation is not
+    // a blind spot, and listing it daily would train the reader to skip the
+    // section — which is exactly how 37 silently-dropped entries stayed invisible
+    // behind a number. Keep only entries where a lookup genuinely did not finish.
+    const failed = new Set(getUnverified().flatMap((e) => [e.id, String(e.id).split('/-/')[0]]));
+    const dropped = stillUnchecked.filter((u) => !failed.has(u.venueId));
+    for (const u of dropped) {
+      console.log(`    · ${u.slug}: OpenReview publishes no submission deadline for ${u.venueId} — nothing to compare`);
+    }
+    unchecked.length = 0;
+    unchecked.push(...stillUnchecked.filter((u) => failed.has(u.venueId)));
+  }
+
   // Identity pass: no network at all, every group is already cached above.
   for (const { raw, slug: s2, file: f2 } of identityEntries) {
     const g = groupById.get(raw.openreview_venue_id);
@@ -531,16 +637,23 @@ async function main() {
     if (ad) { renames.push({ ...meta, field: 'acronym', ...ad }); console.log(`•  ACRONYM   ${s2}: ours "${ad.stored}" vs OpenReview "${ad.openreview}"`); }
   }
 
-  const report = buildReport(items, drift, renames);
+  const report = buildReport(items, drift, renames, unchecked);
   if (reportPath) {
     fs.writeFileSync(reportPath, report);
     const parts = [];
     if (items.length) parts.push(`${items.length} deadline item(s)`);
     if (drift.length) parts.push(`${drift.length} website item(s)`);
     if (renames.length) parts.push(`${renames.length} rename item(s)`);
+    if (unchecked.length) parts.push(`${unchecked.length} unchecked note(s)`);
     console.log(`\nWrote ${parts.length ? parts.join(' + ') : 'empty report'} to ${reportPath}.`);
   }
-  console.log(`\nDone. ${checked} checked, ${items.length} to review, ${skipped} unfetchable${drift.length ? `, ${drift.length} website change(s)` : ''}.`);
+  console.log(
+    `\nDone. ${checked} checked, ${items.length} to review, ${unchecked.length} unchecked` +
+      `${drift.length ? `, ${drift.length} website change(s)` : ''}.`,
+  );
+  writeUnverified(
+    unchecked.map((u) => ({ id: `${u.slug} (${u.venueId})`, reason: u.reason, conf: u.conf, year: u.year })),
+  );
   if (strict && items.length > 0) process.exit(1);
 }
 

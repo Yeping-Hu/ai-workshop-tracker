@@ -28,7 +28,7 @@
  *   - Human-edited deadlines — frozen by the same value-stamp check the weekly
  *     bot uses (`syncedValue(deadline_notes) === submission_deadline`); a
  *     hand-edited deadline never matches, so it is never auto-touched. It can
- *     only surface in the weekly `deadline-review` issue for you to decide.
+ *     only surface in the daily `deadline-review` issue for you to decide.
  *   - Legacy / not-yet-adopted entries — adoption is the weekly job's role; this
  *     job only re-syncs entries that already carry a bot stamp.
  *   - Multi-track venues (`tracks`) — their headline is derived across child
@@ -51,6 +51,7 @@ import path from 'node:path';
 import * as yaml from 'js-yaml';
 import { listWorkshopFiles, readWorkshopFile, recordDeadlineObservation } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
+import { openreviewFetch, recordUnverified, retryUnverified, writeUnverified } from '../lib/openreview.mjs';
 import {
   syncNote,
   syncedValue,
@@ -73,7 +74,7 @@ const LOOKAHEAD_MS = 14 * DAY;
 // clobber a good value or fail validation for the whole run.
 const TWO_YEARS_MS = 2 * 366 * DAY;
 // Later-only by default, identical to the weekly sync: extensions flow in,
-// earlier moves are left for the weekly cross-check / deadline-review issue.
+// earlier moves are left for the daily cross-check / deadline-review issue.
 const ALLOW_EARLIER = false;
 
 // OpenReview wraps some content values as { value: … }; unwrap if so.
@@ -83,28 +84,37 @@ const val = (c, k) => {
 };
 
 /**
- * Fetch a single OpenReview group by its exact id, with the same 429/5xx
- * backoff hardening the rest of the importer uses. Returns the group object
- * (so callers get its `date` line and `submission_id` for free) or null on a
- * genuine miss / persistent failure — in which case the daily job simply skips
- * that entry and the weekly run remains the backstop.
+ * Fetch a single OpenReview group by its exact id. Returns the group object (so
+ * callers get its `date` line and `submission_id` for free), or null.
+ *
+ * Null has two very different meanings and the caller cannot tell them apart, so
+ * this records the difference instead: a 4xx is a genuine miss (the venue is gone
+ * or renamed), while a throttled or failed lookup goes to `recordUnverified` for
+ * the run's retry pass. Returning a bare null for both is how a rate limit used
+ * to look exactly like a venue with nothing to say — for as long as the entry
+ * existed, since nothing ever came back to it.
+ *
+ * Paced by lib/openreview.mjs against OpenReview's advertised budget rather than
+ * a fixed pre-sleep: five scripts call this on daily crons against one per-IP
+ * ceiling, and a limiter that only some of them use is no limiter at all.
  */
 export async function fetchGroupById(id) {
   const url = `https://api2.openreview.net/groups?id=${encodeURIComponent(id)}&limit=1`;
-  const MAX = 5;
+  const MAX = 3;
   for (let attempt = 0; attempt < MAX; attempt++) {
     try {
-      await new Promise((r) => setTimeout(r, attempt === 0 ? 250 : attempt * attempt * 1000));
-      const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+      if (attempt) await new Promise((r) => setTimeout(r, attempt * attempt * 1000));
+      const res = await openreviewFetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
       if (res.status === 429 || res.status >= 500) {
         if (attempt < MAX - 1) continue;
         throw new Error(`HTTP ${res.status} after retries`);
       }
-      if (!res.ok) return null;
+      if (!res.ok) return null; // genuine miss (e.g. 404 — venue gone or renamed)
       const { groups = [] } = await res.json();
       return groups[0] || null;
     } catch (err) {
       if (attempt < MAX - 1) continue;
+      recordUnverified(id, `group lookup: ${err.message}`);
       console.warn(`  ⚠ group lookup failed for ${id}: ${err.message}`);
       return null;
     }
@@ -148,13 +158,15 @@ async function main({ dryRun }) {
 
   // 2. Re-check each against OpenReview by its stored venue id (one direct
   //    lookup apiece — no enumeration) and apply later-only, plausible moves.
+  //    Factored out of the loop so the retry pass below re-runs the WHOLE check,
+  //    not just the fetch: a group recovered on the second attempt has to be able
+  //    to apply its extension, or the retry only quiets the warning.
   let checked = 0;
   let updated = 0;
   const changes = [];
-  for (const { path: fp, raw } of candidates) {
-    checked++;
+  const checkOne = async ({ path: fp, raw }) => {
     const g = await fetchGroupById(raw.openreview_venue_id);
-    if (!g) continue; // transient/missing — weekly run is the backstop
+    if (!g) return false; // recorded as unverified when it was a failed lookup
     // Same value precedence as the weekly sync: the group's free `date` line
     // first, then the submission invitation's machine-readable duedate.
     const fetched = parseGroupDeadline(val(g.content ?? {}, 'date')) || (await deadlineFromInvitation(g));
@@ -208,15 +220,43 @@ async function main({ dryRun }) {
     } else if (!plausible && fetched) {
       console.warn(`  ⚠ ${path.basename(fp)}: OpenReview deadline "${fetched.submission_deadline}" looks implausible — left unchanged`);
     }
+    return true;
+  };
+
+  for (const c of candidates) {
+    checked++;
+    await checkOne(c);
   }
+
+  // 3. Second pass over whatever could not be reached. By now the rate budget has
+  //    recovered, so a lookup that was throttled mid-run usually settles here —
+  //    the same reasoning as discovery's second pass, which until now was the only
+  //    job in the repo that had one. Whatever survives is NAMED: a run that
+  //    silently checked 147 of 184 entries reads exactly like one that checked all
+  //    of them.
+  const byVenue = new Map(candidates.map((c) => [c.raw.openreview_venue_id, c]));
+  // A failure can be recorded against either the venue group or its submission
+  // invitation (`<venue>/-/Submission`), depending on which lookup died. Both
+  // name the same entry, so resolve back to the venue before retrying.
+  const ownerOf = (id) => byVenue.get(id) ?? byVenue.get(String(id).split('/-/')[0]);
+  const missed = await retryUnverified(async (id) => {
+    const c = ownerOf(id);
+    return c ? checkOne(c) : false;
+  });
 
   // Record each change so the workflow can fold it into the commit message,
   // exactly like the weekly discovery run (no silent edits).
   if (changes.length && process.env.DEADLINE_CHANGELOG) {
     fs.appendFileSync(process.env.DEADLINE_CHANGELOG, changes.map((c) => `- ${c}`).join('\n') + '\n');
   }
-  console.log(`Re-checked ${checked} imminent deadline(s) — ${updated} extension(s) applied.`);
+  console.log(
+    `Re-checked ${checked} imminent deadline(s) — ${updated} extension(s) applied` +
+      `${missed.length ? `, ${missed.length} UNVERIFIED` : ''}.`,
+  );
   for (const c of changes) console.log(`    ↳ ${c}`);
+  writeUnverified(
+    missed.map((m) => ({ ...m, conf: ownerOf(m.id)?.raw.conference, year: ownerOf(m.id)?.raw.year })),
+  );
 }
 
 // Only run the CLI when invoked directly, so the exported predicate

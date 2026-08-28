@@ -11,17 +11,20 @@
  *   node scripts/fetch_openreview.mjs --all      # (re)fetch everything
  *   node scripts/fetch_openreview.mjs --slug neurips-2024-math-ai
  *
- * Etiquette: 1 request/second, descriptive User-Agent, per-venue failures are
+ * Etiquette: paced by lib/openreview.mjs against the budget OpenReview
+ * advertises on every response, descriptive User-Agent, per-venue failures are
  * logged and skipped (the job never hard-fails because one venue is down).
+ * This job is monthly, but it spends the same per-IP budget as the daily
+ * deadline jobs, so it goes through the same gate.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { loadWorkshops, CACHE_DIR } from '../lib/workshops.mjs';
+import { openreviewFetch } from '../lib/openreview.mjs';
 
 const API_V2 = 'https://api2.openreview.net';
 const API_V1 = 'https://api.openreview.net';
 const UA = 'ai-workshop-tracker/1.0 (open-source workshop aggregator; github)';
-const SLEEP_MS = 1100;
 const PAGE = 1000;
 const MAX_PAPERS = 3000;
 // Abstracts are dropped by default to keep the repo small (titles+authors
@@ -33,10 +36,9 @@ const args = process.argv.slice(2);
 const mode = args.includes('--all') ? 'all' : args.includes('--recent') ? 'recent' : 'missing';
 const onlySlug = args.includes('--slug') ? args[args.indexOf('--slug') + 1] : null;
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function getJson(url) {
-  const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+  const res = await openreviewFetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
   return res.json();
 }
@@ -75,7 +77,6 @@ async function fetchPaged(baseUrl, apiVersion) {
       if (p) papers.push(p);
     }
     if (notes.length < PAGE) break;
-    await sleep(SLEEP_MS);
   }
   return papers;
 }
@@ -94,14 +95,12 @@ async function fetchVenue(venueId, year) {
 
   // API v1 fallback (mostly pre-2023 venues). Acceptance filtering on v1 is
   // venue-specific, so this may include non-accepted submissions — flagged in meta.
-  await sleep(SLEEP_MS);
   for (const inv of ['Blind_Submission', 'Submission']) {
     papers = await fetchPaged(
       `${API_V1}/notes?invitation=${encodeURIComponent(`${venueId}/-/${inv}`)}`,
       1,
     );
     if (papers.length > 0) return { papers, api: 'v1', caveat: 'v1 invitation listing; may include non-accepted submissions' };
-    await sleep(SLEEP_MS);
   }
   return { papers: [], api: null };
 }
@@ -150,6 +149,5 @@ for (const w of targets) {
   } catch (e) {
     console.log(`FAILED: ${e.message} — skipped`);
   }
-  await sleep(SLEEP_MS);
 }
 console.log(`\nDone. ${changed} cache file(s) updated.`);

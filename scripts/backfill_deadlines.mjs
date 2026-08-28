@@ -67,6 +67,7 @@ import {
 // duplicate the hardening. Importing is side-effect-free — that module only runs
 // its CLI under the `import.meta.url` guard.
 import { fetchGroupById } from './recheck_imminent.mjs';
+import { retryUnverified, writeUnverified } from '../lib/openreview.mjs';
 
 const DAY = 86_400_000;
 // Same plausibility guard as the imminent re-check / weekly sync: reject absurd
@@ -108,17 +109,19 @@ async function main({ dryRun }) {
 
   // 2. Look each up by its stored venue id (one group lookup apiece — no
   //    enumeration) and fill only when OpenReview now publishes a plausible one.
+  //    Factored out so the retry pass below re-runs the WHOLE check rather than
+  //    just the fetch: a group recovered on a second attempt has to be able to
+  //    fill its deadline, or the retry only quiets the warning.
   let checked = 0;
   let filled = 0;
   const changes = [];
-  for (const { path: fp, raw } of candidates) {
-    checked++;
+  const checkOne = async ({ path: fp, raw }) => {
     const g = await fetchGroupById(raw.openreview_venue_id);
-    if (!g) continue; // transient/missing — the weekly run is the backstop
+    if (!g) return false; // recorded as unverified when it was a failed lookup
     // Same value precedence as the imminent re-check: the group's free `date`
     // line first, then the submission invitation's machine-readable duedate.
     const fetched = parseGroupDeadline(val(g.content ?? {}, 'date')) || (await deadlineFromInvitation(g));
-    if (!fetched) continue; // no deadline published yet (e.g. website-only) — leave blank
+    if (!fetched) return true; // reached it; no deadline published yet — leave blank
 
     const fetchedMs = resolveDeadlineUtcMs(fetched.submission_deadline, fetched.timezone || 'UTC');
     const fetchedYear = Number(String(fetched.submission_deadline).slice(0, 4));
@@ -129,7 +132,7 @@ async function main({ dryRun }) {
       Math.abs(fetchedYear - raw.year) <= 1;
     if (!plausible) {
       console.warn(`  ⚠ ${path.basename(fp)}: OpenReview deadline "${fetched.submission_deadline}" looks implausible — left blank`);
-      continue;
+      return true;
     }
 
     // First observation for this entry: records a single "announced" point, which
@@ -143,15 +146,38 @@ async function main({ dryRun }) {
     if (!dryRun) fs.writeFileSync(fp, yaml.dump(raw, { lineWidth: 200, quotingType: '"' }));
     filled++;
     changes.push(`${raw.conference} ${raw.year} · ${path.basename(fp)}: (blank) -> ${fetched.submission_deadline} UTC`);
+    return true;
+  };
+
+  for (const c of candidates) {
+    checked++;
+    await checkOne(c);
   }
+
+  // 3. Second pass over whatever could not be reached, once the rate budget has
+  //    recovered — then name what is still missing. A blank deadline that was
+  //    never actually looked at is indistinguishable from one OpenReview has not
+  //    announced yet, and only one of those is worth chasing.
+  const byVenue = new Map(candidates.map((c) => [c.raw.openreview_venue_id, c]));
+  const ownerOf = (id) => byVenue.get(id) ?? byVenue.get(String(id).split('/-/')[0]);
+  const missed = await retryUnverified(async (id) => {
+    const c = ownerOf(id);
+    return c ? checkOne(c) : false;
+  });
 
   // Record each fill so the workflow can fold it into the commit message —
   // no silent edits, same convention as the imminent re-check / weekly run.
   if (changes.length && process.env.DEADLINE_CHANGELOG) {
     fs.appendFileSync(process.env.DEADLINE_CHANGELOG, changes.map((c) => `- ${c}`).join('\n') + '\n');
   }
-  console.log(`Checked ${checked} blank deadline(s) — ${filled} backfilled from OpenReview.`);
+  console.log(
+    `Checked ${checked} blank deadline(s) — ${filled} backfilled from OpenReview` +
+      `${missed.length ? `, ${missed.length} UNVERIFIED` : ''}.`,
+  );
   for (const c of changes) console.log(`    ↳ ${c}`);
+  writeUnverified(
+    missed.map((m) => ({ ...m, conf: ownerOf(m.id)?.raw.conference, year: ownerOf(m.id)?.raw.year })),
+  );
 }
 
 // Only run the CLI when invoked directly, so the exported predicate

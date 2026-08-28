@@ -237,7 +237,7 @@ one, which crowded the list, so the board shows only the deadline and countdown
 and the full note stays one click away.
 
 Because a human edit freezes auto-sync, two tools cover the manual case. A
-weekly **cross-check** (`scripts/deadline_crosscheck.mjs`, the `deadline-review`
+daily **cross-check** (`scripts/deadline_crosscheck.mjs`, the `deadline-review`
 workflow) compares upcoming and recently-passed deadlines against OpenReview using
 the *same value precedence as every write path* — the venue group's free `date`
 line first, the submission invitation's `duedate` only as a fallback — and keeps
