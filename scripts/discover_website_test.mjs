@@ -27,7 +27,20 @@ check('surrounding whitespace trimmed', websiteFromContent({ website: '  https:/
 
 // Anything that isn't an absolute http(s) URL is rejected rather than stored:
 // organizers do type bare hostnames, emails and placeholders into this field.
-check('bare hostname rejected', websiteFromContent({ website: 'example.org' }), null);
+// A bare hostname used to be rejected. It is now accepted and given a scheme:
+// organizers frequently type the host alone, and rejecting it left six current
+// workshops with no link while OpenReview had one all along (see #46). The
+// strictness the old rule protected is preserved below — this field also carries
+// "N/A", "-" and prose, and prefixing those would publish a broken link.
+check('bare hostname accepted, scheme added', websiteFromContent({ website: 'example.org' }), 'https://example.org');
+check('host with a path accepted', websiteFromContent({ website: 'sim2realgap.github.io/ws-iros2026/' }), 'https://sim2realgap.github.io/ws-iros2026/');
+check('www host accepted', websiteFromContent({ website: 'www.sdad.cc' }), 'https://www.sdad.cc');
+check('a real URL still wins over a bare host', websiteFromContent({ website: 'example.org https://real.example' }), 'https://real.example');
+check('"N/A" rejected', websiteFromContent({ website: 'N/A' }), null);
+check('"-" rejected', websiteFromContent({ website: '-' }), null);
+check('single label rejected (no TLD)', websiteFromContent({ website: 'localhost' }), null);
+check('numeric TLD rejected', websiteFromContent({ website: '3.5' }), null);
+check('leading/trailing hyphen label rejected', websiteFromContent({ website: '-bad.example' }), null);
 check('email rejected', websiteFromContent({ website: 'info@mailab.io' }), null);
 check('protocol-relative rejected', websiteFromContent({ website: '//example.org' }), null);
 check('empty string -> null', websiteFromContent({ website: '' }), null);
