@@ -693,6 +693,26 @@ async function main({ conf, year, dryRun }) {
             fetchedYear != null && Math.abs(fetchedYear - raw.year) <= 1;
           // A deadline that closed more than the look-back ago is not extended
           // automatically, however plausible the new value looks on its own.
+          //
+          // KNOWN GAP, deliberate: a move declined here is reported NOWHERE. It
+          // writes no `deadline_history` entry, so the review's
+          // `lateResurrection` check cannot see it (that check only ever finds
+          // moves that were APPLIED — i.e. the backlog from before this rule
+          // existed), and `reviewCategory` returns null for any later move on a
+          // bot-managed entry. Only the warning below records it.
+          //
+          // Left that way on purpose: of the five long-closed moves in the whole
+          // recorded history of the corpus, every one was invitation reuse and
+          // none was a real extension, so a reporting path would be built against
+          // zero instances. The risk it leaves open is the mirror image — a
+          // genuinely very-late extension gets declined and we show a workshop as
+          // closed while OpenReview says it is open.
+          //
+          // If that ever appears: add a `bot-long-closed` category to
+          // reviewCategory() in deadline_crosscheck.mjs and report it only when
+          // the FETCHED deadline is still in the future, since that is the only
+          // case where the reader can still act on it. Widening the review's
+          // `--recent` fetch window is the cost; do not widen it speculatively.
           const longClosed = storedMs != null && Date.now() - storedMs > DEADLINE_LOOKBACK_MS;
           const decision = !plausible
             ? { update: false, reason: 'implausible' }
