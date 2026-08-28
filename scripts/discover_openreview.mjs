@@ -72,6 +72,23 @@ export const LEGACY_IMPORT_NOTE = 'imported from OpenReview — check the websit
 // (riskier; leans on validate.mjs's sanity checks as the net).
 const ALLOW_EARLIER = false;
 const TWO_YEARS_MS = 2 * 366 * 86_400_000;
+/**
+ * How long after its own deadline a workshop may still be auto-extended.
+ *
+ * A genuine post-deadline extension is announced within days of the original
+ * date — that is why the daily re-check looks back exactly this far. But
+ * OpenReview's `Submission` invitation is often REUSED once submissions close,
+ * for camera-ready, revisions or a competition track, and its `duedate` then
+ * jumps weeks forward. Following that later-only is how four ECCV 2026
+ * workshops came to advertise deadlines that fall after their own notification
+ * dates, two of them live on the site as "upcoming" a month after they closed.
+ *
+ * So the rule is shared rather than living in one job: no job auto-extends a
+ * deadline that has been closed longer than this. Such a move is declined and
+ * goes to the deadline-review issue as a human call. Across the corpus's whole
+ * recorded history this declines five moves, and four of them are wrong.
+ */
+export const DEADLINE_LOOKBACK_MS = 7 * 86_400_000;
 
 /** The note the bot stamps when it sets or updates a deadline. Embeds the exact
  *  value written (UTC) so a later human value-edit is detectable, plus the sync
@@ -468,7 +485,7 @@ export function tracksToYaml(tracks) {
  * Returns { tracks, changes }; changes is a human-readable "<name>: from -> to"
  * list, empty when nothing moved (so the caller can skip a no-op write).
  */
-export function mergeTracks(storedTracks, openreviewTracks, { allowEarlier = false } = {}) {
+export function mergeTracks(storedTracks, openreviewTracks, { allowEarlier = false, nowMs = Date.now() } = {}) {
   const changes = [];
   const byName = new Map();
   const order = [];
@@ -490,7 +507,13 @@ export function mergeTracks(storedTracks, openreviewTracks, { allowEarlier = fal
     } else {
       const storedMs = resolveDeadlineUtcMs(cur.submission_deadline, cur.timezone || 'UTC');
       const fetchedMs = resolveDeadlineUtcMs(ot.submission_deadline, ot.timezone || 'UTC');
-      const decision = decideDeadlineUpdate(storedMs, fetchedMs, { allowEarlier });
+      // Same look-back as the single-deadline sync: a track whose deadline closed
+      // over a week ago is not auto-extended either. A per-track Submission
+      // invitation is reused exactly like a venue-level one.
+      const longClosed = storedMs != null && nowMs - storedMs > DEADLINE_LOOKBACK_MS;
+      const decision = longClosed && fetchedMs > storedMs
+        ? { update: false, reason: 'long-closed' }
+        : decideDeadlineUpdate(storedMs, fetchedMs, { allowEarlier });
       if (decision.update) {
         const from = cur.submission_deadline;
         cur.submission_deadline = ot.submission_deadline;
@@ -668,9 +691,14 @@ async function main({ conf, year, dryRun }) {
             fetchedMs != null &&
             fetchedMs - Date.now() <= TWO_YEARS_MS &&
             fetchedYear != null && Math.abs(fetchedYear - raw.year) <= 1;
-          const decision = plausible
-            ? decideDeadlineUpdate(storedMs, fetchedMs, { allowEarlier: ALLOW_EARLIER })
-            : { update: false, reason: 'implausible' };
+          // A deadline that closed more than the look-back ago is not extended
+          // automatically, however plausible the new value looks on its own.
+          const longClosed = storedMs != null && Date.now() - storedMs > DEADLINE_LOOKBACK_MS;
+          const decision = !plausible
+            ? { update: false, reason: 'implausible' }
+            : longClosed && fetchedMs > storedMs
+              ? { update: false, reason: 'long-closed' }
+              : decideDeadlineUpdate(storedMs, fetchedMs, { allowEarlier: ALLOW_EARLIER });
           if (decision.update) {
             const from = raw.submission_deadline;
             recordDeadlineObservation(raw, fetched.submission_deadline, today, fetched.timezone);
@@ -682,6 +710,12 @@ async function main({ conf, year, dryRun }) {
             changes.push(`${conf} ${raw.year} · ${path.basename(fp)}: ${from} UTC -> ${fetched.submission_deadline} UTC (${decision.reason})`);
           } else if (!plausible && fetched) {
             console.warn(`  ⚠ ${path.basename(fp)}: OpenReview deadline "${fetched.submission_deadline}" looks implausible — left unchanged`);
+          } else if (decision.reason === 'long-closed') {
+            console.warn(
+              `  ⚠ ${path.basename(fp)}: OpenReview moved a deadline that closed ` +
+              `${Math.round((Date.now() - storedMs) / 86_400_000)}d ago to "${fetched.submission_deadline}" — ` +
+              'declined (invitation reuse looks exactly like this); see the deadline-review issue',
+            );
           }
         }
         // else: a non-bot note, or the value no longer matches the stamp => a

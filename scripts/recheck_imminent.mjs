@@ -56,6 +56,7 @@ import {
   syncNote,
   syncedValue,
   decideDeadlineUpdate,
+  DEADLINE_LOOKBACK_MS,
   deadlineFromInvitation,
   parseGroupDeadline,
   parseGroupAbstractDeadline,
@@ -68,7 +69,12 @@ const DAY = 86_400_000;
 // catches the late-extension case (deadline passed, organizer extends a day or
 // two later). A week of look-back is generous: post-deadline extensions almost
 // always land within a few days of the original date.
-const LOOKBACK_MS = 7 * DAY;
+//
+// One definition, shared with the weekly sync, which used to have no look-back
+// at all — so a deadline this job would not touch after a week could still be
+// extended by discovery a month later. That gap is what let reused OpenReview
+// submission invitations resurrect four closed ECCV 2026 deadlines.
+const LOOKBACK_MS = DEADLINE_LOOKBACK_MS;
 const LOOKAHEAD_MS = 14 * DAY;
 // Same plausibility guard as the weekly sync: reject absurd reads rather than
 // clobber a good value or fail validation for the whole run.

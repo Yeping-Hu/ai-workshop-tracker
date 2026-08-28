@@ -8,7 +8,7 @@
  *
  * Run: node scripts/deadline_crosscheck_test.mjs
  */
-import { classifyDeadlineDiff, reviewCategory, isWithinReviewWindow, websiteDrift, normalizeWebsite, titleDrift, acronymDrift, needsDirectLookup, buildReport, siblingVenueCandidates } from './deadline_crosscheck.mjs';
+import { classifyDeadlineDiff, reviewCategory, isWithinReviewWindow, websiteDrift, normalizeWebsite, titleDrift, acronymDrift, needsDirectLookup, buildReport, siblingVenueCandidates, lateResurrection } from './deadline_crosscheck.mjs';
 import { syncNote, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
 
 let failed = 0;
@@ -294,6 +294,69 @@ check('ack is irrelevant when we already agree', titleDrift('Same Title', 'Same 
   const noMove = buildReport([], [], [], [], [{ ...dead[0], moved: null }]);
   check('with no replacement found, it says so rather than guessing',
     noMove.includes('no replacement found'), true);
+}
+
+// --- lateResurrection --------------------------------------------------------
+// OpenReview's Submission invitation gets reused after submissions close, so its
+// duedate jumps weeks forward and the bot used to follow it. The tell is how old
+// the OUTGOING deadline was when it was replaced, not how big the jump is — a
+// workshop really does extend by three weeks, just not three weeks after closing.
+{
+  const bot = (v) => syncNote(v, '2026-08-18');
+  const entry = (hist, deadline) => ({
+    submission_deadline: deadline, timezone: 'UTC',
+    deadline_notes: bot(deadline), deadline_history: hist,
+  });
+
+  const reopened = entry([
+    { value: '2026-08-01 11:59', recorded: '2026-06-23', timezone: 'UTC' },
+    { value: '2026-08-31 11:59', recorded: '2026-08-18', timezone: 'UTC' },
+  ], '2026-08-31 11:59');
+  const r = lateResurrection(reopened);
+  check('a deadline extended 17d after closing is flagged', r && r.closedForDays, 17);
+  check('...naming both values', r && [r.from, r.to], ['2026-08-01 11:59', '2026-08-31 11:59']);
+
+  // The ordinary late extension the whole system exists to catch.
+  check('an extension 2 days after closing is normal, not flagged',
+    lateResurrection(entry([
+      { value: '2026-08-01 11:59', recorded: '2026-06-23', timezone: 'UTC' },
+      { value: '2026-08-20 11:59', recorded: '2026-08-03', timezone: 'UTC' },
+    ], '2026-08-20 11:59')), null);
+
+  // A big jump made while the deadline was still OPEN is just an extension.
+  check('a 30d jump announced before the deadline is not flagged',
+    lateResurrection(entry([
+      { value: '2026-08-01 11:59', recorded: '2026-06-23', timezone: 'UTC' },
+      { value: '2026-08-31 11:59', recorded: '2026-07-25', timezone: 'UTC' },
+    ], '2026-08-31 11:59')), null);
+
+  // Already undone: LifeGenIP's real shape. The bad move is still in the
+  // history, but a later move replaced it, so there is nothing to report.
+  check('a bad move that was later reverted is not re-reported',
+    lateResurrection(entry([
+      { value: '2026-07-21 12:00', recorded: '2026-07-16', timezone: 'UTC' },
+      { value: '2026-08-14 12:00', recorded: '2026-08-14', timezone: 'UTC' },
+      { value: '2026-08-16 12:00', recorded: '2026-08-15', timezone: 'UTC' },
+      { value: '2026-07-21 12:00', recorded: '2026-08-20', timezone: 'UTC' },
+    ], '2026-07-21 12:00')), null);
+
+  // Human-curated: their call, and frozen against re-sync anyway.
+  check('a human-edited deadline is not flagged',
+    lateResurrection({ ...reopened, deadline_notes: 'submitted as 2026-08-30 23:59 AoE' }), null);
+  check('no history -> nothing to say', lateResurrection(entry([], '2026-08-31 11:59')), null);
+  // An earlier move is the review's other category, not this one.
+  check('a move EARLIER is not a resurrection',
+    lateResurrection(entry([
+      { value: '2026-08-31 11:59', recorded: '2026-06-23', timezone: 'UTC' },
+      { value: '2026-08-01 11:59', recorded: '2026-08-18', timezone: 'UTC' },
+    ], '2026-08-01 11:59')), null);
+
+  const rep = buildReport([], [], [], [], [], [{
+    slug: 'x', file: 'data/workshops/x.yml', name: 'X', conf: 'ECCV', year: 2026,
+    from: '2026-08-01 11:59', to: '2026-08-31 11:59', on: '2026-08-18', closedForDays: 17,
+  }]);
+  check('a reopened deadline alone keeps the report alive', rep !== '', true);
+  check('...and says how long it had been closed', rep.includes('17 days after it closed'), true);
 }
 
 console.log(failed === 0 ? '\nDeadline cross-check logic OK.' : `\n${failed} test(s) failed.`);

@@ -46,7 +46,7 @@ import {
   LEGACY_IMPORT_NOTE,
 } from './discover_openreview.mjs';
 import { fetchGroupById } from './recheck_imminent.mjs';
-import { CONF_TEMPLATE } from './discover_openreview.mjs';
+import { CONF_TEMPLATE, DEADLINE_LOOKBACK_MS } from './discover_openreview.mjs';
 import { openreviewFetch, recordUnverified, writeUnverified, getUnverified, clearUnverified } from '../lib/openreview.mjs';
 
 // OpenReview wraps some content values as { value: … }; unwrap if so.
@@ -332,6 +332,44 @@ export function websiteDrift(stored, openreview, acked = null) {
 }
 
 /**
+ * A stored deadline that was extended after it had already closed.
+ *
+ * Both syncs now decline such a move, but four were applied before that rule
+ * existed and are still on the board — and they cannot surface as a normal
+ * review item, because the stored value and OpenReview AGREE. They agree on the
+ * wrong thing: OpenReview's `Submission` invitation gets reused once submissions
+ * close (camera-ready, revisions, a competition track), its `duedate` jumps
+ * forward, and the bot followed it.
+ *
+ * Read from `deadline_history`, which records what was written and when, so this
+ * needs no network and reports only moves that actually happened. The tell is
+ * the outgoing value's age at the moment it was replaced, not the size of the
+ * jump: a workshop really does extend by three weeks, but not three weeks after
+ * it closed. Pure + exported for tests.
+ */
+export function lateResurrection(raw, lookbackMs = DEADLINE_LOOKBACK_MS) {
+  const hist = Array.isArray(raw?.deadline_history) ? raw.deadline_history : [];
+  if (hist.length < 2) return null;
+  // Only bot-managed entries: once a human curates the value it is their call,
+  // and the freeze means no sync will touch it again anyway.
+  if (syncedValue(raw.deadline_notes) !== raw.submission_deadline) return null;
+  // Only the move that produced the value we are SHOWING. Walking further back
+  // would re-report a bad move that has since been undone — LifeGenIP carries
+  // exactly that in its history, and it is correct today.
+  const cur = hist[hist.length - 1];
+  const prev = hist[hist.length - 2];
+  if (cur.value !== raw.submission_deadline) return null;
+  const prevMs = resolveDeadlineUtcMs(prev.value, prev.timezone || 'UTC');
+  const curMs = resolveDeadlineUtcMs(cur.value, cur.timezone || 'UTC');
+  const appliedMs = Date.parse(`${cur.recorded}T00:00:00Z`);
+  if (prevMs == null || curMs == null || !Number.isFinite(appliedMs)) return null;
+  if (curMs <= prevMs) return null; // an earlier move is the review's other category
+  const closedForMs = appliedMs - prevMs;
+  if (closedForMs <= lookbackMs) return null;
+  return { from: prev.value, to: cur.value, on: cur.recorded, closedForDays: Math.round(closedForMs / 86_400_000) };
+}
+
+/**
  * Where a venue may have moved to.
  *
  * OpenReview registers a workshop either under its conference
@@ -390,11 +428,11 @@ async function findMovedVenue(raw) {
   return null;
 }
 
-export function buildReport(items, drift = [], renames = [], unchecked = [], dead = []) {
+export function buildReport(items, drift = [], renames = [], unchecked = [], dead = [], resurrected = []) {
   // `unchecked` deliberately does NOT keep the report alive: it is a statement
   // about the run, not a review item, and letting it do so would stop the issue
   // from ever auto-closing on a throttled day.
-  if (!items.length && !drift.length && !renames.length && !dead.length) return '';
+  if (!items.length && !drift.length && !renames.length && !dead.length && !resurrected.length) return '';
   const human = items.filter((i) => i.kind === 'human-conflict');
   const earlier = items.filter((i) => i.kind === 'bot-earlier');
   const line = (i) =>
@@ -441,6 +479,20 @@ export function buildReport(items, drift = [], renames = [], unchecked = [], dea
         `- [ ] \`${r.file}\` — ${r.field} (${r.conf} ${r.year})\n` +
         `      - ours: ${r.stored}\n` +
         `      - OpenReview: ${r.openreview}`,
+      );
+    }
+    out.push('');
+  }
+  if (resurrected.length) {
+    out.push(
+      '### Extended after it had already closed',
+      "_These were moved later by the bot when the deadline had been closed for over a week. Neither sync will do that any more, but the value is already stored — and it will never appear above, because OpenReview still agrees with it. OpenReview's `Submission` invitation is often reused after submissions close (camera-ready, revisions, a competition track), which moves its `duedate` forward. Check the workshop's own page: if ours is wrong, edit the entry — a hand-set deadline also freezes it against re-sync._",
+      '',
+    );
+    for (const r of resurrected) {
+      out.push(
+        `- [ ] \`${r.file}\` — **${r.name}** (${r.conf} ${r.year}) — now \`${r.to} UTC\`, ` +
+        `moved up from \`${r.from}\` on ${r.on}, ${r.closedForDays} days after it closed`,
       );
     }
     out.push('');
@@ -706,7 +758,18 @@ async function main() {
   // answers with HTTP 200 and no content — so the monthly link check cannot see
   // it either, and nothing else ever re-reads a stored venue id.
   const deadVenues = [];
+  const resurrected = [];
   for (const { raw, slug: s2, file: f2 } of identityEntries) {
+    // Costs nothing and needs no group: it reads what we already wrote down.
+    const lr = lateResurrection(raw);
+    if (lr && resolveDeadlineUtcMs(raw.review_ack?.submission_deadline ?? null, 'UTC')
+             !== resolveDeadlineUtcMs(raw.submission_deadline, raw.timezone || 'UTC')) {
+      resurrected.push({
+        slug: s2, file: f2, name: raw.name,
+        conf: String(raw.conference || '').toUpperCase(), year: raw.year, ...lr,
+      });
+      console.log(`•  REOPENED  ${s2}: ${lr.from} -> ${lr.to} applied ${lr.closedForDays}d after it closed`);
+    }
     let g = groupById.get(raw.openreview_venue_id);
     if (!g) {
       clearUnverified();
@@ -736,7 +799,7 @@ async function main() {
     if (ad) { renames.push({ ...meta, field: 'acronym', ...ad }); console.log(`•  ACRONYM   ${s2}: ours "${ad.stored}" vs OpenReview "${ad.openreview}"`); }
   }
 
-  const report = buildReport(items, drift, renames, unchecked, deadVenues);
+  const report = buildReport(items, drift, renames, unchecked, deadVenues, resurrected);
   if (reportPath) {
     fs.writeFileSync(reportPath, report);
     const parts = [];
@@ -744,13 +807,15 @@ async function main() {
     if (drift.length) parts.push(`${drift.length} website item(s)`);
     if (renames.length) parts.push(`${renames.length} rename item(s)`);
     if (deadVenues.length) parts.push(`${deadVenues.length} dead venue id(s)`);
+    if (resurrected.length) parts.push(`${resurrected.length} reopened deadline(s)`);
     if (unchecked.length) parts.push(`${unchecked.length} unchecked note(s)`);
     console.log(`\nWrote ${parts.length ? parts.join(' + ') : 'empty report'} to ${reportPath}.`);
   }
   console.log(
     `\nDone. ${checked} checked, ${items.length} to review, ${unchecked.length} unchecked` +
       `${drift.length ? `, ${drift.length} website change(s)` : ''}` +
-      `${deadVenues.length ? `, ${deadVenues.length} DEAD venue id(s)` : ''}.`,
+      `${deadVenues.length ? `, ${deadVenues.length} DEAD venue id(s)` : ''}` +
+      `${resurrected.length ? `, ${resurrected.length} reopened after closing` : ''}.`,
   );
   writeUnverified(
     unchecked.map((u) => ({ id: `${u.slug} (${u.venueId})`, reason: u.reason, conf: u.conf, year: u.year })),
