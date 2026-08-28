@@ -359,5 +359,76 @@ check('ack is irrelevant when we already agree', titleDrift('Same Title', 'Same 
   check('...and says how long it had been closed', rep.includes('17 days after it closed'), true);
 }
 
+// --- bot-long-closed: the decline the syncs now make, made visible -----------
+// Since the look-back landed, a later move onto a long-closed deadline is
+// refused rather than applied — and it writes no deadline_history entry, so
+// nothing else in the system can see it happened. Without this category the
+// refusal is silent, which is the failure mode the look-back was meant to end.
+{
+  const DAY = 86_400_000;
+  const NOW = Date.UTC(2026, 7, 28);
+  const at = (daysPast) => NOW - daysPast * DAY;
+  // The stamp only reads as bot-written when the value is date-shaped, so the
+  // fixture uses a real one and derives the instant from it.
+  const iso = (ms) => new Date(ms).toISOString().slice(0, 16).replace('T', ' ');
+  const call = ({ storedMs, fetchedMs, notes }) => {
+    const storedValue = iso(storedMs);
+    const r = reviewCategory({
+      notes: notes ?? syncNote(storedValue, '2026-06-01'),
+      storedValue, storedMs, fetchedMs, nowMs: NOW,
+    });
+    return r ? r.kind : null;
+  };
+
+  // Closed 17 days; OpenReview claims a date still to come -> the reader could
+  // still be submitting, so it must be raised.
+  check('long-closed, OpenReview still in the future -> raised',
+    call({ storedMs: at(17), fetchedMs: NOW + 3 * DAY }),
+    'bot-long-closed');
+
+  // Same shape, but OpenReview's date has passed too: nobody can act, so quiet.
+  check('long-closed, OpenReview also past -> not raised',
+    call({ storedMs: at(40), fetchedMs: at(5) }), null);
+
+  // Inside the look-back the sync APPLIES the move, so there is nothing to decide.
+  check('within the look-back -> applied by the sync, not raised',
+    call({ storedMs: at(3), fetchedMs: NOW + 10 * DAY }), null);
+
+  // An earlier move keeps its own category rather than being absorbed.
+  check('an earlier move is still bot-earlier',
+    call({ storedMs: at(20), fetchedMs: at(30) }), 'bot-earlier');
+
+  // A human-edited entry was always raised for any divergence; unchanged.
+  check('a human-edited entry stays human-conflict',
+    call({ notes: 'submitted as Aug 1 AoE', storedMs: at(17), fetchedMs: NOW + 3 * DAY }),
+    'human-conflict');
+
+  // Legacy entries are still out of scope entirely.
+  check('a legacy entry is never raised',
+    call({ notes: LEGACY_IMPORT_NOTE, storedMs: at(17), fetchedMs: NOW + 3 * DAY }), null);
+
+  const rep = buildReport([{
+    kind: 'bot-long-closed', slug: 'x-2026-y', file: 'data/workshops/x-2026-y.yml',
+    name: 'Y', conf: 'ECCV', year: 2026,
+    stored: '2026-08-01 11:59', fetched: '2026-09-10 12:00', label: 'differs by 40.00d',
+  }]);
+  check('the section leads with what a reader would notice',
+    rep.includes('OpenReview says these are still open'), true);
+  check('...and offers the re-sync command', rep.includes('resync_deadline.mjs --slug x-2026-y'), true);
+}
+
+// The two windows are different on purpose: everything is reviewed close in,
+// but only this one category reaches back far enough to catch a reused
+// invitation, and widening the shared window would refill the issue with the
+// months-old conflicts it was narrowed to exclude.
+{
+  const DAY = 86_400_000;
+  const NOW = Date.UTC(2026, 7, 28);
+  check('14d grace still governs ordinary review', isWithinReviewWindow(NOW - 13 * DAY, NOW), true);
+  check('...and excludes a month-old deadline', isWithinReviewWindow(NOW - 30 * DAY, NOW), false);
+  check('the wider fetch window still holds it', isWithinReviewWindow(NOW - 30 * DAY, NOW, 90 * DAY), true);
+  check('and drops it eventually', isWithinReviewWindow(NOW - 120 * DAY, NOW, 90 * DAY), false);
+}
+
 console.log(failed === 0 ? '\nDeadline cross-check logic OK.' : `\n${failed} test(s) failed.`);
 process.exit(failed === 0 ? 0 : 1);

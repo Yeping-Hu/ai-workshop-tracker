@@ -66,6 +66,24 @@ const MAX_OFFSET_H = 14;               // largest real-world tz magnitude
 // that only slows a run that has room, and guessing is what let 24 listing
 // requests go out inside 6 seconds against a ceiling of 20 per 60.
 const REVIEW_PAST_GRACE_MS = 14 * DAY; // keep reviewing a deadline until ~2 weeks past it
+/**
+ * How far past a deadline is still worth FETCHING, which is wider than how far
+ * is worth reviewing.
+ *
+ * Since the syncs stopped auto-extending a long-closed deadline, a declined move
+ * is a thing a human needs to see: OpenReview says the workshop is open until X
+ * while the site shows it closed. That decline happens at whatever distance the
+ * organiser reused the invitation — 30 or 60 days out, not 14 — so the entry has
+ * to be looked at long after it leaves the review window.
+ *
+ * The two windows stay separate on purpose. Widening REVIEW_PAST_GRACE_MS itself
+ * would drag every other category back in with it, and the issue would refill
+ * with the months-old human-conflicts that window was added to keep out. So
+ * entries between the two windows are fetched but only ever evaluated for the
+ * one category that can still matter, and that category is itself gated on
+ * OpenReview's value still being in the future.
+ */
+const FETCH_PAST_GRACE_MS = 90 * DAY;
 
 
 const UA = 'ai-workshop-tracker/1.0 (open-source workshop aggregator; github)';
@@ -190,16 +208,28 @@ export function classifyDeadlineDiff(storedMs, fetchedMs) {
  * rule the bot uses. Pure + exported for tests. Returns null (no review) or
  * { kind: 'human-conflict' | 'bot-earlier', diff }.
  */
-export function reviewCategory({ notes, storedValue, storedMs, fetchedMs }) {
+export function reviewCategory({ notes, storedValue, storedMs, fetchedMs, nowMs = Date.now() }) {
   if (storedMs == null || fetchedMs == null) return null;
   const diff = classifyDeadlineDiff(storedMs, fetchedMs);
   if (diff.kind === 'match') return null;
   if (notes === LEGACY_IMPORT_NOTE) return null;          // in transition: discovery adopts, then syncs
   const botManaged = syncedValue(notes) === storedValue;  // stamp still equals the stored value
   if (botManaged) {
-    // Later moves are auto-applied by the weekly sync — not a review item.
-    // Only an earlier move is declined (later-only) and needs a human eye.
-    return fetchedMs < storedMs ? { kind: 'bot-earlier', diff } : null;
+    // An earlier move is declined by the later-only rule and needs a human eye.
+    if (fetchedMs < storedMs) return { kind: 'bot-earlier', diff };
+    // A later move onto a deadline that closed over a week ago is declined too,
+    // and that decline used to be invisible: this branch returned null on the
+    // assumption that every later move gets auto-applied, which stopped being
+    // true when the look-back was added.
+    //
+    // Reported only while OpenReview's value is still in the FUTURE, because
+    // that is the whole harm — we show a workshop as closed while OpenReview
+    // says it is open, and a reader could still be submitting to it. Once the
+    // fetched date is past too, nobody can act either way and it is noise.
+    if (nowMs - storedMs > DEADLINE_LOOKBACK_MS && fetchedMs > nowMs) {
+      return { kind: 'bot-long-closed', diff };
+    }
+    return null;
   }
   // Not legacy and not a matching bot stamp => a human curated this deadline.
   return { kind: 'human-conflict', diff };
@@ -435,6 +465,7 @@ export function buildReport(items, drift = [], renames = [], unchecked = [], dea
   if (!items.length && !drift.length && !renames.length && !dead.length && !resurrected.length) return '';
   const human = items.filter((i) => i.kind === 'human-conflict');
   const earlier = items.filter((i) => i.kind === 'bot-earlier');
+  const stillOpen = items.filter((i) => i.kind === 'bot-long-closed');
   const line = (i) =>
     `- [ ] \`${i.file}\` — **${i.name}** (${i.conf} ${i.year}) — stored \`${i.stored} UTC\`, OpenReview \`${i.fetched} UTC\` — ${i.label}. ` +
     `Accept OpenReview: \`node scripts/resync_deadline.mjs --slug ${i.slug}\``;
@@ -446,6 +477,15 @@ export function buildReport(items, drift = [], renames = [], unchecked = [], dea
   if (human.length) {
     out.push('### Human-edited, now disagrees with OpenReview', '_You edited these, so auto-sync is frozen. Decide which to trust._', '');
     for (const i of human) out.push(line(i));
+    out.push('');
+  }
+  if (stillOpen.length) {
+    out.push(
+      '### OpenReview says these are still open — we show them as closed',
+      '_The deadline had been closed for over a week when OpenReview moved it later, so neither sync applied it: that pattern is usually a reused `Submission` invitation (camera-ready, revisions, a competition track) rather than a real extension. But if it IS a real extension, the site is telling people a workshop is shut when they could still submit — so you decide. Only listed while OpenReview\'s date is still in the future._',
+      '',
+    );
+    for (const i of stillOpen) out.push(line(i));
     out.push('');
   }
   if (earlier.length) {
@@ -552,8 +592,16 @@ async function main() {
   // passed months ago) and spares the weekly job a lookup per stale entry.
   else if (recent) {
     entries = entries.filter(({ raw }) =>
-      isWithinReviewWindow(resolveDeadlineUtcMs(raw.submission_deadline, raw.timezone || 'UTC'), nowMs));
+      isWithinReviewWindow(resolveDeadlineUtcMs(raw.submission_deadline, raw.timezone || 'UTC'), nowMs, FETCH_PAST_GRACE_MS));
   }
+  // Inside the narrow window an entry is reviewed for everything; between the two
+  // windows only `bot-long-closed` applies, since that is the one fact that can
+  // still matter about a workshop this old.
+  const fullReview = new Set(
+    entries
+      .filter(({ raw }) => isWithinReviewWindow(resolveDeadlineUtcMs(raw.submission_deadline, raw.timezone || 'UTC'), nowMs))
+      .map((e) => e.slug),
+  );
   // Legacy entries are in transition (discovery adopts then syncs them) and are
   // never review items — skip them so they cost no network call.
   const toCheck = entries.filter((e) => slug || e.raw.deadline_notes !== LEGACY_IMPORT_NOTE);
@@ -676,15 +724,17 @@ async function main() {
       storedValue: raw.submission_deadline,
       storedMs,
       fetchedMs,
+      nowMs,
     });
     if (!cat) continue;
+    if (!fullReview.has(s) && cat.kind !== 'bot-long-closed') continue;
     const item = {
       kind: cat.kind, slug: s, file,
       name: raw.name, conf: String(raw.conference || '').toUpperCase(), year: raw.year,
       stored: raw.submission_deadline, fetched: dl.submission_deadline, label: cat.diff.label,
     };
     items.push(item);
-    const tag = cat.kind === 'human-conflict' ? '⚠ CONFLICT  ' : '•  EARLIER   ';
+    const tag = { 'human-conflict': '⚠ CONFLICT  ', 'bot-earlier': '•  EARLIER   ' }[cat.kind] ?? '⚠ STILL OPEN';
     console.log(`${tag} ${s}: stored ${item.stored} vs OpenReview ${item.fetched} UTC — ${item.label}`);
   }
 
@@ -722,15 +772,17 @@ async function main() {
         storedValue: raw.submission_deadline,
         storedMs,
         fetchedMs,
+        nowMs,
       });
       if (!cat) continue;
+      if (!fullReview.has(u.slug) && cat.kind !== 'bot-long-closed') continue;
       const item = {
         kind: cat.kind, slug: u.slug, file: u.file,
         name: raw.name, conf: u.conf, year: u.year,
         stored: raw.submission_deadline, fetched: dl.submission_deadline, label: cat.diff.label,
       };
       items.push(item);
-      const tag = cat.kind === 'human-conflict' ? '⚠ CONFLICT  ' : '•  EARLIER   ';
+      const tag = { 'human-conflict': '⚠ CONFLICT  ', 'bot-earlier': '•  EARLIER   ' }[cat.kind] ?? '⚠ STILL OPEN';
       console.log(`${tag} ${u.slug}: stored ${item.stored} vs OpenReview ${item.fetched} UTC — ${item.label} (second pass)`);
     }
     // "Could not be verified" and "has nothing to say" are different facts, and

@@ -246,9 +246,19 @@ deadlines to review", `data-health` label) listing only the cases the auto-sync
 will *not* fix on its own: (1) **human-edited** deadlines that now disagree with
 OpenReview (frozen, so the maintainer decides which to trust), and (2)
 **bot-managed deadlines OpenReview moved earlier** (declined by the later-only
-rule, so the maintainer confirms whether it's a real correction). Bot-managed
-*later* moves aren't listed — they auto-sync — and legacy entries are skipped
-(they adopt then sync), which also keeps the check from fetching their duedates.
+rule, so the maintainer confirms whether it's a real correction), and (3)
+**bot-managed deadlines OpenReview moved later onto a deadline that had already
+closed** for more than `DEADLINE_LOOKBACK_MS` — declined by both syncs, because
+that is usually a reused `Submission` invitation rather than an extension, but
+listed while OpenReview's date is still in the future, since if it *is* real the
+site is showing a workshop as shut when people could still submit. Bot-managed
+later moves onto a live deadline aren't listed — they auto-sync — and legacy
+entries are skipped (they adopt then sync), which also keeps the check from
+fetching their duedates. Case (3) reaches further back than the others: the
+review window is 14 days past, but the fetch window is 90, because a reused
+invitation surfaces long after an entry stops being an ordinary review item.
+Widening the shared window instead would refill the issue with the months-old
+conflicts it was narrowed to exclude.
 The issue updates in place and closes itself when nothing's outstanding; each
 item links the re-sync command to accept OpenReview's value. The classifier also
 labels a divergence as a likely *timezone slip* (a near whole/half/quarter-hour
