@@ -502,6 +502,23 @@ const sub = (over = {}) =>
     renderStarredChanges({ sub: s, events: [], workshops, ids }) === null);
   check('an event whose workshop vanished renders null',
     renderStarredChanges({ sub: s, events: [{ slug: 'gone', kind: 'extended', days: 1, new_utc: iso(5) }], workshops: {}, ids }) === null);
+
+  // A closed deadline cannot move for any reason a subscriber cares about — the
+  // only thing that changes it is us correcting our own record. Five seed
+  // entries had estimated historical deadlines replaced with the real ones from
+  // OpenReview, which without this guard would have mailed everyone who saved
+  // them that a 2024 deadline had just been "extended".
+  {
+    const past = [{ slug: 'neurips-2026-alpha', kind: 'extended', days: 10, new_utc: iso(-30) }];
+    const future = [{ slug: 'neurips-2026-alpha', kind: 'extended', days: 10, new_utc: iso(4) }];
+    check('a change to an already-passed deadline is not mailed',
+      renderStarredChanges({ sub: s, events: past, workshops, ids, nowMs: NOW }) === null);
+    check('...while a change to a live deadline still is',
+      renderStarredChanges({ sub: s, events: future, workshops, ids, nowMs: NOW }) !== null);
+    check('...and with no clock supplied the guard stays out of the way',
+      renderStarredChanges({ sub: s, events: past, workshops, ids }) !== null,
+      'opt-in, so every caller that should filter is pinned below rather than here');
+  }
   check('it carries the unsubscribe placeholder', two.html.includes(UNSUB_PLACEHOLDER));
   check('it carries the manage placeholder', two.html.includes(MANAGE_PLACEHOLDER));
   check('it has a plaintext part', two.text.length > 50 && !/<html/i.test(two.text));
@@ -641,6 +658,20 @@ const sub = (over = {}) =>
   // A snapshot written before track_label existed must still render something.
   const legacy = subjectFor('cvpr-2026-cveu', undefined);
   check('falls back to the acronym without a track label', /CVEU/.test(legacy), legacy);
+}
+
+/* ------------------------------------------------- the caller must opt in -- */
+// renderStarredChanges' passed-deadline guard only runs when it is given a
+// clock, which makes it exactly as good as the one call site that matters.
+// Asserted against the source because nothing else would notice the argument
+// being dropped: the mail would still render, and would simply be wrong.
+{
+  const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const run = fs.readFileSync(path.join(ROOT, 'scripts', 'alerts_run.mjs'), 'utf8');
+  const call = run.match(/renderStarredChanges\(\{[^}]*\}\)/);
+  check('the alerts run passes a clock to renderStarredChanges',
+    !!call && /nowMs\s*:/.test(call[0]),
+    call ? call[0] : 'no renderStarredChanges call found in scripts/alerts_run.mjs');
 }
 
 console.log(failed === 0 ? '\nRendering OK.' : `\n${failed} test(s) failed.`);

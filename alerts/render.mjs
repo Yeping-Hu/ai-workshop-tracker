@@ -632,6 +632,7 @@ export function renderStarredChanges({
   events,
   workshops,
   ids,
+  nowMs = null,
   manageUrl = MANAGE_PLACEHOLDER,
   unsubUrl = UNSUB_PLACEHOLDER,
 }) {
@@ -639,6 +640,20 @@ export function renderStarredChanges({
   // is one row reporting the net, not two rows with different numbers.
   const items = mergeEventsBySlug(events)
     .filter((e) => workshops[e.slug])
+    // A deadline that has already passed is not news, and saying it "moved"
+    // is worse than saying nothing: the only way a closed date changes is a
+    // correction to our own record, which is our business and not the
+    // subscriber's. The digest and /changes/ both cut at their window's start
+    // for this reason; a same-day mail's equivalent boundary is now. Skipped
+    // when no clock is supplied, so a caller must opt in — pinned by a test
+    // that the runner does.
+    .filter((e) => {
+      if (!Number.isFinite(nowMs)) return true;
+      const w = workshops[e.slug];
+      const at = e.new_utc || w.next_stage_utc || w.deadline_utc;
+      const ms = at ? Date.parse(at) : NaN;
+      return !Number.isFinite(ms) || ms >= nowMs;
+    })
     .map((e) => changeItem(e, workshops[e.slug], ids, tz));
   if (!items.length) return null;
 

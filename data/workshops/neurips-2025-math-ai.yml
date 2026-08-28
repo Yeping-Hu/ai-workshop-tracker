@@ -4,17 +4,21 @@ conference: neurips
 year: 2025
 website: https://mathai2025.github.io/
 topics:
-- math-reasoning
-- llms
-submission_deadline: 2025-08-23 11:59
+  - math-reasoning
+  - llms
 timezone: UTC
-deadline_notes: SEED estimate of the historical deadline — verify
 workshop_date: '2025-12-06'
 openreview_venue_id: NeurIPS.cc/2025/Workshop/MATH-AI
 submission_portal: openreview
 previous_editions:
-- year: 2024
-  website: https://mathai2024.github.io/
-  proceedings_url: https://openreview.net/group?id=NeurIPS.cc/2024/Workshop/MATH-AI
-notes: SEED DATA — name/website/date taken from the OpenReview venue record; verify remaining fields.
+  - year: 2024
+    website: https://mathai2024.github.io/
+    proceedings_url: https://openreview.net/group?id=NeurIPS.cc/2024/Workshop/MATH-AI
+notes: Name, website and date taken from the OpenReview venue record.
 added: '2026-06-09'
+deadline_history:
+  - value: 2025-09-30 20:00
+    recorded: '2026-08-28'
+    timezone: UTC
+submission_deadline: 2025-09-30 20:00
+deadline_notes: OpenReview-synced 2025-09-30 20:00 UTC (as of 2026-08-28) — extensions on OpenReview are applied automatically; verify on the website.

@@ -360,7 +360,7 @@ async function main() {
       const events = mine.filter((e) => freshSlugs.has(e.slug));
       if (!events.length) continue;
 
-      const mail = renderStarredChanges({ sub, tz: sub.tz, events, workshops: live.workshops, ids });
+      const mail = renderStarredChanges({ sub, tz: sub.tz, events, workshops: live.workshops, ids, nowMs: NOW_MS });
       if (!mail) continue;
       messages.push({ to: sub.email, subject: mail.subject, html: mail.html, text: mail.text });
       logRows.push(fresh);

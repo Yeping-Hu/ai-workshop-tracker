@@ -465,7 +465,8 @@ human to wire anything up. Four signals, in decreasing strength:
    token and is plainly the same series.
 
    **The cost, which is a real regression in one direction.** Conference scoping
-   cuts a series that moved venue, so FM4LS links its ICML 1st and 3rd while the
+   cuts a series that moved conference onto a new domain, so FM4LS links its
+   ICML 1st and 3rd while the
    NeurIPS 2nd sits alone; SPIGM and AI4VA do the same. Those pages now show a
    real but *incomplete* edition list where they previously showed none. Judged
    the better failure — "Other editions" claims relevance, not completeness — but
@@ -497,7 +498,12 @@ the fixtures were rewritten.
 Both are known, measured, and left for a change with its own fixtures — recorded
 here so the next person does not rediscover them as bugs:
 
-- **A series that changes conference.** 21 stems / 49 entries share a stem and
+- **A series that changes conference _and_ address.** Changing conference alone
+  is fine — MusIML runs across ICML and NeurIPS and links, because every edition
+  lives on `musiml.org` and signals 1 and 3 see it; 75 cross-conference pairs
+  link today for that reason. The gap is a series that moves conference *and*
+  registers a new domain, so no address signal can see it and signal 4's
+  conference scoping declines it. 21 stems / 49 entries share a stem and
   some name tokens across venues and stay unlinked — SPIGM, FM4LS, AI4VA and
   SoLaR are genuine series among them, and three of those are *worse* than
   unlinked, showing the partial list described under signal 4. But the candidate
