@@ -160,7 +160,7 @@ body:
     id: openreview
     attributes:
       label: OpenReview venue ID
-      description: Enables the automatic accepted-papers list.
+      description: "Enables the automatic accepted-papers list, and links this workshop to its other years: the short name at the end is what identifies the series. Worth adding even if the papers live elsewhere."
       placeholder: "NeurIPS.cc/2026/Workshop/InterpML"
   - type: input
     id: proceedings

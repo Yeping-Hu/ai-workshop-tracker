@@ -344,7 +344,7 @@ one OpenReview venue. Some workshops instead publish each track as its own
 a fresh venue — so related entries end up as independent YAML files with nothing
 linking them. `computeRelations()` (lib/workshops.mjs) derives the links at
 build time from the whole corpus — nothing is stored, so a new crawl needs no
-human to wire anything up. Three signals, in decreasing strength:
+human to wire anything up. Four signals, in decreasing strength:
 
 1. **Same website** (after folding scheme/`www.`/fragment/query/trailing-slash
    variants, plus Google Sites' `/corp/` and `/home` spellings) — the same site
@@ -395,7 +395,8 @@ human to wire anything up. Three signals, in decreasing strength:
    unrelated venues (`opt`, `gram`), and a site root alone links nothing. The
    pair means the same organisers registered the same short name — identity, not
    coincidence. That is why this lives inside the site bucket rather than being
-   a tier of its own.
+   a tier of its own — and why signal 4, which *does* key on the short name
+   alone, has to put something else in the site root's place.
 
    The unit is `siteRoot()`, not the bare hostname. A generic host
    (github.com, codabench.org, …) belongs to nobody and has no site root, so it
@@ -426,6 +427,53 @@ human to wire anything up. Three signals, in decreasing strength:
    Google Site with no name guard at all, since Tier 1 is the one tier without
    one.
 
+4. **Same registered short name within one conference, across years** — the
+   `(conference, venueStem())` pair, unguarded.
+
+   Signals 1-3 all identify a series by its *address*, which is the one thing a
+   series does not keep. Organisers register a fresh site per edition, and the
+   edition marker frequently lives in the **hostname** rather than in a path:
+   `mathai2024.github.io`, `mathai2025.github.io`, `mathai-2026.github.io`.
+   `siteRoot()` returns a non-generic hostname verbatim, and the year-folding in
+   `seriesSegment()` is reachable only for a tenant *path* segment — so those
+   three landed in three buckets of one and signal 3 short-circuited before
+   comparing anything. Measured before the fix: **74 entries carried a year in
+   the hostname, and all 74 had no edition link at all**. The shared acronym did
+   not help, because no signal has ever read `acronym`.
+
+   Folding the year out of the hostname instead is the obvious repair and is the
+   worse one. It manufactures generic bucket names — `neurips-workshop2026`
+   becomes `workshop`, `neurips2024edu` becomes `edu` — turning 110 addresses
+   into shared vocabulary policed only by the name guard, which passes on ~3.5%
+   of unrelated pairs. It also has a trap: `seriesSegment()`'s trim is anchored
+   to the ends of the string, so folding the *whole host* yields `mathai-` for
+   the hyphenated 2026 edition and silently leaves out the very entry that
+   motivated the change. Only the first-*label* form works, and it still misses
+   two-digit years (`cvpr25-edge` / `cvpr26-edge`).
+
+   The stem is the better key because it is the most **stable** field in the
+   repo: across the history of `data/workshops`, `openreview_venue_id` has been
+   deleted 7 times against `acronym`'s 377 and `name`'s 611. A key that churns
+   silently rewrites group membership on every ingest.
+
+   Scoped to one conference, because globally a bare stem is not identity —
+   `aiw`, `h2r`, `lit` and `fast` each name genuinely different workshops at
+   different venues. One conference is what stands in for signal 3's shared site
+   root. Unguarded by names, because here the name is the *weaker* signal: every
+   conference-scoped name disagreement is a correct link, the clearest being
+   "1st Workshop on VLM4RWD" against its spelled-out 2026 title, which shares no
+   token and is plainly the same series.
+
+   **The cost, which is a real regression in one direction.** Conference scoping
+   cuts a series that moved venue, so FM4LS links its ICML 1st and 3rd while the
+   NeurIPS 2nd sits alone; SPIGM and AI4VA do the same. Those pages now show a
+   real but *incomplete* edition list where they previously showed none. Judged
+   the better failure — "Other editions" claims relevance, not completeness — but
+   it is the one place the precision-over-recall rule below does not simply hold,
+   and it is why widening the key across conferences needs its own design rather
+   than a one-line change. Counting buckets that hold a name-disagreeing pair,
+   widening it naively goes from 5 of 95 conference-scoped to 10 of 124 global.
+
 Each entry gets `relatedTracks` (same conference-year siblings, labeled by
 their venue-id suffix, shown with their own deadlines) and `relatedEditions`
 (the rest of the series, newest first). Only the workshop page renders them;
@@ -435,7 +483,37 @@ is deliberately favored over recall — an unlinked sibling is the safe failure.
 Pinned by `scripts/relations_test.mjs` (fixtures are real corpus records,
 including the must-NOT-link domain collisions). Each fixture is checked to FAIL
 without the rule it pins — one that passes either way pins nothing, and this
-suite has caught exactly that twice.
+suite has caught exactly that three times. The third is worth naming, because
+"the suite is green" was false comfort for months: every fixture put the year in
+a *path*, so nothing exercised a year in a hostname, and the suite passed
+identically for the broken code and for both candidate repairs. Signal 4's
+fixtures were therefore checked by mutation — dropping the conference from the
+key, adding a name guard, restricting to adjacent years, and keying on the raw
+last path segment must each turn the suite red, and the last three did not until
+the fixtures were rewritten.
+
+### What still does not link
+
+Both are known, measured, and left for a change with its own fixtures — recorded
+here so the next person does not rediscover them as bugs:
+
+- **A series that changes conference.** 21 stems / 49 entries share a stem and
+  some name tokens across venues and stay unlinked — SPIGM, FM4LS, AI4VA and
+  SoLaR are genuine series among them, and three of those are *worse* than
+  unlinked, showing the partial list described under signal 4. But the candidate
+  set is not a work list: `aims` pairs COLM's "AI Measurement Science" with
+  ICLR's "AI for Mechanism Design", and `h2r` is one of the four stems that name
+  different workshops outright. Any widening needs a pair-by-pair audit, which
+  is most of why it has not been done.
+- **A series that renames its venue stem.** ICLR's `DPFM` / `Data_Problems` /
+  `DATA-FM` are three character-identical names on three different websites, and
+  ICML has `MI` / `Mech_Interp` and `TAIG` / `TAIGR`. No address- or stem-based
+  rule reaches these; only the name does, and no signal compares names across
+  years unless the site root already matches.
+
+Of the 674 entries with no edition link, 629 are the sole holder of their
+`(conference, stem)` — genuinely nothing to link to. The reachable gap is the
+two cases above, not the 674.
 
 **Changing any of this is a guard-loosening change**, so it follows a fixed
 procedure: enumerate the old rule against the new over the whole corpus, diff

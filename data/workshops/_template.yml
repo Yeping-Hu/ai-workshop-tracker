@@ -41,8 +41,11 @@ workshop_date: ""              # "YYYY-MM-DD"
 #   - { name: "Full",  submission_deadline: "2026-07-13 12:00", timezone: "UTC" }
 #   - { name: "Short" }   # deadline not announced yet
 
-# --- Papers ---
-openreview_venue_id: ""        # e.g. "NeurIPS.cc/2026/Workshop/MATH-AI" -> auto paper list
+# --- Papers, and the series identity ---
+openreview_venue_id: ""        # e.g. "NeurIPS.cc/2026/Workshop/MATH-AI" -> auto paper list,
+                               # AND the key that links this entry to the other editions of the
+                               # same workshop: the trailing short name is matched across years
+                               # within one conference. Without it, "Other editions" stays empty.
 # merged_venue_ids:              # other OpenReview ids that are this same workshop
 #   - "IEEE.org/IROS/2026/Workshop/Alt-Group"   # keeps discovery from re-creating a duplicate
 proceedings_url: ""            # for non-OpenReview workshops: their accepted-papers page

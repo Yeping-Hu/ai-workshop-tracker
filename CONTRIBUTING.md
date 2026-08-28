@@ -41,7 +41,7 @@ One YAML file per workshop **edition** (same series ⇒ new file each year).
 | `tracks` |  | For multi-track workshops (e.g. Full + Short): list of `{ name, submission_deadline?, timezone? }`. Omit `submission_deadline` for a track whose date isn't announced yet. See note below. |
 | `notification_date` |  | `YYYY-MM-DD` |
 | `workshop_date` |  | `YYYY-MM-DD` |
-| `openreview_venue_id` |  | e.g. `NeurIPS.cc/2026/Workshop/MATH-AI` — enables the automatic paper list |
+| `openreview_venue_id` |  | e.g. `NeurIPS.cc/2026/Workshop/MATH-AI`. Does two jobs: it enables the automatic paper list, and its trailing short name is how a workshop is recognised as **the same series** year to year, which is what puts "Other editions" on the page. Worth filling in even for a workshop whose papers are elsewhere — without it an entry links to no other edition |
 | `merged_venue_ids` |  | Other OpenReview ids that are this *same* workshop, when organizers created a second group. Recorded so discovery skips them rather than re-creating a duplicate entry |
 | `proceedings_url` |  | Accepted-papers page for non-OpenReview workshops |
 | `submission_portal` |  | `openreview` \| `cmt` \| `email` \| `other` \| `unknown` |
