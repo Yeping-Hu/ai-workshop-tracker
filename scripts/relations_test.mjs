@@ -306,6 +306,122 @@ function check(label, ok, detail = '') {
     'Computer Vision for Children and AI for Children share a domain and a cause, not a name');
 }
 
+/* ------------------------- editions whose year lives in the hostname ------ */
+// The shape every address-based tier misses. Organisers register one site per
+// edition and put the year in the HOSTNAME, so Tier 1 sees three strings, Tier 3
+// gets three site roots (siteRoot returns a non-generic host verbatim) and
+// short-circuits without comparing anything, and Tier 2 is scoped to a single
+// conference-year on purpose. Every fixture here is the real MATH-AI record.
+//
+// This went unnoticed for a long time because the suite's other fixtures all put
+// the year in a PATH — sites.google.com/view/hcvworkshop2024 — which siteRoot
+// does fold. Every hostname above is year-free, so nothing exercised the case.
+{
+  const SERIES = [
+    { slug: 'neurips-2024-math-ai', name: 'The 4th Workshop on Mathematical Reasoning and AI', conference: 'neurips', year: 2024, website: 'https://mathai2024.github.io/', openreview_venue_id: 'NeurIPS.cc/2024/Workshop/MATH-AI', statusLabel: 'Past' },
+    { slug: 'neurips-2025-math-ai', name: 'The 5th Workshop on Mathematical Reasoning and AI', conference: 'neurips', year: 2025, website: 'https://mathai2025.github.io/', openreview_venue_id: 'NeurIPS.cc/2025/Workshop/MATH-AI', statusLabel: 'Past' },
+    // Note the hyphen. Folding the year out of the WHOLE host string leaves
+    // "mathai-.github.io" here and "mathai.github.io" for the other two — the
+    // trim in seriesSegment is anchored to the ends of the string — so an
+    // address-based fix silently drops the newest edition. The stem does not
+    // care how the host is punctuated.
+    { slug: 'neurips-2026-math-ai', name: 'The Sixth Workshop on Mathematical Reasoning and AI', conference: 'neurips', year: 2026, website: 'https://mathai-2026.github.io/', openreview_venue_id: 'NeurIPS.cc/2026/Workshop/MATH-AI', statusLabel: 'Open call' },
+  ];
+  const ed = (rel, s) => rel.get(s).relatedEditions.map((e) => e.slug).sort();
+  const tr = (rel, s) => rel.get(s).relatedTracks.map((t) => t.slug);
+
+  check('siteRoot really does leave a year in a hostname alone',
+    siteRoot('mathai2024.github.io') !== siteRoot('mathai2025.github.io'),
+    'the premise of this block: the address tiers cannot see this series');
+
+  const rel = computeRelations(SERIES);
+  check('editions on year-named HOSTS link as one series',
+    ed(rel, 'neurips-2024-math-ai').join(',') === 'neurips-2025-math-ai,neurips-2026-math-ai');
+  check('...including the one whose host writes the year with a separator',
+    ed(rel, 'neurips-2026-math-ai').join(',') === 'neurips-2024-math-ai,neurips-2025-math-ai');
+  check('...and every link is an edition, none a sibling track',
+    SERIES.every((w) => tr(rel, w.slug).length === 0),
+    'different years, so they are editions');
+
+  // The requirement in one check: nothing is filled in by hand, so a new entry
+  // joins its series the moment it exists.
+  const WITH_NEW = [
+    ...SERIES,
+    { slug: 'neurips-2027-math-ai', name: 'The Seventh Workshop on Mathematical Reasoning and AI', conference: 'neurips', year: 2027, website: 'https://mathai-2027.example.org/', openreview_venue_id: 'NeurIPS.cc/2027/Workshop/Math-AI', statusLabel: 'Open call' },
+  ];
+  const rel2 = computeRelations(WITH_NEW);
+  check('a NEW edition links itself to every existing one, with no hand-editing',
+    ed(rel2, 'neurips-2027-math-ai').join(',') ===
+      'neurips-2024-math-ai,neurips-2025-math-ai,neurips-2026-math-ai',
+    'a fresh host on a different TLD and a differently-cased stem still join');
+  check('...and every existing edition gains it in return',
+    SERIES.every((w) => ed(rel2, w.slug).includes('neurips-2027-math-ai')));
+
+  // Scope guards, both real records. `fast` is the corpus's actual
+  // cross-conference collision, and the two IROS agri workshops are the real
+  // near-miss stems — both genuinely 2025, which is why they are also a
+  // same-conference-year pair that must NOT become tracks.
+  const CROSS = [
+    { slug: 'iros-2025-fast', name: 'Field Autonomy and Safe Teleoperation', conference: 'iros', year: 2025, website: 'https://fast-iros.example.org/', openreview_venue_id: 'IEEE.org/IROS/2025/Workshop/FAST', statusLabel: 'Past' },
+    { slug: 'neurips-2026-fast', name: 'Foundations of Attention and Sparse Transformers', conference: 'neurips', year: 2026, website: 'https://fast-neurips.example.org/', openreview_venue_id: 'NeurIPS.cc/2026/Workshop/FAST', statusLabel: 'Open call' },
+    { slug: 'iros-2025-agri-a', name: 'Agricultural Robotics and Automation', conference: 'iros', year: 2025, website: 'https://agri-a.example.org/', openreview_venue_id: 'IEEE.org/IROS/2025/Workshop/Agricultural_Robotics', statusLabel: 'Past' },
+    { slug: 'iros-2025-agri-b', name: 'IROS Workshop on Agricultural Robotics', conference: 'iros', year: 2025, website: 'https://agri-b.example.org/', openreview_venue_id: 'IEEE.org/IROS/2025/Workshop/Agrirobotics', statusLabel: 'Past' },
+  ];
+  const rel3 = computeRelations(CROSS);
+  check('one stem shared across two conferences is not a series',
+    ed(rel3, 'iros-2025-fast').length === 0 && ed(rel3, 'neurips-2026-fast').length === 0,
+    'FAST means different things at IROS and NeurIPS; the key is conference-scoped');
+  check('near-miss stems in one conference-year stay wholly apart',
+    ed(rel3, 'iros-2025-agri-a').length === 0 && tr(rel3, 'iros-2025-agri-a').length === 0
+      && ed(rel3, 'iros-2025-agri-b').length === 0 && tr(rel3, 'iros-2025-agri-b').length === 0,
+    'Agricultural_Robotics vs Agrirobotics are two real, different IROS 2025 workshops');
+
+  // Three shapes that a plausible "tightening" of the tier would silently drop.
+  // Each was found by mutating the tier and watching this suite stay green.
+  const EDGE = [
+    // No shared name token at all — a namesAgree() guard on this tier would
+    // refuse it. The real VLM4RWD pair has exactly this shape.
+    { slug: 'neurips-2025-vxr', name: '1st Workshop on VXRWD', conference: 'neurips', year: 2025, website: 'https://vxr25.example.org/', openreview_venue_id: 'NeurIPS.cc/2025/Workshop/VXRWD', statusLabel: 'Past' },
+    { slug: 'neurips-2026-vxr', name: 'Vision Language Models for Real World Deployment', conference: 'neurips', year: 2026, website: 'https://vxr26.example.org/', openreview_venue_id: 'NeurIPS.cc/2026/Workshop/VXRWD', statusLabel: 'Open call' },
+    // A two-year gap — an "adjacent years only" restriction would drop it.
+    // AI4VA (2024, 2026) and SPIGM (2024, 2026) are both really this shape.
+    { slug: 'icml-2024-gapstem', name: 'Workshop on Gapstem Methods', conference: 'icml', year: 2024, website: 'https://gapstem24.example.org/', openreview_venue_id: 'ICML.cc/2024/Workshop/Gapstem', statusLabel: 'Past' },
+    { slug: 'icml-2026-gapstem', name: 'Workshop on Gapstem Methods', conference: 'icml', year: 2026, website: 'https://gapstem26.example.org/', openreview_venue_id: 'ICML.cc/2026/Workshop/Gapstem', statusLabel: 'Open call' },
+    // One edition registered under a track suffix, the next bare. Keying on the
+    // raw last path segment gives 'zeta_proceedings' and 'zeta' and links
+    // nothing; venueStem() strips the suffix first, which is the whole reason
+    // it is used here rather than venueFamily().key.
+    { slug: 'iclr-2025-zeta', name: 'Workshop on Zeta Learning', conference: 'iclr', year: 2025, website: 'https://zeta25.example.org/', openreview_venue_id: 'ICLR.cc/2025/Workshop/Zeta_Proceedings', statusLabel: 'Past' },
+    { slug: 'iclr-2026-zeta', name: 'Workshop on Zeta Learning', conference: 'iclr', year: 2026, website: 'https://zeta26.example.org/', openreview_venue_id: 'ICLR.cc/2026/Workshop/Zeta', statusLabel: 'Open call' },
+  ];
+  const rel4 = computeRelations(EDGE);
+  check('editions link even when their names share no token',
+    ed(rel4, 'neurips-2025-vxr').join(',') === 'neurips-2026-vxr',
+    'a namesAgree() guard on this tier would refuse a real series');
+  check('editions link across a skipped year',
+    ed(rel4, 'icml-2024-gapstem').join(',') === 'icml-2026-gapstem',
+    'series miss years; adjacency is not a property of one');
+  check('a track-suffixed edition links to a bare one',
+    ed(rel4, 'iclr-2025-zeta').join(',') === 'iclr-2026-zeta',
+    'the raw last segment would not match; venueStem strips the suffix');
+
+  // Same conference-year + same stem is a TRACK, and Tier 2 already owns it.
+  // The third entry is what makes this a real assertion: the fixture has both
+  // relationships at once, so a same-year-only tier fails the edition half and
+  // a tier that ignored the year would fail the track half.
+  const TRACKS = [
+    { slug: 'neurips-2026-tstem', name: 'Workshop on Tstem', conference: 'neurips', year: 2026, website: 'https://tstem.example.org/', openreview_venue_id: 'NeurIPS.cc/2026/Workshop/Tstem', statusLabel: 'Open call' },
+    { slug: 'neurips-2026-tstem-np', name: 'Workshop on Tstem Non Proceedings', conference: 'neurips', year: 2026, website: 'https://tstem.example.org/np', openreview_venue_id: 'NeurIPS.cc/2026/Workshop/Tstem_NonProceedings', statusLabel: 'Open call' },
+    { slug: 'neurips-2024-tstem', name: 'Workshop on Tstem', conference: 'neurips', year: 2024, website: 'https://tstem24.example.org/', openreview_venue_id: 'NeurIPS.cc/2024/Workshop/Tstem', statusLabel: 'Past' },
+  ];
+  const rel5 = computeRelations(TRACKS);
+  check('one conference-year is a track, another year is an edition',
+    tr(rel5, 'neurips-2026-tstem').join(',') === 'neurips-2026-tstem-np'
+      && ed(rel5, 'neurips-2026-tstem').join(',') === 'neurips-2024-tstem');
+  check('...and the older edition sees both of that year\'s tracks',
+    ed(rel5, 'neurips-2024-tstem').sort().join(',') === 'neurips-2026-tstem,neurips-2026-tstem-np');
+}
+
 /* ------------------------------------------ the whole corpus, for real ---- */
 {
   const all = loadWorkshops();

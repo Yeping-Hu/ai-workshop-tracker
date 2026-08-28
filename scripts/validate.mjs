@@ -228,6 +228,57 @@ for (const filePath of listWorkshopFiles()) {
   }
 }
 
+// ---- entries that cannot join their own series ----
+// `openreview_venue_id` is what links editions of one workshop across years
+// (Tier 4 in computeRelations, keyed on the trailing stem). The field is
+// optional and its help text describes it as being about papers, so nothing
+// tells a submitter it is also the identity key — an entry without one links to
+// nothing, silently, and the page simply shows no "Other editions".
+//
+// Warning rather than error, and only when it actually costs something: another
+// entry of the same conference already carries a matching acronym, so this one
+// has a series to join and cannot. Every entry has the field today (the
+// OpenReview crawler sets it unconditionally), so this is quiet until the first
+// hand-submitted non-OpenReview workshop arrives — which is exactly when nobody
+// would otherwise notice.
+{
+  const key = (w) =>
+    `${w.conference}|${String(w.acronym ?? '')
+      .toLowerCase()
+      .replace(/(19|20)\d{2}/g, '')
+      .replace(/[^a-z0-9]/g, '')}`;
+  const byAcr = new Map();
+  const rows = [];
+  for (const f of listWorkshopFiles()) {
+    // A YAML file carries no slug — it is derived from the filename — so the
+    // file path is what identifies an entry here. A file that does not parse is
+    // already an error from the main loop; skip it rather than reporting twice.
+    let w;
+    try {
+      w = readWorkshopFile(f).raw;
+    } catch {
+      continue;
+    }
+    if (!w || !w.conference || !w.acronym) continue;
+    rows.push([f, w]);
+    const k = key(w);
+    if (!byAcr.has(k)) byAcr.set(k, []);
+    byAcr.get(k).push([f, w]);
+  }
+  for (const [f, w] of rows) {
+    if (w.openreview_venue_id) continue;
+    const peers = (byAcr.get(key(w)) ?? []).filter(([pf, p]) => pf !== f && p.year !== w.year);
+    if (!peers.length) continue;
+    warnings.push({
+      file: path.relative(REPO_ROOT, f),
+      msg:
+        'No `openreview_venue_id`, so this entry cannot link to the other editions it appears to ' +
+        `have (${peers.map(([, p]) => p.year).sort().join(', ')}). That field is the series ` +
+        'identity key, not just a papers link — add it and the editions link themselves.',
+    });
+  }
+}
+
 // ---- data/editions.yml: row sanity + coverage for tracked years ----
 {
   const seenEd = new Set();
