@@ -8,7 +8,7 @@
  *
  * Run: node scripts/deadline_crosscheck_test.mjs
  */
-import { classifyDeadlineDiff, reviewCategory, isWithinReviewWindow, websiteDrift, normalizeWebsite, titleDrift, acronymDrift, needsDirectLookup, buildReport } from './deadline_crosscheck.mjs';
+import { classifyDeadlineDiff, reviewCategory, isWithinReviewWindow, websiteDrift, normalizeWebsite, titleDrift, acronymDrift, needsDirectLookup, buildReport, siblingVenueCandidates } from './deadline_crosscheck.mjs';
 import { syncNote, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
 
 let failed = 0;
@@ -248,6 +248,52 @@ check('ack is irrelevant when we already agree', titleDrift('Same Title', 'Same 
     withBoth.includes('IEEE.org/IROS/2026/Workshop/Y'), true);
   check('a clean run renders no unchecked section',
     buildReport(item, [], [], []).includes('Could not be checked'), false);
+}
+
+// --- siblingVenueCandidates --------------------------------------------------
+// A workshop lives either under its conference or in its own namespace, and
+// organisers move between the two mid-season. Both directions must be proposed,
+// and the id we already hold must never be proposed back to us.
+{
+  const conf = siblingVenueCandidates('NeurIPS.cc/2026/Workshop/ML4PS', { acronym: 'ML4PS', year: 2026 });
+  check('conference namespace -> the workshop\'s own', conf, ['ML4PS/2026/Workshop']);
+
+  const own = siblingVenueCandidates('ML4PS/2026/Workshop', { acronym: 'ML4PS', year: 2026 });
+  check('own namespace -> every conference namespace', own.includes('NeurIPS.cc/2026/Workshop/ML4PS'), true);
+  check('...and never proposes the dead id back', own.includes('ML4PS/2026/Workshop'), false);
+
+  // The id tail and the stored acronym disagree often enough to try both.
+  const both = siblingVenueCandidates('NeurIPS.cc/2026/Workshop/Long_Tail', { acronym: 'LTW', year: 2026 });
+  check('both the id tail and the acronym are tried',
+    both.includes('Long_Tail/2026/Workshop') && both.includes('LTW/2026/Workshop'), true);
+
+  // The year comes from the id when the record does not carry one.
+  check('the year is read off the id when absent',
+    siblingVenueCandidates('NeurIPS.cc/2025/Workshop/ML4PS', {}), ['ML4PS/2025/Workshop']);
+  check('no year anywhere -> no guessing', siblingVenueCandidates('some/opaque/id', {}), []);
+  check('no id -> nothing', siblingVenueCandidates('', { year: 2026 }), []);
+  // An acronym that would not form a legal id is not turned into one.
+  check('a spaced acronym is not made into an id',
+    siblingVenueCandidates('NeurIPS.cc/2026/Workshop/X', { acronym: 'Not An Acronym', year: 2026 }),
+    ['X/2026/Workshop']);
+}
+
+// --- the dead-venue section --------------------------------------------------
+{
+  const dead = [{
+    slug: 'neurips-2026-ml4ps', file: 'data/workshops/neurips-2026-ml4ps.yml',
+    name: 'ML4PS', conf: 'NEURIPS', year: 2026,
+    venueId: 'NeurIPS.cc/2026/Workshop/ML4PS', moved: 'ML4PS/2026/Workshop',
+  }];
+  // Unlike an unchecked note, a dead id IS a review item: it is a permanent fault
+  // that only a human can fix, and the site is linking it meanwhile.
+  const r = buildReport([], [], [], [], dead);
+  check('a dead venue id alone keeps the report alive', r !== '', true);
+  check('the dead id is named', r.includes('NeurIPS.cc/2026/Workshop/ML4PS'), true);
+  check('the verified replacement is offered', r.includes('ML4PS/2026/Workshop'), true);
+  const noMove = buildReport([], [], [], [], [{ ...dead[0], moved: null }]);
+  check('with no replacement found, it says so rather than guessing',
+    noMove.includes('no replacement found'), true);
 }
 
 console.log(failed === 0 ? '\nDeadline cross-check logic OK.' : `\n${failed} test(s) failed.`);

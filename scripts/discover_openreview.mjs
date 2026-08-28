@@ -124,7 +124,7 @@ export function decideDeadlineUpdate(storedMs, fetchedMs, { allowEarlier = false
 }
 
 const UA = 'ai-workshop-tracker/1.0 (open-source workshop aggregator; github)';
-const CONF_TEMPLATE = {
+export const CONF_TEMPLATE = {
   icml: 'ICML.cc/{year}/Workshop',
   iclr: 'ICLR.cc/{year}/Workshop',
   neurips: 'NeurIPS.cc/{year}/Workshop',

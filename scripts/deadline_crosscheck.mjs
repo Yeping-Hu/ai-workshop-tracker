@@ -46,6 +46,7 @@ import {
   LEGACY_IMPORT_NOTE,
 } from './discover_openreview.mjs';
 import { fetchGroupById } from './recheck_imminent.mjs';
+import { CONF_TEMPLATE } from './discover_openreview.mjs';
 import { openreviewFetch, recordUnverified, writeUnverified, getUnverified, clearUnverified } from '../lib/openreview.mjs';
 
 // OpenReview wraps some content values as { value: … }; unwrap if so.
@@ -330,11 +331,70 @@ export function websiteDrift(stored, openreview, acked = null) {
   return { stored, openreview };
 }
 
-export function buildReport(items, drift = [], renames = [], unchecked = []) {
+/**
+ * Where a venue may have moved to.
+ *
+ * OpenReview registers a workshop either under its conference
+ * (`NeurIPS.cc/2026/Workshop/ML4PS`) or in the workshop's own namespace
+ * (`ML4PS/2026/Workshop`), and organisers move between the two mid-season —
+ * ML4PS was imported from the NeurIPS listing on 2026-08-23 and had left it by
+ * the 28th, leaving a link on the site that OpenReview answers with an empty
+ * page. The two conventions are the only places worth looking, so this proposes
+ * ids rather than searching; the caller offers one only when the group actually
+ * exists AND its title still matches ours, which makes the suggestion a checked
+ * fact rather than a guess. Pure + exported for tests.
+ */
+export function siblingVenueCandidates(venueId, { acronym, year } = {}) {
+  const id = String(venueId || '');
+  if (!id) return [];
+  const parts = id.split('/');
+  const yr = String(year || parts.find((p) => /^(19|20)\d{2}$/.test(p)) || '');
+  if (!yr) return [];
+  const out = new Set();
+  // Conference namespace -> the workshop's own, keyed on the id's own tail and
+  // on the stored acronym (they differ often enough to be worth both).
+  const tails = [parts[parts.length - 1], acronym]
+    .map((t) => String(t ?? '').trim().split('@')[0].trim())
+    .filter((t) => t && /^[\w.-]+$/.test(t));
+  const ownNamespace = /^[\w.-]+\/(19|20)\d{2}\/Workshop$/.test(id);
+  for (const t of tails) {
+    if (!ownNamespace) out.add(`${t}/${yr}/Workshop`);
+  }
+  // ...and back the other way, for a venue that moved INTO a conference.
+  if (ownNamespace) {
+    for (const [, tmpl] of Object.entries(CONF_TEMPLATE)) {
+      out.add(`${tmpl.replace('{year}', yr)}/${parts[0]}`);
+    }
+  }
+  out.delete(id);
+  return [...out];
+}
+
+/**
+ * Confirm where a dead venue moved to, or return null.
+ *
+ * Only ever returns an id whose group EXISTS and whose title still reduces to
+ * ours under the same normalisation the rename check uses — so a maintainer can
+ * paste it in without re-verifying, and a same-acronym workshop from a different
+ * series is never proposed.
+ */
+async function findMovedVenue(raw) {
+  const candidates = siblingVenueCandidates(raw.openreview_venue_id, { acronym: raw.acronym, year: raw.year });
+  const ours = normalizeVenueText(raw.name, raw.conference);
+  for (const id of candidates) {
+    const g = await fetchGroupById(id);
+    if (!g) continue;
+    const title = val(g.content ?? {}, 'title');
+    if (title && normalizeVenueText(title, raw.conference) === ours) return id;
+  }
+  return null;
+}
+
+export function buildReport(items, drift = [], renames = [], unchecked = [], dead = []) {
   // `unchecked` deliberately does NOT keep the report alive: it is a statement
   // about the run, not a review item, and letting it do so would stop the issue
   // from ever auto-closing on a throttled day.
-  if (!items.length && !drift.length && !renames.length) return '';
+  if (!items.length && !drift.length && !renames.length && !dead.length) return '';
   const human = items.filter((i) => i.kind === 'human-conflict');
   const earlier = items.filter((i) => i.kind === 'bot-earlier');
   const line = (i) =>
@@ -381,6 +441,23 @@ export function buildReport(items, drift = [], renames = [], unchecked = []) {
         `- [ ] \`${r.file}\` — ${r.field} (${r.conf} ${r.year})\n` +
         `      - ours: ${r.stored}\n` +
         `      - OpenReview: ${r.openreview}`,
+      );
+    }
+    out.push('');
+  }
+  if (dead.length) {
+    out.push(
+      '### OpenReview venue no longer exists',
+      '_The stored `openreview_venue_id` returns nothing. Organisers move a workshop between the conference namespace (`NeurIPS.cc/2026/Workshop/ML4PS`) and their own (`ML4PS/2026/Workshop`) mid-season, and the id we imported stops resolving. The site still links it, and the link checker cannot catch this — OpenReview answers `200` for a group that does not exist. Update the id in the entry._',
+      '',
+    );
+    for (const d of dead) {
+      out.push(
+        `- [ ] \`${d.file}\` — **${d.name}** (${d.conf} ${d.year})\n` +
+        `      - ours: \`${d.venueId}\` (gone)\n` +
+        (d.moved
+          ? `      - found at: \`${d.moved}\` — same title, verified live`
+          : '      - no replacement found under the sibling naming convention; check the workshop website'),
       );
     }
     out.push('');
@@ -619,10 +696,32 @@ async function main() {
     unchecked.push(...stillUnchecked.filter((u) => failed.has(u.venueId)));
   }
 
-  // Identity pass: no network at all, every group is already cached above.
+  // Identity pass. Normally no network at all — every group is cached above —
+  // but a venue MISSING from the listing is not something to pass over in
+  // silence. It is either a listing we failed to fetch or a venue that has
+  // genuinely gone, and only a direct lookup tells them apart. Skipping both
+  // alike is how ML4PS 2026 kept a dead `openreview_venue_id`: it was imported
+  // from the NeurIPS listing on 2026-08-23, the organisers moved it to their own
+  // namespace days later, and the site went on linking a group page OpenReview
+  // answers with HTTP 200 and no content — so the monthly link check cannot see
+  // it either, and nothing else ever re-reads a stored venue id.
+  const deadVenues = [];
   for (const { raw, slug: s2, file: f2 } of identityEntries) {
-    const g = groupById.get(raw.openreview_venue_id);
-    if (!g) continue;
+    let g = groupById.get(raw.openreview_venue_id);
+    if (!g) {
+      clearUnverified();
+      g = await fetchGroupById(raw.openreview_venue_id);
+      if (!g) {
+        // A completed lookup that found nothing is a permanent fault; a lookup
+        // that never completed is the transient case handled above.
+        if (getUnverified().length) continue;
+        const meta = { slug: s2, file: f2, name: raw.name, conf: String(raw.conference || '').toUpperCase(), year: raw.year };
+        const moved = await findMovedVenue(raw);
+        deadVenues.push({ ...meta, venueId: raw.openreview_venue_id, moved });
+        console.log(`•  GONE      ${s2}: ${raw.openreview_venue_id} no longer exists on OpenReview${moved ? ` — found at ${moved}` : ''}`);
+        continue;
+      }
+    }
     const c = g.content ?? {};
     const meta = { slug: s2, file: f2, name: raw.name, conf: String(raw.conference || '').toUpperCase(), year: raw.year };
     const ack = raw.review_ack ?? {};
@@ -637,19 +736,21 @@ async function main() {
     if (ad) { renames.push({ ...meta, field: 'acronym', ...ad }); console.log(`•  ACRONYM   ${s2}: ours "${ad.stored}" vs OpenReview "${ad.openreview}"`); }
   }
 
-  const report = buildReport(items, drift, renames, unchecked);
+  const report = buildReport(items, drift, renames, unchecked, deadVenues);
   if (reportPath) {
     fs.writeFileSync(reportPath, report);
     const parts = [];
     if (items.length) parts.push(`${items.length} deadline item(s)`);
     if (drift.length) parts.push(`${drift.length} website item(s)`);
     if (renames.length) parts.push(`${renames.length} rename item(s)`);
+    if (deadVenues.length) parts.push(`${deadVenues.length} dead venue id(s)`);
     if (unchecked.length) parts.push(`${unchecked.length} unchecked note(s)`);
     console.log(`\nWrote ${parts.length ? parts.join(' + ') : 'empty report'} to ${reportPath}.`);
   }
   console.log(
     `\nDone. ${checked} checked, ${items.length} to review, ${unchecked.length} unchecked` +
-      `${drift.length ? `, ${drift.length} website change(s)` : ''}.`,
+      `${drift.length ? `, ${drift.length} website change(s)` : ''}` +
+      `${deadVenues.length ? `, ${deadVenues.length} DEAD venue id(s)` : ''}.`,
   );
   writeUnverified(
     unchecked.map((u) => ({ id: `${u.slug} (${u.venueId})`, reason: u.reason, conf: u.conf, year: u.year })),
