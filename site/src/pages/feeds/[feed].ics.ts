@@ -15,7 +15,13 @@ import { buildIcs } from '../../../../lib/ics.mjs';
 const WINDOW_MS = 30 * 86_400_000;
 const NOW = Date.now();
 const feedable = workshops.filter(
-  (w) => w.deadlineUtcMs != null && w.deadlineUtcMs > NOW - WINDOW_MS && w.submission_deadline,
+  (w) =>
+    // A calendar reminder for an edition that is not taking place is worse than
+    // no reminder at all.
+    w.status !== 'not_running' &&
+    w.deadlineUtcMs != null &&
+    w.deadlineUtcMs > NOW - WINDOW_MS &&
+    w.submission_deadline,
 );
 
 function toEvent(w: Record<string, any>) {

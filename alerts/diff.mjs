@@ -150,6 +150,11 @@ export function diffSnapshot(prev, live, observed) {
 export function closingWithin(workshops, nowMs, windowMs) {
   const out = [];
   for (const w of Object.values(workshops)) {
+    // An edition recorded as not taking place has no call to act on, whatever
+    // deadline it last advertised. Gated HERE because this function is the one
+    // definition of "imminent" shared by the 72h urgent pass and the weekly
+    // digest — the two can never disagree about it.
+    if (w.status === 'not_running') continue;
     const iso = w.next_stage_utc || w.deadline_utc;
     if (!iso) continue;
     const ms = Date.parse(iso);

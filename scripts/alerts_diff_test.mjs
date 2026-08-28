@@ -205,5 +205,46 @@ const snap = (list) => projectFeed(feed(list));
   eq('a two-stage workshop sorts by its abstract stage', twoStage, ['sooner']);
 }
 
+/* ------------------------------------------------------- not_running entries */
+{
+  const now = Date.parse('2026-08-14T00:00:00Z');
+  // A rejected proposal keeps a live OpenReview group, so its deadline really is
+  // imminent. Nothing but the status distinguishes it from a genuine open call.
+  const live = snap([
+    ws('real', { next_stage_utc: '2026-08-16T23:59:00.000Z', deadline_utc: '2026-08-16T23:59:00.000Z' }),
+    ws('marked', {
+      status: 'not_running',
+      status_label: 'Not running',
+      // The recorded deadline is KEPT in the feed; only next_stage_utc is nulled.
+      deadline_utc: '2026-08-15T22:00:00.000Z',
+      next_stage_utc: null,
+    }),
+  ]);
+  eq(
+    'closingWithin skips a not-running entry, however imminent its deadline',
+    closingWithin(live.workshops, now, 7 * 86_400_000).map((w) => w.slug),
+    ['real'],
+  );
+
+  // The transition is deliberately SILENT: no new event kind in this landing.
+  // Pinned so a later refactor cannot start mailing subscribers by accident —
+  // if that becomes wanted, it should be a decision, not a side effect.
+  const before = snap([ws('marked', { deadline_utc: '2026-08-15T22:00:00.000Z', next_stage_utc: '2026-08-15T22:00:00.000Z' })]);
+  const after = snap([
+    ws('marked', {
+      status: 'not_running',
+      status_label: 'Not running',
+      deadline_utc: '2026-08-15T22:00:00.000Z',
+      next_stage_utc: null,
+    }),
+  ]);
+  const r = diffSnapshot(before, after, OBSERVED);
+  check('marking an entry not-running emits no event', r.status === 'ok' && r.events.length === 0,
+    JSON.stringify(r.events));
+  // ...and because the slug STAYS in the feed, it cannot count against the
+  // shrink guard on a bulk cleanup, nor re-announce itself if ever unmarked.
+  check('the slug stays in the feed', Object.keys(after.workshops).includes('marked'));
+}
+
 console.log(failed === 0 ? '\nDiff/classification logic OK.' : `\n${failed} test(s) failed.`);
 process.exit(failed === 0 ? 0 : 1);

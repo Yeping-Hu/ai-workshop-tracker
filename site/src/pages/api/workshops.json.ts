@@ -58,6 +58,12 @@ export const GET: APIRoute = () => {
       workshop_date: w.workshop_date ?? null,
       status: w.status,
       status_label: w.statusLabel,
+      // The stored observation behind `status: "not_running"`, so a consumer can
+      // say WHY without re-deriving it. The entry deliberately stays in this feed
+      // rather than disappearing: a vanishing slug produces no event in the
+      // alerts diff, would count against SNAPSHOT_SHRINK_GUARD on a bulk cleanup,
+      // and would re-announce the workshop to everyone if it were ever unmarked.
+      not_running: w.not_running ?? null,
       submission_portal: w.submission_portal ?? null,
       openreview_venue_id: w.openreview_venue_id ?? null,
       proceedings_url: w.proceedings_url ?? null,

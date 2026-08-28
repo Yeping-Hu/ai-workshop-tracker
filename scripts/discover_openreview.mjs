@@ -39,7 +39,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, loadConferences, stripVenueFromName, cleanAcronym, normalizeAcronym } from '../lib/workshops.mjs';
+import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, loadConferences, stripVenueFromName, cleanAcronym, normalizeAcronym, isNotRunning } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 import { openreviewFetch, recordUnverified, getUnverified } from '../lib/openreview.mjs';
 
@@ -594,6 +594,17 @@ async function main({ conf, year, dryRun }) {
     }
     if (known.has(g.id)) {
       const { path: fp, raw } = known.get(g.id);
+      // A human has recorded that this edition is not taking place. Placed here,
+      // BEFORE ensureDl, so a marked venue costs zero invitation calls — the same
+      // property that keeps the human-frozen path inside the rate limit. Note the
+      // asymmetry with the creation path below: deleting a marked file would let
+      // the next crawl re-create it unmarked, which is precisely why the marking
+      // lives in the file rather than in a delete.
+      if (isNotRunning(raw)) {
+        console.log(`  – ${g.id}: marked not running, left alone`);
+        skipped++;
+        continue;
+      }
       let changed = false;
       // OpenReview's current deadline: the group's `date` line is free (already
       // in hand), but the submission invitation's duedate costs a network call,

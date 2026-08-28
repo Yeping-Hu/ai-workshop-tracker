@@ -165,9 +165,30 @@ for (const filePath of listWorkshopFiles()) {
     const edEnd = editionEnds.get(`${w.conference}-${w.year}`);
     if (edEnd != null && NOW > edEnd + DAY_MS) {
       // Conference is over — the entry renders as "Past", which is fine.
+    } else if (w.not_running) {
+      // An edition that is not taking place has nothing to announce; asking for
+      // a deadline would be asking to fill in a date that will never exist.
     } else {
       warnings.push({ file: rel, msg: 'No `submission_deadline` set for a current/future edition (will show as TBA).' });
     }
+  }
+
+  // `not_running` and `review_ack.official_list` are the two opposite verdicts on
+  // one question — "this entry is absent from the official list" — so an entry
+  // carrying both is a contradiction, not a belt-and-braces.
+  if (w.not_running && w.review_ack?.official_list) {
+    errors.push({
+      file: rel,
+      msg:
+        '`not_running` and `review_ack.official_list` are mutually exclusive: the first says this edition is not taking place, ' +
+        'the second says it is running and merely absent from that list. Keep exactly one.',
+    });
+  }
+  if (w.not_running?.reason === 'not_on_official_list' && !w.not_running.source) {
+    warnings.push({
+      file: rel,
+      msg: '`not_running.reason: not_on_official_list` with no `source` — record the list URL, or the call cannot be re-checked without repeating the research.',
+    });
   }
 
   // Per-track deadlines need an explicit, valid timezone too (same ambiguity).

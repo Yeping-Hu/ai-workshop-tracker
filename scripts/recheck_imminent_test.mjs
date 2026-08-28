@@ -10,6 +10,7 @@
  * Run: node scripts/recheck_imminent_test.mjs
  */
 import { isImminentBotManaged } from './recheck_imminent.mjs';
+import { isBlankBackfillable } from './backfill_deadlines.mjs';
 import { syncNote, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
 
 let failed = 0;
@@ -63,6 +64,26 @@ check('no openreview_venue_id -> skipped', isImminentBotManaged(base(5, { openre
 check('multi-track (has tracks) -> skipped', isImminentBotManaged(base(5, { tracks: [{ name: 'Full' }, { name: 'Short' }] }), NOW), false);
 check('no submission_deadline -> skipped', isImminentBotManaged({ openreview_venue_id: 'x', deadline_notes: 'OpenReview-synced 2026-08-01 UTC' }, NOW), false);
 check('null/garbage record -> skipped', [isImminentBotManaged(null, NOW), isImminentBotManaged({}, NOW)], [false, false]);
+
+// --- not_running freezes an entry against BOTH daily writers ---------------
+// `isBlankBackfillable` had no test at all; it is added here rather than in its
+// own file because AUTOMATION.md documents the two predicates as the paired
+// halves of one daily pass, and they must agree about what is frozen.
+const NR = { reason: 'not_on_official_list', recorded: '2026-07-15', source: 'https://example.org/list' };
+check('marked not running -> skipped by the imminent re-check',
+  isImminentBotManaged(base(5, { not_running: NR }), NOW), false);
+check('...even though it is otherwise perfectly eligible',
+  isImminentBotManaged(base(5), NOW), true);
+
+check('blank-fill: OpenReview-linked, deadline-less entry -> eligible',
+  isBlankBackfillable({ openreview_venue_id: 'X/2026/Workshop/A' }), true);
+check('blank-fill: marked not running -> skipped',
+  isBlankBackfillable({ openreview_venue_id: 'X/2026/Workshop/A', not_running: NR }), false);
+check('blank-fill: already has a deadline -> skipped',
+  isBlankBackfillable({ openreview_venue_id: 'X/2026/Workshop/A', submission_deadline: '2026-09-01' }), false);
+check('blank-fill: multi-track -> skipped',
+  isBlankBackfillable({ openreview_venue_id: 'X/2026/Workshop/A', tracks: [{ name: 'Full' }] }), false);
+check('blank-fill: no venue id -> skipped', isBlankBackfillable({}), false);
 
 console.log(failed === 0 ? '\nImminent re-check selection logic OK.' : `\n${failed} test(s) failed.`);
 process.exit(failed === 0 ? 0 : 1);

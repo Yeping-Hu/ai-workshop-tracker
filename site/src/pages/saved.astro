@@ -103,6 +103,8 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
         : (w.deadline_utc ? Date.parse(w.deadline_utc) : null);
       if (w.status === 'upcoming' && ms != null) return [0, ms];
       if (w.status === 'upcoming') return [1, 0];
+      // Not-running editions sort last, below everything that did happen.
+      if (w.status === 'not_running') return [4, -(w.year ?? 0)];
       if (ms != null) return [2, -ms];
       return [3, -(w.year ?? 0)];
     }
@@ -132,6 +134,11 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
       const absOpen = !!w.next_stage_is_abstract;
       const cdMs = w.next_stage_utc ? Date.parse(w.next_stage_utc) : ms;
       const upcoming = w.status === 'upcoming';
+      // This is where someone who starred a workshop that turned out not to be
+      // running will come looking. Without an explicit annotation the row reads
+      // "passed", which is wrong in the way that matters: it suggests they
+      // missed a deadline rather than that there was never a workshop.
+      const notRunning = w.status === 'not_running';
       const name = esc(w.name);
       return `
       <div class="board-row ${upcoming ? '' : 'row-passed'}" data-saved-ws="${esc(w.slug)}">
@@ -145,6 +152,7 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
             ${/* No status pill here, unlike the board: this list already says it
                   twice over — the countdown column reads "passed" or "TBA", and a
                   concluded row is greyed via .row-passed. */ ''}
+            ${notRunning ? `<span class="pill not_running">Not running</span>` : ''}
             ${w.acronym ? `<span class="mono">${esc(w.acronym)}</span>` : ''}
             <span>${esc(conf.name)} ${esc(w.year)}</span>
             ${w.location_distinguishes && w.location_label ? `<span class="ws-where">${esc(w.location_label)}</span>` : ''}
@@ -170,7 +178,9 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
             ? `<span class="countdown" data-deadline-ms="${cdMs}"${absOpen ? ' data-stage="abstract"' : ''} data-name="${esc(w.acronym || w.name)}${absOpen ? ' (abstract)' : ''}">—</span>`
             : upcoming
               ? `<span class="countdown is-tba">TBA</span>`
-              : `<span class="countdown is-over">passed</span>`
+              : notRunning
+                ? `<span class="countdown is-over">not running</span>`
+                : `<span class="countdown is-over">passed</span>`
         }
       </div>`;
     }

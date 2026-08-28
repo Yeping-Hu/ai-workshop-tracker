@@ -378,7 +378,7 @@ const datasetLd: Record<string, any> = {
     function facetSort(f, keys) {
       if (f === 'year') return keys.sort((a, b) => b.localeCompare(a));
       if (f === 'status') {
-        const order = ['Open call', 'Deadline unknown', 'Past'];
+        const order = ['Open call', 'Deadline unknown', 'Past', 'Not running'];
         return keys.sort((a, b) => order.indexOf(a) - order.indexOf(b));
       }
       // localeCompare, matching the hero eyebrow and the footer's conference
@@ -737,7 +737,12 @@ const datasetLd: Record<string, any> = {
         const src = g.ws ?? g.papers;
         const conf = src.meta?.conference ?? '';
         const color = confColors[conf] ?? '#888';
-        const pillClass = { 'Open call': 'upcoming', 'Deadline unknown': 'unknown' }[src.meta?.status] ?? 'past';
+        // Explicit entry for "Not running": without it the ?? fallback would
+        // paint a tombstoned edition exactly like an ordinary past workshop.
+        const pillClass =
+          { 'Open call': 'upcoming', 'Deadline unknown': 'unknown', 'Not running': 'not_running' }[
+            src.meta?.status
+          ] ?? 'past';
         const wsName = g.ws?.meta?.title ?? String(g.papers?.meta?.title ?? '').replace(/ — accepted papers$/, '');
         const slug = g.slug || '';
         const wsLabel = `${wsName} — ${conf} ${src.meta?.year ?? ''}`.trim();

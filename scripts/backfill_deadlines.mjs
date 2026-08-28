@@ -55,7 +55,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { listWorkshopFiles, readWorkshopFile, recordDeadlineObservation } from '../lib/workshops.mjs';
+import { listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, isNotRunning } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 import {
   syncNote,
@@ -89,6 +89,9 @@ const val = (c, k) => {
  */
 export function isBlankBackfillable(raw) {
   if (!raw || !raw.openreview_venue_id) return false;
+  // A human has recorded that this edition is not taking place. Never touch
+  // its deadline again — resurrecting it is exactly what the marking prevents.
+  if (isNotRunning(raw)) return false;
   if (Array.isArray(raw.tracks) && raw.tracks.length) return false;
   if (raw.submission_deadline) return false; // only truly-blank entries
   return true;

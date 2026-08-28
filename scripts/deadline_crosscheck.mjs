@@ -32,7 +32,7 @@
  *   node scripts/deadline_crosscheck.mjs --strict                      # exit 1 if anything to review
  */
 import fs from 'node:fs';
-import { listWorkshopFiles, readWorkshopFile, loadConferences, stripVenueFromName, cleanAcronym, normalizeAcronym } from '../lib/workshops.mjs';
+import { listWorkshopFiles, readWorkshopFile, loadConferences, stripVenueFromName, cleanAcronym, normalizeAcronym, isNotRunning } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 import { isAcronymShaped } from '../lib/identity.mjs';
 export { normalizeWebsite } from './discover_openreview.mjs';
@@ -582,7 +582,13 @@ async function main() {
   // announces a date. The deadline review keeps its own, narrower scope below.
   const allEntries = listWorkshopFiles()
     .map(readWorkshopFile)
-    .filter(({ raw }) => raw?.openreview_venue_id);
+    .filter(({ raw }) => raw?.openreview_venue_id)
+    // An edition a human recorded as not taking place is out of scope for every
+    // section below. LOAD-BEARING: its OpenReview group stays live and open (a
+    // rejected proposal's Submission invitation ticks down like any other), so
+    // without this filter, marking an entry would move it off the board and
+    // straight into this issue every single day, forever — worse than before.
+    .filter(({ raw }) => !isNotRunning(raw));
   let entries = allEntries.filter(({ raw }) => raw?.submission_deadline);
   if (slug) entries = entries.filter((e) => e.slug === slug);
   // --recent scopes by *deadline relevance*, not conference year: a workshop

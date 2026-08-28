@@ -289,6 +289,9 @@ details.dd .dd-panel {
 .pill.upcoming { background: var(--accent-soft); color: var(--accent); }
 .pill.deadline_passed { background: var(--warn-soft); color: var(--warn); }
 .pill.past { background: var(--surface); color: var(--muted); border: 1px solid var(--line); }
+/* Visually distinct from .past: a past workshop happened, a not-running one
+   never will, and reading the two as the same thing is the mistake to avoid. */
+.pill.not_running { background: transparent; color: var(--muted); border: 1px solid var(--muted); text-decoration: line-through; }
 .detail-head { padding-top: 2.2rem; }
 .detail-head .topline { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.7rem; }
 .kv { display: grid; grid-template-columns: 11rem 1fr; gap: 0.45rem 1.2rem; margin: 1.4rem 0; max-width: 46rem; }
@@ -299,6 +302,10 @@ details.dd .dd-panel {
 .seednote {
   margin-top: 1.2rem; padding: 0.7rem 0.9rem; border-left: 3px solid var(--warn);
   background: var(--warn-soft); font-size: 0.86rem; border-radius: 0 8px 8px 0;
+}
+.notrunningnote {
+  margin-top: 1.2rem; padding: 0.7rem 0.9rem; border-left: 3px solid var(--muted);
+  background: var(--surface); font-size: 0.86rem; border-radius: 0 8px 8px 0;
 }
 
 /* papers */

@@ -226,9 +226,51 @@
         "submission_deadline": {
           "type": "string",
           "description": "An OpenReview deadline value reviewed and deliberately not adopted (typically an earlier move you judged wrong or irrelevant). Compared as an instant, so formatting differences don't matter."
+        },
+        "official_list": {
+          "type": "string",
+          "pattern": "^https?://",
+          "maxLength": 500,
+          "description": "The official accepted-workshop list URL that was checked when a human confirmed this entry is legitimately absent from it — an affinity event, a competition, or a co-located workshop that is not a 'workshop' in that list's sense. Records the list that was reviewed, not a blanket mute: point data/editions.yml at a newer list and every acknowledgement for that conference-year is re-reported at once."
         }
       },
       "description": "Optional. Records an OpenReview value that was reviewed and deliberately NOT adopted, so the weekly review stops reporting it. Stores the rejected VALUE rather than a blanket mute: if OpenReview later changes to something different, it is reported again. Set by a human after a review decision."
+    },
+    "not_running": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason",
+        "recorded"
+      ],
+      "description": "Optional. Records the OBSERVATION that this edition is not taking place — most often that the conference's official accepted-workshop list does not include it. OpenReview creates a venue group during the PROPOSAL phase, so a rejected proposal keeps a live group with an open Submission invitation and a ticking duedate, which discovery cannot tell from an accepted one. Stored rather than derived because no date implies it. The entry keeps its file, slug, page and recorded deadlines — deleting the file does NOT work, the next weekly crawl re-creates it — but it stops being an Open call, stops feeding deadline alerts, and is skipped by every deadline sync. Set by a human after reading the weekly official-list report; never written by a scheduled job.",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "enum": [
+            "not_on_official_list",
+            "withdrawn",
+            "cancelled"
+          ],
+          "description": "`not_on_official_list` is what the weekly official-list check reports. `withdrawn` / `cancelled` are for an announcement a human saw. A real event that simply is not a 'workshop' in that list's sense (an affinity event, a competition, a co-located event in its own OpenReview namespace) is NOT this — it is `review_ack.official_list`."
+        },
+        "recorded": {
+          "type": "string",
+          "format": "date",
+          "description": "Date WE observed this, never when the organizers decided it — the same semantics as `deadline_history.recorded`."
+        },
+        "source": {
+          "type": "string",
+          "pattern": "^https?://",
+          "maxLength": 500,
+          "description": "Where it was observed: the official accepted-workshop list, or the organizers' own announcement. This is the evidence, so the call can be re-checked without repeating the research."
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "One line shown to a reader under the notice on the workshop page."
+        }
+      }
     }
   }
 }

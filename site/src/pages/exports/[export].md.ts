@@ -16,8 +16,16 @@ type ConferenceExport = {
   workshops: any[];
 };
 
+// Not-running editions sort last, after Past: they are a footnote to the year,
+// not part of its programme.
 const rank = (w: any) =>
-  w.statusLabel === 'Open call' ? 0 : w.statusLabel === 'Deadline unknown' ? 1 : 2;
+  w.statusLabel === 'Open call'
+    ? 0
+    : w.statusLabel === 'Deadline unknown'
+      ? 1
+      : w.statusLabel === 'Not running'
+        ? 3
+        : 2;
 
 const EXPORTS = new Map<string, ConferenceExport>();
 

@@ -40,7 +40,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { listWorkshopFiles, readWorkshopFile, recordDeadlineObservation } from '../lib/workshops.mjs';
+import { listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, isNotRunning } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 import {
   subTrackInfo,
@@ -60,7 +60,10 @@ const TWO_YEARS_MS = 2 * 366 * 86_400_000;
 /** True while the entry is still bot-managed and human-untouched: its note holds
  *  the value the bot last wrote, or the pre-sync legacy marker. Any human edit to
  *  the value or the note breaks the match and freezes the whole entry. */
-function isBotManaged(raw) {
+export function isBotManaged(raw) {
+  // A human has recorded that this edition is not taking place. Never touch
+  // its deadline again — resurrecting it is exactly what the marking prevents.
+  if (isNotRunning(raw)) return false;
   if (raw.deadline_notes === LEGACY_IMPORT_NOTE) return true;
   const lastBot = syncedValue(raw.deadline_notes);
   return lastBot != null && lastBot === raw.submission_deadline;

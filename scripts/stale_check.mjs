@@ -18,6 +18,10 @@ const reportPath = reportFlag !== -1 ? process.argv[reportFlag + 1] : null;
 const now = Date.now();
 const stale = loadWorkshops().filter(
   (w) =>
+    // An edition recorded as not taking place has nothing to follow up: its
+    // deadline will never gain a papers link, so it would be reported here
+    // every week forever.
+    w.status !== 'not_running' &&
     w.deadlineUtcMs != null &&
     now - w.deadlineUtcMs > 60 * DAY_MS &&
     !w.proceedings_url &&

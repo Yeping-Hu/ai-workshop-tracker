@@ -11,9 +11,15 @@ import { href, REPO_URL } from '../../lib/site';
 // navigation/overview, not search results). They join the sitemap
 // automatically via @astrojs/sitemap.
 export function getStaticPaths() {
-  // status order for listings: open call -> unknown -> past
+  // status order for listings: open call -> unknown -> past -> not running
   const rank = (w: any) =>
-    w.statusLabel === 'Open call' ? 0 : w.statusLabel === 'Deadline unknown' ? 1 : 2;
+    w.statusLabel === 'Open call'
+      ? 0
+      : w.statusLabel === 'Deadline unknown'
+        ? 1
+        : w.statusLabel === 'Not running'
+          ? 3
+          : 2;
   return conferences.map((c: any) => {
     const list = workshops
       .filter((w: any) => w.conference === c.id)
@@ -114,13 +120,21 @@ const breadcrumbLd = {
 };
 
 const statusPill = (w: any) =>
-  w.statusLabel === 'Open call' ? 'upcoming' : w.statusLabel === 'Deadline unknown' ? 'unknown' : 'past';
+  w.statusLabel === 'Open call'
+    ? 'upcoming'
+    : w.statusLabel === 'Deadline unknown'
+      ? 'unknown'
+      : w.statusLabel === 'Not running'
+        ? 'not_running'
+        : 'past';
 // "Deadline unknown" is nearly twice the width of the other labels, which made
 // its pill dominate the row. Break it across two lines at its existing space.
 // Done by splitting the words rather than with a max-width, so the wrap point is
 // exact and can't shift with font metrics.
 const statusLines = (w: any): string[] =>
   statusPill(w) === 'unknown' ? String(w.statusLabel).split(' ') : [String(w.statusLabel)];
+// ^ only "Deadline unknown" splits: "Not running" is comfortably narrower than
+//   the widest single-line label already in use.
 ---
 
 <Base

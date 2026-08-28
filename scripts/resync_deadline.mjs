@@ -14,10 +14,16 @@
  * Usage:
  *   node scripts/resync_deadline.mjs --slug colm-2026-daih
  *   node scripts/resync_deadline.mjs --slug colm-2026-daih --dry-run
+ *   node scripts/resync_deadline.mjs --slug colm-2026-daih --force   # marked not running
  */
 import fs from 'node:fs';
 import * as yaml from 'js-yaml';
-import { recordDeadlineObservation, listWorkshopFiles, readWorkshopFile } from '../lib/workshops.mjs';
+import {
+  recordDeadlineObservation,
+  listWorkshopFiles,
+  readWorkshopFile,
+  isNotRunning,
+} from '../lib/workshops.mjs';
 import {
   deadlineFromInvitation,
   parseGroupDeadline,
@@ -37,6 +43,7 @@ const args = process.argv.slice(2);
 const getArg = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : null);
 const slug = getArg('--slug');
 const dryRun = args.includes('--dry-run');
+const force = args.includes('--force');
 
 if (!slug) {
   console.error('Usage: node scripts/resync_deadline.mjs --slug <workshop-slug> [--dry-run]');
@@ -50,6 +57,18 @@ if (!fp) {
 }
 
 const { raw } = readWorkshopFile(fp);
+// This script is the maintainer override: it deliberately bypasses later-only
+// AND the human-edit freeze. Nothing else would stop it silently reviving an
+// edition recorded as not taking place — and the official-list report prints
+// this command right next to the entries most likely to be marked.
+if (isNotRunning(raw) && !force) {
+  console.error(
+    `"${slug}" is marked not running (${raw.not_running.reason}, recorded ${raw.not_running.recorded}).\n` +
+      'Re-syncing would restore a deadline for an edition that is not taking place.\n' +
+      'Unmark it first (scripts/mark_not_running.mjs --unmark), or pass --force if you are sure.',
+  );
+  process.exit(1);
+}
 if (!raw.openreview_venue_id) {
   console.error(`"${slug}" has no openreview_venue_id — there is no OpenReview source to re-sync from.`);
   process.exit(1);

@@ -63,3 +63,21 @@ added: ""                      # "YYYY-MM-DD" (date this entry was added)
 #   name: "The OpenReview title you declined"
 #   website: "https://the-openreview-url-you-declined.example"
 #   submission_deadline: "2026-08-07 20:59"   # a deadline move you reviewed and declined
+#   official_list: "https://blog.example.cc/announcing-the-2026-workshops/"
+#     # ^ the accepted-workshop list you checked when confirming this entry is
+#       legitimately absent from it (an affinity event, a competition, a
+#       co-located workshop). Records the list reviewed, not a blanket mute.
+
+# This edition is NOT taking place — most often because the conference's official
+# accepted-workshop list does not include it. OpenReview creates a venue group
+# during the PROPOSAL phase, so a rejected proposal keeps a live group with an
+# open submission invitation and a ticking deadline, and discovery cannot tell it
+# from an accepted one. The entry keeps its file and page (deleting it does not
+# work — the next weekly crawl re-creates it) but stops being an Open call, stops
+# feeding alerts, and is frozen against every deadline sync.
+# Set it with `node scripts/mark_not_running.mjs --slug <slug> --reason <reason>`.
+# not_running:
+#   reason: not_on_official_list   # not_on_official_list | withdrawn | cancelled
+#   recorded: "2026-08-28"         # the date WE observed it, not when it was decided
+#   source: "https://blog.example.cc/announcing-the-2026-workshops/"
+#   note: "One line shown to a reader under the notice on the workshop page." 

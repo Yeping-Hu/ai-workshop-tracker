@@ -14,7 +14,8 @@
  *   - stored track OR omits        -> kept (never dropped)
  *   - OR track still TBA            -> ignored (nothing to fill)
  */
-import { mergeTracks, DEADLINE_LOOKBACK_MS } from './discover_openreview.mjs';
+import { mergeTracks, DEADLINE_LOOKBACK_MS, syncNote } from './discover_openreview.mjs';
+import { isBotManaged } from './sync_tracks.mjs';
 
 // These fixtures use fixed July/August 2026 dates, so "now" is pinned too. The
 // merge is time-dependent — a track closed longer than the look-back is no
@@ -117,6 +118,23 @@ const find = (tracks, name) => tracks.find((t) => t.name === name) || {};
   const r3 = mergeTracks([dl('Short')], [dl('Short', '2026-08-31 10:00')], { nowMs: closed });
   check('blank track still filled regardless of the look-back',
     find(r3.tracks, 'Short').submission_deadline, '2026-08-31 10:00');
+}
+
+// --- not_running freezes the multi-track sync too --------------------------
+// The same guard the other three deadline jobs carry. A rejected proposal's
+// sub-track groups stay open on OpenReview alongside its main venue, so without
+// this the track sync would keep refreshing a tombstone's deadlines.
+{
+  const stamped = (v) => ({ submission_deadline: v, deadline_notes: syncNote(v, '2026-08-01') });
+  check('bot-managed entry -> synced', isBotManaged(stamped('2026-09-01 12:00')), true);
+  check(
+    'marked not running -> frozen',
+    isBotManaged({
+      ...stamped('2026-09-01 12:00'),
+      not_running: { reason: 'not_on_official_list', recorded: '2026-08-28' },
+    }),
+    false,
+  );
 }
 
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nAll mergeTracks checks passed.');

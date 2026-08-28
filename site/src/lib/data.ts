@@ -35,6 +35,15 @@ export const past = workshops
   .filter((w: Workshop) => w.status === 'past')
   .sort((a: Workshop, b: Workshop) => b.year - a.year || a.name.localeCompare(b.name));
 
+/**
+ * Editions recorded as not taking place. `status: 'not_running'` is why none of
+ * the four buckets above pick them up — the board, the TBA list and the archive
+ * all drop them with no change here — while `[slug].astro` still builds a page
+ * for every entry in `workshops`, so anyone who starred one still lands
+ * somewhere. Exported so the count is greppable rather than implicit.
+ */
+export const notRunning = workshops.filter((w: Workshop) => w.status === 'not_running');
+
 export const paperCount = workshops.reduce((n: number, w: Workshop) => {
   const c = loadPaperCache(w.slug);
   return n + (c?.paper_count ?? 0);

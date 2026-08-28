@@ -10,7 +10,7 @@
  *   - else any TBA track          -> Deadline unknown  (NOT Past)
  *   - else (all announced+passed) -> Past
  */
-import { resolveWorkshop } from '../lib/workshops.mjs';
+import { resolveWorkshop, deriveStatusLabel } from '../lib/workshops.mjs';
 
 let failed = 0;
 function check(label, got, expect) {
@@ -23,11 +23,10 @@ function check(label, got, expect) {
 function resolve(tracks, nowIso) {
   const raw = { conference: 'eccv', year: 2026, name: 'T', acronym: 'T', tracks };
   const w = resolveWorkshop({ slug: 't', file: 't.yml', raw }, Date.parse(nowIso), {}, {});
-  // mimic loadWorkshops' label step (no papers in these synthetic cases)
-  w.statusLabel =
-    w.status === 'past' || w.status === 'deadline_passed' ? 'Past'
-    : w.deadlineUtcMs == null ? 'Deadline unknown'
-    : 'Open call';
+  // The same ladder loadWorkshops() uses (no papers in these synthetic cases).
+  // Imported rather than re-implemented: an inline copy is what would let this
+  // test and the site disagree the next time a status label is added.
+  w.statusLabel = deriveStatusLabel(w);
   return w;
 }
 
