@@ -60,10 +60,20 @@ async function get(url) {
   let lastErr;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const res = await fetch(url, { headers: { 'user-agent': 'aiworkshoptracker/official-list-check' } });
+      const res = await fetch(url, {
+        headers: {
+          // A plain custom agent is enough for a blog, but some CDNs answer a
+          // bot-shaped request with a 200 and an interstitial instead of the
+          // page. Ask for HTML explicitly and identify honestly.
+          'user-agent': 'aiworkshoptracker/official-list-check (+https://aiworkshoptracker.com)',
+          accept: 'text/html,application/xhtml+xml',
+          'accept-language': 'en',
+        },
+      });
       if (res.status === 429 || res.status >= 500) throw new Error(`HTTP ${res.status}`);
-      if (!res.ok) return { ok: false, reason: `HTTP ${res.status}` };
-      return { ok: true, body: await res.text() };
+      if (!res.ok) return { ok: false, reason: `HTTP ${res.status}`, status: res.status };
+      const body = await res.text();
+      return { ok: true, body, status: res.status, bytes: body.length };
     } catch (e) {
       lastErr = e;
       await new Promise((r) => setTimeout(r, (attempt + 1) * 3000));
@@ -73,12 +83,28 @@ async function get(url) {
 }
 
 /** Read a page and refuse it unless it is plausibly a workshop list. */
-async function readList(url, entries) {
+async function readList(url, entries, { retryEmpty = true } = {}) {
   const res = await get(url);
   if (!res.ok) return { ok: false, reason: res.reason };
   const { items, warnings } = extractListedWorkshops(res.body, { baseUrl: url });
   if (items.length < MIN_LISTED) {
-    return { ok: false, reason: `${items.length} items found, expected at least ${MIN_LISTED}`, warnings };
+    // A 200 that parses to nothing is usually a CDN interstitial or a truncated
+    // response rather than a genuinely wrong URL, and those pass on a second
+    // attempt. Retry ONCE, then report — with what we actually received, because
+    // "0 items found" alone cannot distinguish a challenge page from a real page
+    // we failed to parse, and that difference decides whether the fix is in the
+    // config or in the extractor.
+    if (retryEmpty) {
+      await new Promise((r) => setTimeout(r, 5000));
+      return readList(url, entries, { retryEmpty: false });
+    }
+    return {
+      ok: false,
+      reason:
+        `${items.length} items found, expected at least ${MIN_LISTED}` +
+        ` (HTTP ${res.status}, ${res.bytes} bytes received${res.bytes < 5000 ? ' — too small to be the page, so probably an interstitial or a redirect' : ''})`,
+      warnings,
+    };
   }
   const r = matchOfficialList(entries, items, { listUrl: url });
   const share = entries.length ? r.counts.matched / Math.min(entries.length, items.length) : 1;
@@ -252,7 +278,18 @@ async function main() {
     sections.offList.length + sections.missing.length + sections.drifted.length + sections.unreadable.length + sections.candidates.length;
   const report = actionable ? parts.join('\n\n') : '';
 
-  console.log(headers.length ? headers.join('\n\n').replace(/  \n/g, '\n') : 'No conference-year has a workshop_list_url configured.');
+  // `headers` only holds conference-years that were successfully READ, so an
+  // empty one does not mean nothing was configured — it can equally mean every
+  // configured list failed, which is the more urgent case and used to be
+  // reported as the harmless one.
+  const configured = editions.filter((e) => e.workshop_list_url).length;
+  console.log(
+    headers.length
+      ? headers.join('\n\n').replace(/  \n/g, '\n')
+      : configured
+        ? `None of the ${configured} configured list(s) could be read — see the report.`
+        : 'No conference-year has a workshop_list_url configured.',
+  );
   console.log(`\n${actionable} item(s) need a human decision.`);
 
   if (reportPath === '-') console.log('\n----- report -----\n' + report);
