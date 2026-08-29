@@ -127,6 +127,38 @@ const slugsOf = (list) => list.map((e) => e.slug).sort();
     run([ws({ name: 'Women in Machine Learning Workshop', website: 'https://sites.google.com/wimlworkshop.org/wimlworkshopneurips2026/' })]).pairs.length, 0);
 }
 
+/* ------------------------------------------- drift, and what is NOT drift */
+{
+  // A single entry whose stored website disagrees with the list IS drift.
+  const lone = ws({ slug: 'evorobust', name: 'Self-Evolving Diversity-Driven Search for Robust AI Systems', website: 'https://neurips.cc/Conferences/2026' });
+  check('a lone entry pointing somewhere else is reported', run([lone]).drifted.map((d) => d.field), ['website']);
+
+  // But a TRACK is not. The official list carries one URL per workshop — the
+  // workshop's — so once a sibling matches it exactly, a track pointing
+  // elsewhere is its own competition/track site, not a disagreement.
+  //
+  // This is the real IAB shape, and it matters because the report's suggested
+  // fix is "adopt the official URL": acting on it would overwrite the
+  // competition track's own site with a duplicate of the main entry's, and the
+  // stored value is deliberate — the entry carries a maintainer's note saying
+  // exactly which site belongs to which.
+  const main = ws({ slug: 'iab', name: 'The 1st Workshop on Interpreting Agent Behavior (IAB)', website: 'https://iab-agents.github.io/' });
+  const track = ws({
+    slug: 'iab-competition-paper-track',
+    name: 'The 1st Workshop on Interpreting Agent Behavior (IAB) at NeurIPS 2026 - Competition Paper Track',
+    website: 'https://glee-competition.com',
+  });
+  const both = run([main, track]);
+  check('both the workshop and its track match the one listed entry', both.pairs.length, 2);
+  check('...counted once', both.counts.matched, 1);
+  check('...and the track site is NOT reported as drift', both.drifted.length, 0);
+
+  // The suppression is conditional on a sibling actually accounting for the
+  // official URL — a track alone, with no sibling matching it, still reports.
+  check('the track alone (no sibling holds the official url) still reports',
+    run([track]).drifted.map((d) => d.field), ['website']);
+}
+
 /* ------------------------------------------------- ack and marked entries */
 {
   const affinity = ws({ slug: 'wiml', name: 'Women in Machine Learning Workshop', website: 'https://www.wiml.example/' });
