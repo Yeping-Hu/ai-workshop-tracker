@@ -65,6 +65,7 @@ export const GET: APIRoute = () => {
       // and would re-announce the workshop to everyone if it were ever unmarked.
       not_running: w.not_running ?? null,
       submission_portal: w.submission_portal ?? null,
+      submission_url: w.submission_url ?? null,
       openreview_venue_id: w.openreview_venue_id ?? null,
       proceedings_url: w.proceedings_url ?? null,
     })),

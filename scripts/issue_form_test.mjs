@@ -96,5 +96,16 @@ const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     'issue_to_yaml.mjs enforces this instead, and the workflow comments the error');
 }
 
+// --- Submission URL: the contributor path for a non-OpenReview portal -------
+// The corpus was 929/929 OpenReview when this field was added, so nothing had
+// ever needed it. A `cmt` or `other` portal without it renders as the bare word
+// "CMT" with nothing to click.
+{
+  const form = fs.readFileSync(new URL('../.github/ISSUE_TEMPLATE/add-workshop.yml', import.meta.url), 'utf8');
+  check('the add form offers a Submission URL field', /label: Submission URL/.test(form), true);
+  check('...and tells contributors to leave it empty for OpenReview',
+    /leave this empty for those/i.test(form), true);
+}
+
 console.log(failed === 0 ? '\nIssue-form parsing OK.' : `\n${failed} check(s) failed.`);
 process.exit(failed === 0 ? 0 : 1);

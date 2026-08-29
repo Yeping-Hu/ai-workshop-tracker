@@ -1,0 +1,19 @@
+name: 2nd Workshop on Advances in Representation Learning for Earth Observation
+acronym: REO-2
+conference: neurips
+year: 2026
+website: https://reo-workshop.org/2026/
+topics:
+  - science-applications
+  - vision
+submission_deadline: 2026-09-03 11:59
+timezone: UTC
+notification_date: '2026-09-29'
+submission_portal: cmt
+submission_url: https://cmt3.research.microsoft.com/REO2026
+deadline_notes: submitted as 2026-09-02 23:59 AoE
+added: '2026-08-29'
+deadline_history:
+  - value: 2026-09-03 11:59
+    recorded: '2026-08-29'
+    timezone: UTC

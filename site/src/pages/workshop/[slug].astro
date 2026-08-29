@@ -216,6 +216,12 @@ const metaDesc = [70, 55].reduce((out, n) => (out.length <= 160 ? out : describe
         {w.openreview_venue_id && (
           <a href={`https://openreview.net/group?id=${w.openreview_venue_id}`} rel="noopener">OpenReview venue ↗</a>
         )}
+        {/* The same affordance for a workshop that does not use OpenReview.
+            Suppressed once the call has closed: a live "Submit" link on a
+            passed deadline is worse than none. */}
+        {w.submission_url && !w.openreview_venue_id && w.status === 'upcoming' && (
+          <a href={w.submission_url} rel="noopener">Submit ↗</a>
+        )}
         {w.proceedings_url && <a href={w.proceedings_url} rel="noopener">Accepted papers ↗</a>}
         {CALENDAR_ENABLED && w.deadlineUtcMs && <a href={href(`/feeds/ws-${w.slug}.ics`)}>Add deadline to calendar (.ics)</a>}
         <a href={href(`/conference/${w.conference}/`)}>See all {conf.name} workshops →</a>
@@ -367,7 +373,19 @@ const metaDesc = [70, 55].reduce((out, n) => (out.length <= 160 ? out : describe
       {w.submission_portal && (
         <>
           <dt>Submission portal</dt>
-          <dd>{portalLabel[w.submission_portal] ?? w.submission_portal}</dd>
+          <dd>
+            {/* Name the portal, and link it when we know where. An OpenReview
+                venue already produces its own link in the header above, so this
+                carries the everything-else case — CMT, a Google Form — which
+                otherwise rendered as the bare word "CMT" with nothing to click. */}
+            {w.submission_url ? (
+              <a href={w.submission_url} rel="noopener">
+                {portalLabel[w.submission_portal] ?? w.submission_portal} ↗
+              </a>
+            ) : (
+              portalLabel[w.submission_portal] ?? w.submission_portal
+            )}
+          </dd>
         </>
       )}
       {w.organizers?.length > 0 && (

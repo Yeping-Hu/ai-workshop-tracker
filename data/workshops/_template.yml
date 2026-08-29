@@ -50,6 +50,11 @@ openreview_venue_id: ""        # e.g. "NeurIPS.cc/2026/Workshop/MATH-AI" -> auto
 #   - "IEEE.org/IROS/2026/Workshop/Alt-Group"   # keeps discovery from re-creating a duplicate
 proceedings_url: ""            # for non-OpenReview workshops: their accepted-papers page
 submission_portal: unknown     # openreview | cmt | email | other | unknown
+# Where authors actually submit, when that is NOT OpenReview. An
+# openreview_venue_id already produces its own submission link, so leave this
+# empty for those; without it a `cmt` portal renders as the bare word "CMT"
+# with nothing to click.
+# submission_url: "https://cmt3.research.microsoft.com/EXAMPLE2026"
 
 # --- Optional ---
 organizers: []

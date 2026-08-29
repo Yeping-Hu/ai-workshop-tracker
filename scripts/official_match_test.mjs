@@ -208,9 +208,13 @@ const slugsOf = (list) => list.map((e) => e.slug).sort();
     }));
   const r = run(undecided);
   check('neurips 2026: 102 listed', r.counts.listed, 102);
-  check('99 of 102 covered by the corpus', r.counts.matched, 99);
-  check('10 tracked entries are off-list', r.counts.offList, 10);
-  check('3 accepted workshops are absent', r.counts.missing, 3);
+  // Every accepted workshop is now tracked. Two of them (REO-2, AI for Peace)
+  // have no OpenReview presence at all, so no crawl will ever produce them —
+  // they exist only because this report surfaced them and a human added them.
+  // A drop here means either the matcher regressed or coverage was lost.
+  check('all 102 are covered by the corpus', r.counts.matched, 102);
+  check('nothing on the list is missing', r.counts.missing, 0);
+  check('11 tracked entries are off-list', r.counts.offList, 11);
   check('the off-list set is the known one', slugsOf(r.offList), [
     'neurips-2026-africa-in-ai',
     'neurips-2026-eiml',
@@ -221,12 +225,8 @@ const slugsOf = (list) => list.map((e) => e.slug).sort();
     'neurips-2026-newinml',
     'neurips-2026-queerinai',
     'neurips-2026-roco-spring',
+    'neurips-2026-unireps',
     'neurips-2026-wiml',
-  ]);
-  check('the missing set is the known one', r.missing.map((m) => m.url).sort(), [
-    'https://aiforpeaceworkshop.github.io/',
-    'https://embodiedsr.github.io/',
-    'https://reo-workshop.org/2026/',
   ]);
   // Every legitimate track file is matched, not reported.
   check('no track file is reported off-list',
@@ -242,9 +242,9 @@ const slugsOf = (list) => list.map((e) => e.slug).sort();
   const entries = loadWorkshops().filter((w) => w.conference === 'neurips' && w.year === 2026);
   const r = run(entries);
   check('every off-list entry has a recorded decision', r.counts.offList, 0);
-  check('...nine acknowledged as running', r.counts.acked, 9);
+  check('...ten acknowledged as running', r.counts.acked, 10);
   check('...one marked as not running', r.counts.marked, 1);
-  check('the three genuinely missing workshops still report', r.counts.missing, 3);
+  check('and nothing on the official list is untracked', r.counts.missing, 0);
 }
 
 console.log(failed === 0 ? '\nOfficial-list matching OK.' : `\n${failed} test(s) failed.`);

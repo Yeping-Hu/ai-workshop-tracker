@@ -173,6 +173,12 @@ body:
       label: Submission portal
       options: [openreview, cmt, email, other, unknown]
       default: 4
+  - type: input
+    id: submission_url
+    attributes:
+      label: Submission URL
+      description: "Only if the portal is NOT OpenReview — a CMT site, a Google Form, an EasyChair track. An OpenReview venue id already links itself, so leave this empty for those."
+      placeholder: "https://cmt3.research.microsoft.com/EXAMPLE2026"
   - type: textarea
     id: organizers
     attributes:

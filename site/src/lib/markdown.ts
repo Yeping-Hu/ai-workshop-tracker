@@ -55,6 +55,12 @@ export function formatWorkshop(w: any, confName?: string): string {
     details.push(`- **OpenReview:** [${url}](${url})`);
   }
 
+  // Where to submit when it is not OpenReview (a CMT site, a Google Form). The
+  // OpenReview line above already carries that case, so this never duplicates it.
+  if (w.submission_url && !w.openreview_venue_id) {
+    details.push(`- **Submit:** [${w.submission_url}](${w.submission_url})`);
+  }
+
   if (details.length > 0) {
     parts.push(details.join('\n'));
   }

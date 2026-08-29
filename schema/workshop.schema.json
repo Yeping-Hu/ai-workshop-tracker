@@ -137,6 +137,11 @@
         "unknown"
       ]
     },
+    "submission_url": {
+      "type": "string",
+      "pattern": "^https?://",
+      "description": "Optional. Where authors actually submit, when that is NOT OpenReview — a CMT site, a Google Form, an EasyChair track. An `openreview_venue_id` already produces a submission link on its own, so this is for everything else: without it, `submission_portal: cmt` renders as the bare word \"CMT\" with nothing to click. Set `submission_portal` to match."
+    },
     "organizers": {
       "type": "array",
       "maxItems": 40,

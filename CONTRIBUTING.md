@@ -45,6 +45,7 @@ One YAML file per workshop **edition** (same series ⇒ new file each year).
 | `merged_venue_ids` |  | Other OpenReview ids that are this *same* workshop, when organizers created a second group. Recorded so discovery skips them rather than re-creating a duplicate entry |
 | `proceedings_url` |  | Accepted-papers page for non-OpenReview workshops |
 | `submission_portal` |  | `openreview` \| `cmt` \| `email` \| `other` \| `unknown` |
+| `submission_url` |  | Where authors actually submit, when that is **not** OpenReview — a CMT site, a Google Form, an EasyChair track. An `openreview_venue_id` already links itself, so leave this empty for those. Without it a `cmt` portal renders as the bare word "CMT" with nothing to click. |
 | `organizers` |  | List of names |
 | `previous_editions` |  | List of `{ year, website, proceedings_url }` — only worth filling in for editions this tracker has **no entry for**. Editions that are tracked, and a workshop's other submission tracks, are linked on the workshop page automatically (see ARCHITECTURE.md, "Related entries"); an automatic link supersedes a hand-written row for the same year. |
 | `notes` |  | Free text. Bot-imported entries carry a short "topics were auto-suggested — edits welcome" note; the edit form drops it automatically once a human changes the topics. |
