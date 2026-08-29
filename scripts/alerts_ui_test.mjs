@@ -64,7 +64,12 @@ check('hint names the sending address', (await hint.innerText()).includes('@'), 
 check('hint is visible', await hint.isVisible());
 check('preference fieldsets visible', await box.locator('fieldset.alerts-cadence').first().isVisible());
 check('button reads Subscribe', (await box.locator('#alertsSubmit').innerText()).trim() === 'Subscribe');
-check('summary hint is the pitch', (await box.locator('.alerts-summary-hint').innerText()).includes('workshop extensions'));
+// Captured, not hard-coded: this line is marketing copy and gets rewritten. What
+// must hold is that it starts on the pitch, switches to the pending message, and
+// returns — pinning the words made a copy edit look like a behaviour regression.
+const PITCH = (await box.locator('.alerts-summary-hint').innerText()).trim();
+check('summary hint starts on the pitch',
+  PITCH.length > 0 && !/inbox|confirm/i.test(PITCH), PITCH);
 
 await box.locator('#alertsEmail').fill('tester@stanford.edu');
 await box.locator('#alertsSubmit').click();
@@ -99,7 +104,7 @@ await page.waitForTimeout(150);
 check('data-sent cleared', (await box.getAttribute('data-sent')) === null);
 check('button back to Subscribe', (await box.locator('#alertsSubmit').innerText()).trim() === 'Subscribe');
 check('fieldsets back', await box.locator('fieldset.alerts-cadence').first().isVisible());
-check('summary hint back to the pitch', (await box.locator('.alerts-summary-hint').innerText()).includes('workshop extensions'));
+check('summary hint back to the pitch', (await box.locator('.alerts-summary-hint').innerText()).trim() === PITCH);
 
 console.log('— a collapsed box still says something is pending —');
 // Three of the four placements render collapsed; the summary hint is the only

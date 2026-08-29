@@ -60,7 +60,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
         <p class="lede">Signed in as <strong id="prefsEmail"></strong>.</p>
 
         <form id="prefsForm">
-          <h2>What you hear about</h2>
+          <h2>What to include</h2>
           <p class="muted small">Select nothing in a list to mean "all of them".</p>
 
           <div class="manage-row">
@@ -94,25 +94,25 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
             <legend class="manage-legend">Coverage</legend>
             <label class="check">
               <input type="radio" name="scope" value="all" />
-              The conferences and topics above, plus anything I've saved
+              Selected conferences and topics, plus anything I've saved
             </label>
             <label class="check">
               <input type="radio" name="scope" value="starred" />
-              Only the workshops I've saved
+              Only workshops I've saved
             </label>
           </fieldset>
 
-          <h2>Send me</h2>
+          <h2>Email preferences</h2>
           <fieldset class="manage-cadence">
             <legend class="alerts-sr">Notifications</legend>
-            <label class="check"><input type="checkbox" name="notify" value="weekly" /> A weekly digest, Mondays</label>
+            <label class="check"><input type="checkbox" name="notify" value="weekly" /> Weekly digest every Monday</label>
             <label class="check">
               <input type="checkbox" name="notify" value="urgent" />
-              An alert when a saved workshop's deadline is within 72 hours
+              Alert me 72 hours before a saved workshop's deadline
             </label>
             <label class="check">
               <input type="checkbox" name="notify" value="changes" />
-              An alert the day a saved workshop's deadline changes
+              Alert me whenever a saved workshop's deadline changes
             </label>
           </fieldset>
           <p class="muted small" id="pauseHint">

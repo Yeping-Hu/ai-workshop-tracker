@@ -84,7 +84,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
     <summary class="alerts-summary">
       <svg class="alerts-summary-mark" viewBox="0 0 20 20" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2.2" y="4.2" width="15.6" height="11.6" rx="2.2"/><path d="M3.4 6 10 10.6 16.6 6"/></svg>
       <span>{summary}</span>
-      <span class="alerts-summary-hint">workshop extensions, new calls, and more</span>
+      <span class="alerts-summary-hint">Deadline extensions, new workshop announcements, and more</span>
     </summary>
     <h2 id="alertsSignupHead">{heading}</h2>
     {blurb && <p class="muted small">{blurb}</p>}
@@ -136,37 +136,38 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
           the "newly registered domain" banner some mail filters still attach to
           a young sending domain. */}
       <p class="muted small alerts-hint">
-        Confirmation comes from <strong>{ALERTS_FROM}</strong>. Check spam if it
-        does not arrive. Nothing is sent until you click its link.
+        We'll send a confirmation email from <strong>alerts@mail.aiworkshoptracker.com</strong>. Check
+        your spam folder if it doesn't arrive. You won't receive any updates until you
+        confirm.
       </p>
 
       <fieldset class="alerts-cadence">
-        <legend class="alerts-legend">What you hear about</legend>
+        <legend class="alerts-legend">What to include</legend>
         <label class="check">
           <input type="radio" name="scope" value="all" checked />
-          These conferences and topics, plus anything I've saved
+          Selected conferences and topics, plus anything I've saved
         </label>
         <label class="check">
           <input type="radio" name="scope" value="starred" />
-          Only the workshops I've saved
+          Only workshops I've saved
         </label>
       </fieldset>
 
       {/* Three independent notifications, not one axis. As radios these forced
           artificial combinations and one label was simply untrue. */}
       <fieldset class="alerts-cadence">
-        <legend class="alerts-legend">Send me</legend>
+        <legend class="alerts-legend">Email preferences</legend>
         <label class="check">
           <input type="checkbox" name="notify" value="weekly" checked />
-          A weekly digest, Mondays
+          Weekly digest every Monday
         </label>
         <label class="check">
           <input type="checkbox" name="notify" value="urgent" checked />
-          An alert when a saved workshop's deadline is within 72 hours
+          Alert me 72 hours before a saved workshop's deadline
         </label>
         <label class="check">
           <input type="checkbox" name="notify" value="changes" checked />
-          An alert the day a saved workshop's deadline changes
+          Alert me whenever a saved workshop's deadline changes
         </label>
       </fieldset>
 
@@ -176,13 +177,13 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
 
       <div class="alerts-row">
         <button class="btn" type="submit" id="alertsSubmit">Subscribe</button>
-        <a class="btn-quiet" href={href('/alerts/manage/')}>Already subscribed? Sign in</a>
+        <a class="btn-quiet" href={href('/alerts/manage/')}>Already subscribed? Manage preferences</a>
       </div>
 
       <p class="alerts-status" id="alertsStatus" role="status" aria-live="polite" hidden></p>
 
       <p class="muted small alerts-privacy">
-        Your address is stored only to send these; one-click unsubscribe deletes it.
+        Your email address will only be used for these updates. You can unsubscribe at any time.
       </p>
     </form>
   </details>
