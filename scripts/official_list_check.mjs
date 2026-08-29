@@ -173,16 +173,16 @@ async function main() {
       if (cand) {
         const disagrees = cand.stated != null && cand.stated !== cand.result.counts.listed;
         sections.candidates.push(
-          `- **${label}** — [${cand.title}](${cand.url})\n` +
-            `  - ${fmtCounts(cand.result.counts)}${cand.stated ? ` (the post itself says ${cand.stated})` : ''}\n` +
+          `- [ ] **${label}** — [${cand.title}](${cand.url})\n` +
+            `      - ${fmtCounts(cand.result.counts)}${cand.stated ? ` (the post itself says ${cand.stated})` : ''}\n` +
             // A candidate gets the same self-consistency flag a configured list
             // does. Reading it here, before adopting, is the cheapest moment to
             // notice that the page was only half understood.
             (disagrees
-              ? `  - ⚠️ The post says **${cand.stated}** accepted workshops but ${cand.result.counts.listed} were extracted — read the page before adopting it.\n`
+              ? `      - ⚠️ The post says **${cand.stated}** accepted workshops but ${cand.result.counts.listed} were extracted — read the page before adopting it.\n`
               : '') +
-            (cand.result.counts.missing > 0 ? cand.warnings.map((w) => `  - ⚠️ ${w}\n`).join('') : '') +
-            `  - Adopt it by adding \`workshop_list_url: "${cand.url}"\` to the \`${ed.conference} ${ed.year}\` row of \`data/editions.yml\`.`,
+            (cand.result.counts.missing > 0 ? cand.warnings.map((w) => `      - ⚠️ ${w}\n`).join('') : '') +
+            `      - Adopt it by adding \`workshop_list_url: "${cand.url}"\` to the \`${ed.conference} ${ed.year}\` row of \`data/editions.yml\`.`,
         );
       }
       continue;
@@ -195,7 +195,7 @@ async function main() {
       // Unlike the deadline cross-check's transient "could not be checked", this
       // KEEPS the issue open: the cause there is rate-limiting that settles by
       // itself, here it is a wrong URL in config, which settles never.
-      sections.unreadable.push(`- **${label}** — ${ed.workshop_list_url}\n  - ${read.reason}`);
+      sections.unreadable.push(`- [ ] **${label}** — ${ed.workshop_list_url}\n      - ${read.reason}`);
       continue;
     }
     const { result: r, stated } = read;
@@ -220,20 +220,21 @@ async function main() {
     )) {
       const open = e.statusLabel === 'Open call';
       sections.offList.push(
-        `- ${open ? '🔴 **still showing an Open call**' : `_${e.statusLabel}_`} — \`data/workshops/${e.slug}.yml\`` +
-          ` — ${e.name}\n` +
-          `  - deadline it advertises: ${e.deadlineWallClock ?? '(none)'}` +
+        `- [ ] \`data/workshops/${e.slug}.yml\` — **${e.name}** (${label})` +
+          `${open ? ' — 🔴 still showing an Open call' : ` — _${e.statusLabel}_`}\n` +
+          `      - deadline it advertises: ${e.deadlineWallClock ?? '(none)'}` +
           `${e.openreview_venue_id ? ` · venue \`${e.openreview_venue_id}\`` : ''}` +
           `${e.website ? ` · ${e.website}` : ' · no website recorded'}\n` +
-          `  - **not running?** run *Record an official-list decision* with slug \`${e.slug}\`, action \`not_on_official_list\`\n` +
-          `  - **running, just not on this list** (affinity event, competition, co-located)? same workflow, action \`ack\``,
+          `      - **not running?** run *Record an official-list decision* with slug \`${e.slug}\`, action \`not_on_official_list\`\n` +
+          `      - **running, just not on this list** (affinity event, competition, co-located)? same workflow, action \`ack\``,
       );
     }
 
     for (const m of r.missing) {
       sections.missing.push(
-        `- **${label}** — ${m.title}${m.section ? ` _(${m.section})_` : ''}\n  - ${m.url}\n` +
-          `  - Add it with the [Add a workshop](../../issues/new?template=add-workshop.yml) form. ` +
+        `- [ ] **${m.title}** (${label})${m.section ? ` — _${m.section}_` : ''}\n` +
+          `      - ${m.url}\n` +
+          `      - Add it with the [Add a workshop](../../issues/new?template=add-workshop.yml) form. ` +
           `Some listed workshops have no OpenReview presence at all, so no crawl will ever find them.`,
       );
     }
@@ -254,16 +255,26 @@ async function main() {
         d.verdict === 'unclear' ? `**Your call** — ${why}.` : `**${d.verdict === 'adopt' ? 'Adopt' : 'Decline'}** — ${why}.`;
       const flag = d.verdict === 'decline' ? '--decline' : '--adopt';
       sections.drifted.push(
-        `- \`data/workshops/${d.entry.slug}.yml\` — ${d.field}\n` +
-          `  - ours: ${d.ours}\n  - official list: ${d.theirs}\n` +
-          `  - ${verdict}\n` +
-          `  - \`node scripts/apply_official_list.mjs --slug ${d.entry.slug} --field ${d.field} ${flag}\`` +
+        `- [ ] \`data/workshops/${d.entry.slug}.yml\` — **${d.entry.name}** (${label}) — ${d.field}\n` +
+          `      - ours: ${d.ours}\n      - official list: ${d.theirs}\n` +
+          `      - ${verdict}\n` +
+          `      - \`node scripts/apply_official_list.mjs --slug ${d.entry.slug} --field ${d.field} ${flag}\`` +
           (d.verdict === 'unclear' ? ' (or `--decline` to keep ours)' : ''),
       );
     }
   }
 
   const parts = [];
+  // Same shape as the "deadlines to review" issue: a line saying what this is,
+  // then checkbox items. Tick one off as you deal with it — the body is rebuilt
+  // from scratch on every run, so a resolved item disappears on its own and the
+  // ticks are only a working aid between runs.
+  parts.push(
+    'These entries disagree with the conference\'s own **accepted-workshop list**, or are workshops it names that we do not track. ' +
+      'Nothing here is applied automatically.\n' +
+      'A list is authoritative for what it *includes*, never for what it omits — affinity events, competitions and co-located ' +
+      'workshops are legitimately absent from one.',
+  );
   if (headers.length) parts.push(headers.join('\n\n'));
   if (sections.offList.length) {
     parts.push(
