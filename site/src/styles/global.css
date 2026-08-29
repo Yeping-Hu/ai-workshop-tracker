@@ -113,9 +113,19 @@ h3 { font-size: 1.12rem; margin: 1.6rem 0 0.4rem; }
    by conference doesn't mean scrolling to the footer. Kept visually identical to
    the plain text it replaced — the underline appears on hover/focus rather than
    putting nine underlines across the top of the page. */
-.conf-nav a { color: inherit; text-decoration: none; }
+/* A dotted underline marks these as links without a solid rule under spaced-out
+   uppercase mono, where letter-spacing pushes a solid line past the last glyph and
+   it reads as too long. Persistent rather than hover-only: most of the traffic is
+   phones, which have no hover, and this strip is otherwise indistinguishable from
+   the decorative eyebrow it sits in. currentColor is the fallback where color-mix
+   is unsupported — a slightly stronger dotted line, never no line. */
+.conf-nav a { color: inherit; text-decoration-line: underline; text-decoration-style: dotted;
+  text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: currentColor; }
+@supports (color: color-mix(in srgb, currentColor 50%, transparent)) {
+  .conf-nav a { text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); }
+}
 .conf-nav a:hover,
-.conf-nav a:focus-visible { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.conf-nav a:focus-visible { text-decoration-style: solid; text-decoration-color: currentColor; text-underline-offset: 3px; }
 .conf-nav .sep { opacity: 0.5; }
 .masthead p.lede { font-size: 1.06rem; color: var(--muted); max-width: 46rem; margin: 0.4rem 0 0; }
 .statline { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; margin-top: 1.1rem; font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); }
