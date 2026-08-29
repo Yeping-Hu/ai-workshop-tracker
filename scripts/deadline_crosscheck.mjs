@@ -353,6 +353,29 @@ export function upstreamIdentity(content, { conference, year }, conferences = lo
  *  it alone, which protects a hand-picked URL but also means one that goes stale
  *  stays stale (IROS BEMHAT's stored site had been unpublished and redirected to
  *  a Google sign-in page). A human decides; ours is sometimes the better link. */
+/**
+ * After adopting a value from a conference's OFFICIAL list, what (if anything)
+ * must be recorded as declined so this report stays quiet?
+ *
+ * Taking the official list's value implicitly declines OpenReview's, and this
+ * cross-check has no way to know that — it would open a fresh rename/website row
+ * the next morning for a decision that was just made deliberately. Expressed
+ * here, in terms of the very drift rules that would fire, so the ack written by
+ * scripts/apply_official_list.mjs is precisely the one that silences them; a
+ * second implementation of "does this count as drift" would eventually disagree
+ * with the report it exists to quiet.
+ *
+ * @returns the upstream value to record in `review_ack[field]`, or null.
+ */
+export function declinedUpstreamValue(record, field, upstream) {
+  if (!record?.openreview_venue_id || !upstream) return null;
+  const drift =
+    field === 'name'
+      ? titleDrift(record.name, upstream, record.conference, record.review_ack?.name)
+      : websiteDrift(record.website, upstream, record.review_ack?.website);
+  return drift ? upstream : null;
+}
+
 export function websiteDrift(stored, openreview, acked = null) {
   const a = normalizeWebsite(stored);
   const b = normalizeWebsite(openreview);

@@ -8,7 +8,7 @@
  *
  * Run: node scripts/deadline_crosscheck_test.mjs
  */
-import { classifyDeadlineDiff, reviewCategory, isWithinReviewWindow, websiteDrift, normalizeWebsite, titleDrift, acronymDrift, needsDirectLookup, buildReport, siblingVenueCandidates, lateResurrection } from './deadline_crosscheck.mjs';
+import { classifyDeadlineDiff, reviewCategory, isWithinReviewWindow, websiteDrift, normalizeWebsite, titleDrift, acronymDrift, needsDirectLookup, buildReport, siblingVenueCandidates, lateResurrection, declinedUpstreamValue } from './deadline_crosscheck.mjs';
 import { syncNote, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
 
 let failed = 0;
@@ -428,6 +428,36 @@ check('ack is irrelevant when we already agree', titleDrift('Same Title', 'Same 
   check('...and excludes a month-old deadline', isWithinReviewWindow(NOW - 30 * DAY, NOW), false);
   check('the wider fetch window still holds it', isWithinReviewWindow(NOW - 30 * DAY, NOW, 90 * DAY), true);
   check('and drops it eventually', isWithinReviewWindow(NOW - 120 * DAY, NOW, 90 * DAY), false);
+}
+
+// --- adopting the official list must not re-open this report tomorrow -------
+// The interaction that is easy to miss: taking a conference's official title or
+// URL implicitly declines OpenReview's, and this cross-check cannot know that.
+// Without an ack it opens a fresh rename/website row the next morning for a
+// decision that was just made deliberately.
+{
+  const base = {
+    conference: 'neurips',
+    openreview_venue_id: 'NeurIPS.cc/2026/Workshop/AgenticOS',
+    name: 'AgenticOS: Co-designing Systems and ML Foundations of an OS Layer for Agentic AI',
+    website: 'https://liuj.example/EvoRobust/',
+  };
+  check('an adopted name declines the upstream title',
+    declinedUpstreamValue(base, 'name', 'NeurIPS 2026 AgenticOS Workshop'), 'NeurIPS 2026 AgenticOS Workshop');
+  check('...and once declined, says nothing more',
+    declinedUpstreamValue({ ...base, review_ack: { name: 'NeurIPS 2026 AgenticOS Workshop' } }, 'name', 'NeurIPS 2026 AgenticOS Workshop'),
+    null);
+  check('an upstream title that already agrees needs no ack',
+    declinedUpstreamValue(base, 'name', base.name), null);
+  check('an adopted website declines the upstream URL',
+    declinedUpstreamValue(base, 'website', 'https://neurips.cc/Conferences/2026'), 'https://neurips.cc/Conferences/2026');
+  check('...and an agreeing URL needs no ack',
+    declinedUpstreamValue(base, 'website', 'https://liuj.example/EvoRobust/'), null);
+  // An entry with no OpenReview venue has no upstream to disagree with, so
+  // recording an ack would be inventing a decision nobody made.
+  check('no venue id -> never acks',
+    declinedUpstreamValue({ ...base, openreview_venue_id: undefined }, 'name', 'Anything Else'), null);
+  check('no upstream value -> never acks', declinedUpstreamValue(base, 'name', null), null);
 }
 
 console.log(failed === 0 ? '\nDeadline cross-check logic OK.' : `\n${failed} test(s) failed.`);

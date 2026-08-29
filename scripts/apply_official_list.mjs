@@ -34,6 +34,8 @@ import {
 } from '../lib/workshops.mjs';
 import { extractListedWorkshops } from '../lib/official_list.mjs';
 import { matchOfficialList } from '../lib/official_match.mjs';
+import { declinedUpstreamValue } from './deadline_crosscheck.mjs';
+import { fetchGroupById } from './recheck_imminent.mjs';
 
 const args = process.argv.slice(2);
 const getArg = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : null);
@@ -72,25 +74,64 @@ const { items } = extractListedWorkshops(await res.text(), { baseUrl: edition.wo
 
 const entries = loadWorkshops().filter((w) => w.conference === raw.conference && w.year === raw.year);
 const conferenceWebsite = loadConferences().find((c) => c.id === raw.conference)?.website ?? null;
-const { drifted } = matchOfficialList(entries, items, { listUrl: edition.workshop_list_url, conferenceWebsite });
-
+const { pairs, drifted } = matchOfficialList(entries, items, { listUrl: edition.workshop_list_url, conferenceWebsite });
 const row = drifted.find((d) => d.entry.slug === slug && d.field === field);
-if (!row) {
-  console.log(`${slug}: its ${field} no longer differs from the official list — nothing to decide.`);
+const pair = pairs.find((p) => p.entry.slug === slug);
+
+if (!row && !pair) {
+  console.log(`${slug}: no entry on the official list matches it — nothing to decide.`);
   process.exit(0);
 }
+// The official value, whether or not it currently differs: --adopt stays
+// idempotent, so re-running it on an entry already adopted still reconciles the
+// OpenReview side below rather than exiting as a no-op.
+const official = field === 'name' ? pair?.item.title : pair?.item.url;
 
-if (adopt) {
-  raw[field] = row.theirs;
+if (decline) {
+  if (!row) {
+    console.log(`${slug}: its ${field} no longer differs from the official list — nothing to decline.`);
+    process.exit(0);
+  }
+  raw.review_ack = { ...(raw.review_ack ?? {}), [field]: row.theirs };
+  console.log(`${slug}: kept our ${field}, declined the official list's\n  ours:     ${row.ours}\n  declined: ${row.theirs}`);
+} else {
+  const before = raw[field];
+  if (official && before !== official) {
+    raw[field] = official;
+    console.log(`${slug}: ${field} adopted from the official list\n  was:  ${before}\n  now:  ${official}`);
+  } else {
+    console.log(`${slug}: ${field} already matches the official list (${official}).`);
+  }
   // A value we have now adopted must not also be recorded as one we declined.
-  if (raw.review_ack && websiteKey(String(raw.review_ack[field] ?? '')) === websiteKey(String(row.theirs))) {
+  if (raw.review_ack && websiteKey(String(raw.review_ack[field] ?? '')) === websiteKey(String(official))) {
     delete raw.review_ack[field];
     if (!Object.keys(raw.review_ack).length) delete raw.review_ack;
   }
-  console.log(`${slug}: ${field} adopted from the official list\n  was:  ${row.ours}\n  now:  ${row.theirs}`);
-} else {
-  raw.review_ack = { ...(raw.review_ack ?? {}), [field]: row.theirs };
-  console.log(`${slug}: kept our ${field}, declined the official list's\n  ours:     ${row.ours}\n  declined: ${row.theirs}`);
+  await ackOpenReviewIfItDisagrees(raw, field);
+}
+
+/**
+ * Taking the official list's value implicitly DECLINES OpenReview's, and the
+ * daily cross-check has no way to know that — it would open a fresh "renamed on
+ * OpenReview" / "website changed on OpenReview" row the very next morning, for a
+ * decision that was just made deliberately. Record it as `review_ack`, which is
+ * exactly that field's job.
+ *
+ * Uses the cross-check's own titleDrift/websiteDrift so the ack written here is
+ * precisely the one that silences it — a second implementation of "does this
+ * count as drift" would eventually disagree with the report it is meant to quiet.
+ */
+async function ackOpenReviewIfItDisagrees(record, which) {
+  if (!record.openreview_venue_id) return;
+  const group = await fetchGroupById(record.openreview_venue_id);
+  const val = (k) => {
+    const x = group?.content?.[k];
+    return x && typeof x === 'object' && 'value' in x ? x.value : x;
+  };
+  const declined = declinedUpstreamValue(record, which, which === 'name' ? val('title') : val('website'));
+  if (!declined) return;
+  record.review_ack = { ...(record.review_ack ?? {}), [which]: declined };
+  console.log(`  also declined OpenReview's ${which}: ${declined}\n  (so the daily cross-check does not re-open this tomorrow)`);
 }
 
 if (dryRun) {

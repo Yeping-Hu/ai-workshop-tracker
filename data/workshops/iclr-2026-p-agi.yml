@@ -2,7 +2,7 @@ name: Post-AGI Science and Society Workshop
 acronym: P-AGI
 conference: iclr
 year: 2026
-website: https://p-agi.netlify.app/
+website: https://p-agi.org/
 topics:
   - science-applications
   - fairness
@@ -14,3 +14,5 @@ submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
 added: '2026-06-10'
 location: Rio de Janeiro, Brazil
+review_ack:
+  website: https://p-agi.netlify.app/
