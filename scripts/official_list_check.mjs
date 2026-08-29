@@ -145,9 +145,17 @@ async function main() {
       if (!feed) continue;
       const cand = await findCandidate(feed, ed.year, entries);
       if (cand) {
+        const disagrees = cand.stated != null && cand.stated !== cand.result.counts.listed;
         sections.candidates.push(
           `- **${label}** — [${cand.title}](${cand.url})\n` +
             `  - ${fmtCounts(cand.result.counts)}${cand.stated ? ` (the post itself says ${cand.stated})` : ''}\n` +
+            // A candidate gets the same self-consistency flag a configured list
+            // does. Reading it here, before adopting, is the cheapest moment to
+            // notice that the page was only half understood.
+            (disagrees
+              ? `  - ⚠️ The post says **${cand.stated}** accepted workshops but ${cand.result.counts.listed} were extracted — read the page before adopting it.\n`
+              : '') +
+            (cand.warnings.length ? cand.warnings.map((w) => `  - ⚠️ ${w}\n`).join('') : '') +
             `  - Adopt it by adding \`workshop_list_url: "${cand.url}"\` to the \`${ed.conference} ${ed.year}\` row of \`data/editions.yml\`.`,
         );
       }

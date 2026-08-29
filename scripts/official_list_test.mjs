@@ -102,7 +102,17 @@ const fixture = (f) => fs.readFileSync(new URL(`./fixtures/${f}`, import.meta.ur
   check('a block with TWO anchors is prose, not a list entry',
     extractListedWorkshops('<main><ul>' + '<li><a href="https://a.example">A</a> and <a href="https://b.example">B</a></li>'.repeat(9) + '</ul></main>').items,
     []);
+  // The stated count is a cross-check, so a wrong number is worse than none.
+  // Every phrasing below appears verbatim on a real announcement page.
   check('a year is never read as a stated count', statedWorkshopCount('the NeurIPS 2026 accepted workshops'), null);
+  check('"we have accepted 102 workshops" (NeurIPS word order)',
+    statedWorkshopCount('After reviewing, we have accepted 102 workshops: 48, 28, and 26.'), 102);
+  check('"40: accepted workshops" (ICLR word order)',
+    statedWorkshopCount('ICLR 2025 Workshops in Numbers 122: workshop proposal submissions 40: accepted workshops'), 40);
+  check('a PROPOSAL count is never mistaken for an accepted count',
+    statedWorkshopCount('TL;DR 151 (135 valid) workshop proposal submissions'), null);
+  check('a per-city subtotal is not a stated total',
+    statedWorkshopCount('ordered by location. Sydney (48 workshops) Paris (28 workshops)'), null);
 }
 
 /* ---- finding the list in a conference's announcement feed --------------- */
