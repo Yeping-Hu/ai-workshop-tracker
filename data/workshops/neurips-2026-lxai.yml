@@ -23,3 +23,5 @@ deadline_history:
     recorded: '2026-08-26'
     timezone: UTC
 location: Sidney, Australia
+review_ack:
+  official_list: https://blog.neurips.cc/2026/08/10/announcing-the-neurips-2026-workshops/

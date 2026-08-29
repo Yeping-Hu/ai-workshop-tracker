@@ -159,11 +159,22 @@ const slugsOf = (list) => list.map((e) => e.slug).sort();
 }
 
 /* ------------------------------------------- the live corpus: the real shape */
-// The plan's stated expectation. If this partition changes, either a conference
-// published something new or the matcher regressed — both worth a red test.
+// Two different properties, pinned separately.
+//
+// FIRST: how the MATCHER classifies the real corpus, with every recorded
+// decision stripped back off. This is the durable assertion — it describes what
+// the code concludes, not what a maintainer has since decided about it, so
+// acknowledging an entry cannot quietly turn it green.
 {
-  const entries = loadWorkshops().filter((w) => w.conference === 'neurips' && w.year === 2026);
-  const r = run(entries);
+  const undecided = loadWorkshops()
+    .filter((w) => w.conference === 'neurips' && w.year === 2026)
+    .map(({ not_running, review_ack, ...w }) => ({
+      ...w,
+      status: w.status === 'not_running' ? 'upcoming' : w.status,
+      statusLabel: w.statusLabel === 'Not running' ? 'Open call' : w.statusLabel,
+      ...(review_ack ? { review_ack: { ...review_ack, official_list: undefined } } : {}),
+    }));
+  const r = run(undecided);
   check('neurips 2026: 102 listed', r.counts.listed, 102);
   check('99 of 102 covered by the corpus', r.counts.matched, 99);
   check('10 tracked entries are off-list', r.counts.offList, 10);
@@ -188,6 +199,20 @@ const slugsOf = (list) => list.map((e) => e.slug).sort();
   // Every legitimate track file is matched, not reported.
   check('no track file is reported off-list',
     r.offList.some((e) => /neurreps|genai4health|infpriv|tccml|vericodegen|iab-/.test(e.slug)), false);
+}
+
+// SECOND: the corpus as it actually stands. Each of those ten now carries a
+// decision — nine acknowledged as real events that are simply not "workshops" in
+// this list's sense, one marked as a rejected proposal — so the weekly report is
+// empty and the issue closes. A new off-list entry appearing here (UniReps is
+// due on the next crawl) turns this red, which is the point.
+{
+  const entries = loadWorkshops().filter((w) => w.conference === 'neurips' && w.year === 2026);
+  const r = run(entries);
+  check('every off-list entry has a recorded decision', r.counts.offList, 0);
+  check('...nine acknowledged as running', r.counts.acked, 9);
+  check('...one marked as not running', r.counts.marked, 1);
+  check('the three genuinely missing workshops still report', r.counts.missing, 3);
 }
 
 console.log(failed === 0 ? '\nOfficial-list matching OK.' : `\n${failed} test(s) failed.`);

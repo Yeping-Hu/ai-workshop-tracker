@@ -20,3 +20,5 @@ deadline_history:
   - value: 2026-08-30 07:59
     recorded: '2026-08-28'
     timezone: UTC
+review_ack:
+  official_list: https://blog.neurips.cc/2026/08/10/announcing-the-neurips-2026-workshops/

@@ -108,5 +108,11 @@ if (dryRun) {
   console.log('(dry-run — no file written)');
   process.exit(0);
 }
-fs.writeFileSync(fp, yaml.dump(raw, { lineWidth: 200, quotingType: '"' }));
+// Keep any leading comment block. A deadline-less entry carries the importer's
+// DEADLINE_HINT header inviting a contributor to fill the deadline in, and
+// yaml.dump() would silently drop it. The deadline-writing scripts drop it on
+// purpose — they have just answered it — but this one never touches the
+// deadline, so removing the prompt would be pure loss.
+const header = fs.readFileSync(fp, 'utf8').match(/^(?:#[^\n]*\n)+/)?.[0] ?? '';
+fs.writeFileSync(fp, header + yaml.dump(raw, { lineWidth: 200, quotingType: '"' }));
 console.log(`Wrote ${fp}.`);

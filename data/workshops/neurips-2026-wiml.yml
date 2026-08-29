@@ -26,3 +26,5 @@ deadline_history:
     recorded: '2026-08-25'
     timezone: UTC
 location: Sydney, Paris, Atlanta
+review_ack:
+  official_list: https://blog.neurips.cc/2026/08/10/announcing-the-neurips-2026-workshops/
