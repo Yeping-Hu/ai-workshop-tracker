@@ -1,0 +1,11 @@
+# Intentionally no static entries.
+#
+# This file once excluded the `{year}` placeholder URLs built from
+# `workshop_list_url_pattern` in conferences.yml. That field was deleted in
+# 8c9fec9 (the templated schedule pages are JS-rendered and yield no anchors), so
+# the patterns had nothing left to exclude and were removed with it.
+#
+# It is not unused: the link-check workflow appends to it at run time from
+# `scripts/lychee_exclusions.mjs`, one line per `review_ack.website` — URLs
+# reviewed, declined, and kept in the data only so the importer cannot restore
+# them. Those exclusions are generated from the corpus, never hand-listed here.
