@@ -160,6 +160,59 @@ const slugsOf = (list) => list.map((e) => e.slug).sort();
     run([track]).drifted.map((d) => d.field), ['website']);
 }
 
+/* --------------------------- a list that links OpenReview instead of homepages */
+// Four of ICLR 2024's twenty entries link the workshop's OpenReview GROUP rather
+// than its website. websiteKey() drops the query string, so all four normalise to
+// the single key "openreview.net/group": they matched each other, the counts
+// disagreed with the list itself, and each produced a nonsense "your website
+// should be openreview.net" drift row.
+{
+  const iclr2024 = extractListedWorkshops(
+    fs.readFileSync(new URL('./fixtures/iclr-2024-workshops.html', import.meta.url), 'utf8'),
+    { baseUrl: 'https://blog.iclr.cc/2024/01/08/announcing-the-accepted-workshops-at-iclr-2024/' },
+  ).items;
+  check('20 workshops listed', iclr2024.length, 20);
+  const collapsed = iclr2024.filter((i) => /openreview\.net\/group/.test(i.url));
+  check('...four of them link an OpenReview group, not a homepage', collapsed.length, 4);
+
+  const entries = [
+    ws({ slug: 'gem', name: 'Nothing In Common', openreview_venue_id: 'ICLR.cc/2024/Workshop/GEM', website: 'https://gem-workshop.example/' }),
+    ws({ slug: 'dpfm', name: 'Also Unrelated', openreview_venue_id: 'ICLR.cc/2024/Workshop/DPFM', website: 'https://dpfm.example/' }),
+  ];
+  const r = matchOfficialList(entries, iclr2024, { listUrl: 'x', conferenceWebsite: 'https://iclr.cc' });
+
+  // Names deliberately share nothing with the listed titles, so ONLY the venue
+  // id can match these — and it must match each to its own workshop.
+  check('each matches by venue id', r.pairs.map((p) => p.how), ['venue', 'venue']);
+  check('...to two DIFFERENT listed workshops', new Set(r.pairs.map((p) => p.item.index)).size, 2);
+  check('...and the right ones', r.pairs.map((p) => /GEM|DPFM/.exec(p.item.url)?.[0]).sort(), ['DPFM', 'GEM']);
+
+  // An OpenReview group URL is not a homepage, so it can never be evidence that
+  // our website is wrong.
+  check('no website drift is invented from an OpenReview link',
+    r.drifted.filter((d) => d.field === 'website').length, 0);
+  // Name drift still fires, correctly — these fixtures are deliberately named
+  // nothing like the listed titles, which is what forced the venue-id match.
+  check('...while name drift still works', r.drifted.filter((d) => d.field === 'name').length, 2);
+
+  // The case the !item.venueId guard actually protects: an entry with NO venue
+  // id of its own, matched to an OpenReview-linked listing by title. Nothing
+  // else suppresses it, and without the guard the report would tell you to set
+  // your website to "openreview.net/group?id=…".
+  const byTitle = matchOfficialList(
+    [ws({ slug: 'settlm', name: 'Secure and Trustworthy Large Language Models', website: 'https://set-llm.example/' })],
+    iclr2024,
+    { listUrl: 'x', conferenceWebsite: 'https://iclr.cc' },
+  );
+  check('a title match against an OpenReview-linked listing still matches', byTitle.pairs[0]?.how, 'title');
+  check('...and still invents no website drift',
+    byTitle.drifted.filter((d) => d.field === 'website').length, 0);
+
+  // The count is derived from the array the report prints, not from lengths.
+  check('counts.missing agrees with the missing array', r.counts.missing, r.missing.length);
+  check('...and with the arithmetic', r.counts.missing, 18);
+}
+
 /* ------------------------------------------- classifying drift, not just reporting it */
 {
   // The three real NeurIPS 2026 name mismatches were three DIFFERENT situations,
