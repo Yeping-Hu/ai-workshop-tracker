@@ -28,7 +28,7 @@ for human review, as do dependency updates.
 | `resync-deadline.yml` | manual | Re-pull one workshop's deadline from OpenReview's duedate (either direction) |
 | `deadline-review.yml` | daily | One consolidated issue listing deadlines that need a human decision — including ones OpenReview reopened after they had closed, where the site says shut and OpenReview says open — daily because it is the only job that ever looks at a **human-edited** deadline, which freeze-on-touch excludes from every automatic sync. Comments when a workshop first appears, since editing an issue body notifies nobody. Also reports a `website` that changed on OpenReview (reported, never applied), and names any entry OpenReview could not answer for rather than counting it. |
 | `official-list-check.yml` | weekly | Reconciles the corpus against each conference-edition's **official accepted-workshop list** (`data/editions.yml` → `workshop_list_url`), and proposes one from the conference's `announcement_feed` where none is configured. One consolidated issue: entries we track that are not on the list (ranked so a still-open call comes first), listed workshops we do not track, and title/website drift. Reports only — see below. |
-| `mark-not-running.yml` | manual | `scripts/mark_not_running.mjs` — records `not_running` on one entry, or `review_ack.official_list` to keep it and stop reporting it → commits to `main` |
+| `official-list-decision.yml` | manual | Records one decision the official-list report asked for — `not_running` / `review_ack.official_list` via `scripts/mark_not_running.mjs`, or adopting/declining a drifted name or website via `scripts/apply_official_list.mjs` → commits to `main` |
 | `stale-check.yml` | weekly | One consolidated issue listing entries needing follow-up |
 | `link-check.yml` | monthly | One consolidated issue listing broken URLs Before running, `scripts/lychee_exclusions.mjs` appends every `review_ack.website` to `.lycheeignore`, so a URL deliberately removed as dead is not re-reported each month. |
 | `alerts.yml` | daily, manual | `scripts/alerts_run.mjs` — diffs `/api/workshops.json` against yesterday's snapshot, records events, sends urgent starred-deadline alerts, and on Mondays the weekly digests. Commits nothing. |
@@ -56,9 +56,22 @@ Three things follow, and they are the whole design:
   competitions, and co-located workshops in their own OpenReview namespace are
   all legitimately off-list. UniReps 2026 is exactly that shape — a live site, a
   4th edition, absent from the 102. So off-list means *a human should look*, and
-  the two verdicts are recorded by dispatching `mark-not-running.yml`:
+  the two verdicts are recorded by dispatching `official-list-decision.yml`:
   `not_running` for an edition that is not happening, `review_ack.official_list`
   for one that is and should stop being reported.
+- **A name or website that disagrees with the list is classified, not just
+  reported.** Three real NeurIPS 2026 cases were three different situations, so
+  "always adopt the list" is wrong: our stub name loses to the official title
+  (AgenticOS), our venue-noisy name loses to it (BabyVLM), and our real name
+  BEATS `AI4Mat-NeurIPS-2026`, which is acronym+venue+year — the very shape
+  `stripVenueFromName` strips everywhere else. `classifyNameDrift` decides from
+  the two token sets alone (`nameTokens` already discards venue words and the
+  year); `classifyWebsiteDrift` adopts only when our stored URL is the
+  conference's own site, i.e. a placeholder. Anything else stays a person's call.
+  Note the fix for a venue-noisy stored name is to take the official title, NOT
+  to widen the stripper: 126 of 934 names carry a conference name or year and
+  nearly all legitimately ("4th CoRL Workshop on…", "co-located with NeurIPS
+  2025"), so a stripper aggressive enough to catch them would mangle correct ones.
 - **A marked entry is never deleted.** Its OpenReview group is still live, so the
   next weekly crawl would re-create a deleted file — the same lesson
   `merged_venue_ids` records for duplicates. Keeping the file is what makes the

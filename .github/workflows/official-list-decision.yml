@@ -13,7 +13,11 @@
 #
 # Use `ack` instead of a reason for an entry that IS running and is merely absent
 # from that list: an affinity event, a competition, a co-located workshop.
-name: Mark a workshop not running
+#
+# The same report also flags a name or website that disagrees with the list, and
+# the adopt_*/decline_* actions record those. One workflow for all of it, because
+# every one of these decisions comes from reading the same issue.
+name: Record an official-list decision
 
 on:
   workflow_dispatch:
@@ -28,11 +32,15 @@ on:
         type: choice
         default: not_on_official_list
         options:
-          - not_on_official_list   # absent from the conference's official accepted-workshop list
-          - withdrawn              # the organizers withdrew it
-          - cancelled              # announced and then cancelled
+          - not_on_official_list   # not running: absent from the official accepted-workshop list
+          - withdrawn              # not running: the organizers withdrew it
+          - cancelled              # not running: announced and then cancelled
           - ack                    # it IS running; stop reporting it as off-list
-          - unmark                 # undo a previous marking
+          - unmark                 # undo a previous not-running marking
+          - adopt_name             # take the official list's title
+          - decline_name           # keep ours, remember the title we turned down
+          - adopt_website          # take the official list's URL
+          - decline_website        # keep ours, remember the URL we turned down
       source:
         description: 'Evidence URL (defaults to the edition''s configured official list)'
         required: false
@@ -71,18 +79,26 @@ jobs:
           NOTE: ${{ inputs.note }}
         run: |
           set -euo pipefail
-          args=(--slug "$SLUG")
           case "$ACTION" in
-            ack)    args+=(--ack) ;;
-            unmark) args+=(--unmark) ;;
-            *)      args+=(--reason "$ACTION") ;;
+            adopt_name)      node scripts/apply_official_list.mjs --slug "$SLUG" --field name --adopt ;;
+            decline_name)    node scripts/apply_official_list.mjs --slug "$SLUG" --field name --decline ;;
+            adopt_website)   node scripts/apply_official_list.mjs --slug "$SLUG" --field website --adopt ;;
+            decline_website) node scripts/apply_official_list.mjs --slug "$SLUG" --field website --decline ;;
+            *)
+              args=(--slug "$SLUG")
+              case "$ACTION" in
+                ack)    args+=(--ack) ;;
+                unmark) args+=(--unmark) ;;
+                *)      args+=(--reason "$ACTION") ;;
+              esac
+              # `if`, not `[ -n … ] && …`: under `set -e` a false test on the LAST
+              # command of the step would exit non-zero and fail the job whenever
+              # the optional input was left blank.
+              if [ -n "$SOURCE" ]; then args+=(--source "$SOURCE"); fi
+              if [ -n "$NOTE" ]; then args+=(--note "$NOTE"); fi
+              node scripts/mark_not_running.mjs "${args[@]}"
+              ;;
           esac
-          # `if`, not `[ -n … ] && …`: under `set -e` a false test on the LAST
-          # command of the step would exit non-zero and fail the job whenever the
-          # optional input was left blank.
-          if [ -n "$SOURCE" ]; then args+=(--source "$SOURCE"); fi
-          if [ -n "$NOTE" ]; then args+=(--note "$NOTE"); fi
-          node scripts/mark_not_running.mjs "${args[@]}"
       - name: Validate
         run: node scripts/validate.mjs
       # Validation passed — publish directly. A failed validation fails the job

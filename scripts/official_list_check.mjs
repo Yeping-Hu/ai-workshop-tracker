@@ -83,7 +83,7 @@ async function get(url) {
 }
 
 /** Read a page and refuse it unless it is plausibly a workshop list. */
-async function readList(url, entries, { retryEmpty = true } = {}) {
+async function readList(url, entries, { retryEmpty = true, conferenceWebsite = null } = {}) {
   const res = await get(url);
   if (!res.ok) return { ok: false, reason: res.reason };
   const { items, warnings } = extractListedWorkshops(res.body, { baseUrl: url });
@@ -96,7 +96,7 @@ async function readList(url, entries, { retryEmpty = true } = {}) {
     // config or in the extractor.
     if (retryEmpty) {
       await new Promise((r) => setTimeout(r, 5000));
-      return readList(url, entries, { retryEmpty: false });
+      return readList(url, entries, { retryEmpty: false, conferenceWebsite });
     }
     return {
       ok: false,
@@ -106,7 +106,7 @@ async function readList(url, entries, { retryEmpty = true } = {}) {
       warnings,
     };
   }
-  const r = matchOfficialList(entries, items, { listUrl: url });
+  const r = matchOfficialList(entries, items, { listUrl: url, conferenceWebsite });
   const share = entries.length ? r.counts.matched / Math.min(entries.length, items.length) : 1;
   if (share < MIN_MATCH_SHARE) {
     return {
@@ -123,7 +123,7 @@ async function readList(url, entries, { retryEmpty = true } = {}) {
  * adopting it is a human's dispatch, because a mis-read page would declare the
  * whole corpus rejected.
  */
-async function findCandidate(feedUrl, year, entries) {
+async function findCandidate(feedUrl, year, entries, conferenceWebsite = null) {
   const seen = new Set();
   for (let page = 1; page <= FEED_PAGES; page++) {
     // WordPress feeds hold ten items; a weekly job against a busy blog needs to
@@ -135,7 +135,7 @@ async function findCandidate(feedUrl, year, entries) {
     for (const c of candidates) {
       if (seen.has(c.url)) continue;
       seen.add(c.url);
-      const probe = await readList(c.url, entries);
+      const probe = await readList(c.url, entries, { conferenceWebsite });
       if (probe.ok) return { url: c.url, title: c.title, ...probe };
     }
   }
@@ -169,7 +169,7 @@ async function main() {
       // OpenReview crawl for this conference-year runs exactly as before.
       const feed = confById.get(ed.conference)?.announcement_feed;
       if (!feed) continue;
-      const cand = await findCandidate(feed, ed.year, entries);
+      const cand = await findCandidate(feed, ed.year, entries, confById.get(ed.conference)?.website ?? null);
       if (cand) {
         const disagrees = cand.stated != null && cand.stated !== cand.result.counts.listed;
         sections.candidates.push(
@@ -188,7 +188,9 @@ async function main() {
       continue;
     }
 
-    const read = await readList(ed.workshop_list_url, entries);
+    const read = await readList(ed.workshop_list_url, entries, {
+      conferenceWebsite: confById.get(ed.conference)?.website ?? null,
+    });
     if (!read.ok) {
       // Unlike the deadline cross-check's transient "could not be checked", this
       // KEEPS the issue open: the cause there is rate-limiting that settles by
@@ -217,7 +219,7 @@ async function main() {
           `  - deadline it advertises: ${e.deadlineWallClock ?? '(none)'}` +
           `${e.openreview_venue_id ? ` · venue \`${e.openreview_venue_id}\`` : ''}` +
           `${e.website ? ` · ${e.website}` : ' · no website recorded'}\n` +
-          `  - **not running?** run *Mark a workshop not running* with slug \`${e.slug}\`, action \`not_on_official_list\`\n` +
+          `  - **not running?** run *Record an official-list decision* with slug \`${e.slug}\`, action \`not_on_official_list\`\n` +
           `  - **running, just not on this list** (affinity event, competition, co-located)? same workflow, action \`ack\``,
       );
     }
@@ -231,10 +233,26 @@ async function main() {
     }
 
     for (const d of r.drifted) {
+      // Most drift is decidable from the two strings alone, so the report says
+      // which it is and prints the one command — a row that still needs a
+      // person's judgement is then the only one that looks like a question.
+      const why =
+        d.verdict === 'adopt' && d.field === 'name'
+          ? 'the official title is the same name plus its subtitle'
+          : d.verdict === 'adopt'
+            ? "our stored URL is the conference's own site — a placeholder, not this workshop's homepage"
+            : d.verdict === 'decline'
+              ? 'ours already says more; theirs is acronym/venue-shaped, which is what the importer strips everywhere else'
+              : 'two genuinely different values, and neither source is authoritative';
+      const verdict =
+        d.verdict === 'unclear' ? `**Your call** — ${why}.` : `**${d.verdict === 'adopt' ? 'Adopt' : 'Decline'}** — ${why}.`;
+      const flag = d.verdict === 'decline' ? '--decline' : '--adopt';
       sections.drifted.push(
         `- \`data/workshops/${d.entry.slug}.yml\` — ${d.field}\n` +
           `  - ours: ${d.ours}\n  - official list: ${d.theirs}\n` +
-          `  - Adopt it, or record \`review_ack.${d.field}\` to decline it.`,
+          `  - ${verdict}\n` +
+          `  - \`node scripts/apply_official_list.mjs --slug ${d.entry.slug} --field ${d.field} ${flag}\`` +
+          (d.verdict === 'unclear' ? ' (or `--decline` to keep ours)' : ''),
       );
     }
   }

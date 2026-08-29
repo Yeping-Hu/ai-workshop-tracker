@@ -12,7 +12,7 @@
  */
 import fs from 'node:fs';
 import { extractListedWorkshops } from '../lib/official_list.mjs';
-import { matchOfficialList } from '../lib/official_match.mjs';
+import { matchOfficialList, classifyNameDrift, classifyWebsiteDrift } from '../lib/official_match.mjs';
 import { loadWorkshops } from '../lib/workshops.mjs';
 
 let failed = 0;
@@ -39,7 +39,8 @@ const ws = (over) => ({
   statusLabel: 'Open call',
   ...over,
 });
-const run = (entries, items = listed) => matchOfficialList(entries, items, { listUrl: LIST_URL });
+const run = (entries, items = listed) =>
+  matchOfficialList(entries, items, { listUrl: LIST_URL, conferenceWebsite: 'https://neurips.cc' });
 const slugsOf = (list) => list.map((e) => e.slug).sort();
 
 /* ------------------------------------------------- tier U: the same page */
@@ -157,6 +158,49 @@ const slugsOf = (list) => list.map((e) => e.slug).sort();
   // official URL — a track alone, with no sibling matching it, still reports.
   check('the track alone (no sibling holds the official url) still reports',
     run([track]).drifted.map((d) => d.field), ['website']);
+}
+
+/* ------------------------------------------- classifying drift, not just reporting it */
+{
+  // The three real NeurIPS 2026 name mismatches were three DIFFERENT situations,
+  // which is the whole reason "always adopt the official list" is wrong.
+  check('a stub name loses to the full official title',
+    classifyNameDrift('AgenticOS Workshop', 'AgenticOS: Co-designing Systems and ML Foundations of an OS Layer for Agentic AI'),
+    'adopt');
+  check('a venue-noisy name loses to it too',
+    classifyNameDrift('BabyVLM Workshop NEURIPS 2026', 'The BabyVLM Workshop: Toward Developmentally Plausible Multimodal Systems'),
+    'adopt');
+  // The expensive one: the official list is NOT always better. Adopting
+  // "AI4Mat-NeurIPS-2026" would put acronym+venue+year in `name` — the exact
+  // shape stripVenueFromName removes everywhere else — and would throw away the
+  // only descriptive title this entry has.
+  check('our real name BEATS an acronym-shaped official title',
+    classifyNameDrift('AI for Accelerated Materials Design', 'AI4Mat-NeurIPS-2026'), 'decline');
+
+  check('two genuinely different names are a human call',
+    classifyNameDrift('Workshop on Robot Learning', 'Foundations of Agentic Systems Theory'), 'unclear');
+  check('an empty side is never decided automatically', classifyNameDrift('', 'Anything At All'), 'unclear');
+
+  // nameTokens already discards "workshop", the conference and the year, so
+  // these two say the same thing and neither is more informative.
+  check('a pure venue-noise difference is not an improvement',
+    classifyNameDrift('BabyVLM Workshop NEURIPS 2026', 'BabyVLM Workshop'), 'unclear');
+
+  // Website: exactly one case is mechanical.
+  check('a stored URL that is the conference site is a placeholder -> adopt',
+    classifyWebsiteDrift('https://neurips.cc/Conferences/2026', 'https://neurips.cc'), 'adopt');
+  check('...regardless of scheme or www', classifyWebsiteDrift('http://www.neurips.cc/x', 'https://neurips.cc'), 'adopt');
+  check('two real, different URLs stay a human call',
+    classifyWebsiteDrift('https://theagenticweb.ai', 'https://neurips.cc'), 'unclear');
+  check('no conference website configured -> never decides',
+    classifyWebsiteDrift('https://neurips.cc/Conferences/2026', null), 'unclear');
+
+  // And the verdict reaches the report rows.
+  const r = run(
+    [ws({ slug: 'evorobust', name: 'Self-Evolving Diversity-Driven Search for Robust AI Systems', website: 'https://neurips.cc/Conferences/2026' })],
+    listed,
+  );
+  check('a drift row carries its verdict', r.drifted[0]?.verdict, 'adopt');
 }
 
 /* ------------------------------------------------- ack and marked entries */

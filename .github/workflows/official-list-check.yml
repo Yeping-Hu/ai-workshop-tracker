@@ -15,7 +15,7 @@
 # It commits nothing, so — like deadline-review.yml and stale-check.yml — it does
 # NOT join the `data-write` concurrency group; queueing a read-only report behind
 # the data jobs would only delay it. The workflow that acts on a finding
-# (mark-not-running.yml) does write data and does join the group.
+# (official-list-decision.yml) does write data and does join the group.
 #
 # Weekly rather than daily because the input moves about twice a year: a
 # conference publishes its accepted list once, and the corpus around it changes
