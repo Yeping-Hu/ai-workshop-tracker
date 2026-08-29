@@ -59,9 +59,14 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
     signed-in visitor is offered a signup on every page but /saved/, which
     reads as "you are not signed in". Filled in by the script below, since the
     pages are static and the token lives in localStorage. */}
+{/* Inline SVG rather than the ✉ character. U+2709 has no default
+    presentation, so desktop drew a hairline text glyph while iOS and Android
+    substituted a chunky colour emoji — the same markup looking like two
+    different icons. This inherits currentColor and scales with the heading, so
+    it renders identically everywhere. */}
 {enabled && !hideSignedIn && (
   <p class="alerts-signedin" id="alertsSignedIn" hidden>
-    <span class="alerts-summary-mark" aria-hidden="true">✉</span>
+    <svg class="alerts-summary-mark" viewBox="0 0 20 20" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2.2" y="4.2" width="15.6" height="11.6" rx="2.2"/><path d="M3.4 6 10 10.6 16.6 6"/></svg>
     <span id="alertsSignedInText"></span>
   </p>
 )}
@@ -77,7 +82,7 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
     {/* One structure for both variants: `open` with the summary hidden gives
         the full box, without a second copy of the form and its element ids. */}
     <summary class="alerts-summary">
-      <span class="alerts-summary-mark" aria-hidden="true">✉</span>
+      <svg class="alerts-summary-mark" viewBox="0 0 20 20" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2.2" y="4.2" width="15.6" height="11.6" rx="2.2"/><path d="M3.4 6 10 10.6 16.6 6"/></svg>
       <span>{summary}</span>
       <span class="alerts-summary-hint">workshop extensions, new calls, and more</span>
     </summary>
@@ -405,7 +410,12 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
     font-size: 0.98rem;
   }
   .alerts-summary::-webkit-details-marker { display: none; }
-  .alerts-summary-mark { color: var(--accent); font-weight: 400; }
+  /* An <svg> in a flex row would shrink under pressure and, in the signed-in
+     line, sit on the text baseline rather than centred on it. */
+  /* Both rows are flex with baseline alignment, and an <svg>'s baseline is its
+     bottom edge — so it floated 3.4px above the text's optical centre. Centre it
+     on the line box instead, and stop it shrinking in a wrapped row. */
+  .alerts-summary-mark { color: var(--accent); flex: none; align-self: center; }
   .alerts-summary-hint { color: var(--muted); font-size: 0.84rem; font-weight: 400; }
   .alerts-signup[data-collapsed] > .alerts-summary::after {
     content: '+';
