@@ -181,7 +181,7 @@ async function main() {
             (disagrees
               ? `  - ⚠️ The post says **${cand.stated}** accepted workshops but ${cand.result.counts.listed} were extracted — read the page before adopting it.\n`
               : '') +
-            (cand.warnings.length ? cand.warnings.map((w) => `  - ⚠️ ${w}\n`).join('') : '') +
+            (cand.result.counts.missing > 0 ? cand.warnings.map((w) => `  - ⚠️ ${w}\n`).join('') : '') +
             `  - Adopt it by adding \`workshop_list_url: "${cand.url}"\` to the \`${ed.conference} ${ed.year}\` row of \`data/editions.yml\`.`,
         );
       }
@@ -203,7 +203,13 @@ async function main() {
     if (stated != null && stated !== r.counts.listed) {
       header += `\n\n> ⚠️ The post says **${stated}** accepted workshops but ${r.counts.listed} were extracted — the page shape may have changed.`;
     }
-    for (const w of read.warnings) header += `\n\n> ⚠️ ${w}`;
+    // The extractor warns when it had to fall back past <li>. That is a useful
+    // signal ONLY while the read looks doubtful: ICLR publishes its list as a
+    // table every year, so surfacing it unconditionally would print the same
+    // warning forever and teach the reader to skip warnings. A list where every
+    // entry matched something we track was demonstrably read correctly,
+    // whichever tag carried it.
+    if (r.counts.missing > 0) for (const w of read.warnings) header += `\n\n> ⚠️ ${w}`;
     headers.push(header);
 
     // Ranked: an off-list entry still advertising an Open call is the one

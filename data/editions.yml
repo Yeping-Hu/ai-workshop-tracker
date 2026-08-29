@@ -87,6 +87,7 @@
   start: "2026-04-23"
   end: "2026-04-27"
   source: "https://iclr.cc/Conferences/2026/CallForWorkshops"
+  workshop_list_url: "https://blog.iclr.cc/2026/01/13/iclr2026-workshops/"
 - conference: icra
   year: 2026
   start: "2026-06-01"
