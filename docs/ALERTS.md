@@ -257,6 +257,16 @@ Three **independent** notifications, any combination:
 | `urgent` | A saved workshop's deadline is within 72 h |
 | `changes` | Same-day, when a saved workshop's deadline moves |
 
+An edition recorded as `not_running` is skipped, however imminent its stored
+deadline: a rejected workshop proposal keeps a live OpenReview group whose
+deadline ticks down like any other, and mailing someone about it would be worse
+than saying nothing. The skip lives in `closingWithin()` — the one definition of
+"imminent" shared by this 72 h pass and the digest's "closing soon" section — so
+the two can never disagree about it. Marking an entry is otherwise **silent**: no
+mail is sent to say a workshop stopped running, which is a deliberate gap rather
+than an oversight (`alerts_diff_test.mjs` pins it, so a refactor cannot start
+mailing by accident).
+
 They were a single-choice `cadence`, which forced artificial combinations and
 mislabelled one of them — `starred_changes` also sent the 72 h alert while its
 label said "only when a deadline changes". Independent flags make every

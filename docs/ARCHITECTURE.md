@@ -163,6 +163,32 @@ if that also fails does it show an honest message with a reload button.
 daily scheduled rebuild keeps them current with zero commits, so an "Open call"
 becomes "Past" on its own (within a day) without anyone editing data.
 
+There is a fourth value, `not_running`, and it is the one exception worth
+understanding. It is still *derived* — `computeStatus` returns it — but from a
+stored **observation** (`not_running` in the YAML) rather than from a date,
+because no date implies it: a rejected workshop proposal keeps a live OpenReview
+group whose deadline ticks down exactly like an accepted one's. It is checked
+**first**, before the open-deadline rule below, precisely because that rule is
+what it has to beat. Making it a status rather than a parallel flag is what keeps
+every surface honest: `site/src/lib/data.ts` partitions on the three date-derived
+values, so a marked entry drops out of the board, the TBA list and the archive at
+once, while `[slug].astro` still builds its page — it iterates `workshops`, not a
+bucket — so anyone who starred it lands on a page with a notice instead of a 404.
+See *An OpenReview venue is not proof a workshop was accepted* in
+[AUTOMATION.md](AUTOMATION.md) for why the field exists and who sets it.
+
+**Where to submit.** `openreview_venue_id` produces its own submission link, and
+until three NeurIPS 2026 workshops were added by hand every single entry in the
+corpus submitted through OpenReview, so that was the only case there was. A
+workshop that submits through CMT, a Google Form or EasyChair needs
+`submission_url`, without
+which `submission_portal: cmt` renders as the bare word "CMT" with nothing to
+click. It is shown as a linked portal row plus a "Submit ↗" action, and that
+action is suppressed in two situations that both matter: once the call has closed
+(a live Submit link on a passed deadline is worse than none), and whenever an
+OpenReview venue is present (which already carries the link, so showing both would
+offer two answers to one question).
+
 When a workshop has no explicit `workshop_date`, its event date is **inferred** —
 from its conference edition's end date (`data/editions.yml`), or, failing that,
 the conference's typical month. That inference must never override a real

@@ -69,17 +69,43 @@ Three things follow, and they are the whole design:
   year); `classifyWebsiteDrift` adopts only when our stored URL is the
   conference's own site, i.e. a placeholder. Anything else stays a person's call.
   Note the fix for a venue-noisy stored name is to take the official title, NOT
-  to widen the stripper: 126 of 934 names carry a conference name or year and
-  nearly all legitimately ("4th CoRL Workshop on…", "co-located with NeurIPS
-  2025"), so a stripper aggressive enough to catch them would mangle correct ones.
+  to widen the stripper: roughly one stored name in seven carries a conference
+  name or year and nearly all do so legitimately ("4th CoRL Workshop on…",
+  "co-located with NeurIPS 2025"), so a stripper aggressive enough to catch the
+  handful of bad ones would mangle correct ones.
 - **A marked entry is never deleted.** Its OpenReview group is still live, so the
   next weekly crawl would re-create a deleted file — the same lesson
   `merged_venue_ids` records for duplicates. Keeping the file is what makes the
   decision stick, and it keeps the page alive for anyone who already starred or
-  linked it. Seven scripts skip a marked entry through one exported predicate;
-  two of those filters (`deadline_crosscheck.mjs`, `stale_check.mjs`) are
+  linked it. Eight scripts skip a marked entry — six through the exported
+  `isNotRunning()` predicate, plus `stale_check.mjs` (which reads the derived
+  status) and `lychee_exclusions.mjs` (a deliberately dependency-free line scan,
+  so a tombstoned workshop's dead homepage is not reported broken every month).
+  Two of those filters (`deadline_crosscheck.mjs`, `stale_check.mjs`) are
   load-bearing rather than tidiness, since without them marking an entry would
   move it off the board and into a daily issue forever.
+
+**Adopting from one source declines the other.** Taking the official list's title
+or URL implicitly rejects OpenReview's, and the daily cross-check cannot know
+that — it would open a fresh "renamed on OpenReview" row the next morning for a
+decision just made deliberately, in a *different* issue. `--adopt` therefore also
+records the displaced upstream value as `review_ack[field]`, which is exactly that
+field's job. The decision is `declinedUpstreamValue()` in
+`deadline_crosscheck.mjs`, expressed in terms of the very `titleDrift` /
+`websiteDrift` rules that would fire, because a second implementation of "does
+this count as drift" would eventually disagree with the report it exists to quiet.
+`--adopt` is idempotent for the same reason: re-running it on an entry already
+adopted reconciles the OpenReview side rather than exiting as a no-op.
+
+**Some lists link an OpenReview group rather than a homepage.** Four of ICLR
+2024's twenty do. That is not a website — `websiteKey()` drops the query string,
+so every such link normalises to the single key `openreview.net/group`: they
+matched each other, the header's count disagreed with the list it printed, and
+each produced a row advising that our website should be `openreview.net`. The id
+is now parsed out and used as a **match tier ahead of the URL tier** (a venue id
+is the corpus's own primary key), matched listings are tracked by index rather
+than by a normalised key so two can never collide, and such a link can never be
+evidence that a stored `website` is wrong.
 
 **Finding the list is automatic; adopting it is not.** `conferences.yml` carries
 an optional `announcement_feed` (NeurIPS and ICLR publish one), and the weekly job

@@ -20,7 +20,7 @@ Conference deadline trackers exist; *workshop* deadlines never had one. This fil
 GitHub repo (single source of truth)
  ├── data/workshops/*.yml      one YAML file per workshop edition (community-edited)
  ├── data/conferences.yml      conference metadata
- ├── data/editions.yml         per-edition conference dates (drives "Past" for deadline-unknown entries)
+ ├── data/editions.yml         per-edition conference dates, and each edition's official accepted-workshop list
  ├── data/topics.yml           controlled topic vocabulary
  ├── cache/openreview/*.json   committed paper-list caches (fetched monthly)
  ├── lib/                      shared date/AoE, data-loading, and ICS code
@@ -92,6 +92,8 @@ Contributions are governed by lightweight [contributor terms](CONTRIBUTOR_TERMS.
 
 ## Scope (deliberately) excluded
 
-No accounts, no scraping of non-OpenReview portals, no LLM pipelines, no PDF rehosting. These are the things that make trackers expensive to run and easy to abandon.
+No accounts, no LLM pipelines, no PDF rehosting, and no scraping of submission portals or individual workshop sites. These are the things that make trackers expensive to run and easy to abandon.
+
+One narrow exception, added deliberately: the tracker reads each conference's **own published list of accepted workshops** (one page per conference-year, e.g. the NeurIPS blog announcement) to cross-check what OpenReview told it. That is necessary because OpenReview creates a venue group during a conference's *proposal* phase, so a **rejected** proposal keeps a live group with a ticking deadline and is otherwise indistinguishable from an accepted workshop — without a second opinion the site advertises calls for workshops that will never happen. It stays cheap and hard to break: one fetch per conference-year per week, a conservative parser that **refuses** a page it cannot read rather than guessing, and findings that are reported for a human rather than applied. See [docs/AUTOMATION.md](docs/AUTOMATION.md).
 
 Email alerts do exist, but as an **optional, isolated satellite** (one Cloudflare Worker + one small database) rather than a backend the site depends on: there are still no passwords and no login wall, the tracker is built and served as a fully static site, and deleting the alerts system leaves the site byte-for-byte unchanged. A build with `PUBLIC_ALERTS_API` unset — every fork, every PR preview — carries no trace of it. See **[docs/ALERTS.md](docs/ALERTS.md)**.
