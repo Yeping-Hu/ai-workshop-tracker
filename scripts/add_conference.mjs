@@ -60,7 +60,6 @@ if (!notes.some((n) => n.includes('conferences.yml'))) {
   name: "${name}"
   full_name: "${fullName}"
   website: "${website}"
-  workshop_list_url_pattern: "${website}"
   color: "${color}"
   typical_month: ${m}
 `;

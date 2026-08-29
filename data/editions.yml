@@ -6,6 +6,15 @@
 # Add a row when a new edition's dates are announced — `node
 # scripts/validate.mjs` prints a note for tracked years that lack one.
 # `start` and `source` are optional but encouraged for provenance.
+#
+# `workshop_list_url` points at the conference's OFFICIAL accepted-workshop
+# announcement, and switches on the weekly reconciliation
+# (scripts/official_list_check.mjs). It lives here, not in conferences.yml,
+# because the URL is not derivable from the year — NeurIPS 2026's carries its own
+# publication date in the path. The same script proposes candidates from a
+# conference's `announcement_feed`, so this is normally adopted by dispatch
+# rather than typed. Without it, that conference-year is simply not reconciled;
+# OpenReview discovery is unaffected either way.
 
 - conference: iclr
   year: 2024
@@ -107,6 +116,7 @@
   start: "2026-12-06"
   end: "2026-12-13"
   source: "https://neurips.cc/"
+  workshop_list_url: "https://blog.neurips.cc/2026/08/10/announcing-the-neurips-2026-workshops/"
 - conference: eccv
   year: 2024
   start: "2024-09-29"

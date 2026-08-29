@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+        <style id="tb_inline_styles" data-no-optimize="1">.tb_animation_on{overflow-x:hidden}.themify_builder .wow{visibility:hidden;animation-fill-mode:both}[data-tf-animation]{will-change:transform,opacity,visibility}.themify_builder .tf_lax_done{transition-duration:.8s;transition-timing-function:cubic-bezier(.165,.84,.44,1)}[data-sticky-active].tb_sticky_scroll_active{z-index:1}[data-sticky-active].tb_sticky_scroll_active .hide-on-stick{display:none}@media(min-width:1281px){.hide-desktop{width:0!important;height:0!important;padding:0!important;visibility:hidden!important;margin:0!important;display:table-column!important;background:0!important;content-visibility:hidden;overflow:hidden!important}}@media(min-width:769px) and (max-width:1280px){.hide-tablet_landscape{width:0!important;height:0!important;padding:0!important;visibility:hidden!important;margin:0!important;display:table-column!important;background:0!important;content-visibility:hidden;overflow:hidden!important}}@media(min-width:681px) and (max-width:768px){.hide-tablet{width:0!important;height:0!important;padding:0!important;visibility:hidden!important;margin:0!important;display:table-column!important;background:0!important;content-visibility:hidden;overflow:hidden!important}}@media(max-width:680px){.hide-mobile{width:0!important;height:0!important;padding:0!important;visibility:hidden!important;margin:0!important;display:table-column!important;background:0!important;content-visibility:hidden;overflow:hidden!important}}div.row_inner,div.module_subrow{--gutter:3.2%;--narrow:1.6%;--none:0%;}@media(max-width:768px){div.module-gallery-grid{--galn:var(--galt)}}@media(max-width:680px){
+                .themify_map.tf_map_loaded{width:100%!important}
+                .ui.builder_button,.ui.nav li a{padding:.525em 1.15em}
+                .fullheight>.row_inner:not(.tb_col_count_1){min-height:0}
+                div.module-gallery-grid{--galn:var(--galm);gap:8px}
+            }</style><noscript><style>.themify_builder .wow,.wow .tf_lazy{visibility:visible!important}</style></noscript>            <style id="tf_lazy_style" data-no-optimize="1">
+                .tf_svg_lazy{
+                    content-visibility:auto;
+                    background-size:100% 25%!important;
+                    background-repeat:no-repeat!important;
+                    background-position:0 0, 0 33.4%,0 66.6%,0 100%!important;
+                    transition:filter .3s linear!important;
+                    filter:blur(25px)!important;                    transform:translateZ(0)
+                }
+                .tf_svg_lazy_loaded{
+                    filter:blur(0)!important
+                }
+                [data-lazy]:is(.module,.module_row:not(.tb_first)),.module[data-lazy] .ui,.module_row[data-lazy]:not(.tb_first):is(>.row_inner,.module_column[data-lazy],.module_subrow[data-lazy]){
+                    background-image:none!important
+                }
+            </style>
+            <noscript>
+                <style>
+                    .tf_svg_lazy{
+                        display:none!important
+                    }
+                </style>
+            </noscript>
+                    <style id="tf_lazy_common" data-no-optimize="1">
+                        img{
+                max-width:100%;
+                height:auto
+            }
+                                    :where(.tf_in_flx,.tf_flx){display:inline-flex;flex-wrap:wrap;place-items:center}
+            .tf_fa,:is(em,i) tf-lottie{display:inline-block;vertical-align:middle}:is(em,i) tf-lottie{width:1.5em;height:1.5em}.tf_fa{width:1em;height:1em;stroke-width:0;stroke:currentColor;overflow:visible;fill:currentColor;pointer-events:none;text-rendering:optimizeSpeed;buffered-rendering:static}#tf_svg symbol{overflow:visible}:where(.tf_lazy){position:relative;visibility:visible;display:block;opacity:.3}.wow .tf_lazy:not(.tf_swiper-slide){visibility:hidden;opacity:1}div.tf_audio_lazy audio{visibility:hidden;height:0;display:inline}.mejs-container{visibility:visible}.tf_iframe_lazy{transition:opacity .3s ease-in-out;min-height:10px}:where(.tf_flx),.tf_swiper-wrapper{display:flex}.tf_swiper-slide{flex-shrink:0;opacity:0;width:100%;height:100%}.tf_swiper-wrapper>br,.tf_lazy.tf_swiper-wrapper .tf_lazy:after,.tf_lazy.tf_swiper-wrapper .tf_lazy:before{display:none}.tf_lazy:after,.tf_lazy:before{content:'';display:inline-block;position:absolute;width:10px!important;height:10px!important;margin:0 3px;top:50%!important;inset-inline:auto 50%!important;border-radius:100%;background-color:currentColor;visibility:visible;animation:tf-hrz-loader infinite .75s cubic-bezier(.2,.68,.18,1.08)}.tf_lazy:after{width:6px!important;height:6px!important;inset-inline:50% auto!important;margin-top:3px;animation-delay:-.4s}@keyframes tf-hrz-loader{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.1);opacity:.6}}.tf_lazy_lightbox{position:fixed;background:rgba(11,11,11,.8);color:#ccc;top:0;left:0;display:flex;align-items:center;justify-content:center;z-index:999}.tf_lazy_lightbox .tf_lazy:after,.tf_lazy_lightbox .tf_lazy:before{background:#fff}.tf_vd_lazy,tf-lottie{display:flex;flex-wrap:wrap}tf-lottie{aspect-ratio:1.777}.tf_w.tf_vd_lazy video{width:100%;height:auto;position:static;object-fit:cover}
+        </style>
+        <link type="image/x-icon" href="https://blog.neurips.cc/wp-content/uploads/2021/05/favicon.ico" rel="icon" /><title>Announcing the NeurIPS 2026 Workshops &#8211; NeurIPS Blog</title>
+<meta name='robots' content='max-image-preview:large' />
+<link rel="alternate" type="application/rss+xml" title="NeurIPS Blog &raquo; Feed" href="https://blog.neurips.cc/feed/" />
+<link rel="alternate" type="application/rss+xml" title="NeurIPS Blog &raquo; Comments Feed" href="https://blog.neurips.cc/comments/feed/" />
+<style id="tb-preset-colors">:root{--blue:#4d7de1;--brown:#a35004;--gray:#989797;--green:#4aab10;--light-blue:#bdd9fd;--light-green:#9bd611;--light-purple:#c1bafd;--orange:#ff9600;--pink:#feb4e4;--purple:#7a6bf8;--red:#e8311f;--yellow:#fff06c;}</style>
+<link rel="alternate" title="oEmbed (JSON)" type="application/json+oembed" href="https://blog.neurips.cc/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fblog.neurips.cc%2F2026%2F08%2F10%2Fannouncing-the-neurips-2026-workshops%2F" />
+<link rel="alternate" title="oEmbed (XML)" type="text/xml+oembed" href="https://blog.neurips.cc/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fblog.neurips.cc%2F2026%2F08%2F10%2Fannouncing-the-neurips-2026-workshops%2F&#038;format=xml" />
+<style id="wp-img-auto-sizes-contain-inline-css">
+img:is([sizes=auto i],[sizes^="auto," i]){contain-intrinsic-size:3000px 1500px}
+/*# sourceURL=wp-img-auto-sizes-contain-inline-css */
+</style>
+<link rel="preload" href="https://blog.neurips.cc/wp-content/themes/themify-ultra/themify/themify-builder/css/themify-builder-style.css?ver=8.5.6" as="style"><link rel='stylesheet' id='themify-builder-style-css' href='https://blog.neurips.cc/wp-content/themes/themify-ultra/themify/themify-builder/css/themify-builder-style.css?ver=8.5.6' media='all' />
+<style id="global-styles-inline-css">
+:root{--wp--preset--aspect-ratio--square: 1;--wp--preset--aspect-ratio--4-3: 4/3;--wp--preset--aspect-ratio--3-4: 3/4;--wp--preset--aspect-ratio--3-2: 3/2;--wp--preset--aspect-ratio--2-3: 2/3;--wp--preset--aspect-ratio--16-9: 16/9;--wp--preset--aspect-ratio--9-16: 9/16;--wp--preset--color--black: #000000;--wp--preset--color--cyan-bluish-gray: #abb8c3;--wp--preset--color--white: #ffffff;--wp--preset--color--pale-pink: #f78da7;--wp--preset--color--vivid-red: #cf2e2e;--wp--preset--color--luminous-vivid-orange: #ff6900;--wp--preset--color--luminous-vivid-amber: #fcb900;--wp--preset--color--light-green-cyan: #7bdcb5;--wp--preset--color--vivid-green-cyan: #00d084;--wp--preset--color--pale-cyan-blue: #8ed1fc;--wp--preset--color--vivid-cyan-blue: #0693e3;--wp--preset--color--vivid-purple: #9b51e0;--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple: linear-gradient(135deg,rgb(6,147,227) 0%,rgb(155,81,224) 100%);--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan: linear-gradient(135deg,rgb(122,220,180) 0%,rgb(0,208,130) 100%);--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange: linear-gradient(135deg,rgb(252,185,0) 0%,rgb(255,105,0) 100%);--wp--preset--gradient--luminous-vivid-orange-to-vivid-red: linear-gradient(135deg,rgb(255,105,0) 0%,rgb(207,46,46) 100%);--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray: linear-gradient(135deg,rgb(238,238,238) 0%,rgb(169,184,195) 100%);--wp--preset--gradient--cool-to-warm-spectrum: linear-gradient(135deg,rgb(74,234,220) 0%,rgb(151,120,209) 20%,rgb(207,42,186) 40%,rgb(238,44,130) 60%,rgb(251,105,98) 80%,rgb(254,248,76) 100%);--wp--preset--gradient--blush-light-purple: linear-gradient(135deg,rgb(255,206,236) 0%,rgb(152,150,240) 100%);--wp--preset--gradient--blush-bordeaux: linear-gradient(135deg,rgb(254,205,165) 0%,rgb(254,45,45) 50%,rgb(107,0,62) 100%);--wp--preset--gradient--luminous-dusk: linear-gradient(135deg,rgb(255,203,112) 0%,rgb(199,81,192) 50%,rgb(65,88,208) 100%);--wp--preset--gradient--pale-ocean: linear-gradient(135deg,rgb(255,245,203) 0%,rgb(182,227,212) 50%,rgb(51,167,181) 100%);--wp--preset--gradient--electric-grass: linear-gradient(135deg,rgb(202,248,128) 0%,rgb(113,206,126) 100%);--wp--preset--gradient--midnight: linear-gradient(135deg,rgb(2,3,129) 0%,rgb(40,116,252) 100%);--wp--preset--font-size--small: 13px;--wp--preset--font-size--medium: clamp(14px, 0.875rem + ((1vw - 3.2px) * 0.469), 20px);--wp--preset--font-size--large: clamp(22.041px, 1.378rem + ((1vw - 3.2px) * 1.091), 36px);--wp--preset--font-size--x-large: clamp(25.014px, 1.563rem + ((1vw - 3.2px) * 1.327), 42px);--wp--preset--font-family--system-font: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif;--wp--preset--spacing--20: 0.44rem;--wp--preset--spacing--30: 0.67rem;--wp--preset--spacing--40: 1rem;--wp--preset--spacing--50: 1.5rem;--wp--preset--spacing--60: 2.25rem;--wp--preset--spacing--70: 3.38rem;--wp--preset--spacing--80: 5.06rem;--wp--preset--shadow--natural: 6px 6px 9px rgba(0, 0, 0, 0.2);--wp--preset--shadow--deep: 12px 12px 50px rgba(0, 0, 0, 0.4);--wp--preset--shadow--sharp: 6px 6px 0px rgba(0, 0, 0, 0.2);--wp--preset--shadow--outlined: 6px 6px 0px -3px rgb(255, 255, 255), 6px 6px rgb(0, 0, 0);--wp--preset--shadow--crisp: 6px 6px 0px rgb(0, 0, 0);}.wp-block-button{--wp--preset--dimension--25: 25%;--wp--preset--dimension--50: 50%;--wp--preset--dimension--75: 75%;--wp--preset--dimension--100: 100%;}:where(body) { margin: 0; }.wp-site-blocks > .alignleft { float: left; margin-right: 2em; }.wp-site-blocks > .alignright { float: right; margin-left: 2em; }.wp-site-blocks > .aligncenter { justify-content: center; margin-left: auto; margin-right: auto; }:where(.wp-site-blocks) > * { margin-block-start: 24px; margin-block-end: 0; }:where(.wp-site-blocks) > :first-child { margin-block-start: 0; }:where(.wp-site-blocks) > :last-child { margin-block-end: 0; }:root { --wp--style--block-gap: 24px; }:root :where(.is-layout-flow) > :first-child{margin-block-start: 0;}:root :where(.is-layout-flow) > :last-child{margin-block-end: 0;}:root :where(.is-layout-flow) > *{margin-block-start: 24px;margin-block-end: 0;}:root :where(.is-layout-constrained) > :first-child{margin-block-start: 0;}:root :where(.is-layout-constrained) > :last-child{margin-block-end: 0;}:root :where(.is-layout-constrained) > *{margin-block-start: 24px;margin-block-end: 0;}:root :where(.is-layout-flex){gap: 24px;}:root :where(.is-layout-grid){gap: 24px;}.is-layout-flow > .alignleft{float: left;margin-inline-start: 0;margin-inline-end: 2em;}.is-layout-flow > .alignright{float: right;margin-inline-start: 2em;margin-inline-end: 0;}.is-layout-flow > .aligncenter{margin-left: auto !important;margin-right: auto !important;}.is-layout-constrained > .alignleft{float: left;margin-inline-start: 0;margin-inline-end: 2em;}.is-layout-constrained > .alignright{float: right;margin-inline-start: 2em;margin-inline-end: 0;}.is-layout-constrained > .aligncenter{margin-left: auto !important;margin-right: auto !important;}.is-layout-constrained > :where(:not(.alignleft):not(.alignright):not(.alignfull)){margin-left: auto !important;margin-right: auto !important;}body .is-layout-flex{display: flex;}.is-layout-flex{flex-wrap: wrap;align-items: center;}.is-layout-flex > :is(*, div){margin: 0;}body .is-layout-grid{display: grid;}.is-layout-grid > :is(*, div){margin: 0;}body{font-family: var(--wp--preset--font-family--system-font);font-size: var(--wp--preset--font-size--medium);line-height: 1.6;padding-top: 0px;padding-right: 0px;padding-bottom: 0px;padding-left: 0px;}:root :where(.wp-element-button, .wp-block-button__link){background-color: #32373c;border-width: 0;color: #fff;font-family: inherit;font-size: inherit;font-style: inherit;font-weight: inherit;letter-spacing: inherit;line-height: inherit;padding-top: calc(0.667em + 2px);padding-right: calc(1.333em + 2px);padding-bottom: calc(0.667em + 2px);padding-left: calc(1.333em + 2px);text-decoration: none;text-transform: inherit;}.has-black-color{color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-color{color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-color{color: var(--wp--preset--color--white) !important;}.has-pale-pink-color{color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-color{color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-color{color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-color{color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-color{color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-color{color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-color{color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-color{color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-color{color: var(--wp--preset--color--vivid-purple) !important;}.has-black-background-color{background-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-background-color{background-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-background-color{background-color: var(--wp--preset--color--white) !important;}.has-pale-pink-background-color{background-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-background-color{background-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-background-color{background-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-background-color{background-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-background-color{background-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-background-color{background-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-background-color{background-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-background-color{background-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-background-color{background-color: var(--wp--preset--color--vivid-purple) !important;}.has-black-border-color{border-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-border-color{border-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-border-color{border-color: var(--wp--preset--color--white) !important;}.has-pale-pink-border-color{border-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-border-color{border-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-border-color{border-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-border-color{border-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-border-color{border-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-border-color{border-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-border-color{border-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-border-color{border-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-border-color{border-color: var(--wp--preset--color--vivid-purple) !important;}.has-vivid-cyan-blue-to-vivid-purple-gradient-background{background: var(--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple) !important;}.has-light-green-cyan-to-vivid-green-cyan-gradient-background{background: var(--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan) !important;}.has-luminous-vivid-amber-to-luminous-vivid-orange-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange) !important;}.has-luminous-vivid-orange-to-vivid-red-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-orange-to-vivid-red) !important;}.has-very-light-gray-to-cyan-bluish-gray-gradient-background{background: var(--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray) !important;}.has-cool-to-warm-spectrum-gradient-background{background: var(--wp--preset--gradient--cool-to-warm-spectrum) !important;}.has-blush-light-purple-gradient-background{background: var(--wp--preset--gradient--blush-light-purple) !important;}.has-blush-bordeaux-gradient-background{background: var(--wp--preset--gradient--blush-bordeaux) !important;}.has-luminous-dusk-gradient-background{background: var(--wp--preset--gradient--luminous-dusk) !important;}.has-pale-ocean-gradient-background{background: var(--wp--preset--gradient--pale-ocean) !important;}.has-electric-grass-gradient-background{background: var(--wp--preset--gradient--electric-grass) !important;}.has-midnight-gradient-background{background: var(--wp--preset--gradient--midnight) !important;}.has-small-font-size{font-size: var(--wp--preset--font-size--small) !important;}.has-medium-font-size{font-size: var(--wp--preset--font-size--medium) !important;}.has-large-font-size{font-size: var(--wp--preset--font-size--large) !important;}.has-x-large-font-size{font-size: var(--wp--preset--font-size--x-large) !important;}.has-system-font-font-family{font-family: var(--wp--preset--font-family--system-font) !important;}
+:root :where(.wp-block-icon svg){width: 24px;}
+:root :where(.wp-block-pullquote){font-size: clamp(0.984em, 0.984rem + ((1vw - 0.2em) * 0.645), 1.5em);line-height: 1.6;}
+/*# sourceURL=global-styles-inline-css */
+</style>
+<link rel="preload" href="https://blog.neurips.cc/wp-content/plugins/tablepress/css/build/default.css?ver=3.3.4" as="style"><link rel='stylesheet' id='tablepress-default-css' href='https://blog.neurips.cc/wp-content/plugins/tablepress/css/build/default.css?ver=3.3.4' media='all' />
+<script id="jquery-core-js" src="https://blog.neurips.cc/wp-includes/js/jquery/jquery.min.js?ver=3.7.1"></script>
+<script id="jquery-migrate-js" src="https://blog.neurips.cc/wp-includes/js/jquery/jquery-migrate.min.js?ver=3.4.1"></script>
+<link rel="https://api.w.org/" href="https://blog.neurips.cc/wp-json/" /><link rel="alternate" title="JSON" type="application/json" href="https://blog.neurips.cc/wp-json/wp/v2/posts/1686" /><link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://blog.neurips.cc/xmlrpc.php?rsd" />
+<meta name="generator" content="WordPress 7.1" />
+<link rel="canonical" href="https://blog.neurips.cc/2026/08/10/announcing-the-neurips-2026-workshops/" />
+<link rel='shortlink' href='https://blog.neurips.cc/?p=1686' />
+<meta name="cdp-version" content="1.5.6" />
+	<style>
+	@keyframes themifyAnimatedBG{
+		0%{background-color:#33baab}100%{background-color:#e33b9e}50%{background-color:#4961d7}33.3%{background-color:#2ea85c}25%{background-color:#2bb8ed}20%{background-color:#dd5135}
+	}
+	.module_row.animated-bg{
+		animation:themifyAnimatedBG 30000ms infinite alternate
+	}
+	</style>
+	<style>.recentcomments a{display:inline !important;padding:0 !important;margin:0 !important;}</style><!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-K6HDW6L306"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-K6HDW6L306');
+</script><link rel="prefetch" href="https://blog.neurips.cc/wp-content/themes/themify-ultra/js/themify-script.js?ver=8.2.8"><link rel="prefetch" href="https://blog.neurips.cc/wp-content/themes/themify-ultra/themify/js/modules/themify-sidemenu.js?ver=8.5.6"><link rel="prefetch" href="https://blog.neurips.cc/wp-content/uploads/neurips-logo-svg.svg"><style id="tf_gf_fonts_style">@font-face{font-family:'Montserrat';font-style:italic;font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUQjIg1_i6t8kCHKm459WxRxC7mw9c.woff2) format('woff2');unicode-range:U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;}@font-face{font-family:'Montserrat';font-style:italic;font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUQjIg1_i6t8kCHKm459WxRzS7mw9c.woff2) format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;}@font-face{font-family:'Montserrat';font-style:italic;font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUQjIg1_i6t8kCHKm459WxRxi7mw9c.woff2) format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}@font-face{font-family:'Montserrat';font-style:italic;font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUQjIg1_i6t8kCHKm459WxRxy7mw9c.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}@font-face{font-family:'Montserrat';font-style:italic;font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUQjIg1_i6t8kCHKm459WxRyS7m.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}@font-face{font-family:'Montserrat';font-style:italic;font-weight:500;font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUQjIg1_i6t8kCHKm459WxRxC7mw9c.woff2) format('woff2');unicode-range:U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;}@font-face{font-family:'Montserrat';font-style:italic;font-weight:500;font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUQjIg1_i6t8kCHKm459WxRzS7mw9c.woff2) format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;}@font-face{font-family:'Montserrat';font-style:italic;font-weight:500;font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUQjIg1_i6t8kCHKm459WxRxi7mw9c.woff2) format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}@font-face{font-family:'Montserrat';font-style:italic;font-weight:500;font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUQjIg1_i6t8kCHKm459WxRxy7mw9c.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}@font-face{font-family:'Montserrat';font-style:italic;font-weight:500;font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUQjIg1_i6t8kCHKm459WxRyS7m.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}@font-face{font-family:'Montserrat';font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUSjIg1_i6t8kCHKm459WRhyzbi.woff2) format('woff2');unicode-range:U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;}@font-face{font-family:'Montserrat';font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUSjIg1_i6t8kCHKm459W1hyzbi.woff2) format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;}@font-face{font-family:'Montserrat';font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUSjIg1_i6t8kCHKm459WZhyzbi.woff2) format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}@font-face{font-family:'Montserrat';font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUSjIg1_i6t8kCHKm459Wdhyzbi.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}@font-face{font-family:'Montserrat';font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUSjIg1_i6t8kCHKm459Wlhyw.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}@font-face{font-family:'Montserrat';font-weight:500;font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUSjIg1_i6t8kCHKm459WRhyzbi.woff2) format('woff2');unicode-range:U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;}@font-face{font-family:'Montserrat';font-weight:500;font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUSjIg1_i6t8kCHKm459W1hyzbi.woff2) format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;}@font-face{font-family:'Montserrat';font-weight:500;font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUSjIg1_i6t8kCHKm459WZhyzbi.woff2) format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}@font-face{font-family:'Montserrat';font-weight:500;font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUSjIg1_i6t8kCHKm459Wdhyzbi.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}@font-face{font-family:'Montserrat';font-weight:500;font-display:swap;src:url(https://fonts.gstatic.com/s/montserrat/v31/JTUSjIg1_i6t8kCHKm459Wlhyw.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}@font-face{font-family:'Public Sans';font-style:italic;font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwTs572Xtc6ZYQws9YVwnNDTJPax9k0.woff2) format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}@font-face{font-family:'Public Sans';font-style:italic;font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwTs572Xtc6ZYQws9YVwnNDTJLax9k0.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}@font-face{font-family:'Public Sans';font-style:italic;font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwTs572Xtc6ZYQws9YVwnNDTJzaxw.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}@font-face{font-family:'Public Sans';font-style:italic;font-weight:600;font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwTs572Xtc6ZYQws9YVwnNDTJPax9k0.woff2) format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}@font-face{font-family:'Public Sans';font-style:italic;font-weight:600;font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwTs572Xtc6ZYQws9YVwnNDTJLax9k0.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}@font-face{font-family:'Public Sans';font-style:italic;font-weight:600;font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwTs572Xtc6ZYQws9YVwnNDTJzaxw.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}@font-face{font-family:'Public Sans';font-style:italic;font-weight:700;font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwTs572Xtc6ZYQws9YVwnNDTJPax9k0.woff2) format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}@font-face{font-family:'Public Sans';font-style:italic;font-weight:700;font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwTs572Xtc6ZYQws9YVwnNDTJLax9k0.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}@font-face{font-family:'Public Sans';font-style:italic;font-weight:700;font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwTs572Xtc6ZYQws9YVwnNDTJzaxw.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}@font-face{font-family:'Public Sans';font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwRs572Xtc6ZYQws9YVwnNJfJ7Cww.woff2) format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}@font-face{font-family:'Public Sans';font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwRs572Xtc6ZYQws9YVwnNIfJ7Cww.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}@font-face{font-family:'Public Sans';font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwRs572Xtc6ZYQws9YVwnNGfJ4.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}@font-face{font-family:'Public Sans';font-weight:600;font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwRs572Xtc6ZYQws9YVwnNJfJ7Cww.woff2) format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}@font-face{font-family:'Public Sans';font-weight:600;font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwRs572Xtc6ZYQws9YVwnNIfJ7Cww.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}@font-face{font-family:'Public Sans';font-weight:600;font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwRs572Xtc6ZYQws9YVwnNGfJ4.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}@font-face{font-family:'Public Sans';font-weight:700;font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwRs572Xtc6ZYQws9YVwnNJfJ7Cww.woff2) format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}@font-face{font-family:'Public Sans';font-weight:700;font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwRs572Xtc6ZYQws9YVwnNIfJ7Cww.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}@font-face{font-family:'Public Sans';font-weight:700;font-display:swap;src:url(https://fonts.gstatic.com/s/publicsans/v21/ijwRs572Xtc6ZYQws9YVwnNGfJ4.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}</style><link rel="preload" fetchpriority="high" href="https://blog.neurips.cc/wp-content/uploads/themify-concate/1292286160/themify-3645101353.css" as="style"><link fetchpriority="high" id="themify_concate-css" rel="stylesheet" href="https://blog.neurips.cc/wp-content/uploads/themify-concate/1292286160/themify-3645101353.css"><link rel="preconnect" href="https://www.google-analytics.com"><style id="tf-sv-root-vars">:root{--theme_rounded:12px;--theme_rounded_sm:10px;--theme_input_rounded:12px;--theme_btn_rounded:30px;--blue:#4d7de1;--brown:#a35004;--gray:#989797;--green:#4aab10;--light-blue:#bdd9fd;--light-green:#9bd611;--light-purple:#c1bafd;--orange:#ff9600;--pink:#feb4e4;--purple:#7a6bf8;--red:#e8311f;--yellow:#fff06c;}</style>
+</head>
+<body class="wp-singular post-template-default single single-post postid-1686 single-format-standard wp-theme-themify-ultra skin-default sidebar1 default_width no-home tb_animation_on ready-view header-horizontal fixed-header-enabled footer-horizontal-left theme-font-sans-serif tagline-off single-classic-layout sidemenu-active">
+<a class="screen-reader-text skip-to-content" href="#content">Skip to content</a><svg id="tf_svg" style="display:none"><defs><symbol id="tf-ti-search" viewBox="0 0 32 32"><path d="m31.25 29.875-1.313 1.313-9.75-9.75a12.019 12.019 0 0 1-7.938 3c-6.75 0-12.25-5.5-12.25-12.25 0-3.25 1.25-6.375 3.563-8.688C5.875 1.25 8.937-.063 12.25-.063c6.75 0 12.25 5.5 12.25 12.25 0 3-1.125 5.813-3 7.938zm-19-7.312c5.688 0 10.313-4.688 10.313-10.375S17.938 1.813 12.25 1.813c-2.813 0-5.375 1.125-7.313 3.063-2 1.938-3.063 4.563-3.063 7.313 0 5.688 4.625 10.375 10.375 10.375z"/></symbol><symbol id="tf-fas-search" viewBox="0 0 32 32"><path d="M31.6 27.7q.4.4.4 1t-.4 1.1l-1.8 1.8q-.4.4-1 .4t-1.1-.4l-6.3-6.3q-.4-.4-.4-1v-1Q17.5 26 13 26q-5.4 0-9.2-3.8T0 13t3.8-9.2T13 0t9.2 3.8T26 13q0 4.5-2.8 8h1q.7 0 1.1.4zM13 21q3.3 0 5.7-2.3T21 13t-2.3-5.7T13 5 7.3 7.3 5 13t2.3 5.7T13 21z"/></symbol></defs></svg><script> </script><div class="tf_search_form tf_search_overlay">
+    <form role="search" method="get" id="searchform" class="tf_rel  tf_hide" action="https://blog.neurips.cc/">
+            <div class="tf_icon_wrap icon-search"><svg  aria-label="Search" class="tf_fa tf-ti-search" xmlns:xlink="http://www.w3.org/1999/xlink" role="img"><use href="#tf-ti-search" xlink:href="#tf-ti-search"></use></svg></div>
+            <input type="text" name="s" id="s" title="Search" placeholder="Search" value="" />
+
+            
+        
+    </form>
+</div>
+<div id="pagewrap" class="tf_box hfeed site">
+					<div id="headerwrap"  class="tf_box">
+
+			
+										                                                    <div class="header-icons tf_hide">
+                                <a id="menu-icon" class="tf_inline_b tf_text_dec" href="#mobile-menu" aria-label="Menu"><span class="menu-icon-inner tf_inline_b tf_vmiddle tf_overflow"></span><span class="screen-reader-text">Menu</span></a>
+				                            </div>
+                        
+			<header id="header" class="tf_box pagewidth tf_clearfix" itemscope="itemscope" itemtype="https://schema.org/WPHeader">
+
+	            
+	            <div class="header-bar tf_box">
+				    <div id="site-logo"><a href="https://neurips.cc" title="NeurIPS Blog"><img  src="https://blog.neurips.cc/wp-content/uploads/neurips-logo-svg.svg" alt="NeurIPS Blog" class="site-logo-image" width="200" data-tf-not-load="1" fetchpriority="low"></a></div>				</div>
+				<!-- /.header-bar -->
+
+									<div id="mobile-menu" class="sidemenu sidemenu-off tf_scrollbar">
+												
+						<div class="navbar-wrapper tf_clearfix">
+                            																						<div class="social-widget tf_inline_b tf_vmiddle">
+																	    								</div>
+								<!-- /.social-widget -->
+							
+							<a data-lazy="1" class="search-button tf_search_icon tf_vmiddle tf_inline_b" href="#"><svg  aria-label="Search" class="tf_fa tf-fas-search" xmlns:xlink="http://www.w3.org/1999/xlink" role="img"><use href="#tf-fas-search" xlink:href="#tf-fas-search"></use></svg><span class="screen-reader-text">Search</span></a>
+							
+							<nav id="main-nav-wrap" itemscope="itemscope" itemtype="https://schema.org/SiteNavigationElement">
+															</nav>
+							<!-- /#main-nav-wrap -->
+                                                    </div>
+
+																				<!-- /header-widgets -->
+						
+							<a id="menu-icon-close" aria-label="Close menu" class="tf_close tf_hide" href="#"><span class="screen-reader-text">Close Menu</span></a>
+
+																	</div><!-- #mobile-menu -->
+                     					<!-- /#mobile-menu -->
+				
+				
+				
+			</header>
+			<!-- /#header -->
+				        
+		</div>
+		<!-- /#headerwrap -->
+	
+	<div id="body" class="tf_box tf_clear tf_mw tf_clearfix">
+		
+		    <!-- layout-container -->
+    <div id="layout" class="pagewidth tf_box tf_clearfix">
+	<!-- content -->
+<main id="content" class="tf_box tf_clearfix">
+        
+	<article id="post-1686" class="post tf_clearfix post-1686 type-post status-publish format-standard hentry category-2026-conference has-post-title has-post-date has-post-category has-post-tag has-post-comment has-post-author ">
+	    
+		<div class="post-content">
+		<div class="post-content-inner">
+
+								<div class="post-date-wrap">
+		<time class="post-date entry-date updated" datetime="2026-08-10">
+								<span class="month">August</span> <span class="day">10</span> <span class="year">2026</span> 				</time>
+	</div><!-- .post-date-wrap -->
+				
+			<h1 class="post-title entry-title"><a href="https://blog.neurips.cc/2026/08/10/announcing-the-neurips-2026-workshops/">Announcing the NeurIPS 2026 Workshops</a></h1>
+							<p class="post-meta entry-meta">
+											<span class="post-author"><span class="author vcard"><a class="url fn n" href="https://blog.neurips.cc/author/jeankossaifi/" rel="author">Communication Chairs 2026</a></span></span>
+					
+					<span class="post-category"><a href="https://blog.neurips.cc/category/2026-conference/" rel="tag" class="term-2026-conference">2026 Conference</a></span>
+																
+									</p>
+				<!-- /post-meta -->
+			
+			
+			        <div class="entry-content">
+
+                                        
+<p class="wp-block-paragraph">We are excited to announce the list of NeurIPS 2026 workshops. We received 477 submissions (454 valid), a significant increase over last year’s numbers. From this great batch of submissions, we have accepted 102 workshops: 48, 28, and 26, to be hosted in Sydney, Paris, and Atlanta, respectively. The acceptance rates were 21.5%, 25.4%, and 23.6% for Sydney, Paris, and Atlanta, respectively. These variations reflect different numbers of submissions for each location and different numbers of rooms available per venue. </p>
+
+
+
+<p class="wp-block-paragraph"><strong>The workshops will take place on:</strong></p>
+
+
+
+<ul class="wp-block-list">
+<li>Fri Dec 11 and Sat Dec 12, 2026 &#8211; <strong>Sydney</strong></li>
+
+
+
+<li>Sat Dec 12 and Sun Dec 13, 2026 &#8211; <strong>Paris and Atlanta</strong></li>
+</ul>
+
+
+
+<p class="wp-block-paragraph">Given the exceptional quality of submissions this year, we wish we could have accepted many more workshops. We want to thank everyone who put in tremendous effort in submitting a workshop proposal. We would also like to thank the reviewers who worked tirelessly to assess all proposals.</p>
+
+
+
+<h1 class="wp-block-heading">Selection Process</h1>
+
+
+
+<p class="wp-block-paragraph">In making our selections, we asked the reviewers to closely follow our <a href="https://neurips.cc/Conferences/2026/WorkshopsGuidance">Guidance for Workshop Proposals</a>, which was also shared with the proposal authors via the call for proposals. Workshop proposals must be reviewed somewhat differently from academic papers, and hence we asked the reviewers to consider both scientific merits and broader impacts in their assessments, including fitness for NeurIPS, potential for high impact, originality and novelty, quality and clarity, organizers&#8217; quality, speakers&#8217; quality, diversity and quality of logistics. We invited 1021 high-quality reviewers (mostly from past years’ top-reviewer lists) and managed to recruit 353. Each proposal had at least 2 assigned reviewers, whose reviews were summarized into metareview feedback.</p>
+
+
+
+<p class="wp-block-paragraph">Individual reviewers&#8217; evaluations of proposals were important in the decision process, but they were not the only considerations. We also strove for a good balance among research areas, applications, and theory. As interest across research areas varies, some areas were more competitive than others.</p>
+
+
+
+<p class="wp-block-paragraph">This year, we also collected organizers&#8217; preferences for workshop venues. With the exception of a handful of workshops that received their secondary preferred location, we were able to satisfy the primary preference constraints.&nbsp;</p>
+
+
+
+<p class="wp-block-paragraph">This year we introduced two constraints to safeguard the quality of workshops: we disallowed more than 8 organizers per workshop, and prohibited any organizer from being listed on more than 2 proposals. The vast majority of organizers followed these rules with the exception of 5 cases.</p>
+
+
+
+<p class="wp-block-paragraph">The next step is your contributions! Several workshops have begun soliciting submissions, many using our suggested submission date of Aug 29, 2026. We typically let each workshop advertise its own call for papers (if they plan to include workshop papers). We will communicate some additional deadlines to the workshop organizers to facilitate the successful planning of 102 exciting workshops. Stay tuned for more technical and contextual information coming soon!</p>
+
+
+
+<h1 class="wp-block-heading">NeurIPS 2026 Accepted workshops</h1>
+
+
+
+<p class="wp-block-paragraph">Firstly, we would like to warn everyone against any informal workshop lists circulating on the internet — these lists are not affiliated with NeurIPS and do not contain reliable information. Below is the preliminary formal list of accepted workshops for 2026, ordered by location.&nbsp;</p>
+
+
+
+<h2 class="wp-block-heading">Sydney (48 workshops)</h2>
+
+
+
+<ol class="wp-block-list">
+<li><a href="https://lp4fm.github.io/">Workshop on the Linguistic Principles for Foundation Models</a></li>
+
+
+
+<li><a href="https://7amin.github.io/diffulm-neurips2026/">DiffuLM &#8211; Diffusion Language Models: Foundations, Efficiency, and Reasoning</a></li>
+
+
+
+<li><a href="https://bento-neurips.github.io/">Beyond Next Token Prediction: Diffusion and Flow Models for Next-Generation Decoding</a></li>
+
+
+
+<li><a href="https://rtcaneurips26.github.io/">Real-Time Conversational Agents: Toward Natural Multimodal Interaction</a></li>
+
+
+
+<li><a href="https://ai4sciencecommunity.github.io/neurips26.html">AI for Science: Verification in the Age of AI Scientists</a></li>
+
+
+
+<li><a href="https://eethanshi.github.io/stochastic-dynamics-2026/">AI for Stochastic Dynamics: From Theoretical Foundations to Scientific Applications</a></li>
+
+
+
+<li><a href="https://odi2026.github.io/">On-Device Intelligence: Foundation Models under Real-World Constraints</a></li>
+
+
+
+<li><a href="https://fmts-workshop.github.io/">Foundation Models for Temporal Systems: From Forecasting to World Modeling</a></li>
+
+
+
+<li><a href="https://automlr.com/">Workshop for Autonomous Machine Learning Research</a></li>
+
+
+
+<li><a href="https://opt-ml.org/">Optimization for Machine Learning</a></li>
+
+
+
+<li><a href="https://bialign-workshop.github.io/">Dynamic Alignment in Human-AI Coupled Systems</a></li>
+
+
+
+<li><a href="https://asci.artificialintelligencepathology.org/">AI at Scale for Clinical Impact (ASCI): Cancer Pathology Foundation Models</a></li>
+
+
+
+<li><a href="https://vlm4rwd.github.io/">VLM4RWD: Grounded and Faithful Vision-Language Models for Real-World Deployment</a></li>
+
+
+
+<li><a href="https://tai-eval.github.io/">Trustworthy AI Evaluation (TAI-Eval)</a></li>
+
+
+
+<li><a href="https://ptaworkshop.github.io/">PTA: From Pretrained Representations to Acting Agents</a></li>
+
+
+
+<li><a href="https://sites.google.com/view/aaba4et/home">Agentic AI Benchmark and Application for Enterprise Tasks</a></li>
+
+
+
+<li><a href="https://sites.google.com/view/neurips-2026-workshop-pudm">NeurIPS 2026 Workshop on Physical Understanding for Decision-Making: Bridging Foundation Models and Reliable Agents</a></li>
+
+
+
+<li><a href="https://www.climatechange.ai/events/neurips2026">Tackling Climate Change with Machine Learning</a></li>
+
+
+
+<li><a href="https://sites.google.com/view/ai4mat/home">AI4Mat-NeurIPS-2026</a></li>
+
+
+
+<li><a href="https://ai4powergrids.github.io/">AI Foundations for Power Grids: From Models to Deployment at Scale</a></li>
+
+
+
+<li><a href="http://www.worldmodels-physicalai.com/">World Models in Physical AI</a></li>
+
+
+
+<li><a href="https://mlforsystems.org/">Machine Learning for Systems</a></li>
+
+
+
+<li><a href="https://agentwild-workshop.github.io/neurips2026/">The Third Workshop on Agents in the Wild: Safety, Security, and Beyond</a></li>
+
+
+
+<li><a href="https://liuj-2023.github.io/EvoRobust-NeurIPS2026/">Self-Evolving Diversity-Driven Search for Robust AI Systems</a></li>
+
+
+
+<li><a href="https://iab-agents.github.io/">Interpreting Agent Behavior (IAB): The First Workshop on Human-Centered Interpretation for Understanding Agents, Humans, and Interaction</a></li>
+
+
+
+<li><a href="https://ai4dd-neurips2026.github.io/">AI for Drug Discovery: Bridging the Translation Gap</a></li>
+
+
+
+<li><a href="http://www.simbiochem.com/">Machine Learning for Simulations in Biology and Chemistry &#8211; Simbiochem</a> </li>
+
+
+
+<li><a href="https://translatingmlresearch.github.io/RCMLR/">Responsible Communication of Machine Learning Research in Biomedicine (RCMLR)</a></li>
+
+
+
+<li><a href="https://collaborative-open-decentralized-fomo.github.io/">Collaborative, Open, and Decentralized training of Foundation Models</a></li>
+
+
+
+<li><a href="https://beyond-private-training.ai.studio/">Beyond Private Training: The New Landscape of AI Privacy</a></li>
+
+
+
+<li><a href="https://genai4health.github.io/2026-NeurIPS/">The Third Workshop on GenAI for Health Agentic Systems, Clinical Trust, and Future Potential</a></li>
+
+
+
+<li><a href="https://continual-world-models-workshop.github.io/">Continual World Models</a> </li>
+
+
+
+<li><a href="https://agentic-fmos.github.io/">AgenticOS: Co-designing Systems and ML Foundations of an OS Layer for Agentic AI</a></li>
+
+
+
+<li><a href="https://nemo.semantic.review/">Neuro-Symbolic Embodied Intelligence</a></li>
+
+
+
+<li><a href="https://agenticls.github.io/">Agentic AI for Biological Discovery: Toward Closed-Loop Life-Science Intelligence (AgenticLS)</a></li>
+
+
+
+<li><a href="https://xai4science.github.io/">XAI4Science: Knowledge Discovery and Trust through Interpretable Foundation Models</a></li>
+
+
+
+<li><a href="https://pretrain2posttrain.github.io/">Transitioning from Pre-Training to Post-Training</a></li>
+
+
+
+<li><a href="https://interpscience.github.io/">Interpretability as a Science: Toward Rigorous Foundations for Understanding LLMs</a></li>
+
+
+
+<li><a href="https://verify-agents-workshop.github.io/">Who Verifies the Agents? Toward Reliable Agent Development</a></li>
+
+
+
+<li><a href="https://icbinb-bio.github.io/">I Can’t Believe It’s Not Better (ICBINB): Failure Modes of AI in Biology</a></li>
+
+
+
+<li><a href="https://embodiedsr.github.io/">2nd Embodied Spatial Reasoning Workshop</a></li>
+
+
+
+<li><a href="https://neurreps.org/">Symmetry and Geometry in Neural Representations (NeurReps)</a></li>
+
+
+
+<li><a href="https://attrib-workshop.cc/">Third NeurIPS Workshop on Attributing Model Behavior at Scale: Data Attribution and Provenance</a></li>
+
+
+
+<li><a href="https://robowm-ws.github.io/">Robot Learning with World Models: Capabilities, Frontiers, and Challenges</a></li>
+
+
+
+<li><a href="https://meta-agents-workshop.github.io/">First Workshop on Meta Agents: Managing Agents that Manage Agents</a></li>
+
+
+
+<li><a href="https://www.robot-learning.ml/2026/">8th Robot Learning Workshop: Is Physical AI truly going zero-shot?</a></li>
+
+
+
+<li><a href="https://brainbodyfm-workshop.github.io/">Foundation Models for the Brain and Body</a></li>
+
+
+
+<li><a href="https://neurips26-cl4fmagents.github.io/">Continual Learning in the Era of Foundation Models and Embodied Agents</a></li>
+</ol>
+
+
+
+<h2 class="wp-block-heading">Paris (28 workshops)</h2>
+
+
+
+<ol class="wp-block-list">
+<li><a href="https://flmsec.github.io/">Foundations of Language Model Security: Theory, Practice and Fundamental Limits</a></li>
+
+
+
+<li><a href="https://rl-experimental-sciences-workshop.github.io/">Reinforcement Learning for Experimental Sciences</a></li>
+
+
+
+<li><a href="https://robotpad2026.github.io/">RobotPAD: Post-Training Adaptation of Robot Foundation Models</a></li>
+
+
+
+<li><a href="https://reo-workshop.org/2026/">2nd Workshop on Advances in Representation Learning for Earth Observation (REO-2)</a></li>
+
+
+
+<li><a href="https://aiforpeaceworkshop.github.io/">AI for Peace</a></li>
+
+
+
+<li><a href="https://ts-limits.github.io/">TS-LIMITS &#8211; Generalization for Time Series in Tight Settings: Latency, Inference, Memory, Privacy and Sustainability</a></li>
+
+
+
+<li><a href="https://neurips-workshop2026.github.io/foundation_model_agentic_privacy/call_for_papers.html">Privacy in the Era of Large Opaque Models: Theoretical, Legal and Practical Perspectives</a></li>
+
+
+
+<li><a href="https://sites.google.com/view/remucai/description">Real-Time Multimodal Conversational AI Workshop at NeurIPS 2026</a></li>
+
+
+
+<li><a href="https://www.sim2science.com/">Sim2Science: ML with Imperfect Scientific Models</a></li>
+
+
+
+<li><a href="https://gddl-neurips-2026.github.io/">Bridging Optimal Transport, Learning and Structured Data: Toward Geometric Distributional Learning</a></li>
+
+
+
+<li><a href="https://representations-physical-sciences.github.io/workshop-2026/">Representations for the Physical Sciences</a></li>
+
+
+
+<li><a href="https://www.fllmpt-work.shop/">Foundations of LLM Post-Training in Changing Environments</a></li>
+
+
+
+<li><a href="https://moleculediscovery.github.io/workshop2026/">ML4Molecules: Agentic Systems for Molecular Sciences</a></li>
+
+
+
+<li><a href="https://almaai-disi-unibo.github.io/neurips2026-light-smallModels/">LIGHT: Deployable Small Foundation Models</a></li>
+
+
+
+<li><a href="https://e-values-workshop.github.io/">E-values: from Statistics to ML</a></li>
+
+
+
+<li><a href="https://palm-neurips-2026.github.io/">PALM: Personalized, aligned, long-term memory for AI systems</a></li>
+
+
+
+<li><a href="https://trustworthy-ai-for-good.github.io/">Trustworthy AI for Good (AI4GOOD) Workshop</a> </li>
+
+
+
+<li><a href="https://aidar-workshop.github.io/2026/">AIDaR: AI Data Readiness for Scientific Discovery</a></li>
+
+
+
+<li><a href="https://sites.google.com/view/prigmneurips2026/home">Principles of Generative Modeling (PriGM)</a></li>
+
+
+
+<li><a href="http://artifactsasdata.org/">Neural Network Artifacts as a New Data Modality</a></li>
+
+
+
+<li><a href="https://ai4metascience.org/">AI for Meta-Science: Scaling and Organizing Science in the Age of AI Scientists</a></li>
+
+
+
+<li><a href="https://neurips-ai-for-chip-design-2026.github.io/">AI for Chip Design</a></li>
+
+
+
+<li><a href="https://imsb-uke.github.io/ml4spatialbio-2026/">Machine Learning for Spatially Resolved High-dimensional Biology</a></li>
+
+
+
+<li><a href="https://fast-workshop.github.io/">Foundations of Agentic Systems Theory</a></li>
+
+
+
+<li><a href="https://axiom-neurips2026.github.io/">AXIOM: Foundations of Efficient Deep Learning</a></li>
+
+
+
+<li><a href="https://slmw2026.github.io/">SLM-Agents: 1st Workshop on SLMs for Agentic Systems</a> </li>
+
+
+
+<li><a href="https://usersim-workshop.github.io/">Grounded User Simulation for Model Evaluation and Training: Diversity, Fidelity, and Validity</a></li>
+
+
+
+<li><a href="https://aintheself.github.io/">AI and the Self: Human Identity, Authenticity, and Agency in the Age of AI</a></li>
+</ol>
+
+
+
+<h2 class="wp-block-heading">Atlanta (26 workshops)</h2>
+
+
+
+<ol class="wp-block-list">
+<li><a href="https://physworld-org.github.io/physworld.github.io/">The 1st Workshop on Physical World AI: Geometry, Characteristics, and Multimodal Sensing</a> </li>
+
+
+
+<li><a href="https://vericodegen.github.io/">AI for Verifiable Coding</a></li>
+
+
+
+<li><a href="https://mathai-2026.github.io/">The 6th Workshop on Mathematical Reasoning and AI</a></li>
+
+
+
+<li><a href="https://sites.google.com/view/dynafrontneurips26">DynaFront: Dynamics at the Frontiers of Learning, Sampling, and Games</a></li>
+
+
+
+<li><a href="https://wmhs-neurips.github.io/WMHS/">World Models for High-Stakes Health: Reliable Clinical Trial Simulation and Intervention-Aware Reasoning</a></li>
+
+
+
+<li><a href="https://interpretability4discovery.github.io/">Interpretability for Discovery: Understanding and Discovering Novel Knowledge in AI Models</a></li>
+
+
+
+<li><a href="https://med-reasoner.github.io/neurips2026/">NeurIPS 2026 Workshop on Medical Reasoning with Vision Language Foundation Models</a></li>
+
+
+
+<li><a href="https://judge2026.github.io/">Can We Trust the Judge? Building Reliable Evaluation for Language Models</a></li>
+
+
+
+<li><a href="https://eval-interactive-agents-workshop.github.io/">Workshop on Evaluation of Interactive Agents</a></li>
+
+
+
+<li><a href="https://satquml.github.io/">NeurIPS 2026 Workshop on SaTQuML: Secure and Trustworthy Quantum Machine Learning</a></li>
+
+
+
+<li><a href="https://econml26-workshop.github.io/">EconML: Economics for Machine Learning</a></li>
+
+
+
+<li><a href="https://ttcl-agents.github.io/">Towards Test-Time Continual Learning Agents</a></li>
+
+
+
+<li><a href="https://ai-native-academia.github.io/#overview">AI-Native Academia: Authorship, Peer Review, and Conference Governance under AI</a></li>
+
+
+
+<li><a href="https://clea-neurips.github.io/">Continual Learning for Enterprise AI Agents</a></li>
+
+
+
+<li><a href="http://aim-neurips26.github.io/">AI Agents for Biomedical Imaging and Multimodal Clinical Data</a></li>
+
+
+
+<li><a href="https://babyvlm.github.io/">The BabyVLM Workshop: Toward Developmentally Plausible Multimodal Systems</a></li>
+
+
+
+<li><a href="https://projectnanda.org/workshops/neurips26/">The Agentic Web: Networked, Continually-Adapting Agent Ecosystems</a></li>
+
+
+
+<li><a href="https://social-llm-workshop.github.io/">SocialAgent: Second Workshop on Large Language Models for Social Reasoning and Simulation</a></li>
+
+
+
+<li><a href="https://resource-aware-workshop.github.io/">Workshop on Resource-Aware Agentic AI</a></li>
+
+
+
+<li><a href="https://childsafety-ai.github.io/">Workshop on Child Safety in AI</a></li>
+
+
+
+<li><a href="https://longcontextfm.github.io/">The Third Workshop on Long-Context Foundation Models</a></li>
+
+
+
+<li><a href="https://neurips2026haic.com/">Human-AI Coevolution: Measuring Human-Agent Teams in the Agentic Era</a></li>
+
+
+
+<li><a href="https://mlxor-2026.github.io/">Second Workshop on ML×OR: Mathematical Foundations and Operational Integration of Machine Learning for Uncertainty-Aware Decision-Making</a></li>
+
+
+
+<li><a href="https://www.gembio.ai/">GEM: Integrating Generative and Experimental Platforms for Biomolecular Design</a></li>
+
+
+
+<li><a href="https://sites.google.com/view/devai-workshop-2026">DevAI: Developmental Perspectives on AI</a></li>
+
+
+
+<li><a href="https://aiscik.github.io/">AI &amp; Science: Evolution or Extinction?</a></li>
+</ol>
+
+
+
+<p class="wp-block-paragraph"></p>
+
+
+
+<p class="wp-block-paragraph"><strong>NeurIPS 2026 Workshop Chairs</strong><br>Ghada Zamzmi, Elisa Ricci, Shao-Hua Sun, Khoa Doan, Theodore Papamarkou, and Piotr Koniusz</p>
+
+
+
+<p class="wp-block-paragraph"><strong>NeurIPS 2026 Workshop Chairs Assistants</strong><br>Nina Corvelo Benz, Junhao Dong</p>
+
+            
+        </div><!-- /.entry-content -->
+        
+		</div>
+		<!-- /.post-content-inner -->
+	</div>
+	<!-- /.post-content -->
+	
+</article>
+<!-- /.post -->
+
+    
+    
+		<div class="post-nav tf_box tf_clearfix">
+			<span class="prev tf_box"><a href="https://blog.neurips.cc/2026/07/31/neurips-newsletter-july-2026/" rel="prev"><span class="arrow"></span> NeurIPS Newsletter &#8211; July 2026</a></span><span class="next tf_box"><a href="https://blog.neurips.cc/2026/08/11/meet-the-organizing-team-behind-neurips-2026/" rel="next"><span class="arrow"></span> Meet the Organizing Team Behind NeurIPS 2026</a></span>		</div>
+		<!-- /.post-nav -->
+
+					<div class="related-posts tf_clearfix">
+			<h3 class="related-title">Related Posts</h3>
+							<article class="post type-post tf_clearfix">
+										<div class="post-content">
+                                                    <p class="post-meta">
+                                 <span class="post-category"><a href="https://blog.neurips.cc/category/2026-conference/" rel="tag" class="term-2026-conference">2026 Conference</a></span>                            </p>
+                        						<h4 class="post-title entry-title"><a href="https://blog.neurips.cc/2026/08/27/navigating-neurips-2026-a-breakdown-of-the-multi-site-registration-process/">Navigating NeurIPS 2026: A Breakdown of the Multi-Site Registration Process</a></h4>        <div class="entry-content">
+
+        
+        </div><!-- /.entry-content -->
+        					</div>
+					<!-- /.post-content -->
+				</article>
+							<article class="post type-post tf_clearfix">
+										<div class="post-content">
+                                                    <p class="post-meta">
+                                 <span class="post-category"><a href="https://blog.neurips.cc/category/2026-conference/" rel="tag" class="term-2026-conference">2026 Conference</a></span>                            </p>
+                        						<h4 class="post-title entry-title"><a href="https://blog.neurips.cc/2026/08/11/meet-the-organizing-team-behind-neurips-2026/">Meet the Organizing Team Behind NeurIPS 2026</a></h4>        <div class="entry-content">
+
+        
+        </div><!-- /.entry-content -->
+        					</div>
+					<!-- /.post-content -->
+				</article>
+							<article class="post type-post tf_clearfix">
+										<div class="post-content">
+                                                    <p class="post-meta">
+                                 <span class="post-category"><a href="https://blog.neurips.cc/category/2026-conference/" rel="tag" class="term-2026-conference">2026 Conference</a><span class="separator">, </span><a href="https://blog.neurips.cc/category/general/neurips-newsletters/" rel="tag" class="term-neurips-newsletters">NeurIPS Newsletters</a></span>                            </p>
+                        						<h4 class="post-title entry-title"><a href="https://blog.neurips.cc/2026/07/31/neurips-newsletter-july-2026/">NeurIPS Newsletter &#8211; July 2026</a></h4>        <div class="entry-content">
+
+        
+        </div><!-- /.entry-content -->
+        					</div>
+					<!-- /.post-content -->
+				</article>
+					</div>
+		<!-- /.related-posts -->
+			                
+            </main>
+<!-- /content -->
+    
+    <aside id="sidebar" class="tf_box" itemscope="itemscope" itemtype="https://schema.org/WPSidebar">
+
+        <div id="search-2" class="widget widget_search"><div class="tf_search_form tf_s_dropdown" data-lazy="1" data-ajax="">
+    <form role="search" method="get" id="searchform" class="tf_rel " action="https://blog.neurips.cc/">
+            <div class="tf_icon_wrap icon-search"><svg  aria-label="Search" class="tf_fa tf-ti-search" xmlns:xlink="http://www.w3.org/1999/xlink" role="img"><use href="#tf-ti-search" xlink:href="#tf-ti-search"></use></svg></div>
+            <input type="text" name="s" id="s" title="Search" placeholder="Search" value="" />
+
+            
+        
+    </form>
+</div>
+</div><div id="block-2" class="widget widget_block widget_text">
+<p class="wp-block-paragraph"><a href="/feed">Feed</a></p>
+</div>
+		<div id="recent-posts-2" class="widget widget_recent_entries">
+		<h4 class="widgettitle">Recent Posts</h4>
+		<ul>
+											<li>
+					<a href="https://blog.neurips.cc/2026/08/27/navigating-neurips-2026-a-breakdown-of-the-multi-site-registration-process/">Navigating NeurIPS 2026: A Breakdown of the Multi-Site Registration Process</a>
+											<span class="post-date">August 27, 2026</span>
+									</li>
+											<li>
+					<a href="https://blog.neurips.cc/2026/08/11/meet-the-organizing-team-behind-neurips-2026/">Meet the Organizing Team Behind NeurIPS 2026</a>
+											<span class="post-date">August 11, 2026</span>
+									</li>
+											<li>
+					<a href="https://blog.neurips.cc/2026/08/10/announcing-the-neurips-2026-workshops/" aria-current="page">Announcing the NeurIPS 2026 Workshops</a>
+											<span class="post-date">August 10, 2026</span>
+									</li>
+											<li>
+					<a href="https://blog.neurips.cc/2026/07/31/neurips-newsletter-july-2026/">NeurIPS Newsletter &#8211; July 2026</a>
+											<span class="post-date">July 31, 2026</span>
+									</li>
+											<li>
+					<a href="https://blog.neurips.cc/2026/07/28/neurips-2026-competitions-announced/">NeurIPS 2026 Competitions Announced</a>
+											<span class="post-date">July 28, 2026</span>
+									</li>
+											<li>
+					<a href="https://blog.neurips.cc/2026/07/03/neurips-newsletter-june-2026/">NeurIPS Newsletter &#8211; June 2026</a>
+											<span class="post-date">July 3, 2026</span>
+									</li>
+											<li>
+					<a href="https://blog.neurips.cc/2026/06/02/ai-generated-papers-in-the-neurips-2026-position-paper-track/">AI-Generated Papers in the NeurIPS 2026 Position Paper Track</a>
+											<span class="post-date">June 2, 2026</span>
+									</li>
+											<li>
+					<a href="https://blog.neurips.cc/2026/05/29/neurips-newsletter-may-2026/">NeurIPS Newsletter &#8211; May 2026</a>
+											<span class="post-date">May 29, 2026</span>
+									</li>
+											<li>
+					<a href="https://blog.neurips.cc/2026/05/12/neurips-2026-call-for-ethics-reviewers/">NeurIPS 2026 Call for Ethics Reviewers</a>
+											<span class="post-date">May 12, 2026</span>
+									</li>
+											<li>
+					<a href="https://blog.neurips.cc/2026/05/04/mlrc-2026-reproducibility-as-an-official-track-at-neurips/">MLRC 2026: Reproducibility as an Official Track at NeurIPS</a>
+											<span class="post-date">May 4, 2026</span>
+									</li>
+											<li>
+					<a href="https://blog.neurips.cc/2026/05/04/responsible-ai-metadata-requirements-for-the-evaluations-and-datasets-track-neurips-2026/">Responsible AI metadata requirements for the Evaluations and Datasets Track NeurIPS 2026</a>
+											<span class="post-date">May 4, 2026</span>
+									</li>
+											<li>
+					<a href="https://blog.neurips.cc/2026/04/22/neurips-newsletter-april-2026/">NeurIPS Newsletter &#8211; April 2026</a>
+											<span class="post-date">April 22, 2026</span>
+									</li>
+					</ul>
+
+		</div><div id="recent-comments-2" class="widget widget_recent_comments"><h4 class="widgettitle">Recent Comments</h4><ul id="recentcomments"></ul></div>
+    </aside>
+    <!-- /#sidebar -->
+
+        </div>    
+    </div><!-- /body -->
+<div id="footerwrap" class="tf_box tf_clear tf_scrollbar ">
+				<footer id="footer" class="tf_box pagewidth tf_scrollbar tf_rel tf_clearfix" itemscope="itemscope" itemtype="https://schema.org/WPFooter">
+			<div class="back-top tf_textc tf_clearfix back-top-float back-top-hide"><div class="arrow-up"><a aria-label="Back to top" href="#header"><span class="screen-reader-text">Back To Top</span></a></div></div>
+			<div class="main-col first tf_clearfix">
+				<div class="footer-left-wrap first">
+																	<div class="footer-logo-wrapper tf_clearfix">
+							<div id="footer-logo"><a href="https://blog.neurips.cc" title="NeurIPS Blog"><span>NeurIPS Blog</span></a></div>							<!-- /footer-logo -->
+						</div>
+					
+									</div>
+
+				<div class="footer-right-wrap">
+																	<div class="footer-nav-wrap">
+													</div>
+						<!-- /.footer-nav-wrap -->
+					
+											<div class="footer-text tf_clear tf_clearfix">
+							<div class="footer-text-inner">
+								<div class="one">&copy; <a href="https://blog.neurips.cc">NeurIPS Blog</a> 2026</div><div class="two">Powered by <a href="http://wordpress.org">WordPress</a> &bull; <a href="https://themify.me">Themify WordPress Themes</a></div>							</div>
+						</div>
+						<!-- /.footer-text -->
+									</div>
+			</div>
+
+												<div class="section-col tf_clearfix">
+						<div class="footer-widgets-wrap">
+														<!-- /footer-widgets -->
+						</div>
+					</div>
+							
+					</footer><!-- /#footer -->
+				
+	</div><!-- /#footerwrap -->
+</div><!-- /#pagewrap -->
+<!-- wp_footer -->
+<script type="speculationrules">
+{"prefetch":[{"source":"document","where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":["/wp-*.php","/wp-admin/*","/wp-content/uploads/*","/wp-content/*","/wp-content/plugins/*","/wp-content/themes/themify-ultra/*","/*\\?(.+)"]}},{"not":{"selector_matches":"a[rel~=\"nofollow\"]"}},{"not":{"selector_matches":".no-prefetch, .no-prefetch a"}}]},"eagerness":"conservative"}]}
+</script>
+            <!--googleoff:all-->
+            <!--noindex-->
+            <!--noptimize-->
+            <script id="tf_vars" data-no-optimize="1" data-noptimize="1" data-no-minify="1" data-cfasync="false" defer="defer" src="data:text/javascript;base64,dmFyIHRoZW1pZnlTY3JpcHQgPSB7ImhlYWRlclR5cGUiOiJoZWFkZXItaG9yaXpvbnRhbCIsInN0aWNreV9oZWFkZXIiOiIiLCJwYWdlTG9hZGVyRWZmZWN0IjoiIiwiaW5maW5pdGVFbmFibGUiOiIwIn07CnZhciB0YkxvY2FsU2NyaXB0ID0geyJzY3JvbGxIaWdobGlnaHQiOnsic3BlZWQiOjkwMC4wMX0sImFkZG9ucyI6W119Owp2YXIgdGhlbWlmeV92YXJzID0geyJtZW51X3BvaW50IjoiOTAwIiwiYnJlYWtwb2ludHMiOnsidGFibGV0X2xhbmRzY2FwZSI6Wzc2OSwxMjgwXSwidGFibGV0IjpbNjgxLDc2OF0sIm1vYmlsZSI6NjgwfSwid3AiOiI3LjEiLCJhamF4X3VybCI6Imh0dHBzOi8vYmxvZy5uZXVyaXBzLmNjL3dwLWFkbWluL2FkbWluLWFqYXgucGhwIiwibm9uY2UiOiI5YmRmMWFiMmVhIiwiYXp1cmVfa2V5IjoiIiwib3NtX3RpbGVfdXJsIjoiaHR0cHM6Ly97c30uYmFzZW1hcHMuY2FydG9jZG4uY29tL3Jhc3RlcnRpbGVzL3ZveWFnZXIve3p9L3t4fS97eX17cn0ucG5nIiwib3NtX3RpbGVfYXR0cmlidXRpb24iOiJcdTAwYTkgPGEgaHJlZj1cImh0dHBzOi8vd3d3Lm9wZW5zdHJlZXRtYXAub3JnL2NvcHlyaWdodFwiPk9wZW5TdHJlZXRNYXA8L2E+IGNvbnRyaWJ1dG9ycyBcdTAwYTkgPGEgaHJlZj1cImh0dHBzOi8vY2FydG8uY29tL2F0dHJpYnV0aW9uc1wiPkNBUlRPPC9hPiIsIm1lbnVfdG9vbHRpcHMiOltdLCJwbHVnaW5fdXJsIjoiaHR0cHM6Ly9ibG9nLm5ldXJpcHMuY2Mvd3AtY29udGVudC9wbHVnaW5zIiwiY29udGVudF91cmwiOiJodHRwczovL2Jsb2cubmV1cmlwcy5jYy93cC1jb250ZW50IiwiaW5jbHVkZXNfdXJsIjoiaHR0cHM6Ly9ibG9nLm5ldXJpcHMuY2Mvd3AtaW5jbHVkZXMvIiwibGF6eV90aHJlc2hvbGQiOiIzMDAiLCJ0aGVtZV92IjoiOC4yLjgiLCJlbWFpbFN1YiI6IkNoZWNrIHRoaXMgb3V0ISIsIm5vcCI6IkNoZWNrIHRoaXMgb3V0ISIsImxpZ2h0Ym94Ijp7ImkxOG4iOnsidENvdW50ZXIiOiIlY3VyciUgb2YgJXRvdGFsJSJ9fSwiZG9uZSI6eyJ0Zl9zZWFyY2hfZm9ybSI6dHJ1ZSwidGZfdGhlbWVfd2lkZ2V0X3JlY2VudF9jb21tZW50cyI6dHJ1ZX19Ow=="></script>
+            <!--/noptimize-->
+            <!--/noindex-->
+            <!--googleon:all-->
+            <script id="themify-main-script-js" defer="defer" data-v="8.5.6" data-pl-href="https://blog.neurips.cc/wp-content/plugins/fake.css" data-no-optimize="1" data-noptimize="1" src="https://blog.neurips.cc/wp-content/themes/themify-ultra/themify/js/main.js?ver=8.5.6"></script>
+
+
+<!-- SCHEMA BEGIN --><script type="application/ld+json">[{"@context":"https:\/\/schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https:\/\/blog.neurips.cc\/2026\/08\/10\/announcing-the-neurips-2026-workshops\/"},"headline":"Announcing the NeurIPS 2026 Workshops","datePublished":"2026-08-10T12:22:06-07:00","dateModified":"2026-08-10T12:22:07-07:00","author":{"@type":"Person","url":"https:\/\/blog.neurips.cc\/author\/jeankossaifi\/","name":"Communication Chairs 2026"},"publisher":{"@type":"Organization","name":"","logo":{"@type":"ImageObject","url":"","width":0,"height":0}},"description":"We are excited to announce the list of NeurIPS 2026 workshops. We received 477 submissions (454 valid), a significant increase over last year\u2019s numbers. From this great batch of submissions, we have accepted 102 workshops: 48, 28, and 26, to be hosted in Sydney, Paris, and Atlanta, respectively. The acceptance rates were 21.5%, 25.4%, and [&hellip;]"}]</script><!-- /SCHEMA END -->	</body>
+</html>

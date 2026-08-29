@@ -4,61 +4,54 @@
   typical_month: 7   # used to infer past/upcoming when a workshop has no workshop_date
   full_name: "International Conference on Machine Learning"
   website: "https://icml.cc"
-  workshop_list_url_pattern: "https://icml.cc/Conferences/{year}/Schedule?type=Workshop"
   color: "#0F766E"
 - id: iclr
   name: "ICLR"
   typical_month: 5
   full_name: "International Conference on Learning Representations"
   website: "https://iclr.cc"
-  workshop_list_url_pattern: "https://iclr.cc/Conferences/{year}/Schedule?type=Workshop"
+  announcement_feed: "https://blog.iclr.cc/feed/"
   color: "#C2410C"
 - id: neurips
   name: "NeurIPS"
   typical_month: 12
   full_name: "Conference on Neural Information Processing Systems"
   website: "https://neurips.cc"
-  workshop_list_url_pattern: "https://neurips.cc/Conferences/{year}/Schedule?type=Workshop"
+  announcement_feed: "https://blog.neurips.cc/feed/"
   color: "#6D28D9"
 - id: icra
   name: "ICRA"
   full_name: "IEEE International Conference on Robotics and Automation"
   website: "https://www.ieee-ras.org"
-  workshop_list_url_pattern: "https://{year}.ieee-icra.org/"
   color: "#BE123C"
   typical_month: 6
 - id: iros
   name: "IROS"
   full_name: "IEEE/RSJ International Conference on Intelligent Robots and Systems"
   website: "https://www.ieee-ras.org"
-  workshop_list_url_pattern: "https://www.ieee-ras.org"
   color: "#4D7C0F"
   typical_month: 10
 - id: cvpr
   name: "CVPR"
   full_name: "IEEE/CVF Conference on Computer Vision and Pattern Recognition"
   website: "https://cvpr.thecvf.com"
-  workshop_list_url_pattern: "https://cvpr.thecvf.com"
   color: "#1D4ED8"
   typical_month: 6
 - id: corl
   name: "CoRL"
   full_name: "Conference on Robot Learning"
   website: "https://www.corl.org"
-  workshop_list_url_pattern: "https://www.corl.org"
   color: "#B45309"
   typical_month: 10
 - id: colm
   name: "COLM"
   full_name: "Conference on Language Modeling"
   website: "https://colmweb.org"
-  workshop_list_url_pattern: "https://colmweb.org"
   color: "#A21CAF"
   typical_month: 10
 - id: eccv
   name: "ECCV"
   full_name: "European Conference on Computer Vision"
   website: "https://eccv.ecva.net"
-  workshop_list_url_pattern: "https://eccv.ecva.net"
   color: "#0891B2"
   typical_month: 10

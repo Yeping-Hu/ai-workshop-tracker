@@ -27,11 +27,59 @@ for human review, as do dependency updates.
 | `edit-to-pr.yml` | "Edit a workshop" issue form | Applies the edit to the existing YAML + PR (timezone-safe), validates, reports back |
 | `resync-deadline.yml` | manual | Re-pull one workshop's deadline from OpenReview's duedate (either direction) |
 | `deadline-review.yml` | daily | One consolidated issue listing deadlines that need a human decision — including ones OpenReview reopened after they had closed, where the site says shut and OpenReview says open — daily because it is the only job that ever looks at a **human-edited** deadline, which freeze-on-touch excludes from every automatic sync. Comments when a workshop first appears, since editing an issue body notifies nobody. Also reports a `website` that changed on OpenReview (reported, never applied), and names any entry OpenReview could not answer for rather than counting it. |
+| `official-list-check.yml` | weekly | Reconciles the corpus against each conference-edition's **official accepted-workshop list** (`data/editions.yml` → `workshop_list_url`), and proposes one from the conference's `announcement_feed` where none is configured. One consolidated issue: entries we track that are not on the list (ranked so a still-open call comes first), listed workshops we do not track, and title/website drift. Reports only — see below. |
+| `mark-not-running.yml` | manual | `scripts/mark_not_running.mjs` — records `not_running` on one entry, or `review_ack.official_list` to keep it and stop reporting it → commits to `main` |
 | `stale-check.yml` | weekly | One consolidated issue listing entries needing follow-up |
 | `link-check.yml` | monthly | One consolidated issue listing broken URLs Before running, `scripts/lychee_exclusions.mjs` appends every `review_ack.website` to `.lycheeignore`, so a URL deliberately removed as dead is not re-reported each month. |
 | `alerts.yml` | daily, manual | `scripts/alerts_run.mjs` — diffs `/api/workshops.json` against yesterday's snapshot, records events, sends urgent starred-deadline alerts, and on Mondays the weekly digests. Commits nothing. |
 | `alerts-worker-deploy.yml` | push touching `alerts/**` | `wrangler deploy` of the alerts Worker, after checking `alerts/ids.json` is in sync with the data vocabulary |
 | `alerts-ci.yml` | PRs & pushes touching `alerts/**` or `scripts/alerts_*` | The four pure-logic alerts suites (tokens, diff, matching, rendering) plus the ids sync check |
+
+## An OpenReview venue is not proof a workshop was accepted
+
+Every workshop record comes from an OpenReview venue group. OpenReview creates
+those during a conference's **proposal** phase, so a **rejected** proposal keeps a
+live group with an open `/-/Submission` invitation and a duedate that ticks down
+exactly like an accepted workshop's. Discovery cannot tell them apart, and until
+`official-list-check.yml` there was no second opinion anywhere in the pipeline:
+NeurIPS 2026 accepted 102 workshops, OpenReview exposed 119 venue groups, and the
+site advertised an Open call for a workshop whose own website had 404'd.
+
+Three things follow, and they are the whole design:
+
+- **Discovery is unchanged and stays the only thing that creates a record.** The
+  reconciliation is additive. A conference-year with no configured list — and no
+  announcement feed to propose one — is simply not reconciled, exactly as before.
+- **The check reports; it never applies.** An official list is authoritative for
+  *presence*, not for *absence*. A workshop can be running and merely not be a
+  "workshop" in that list's sense: affinity events (WiML, QueerInAI, LXAI…),
+  competitions, and co-located workshops in their own OpenReview namespace are
+  all legitimately off-list. UniReps 2026 is exactly that shape — a live site, a
+  4th edition, absent from the 102. So off-list means *a human should look*, and
+  the two verdicts are recorded by dispatching `mark-not-running.yml`:
+  `not_running` for an edition that is not happening, `review_ack.official_list`
+  for one that is and should stop being reported.
+- **A marked entry is never deleted.** Its OpenReview group is still live, so the
+  next weekly crawl would re-create a deleted file — the same lesson
+  `merged_venue_ids` records for duplicates. Keeping the file is what makes the
+  decision stick, and it keeps the page alive for anyone who already starred or
+  linked it. Seven scripts skip a marked entry through one exported predicate;
+  two of those filters (`deadline_crosscheck.mjs`, `stale_check.mjs`) are
+  load-bearing rather than tidiness, since without them marking an entry would
+  move it off the board and into a daily issue forever.
+
+**Finding the list is automatic; adopting it is not.** `conferences.yml` carries
+an optional `announcement_feed` (NeurIPS and ICLR publish one), and the weekly job
+walks it — following `?paged=N`, since a ten-item window is too tight for a weekly
+cadence — for a post whose title names workshops and the year, excluding
+competitions, tutorials, newsletters and calls for proposals. Each candidate is
+parsed and checked against the corpus, and proposed only if it clears both guards:
+at least `MIN_LISTED` items **and** at least half of them matching workshops we
+already track. Adopting it is still one human dispatch, because a page that reads
+as empty or wrong would report the entire corpus as rejected — by far the worst
+thing this check could produce. That is also why no `{year}` URL template is used
+as a fallback: the templated schedule pages are JS-rendered and yield zero
+anchors, which is indistinguishable from "everything was rejected".
 
 ## The alerts job is outside the data-write group
 

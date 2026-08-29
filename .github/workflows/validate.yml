@@ -79,6 +79,10 @@ jobs:
         run: node scripts/topics_guess_test.mjs
       - name: Test related entries (sibling tracks, other editions)
         run: node scripts/relations_test.mjs
+      - name: Test official accepted-workshop list extraction
+        run: node scripts/official_list_test.mjs
+      - name: Test official-list reconciliation against the corpus
+        run: node scripts/official_match_test.mjs
       - name: Test the sitemap reports honest per-page lastmod dates
         run: node scripts/sitemap_lastmod_test.mjs
       - name: Test issue-form field parsing

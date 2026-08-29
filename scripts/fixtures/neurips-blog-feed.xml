@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:atom="http://www.w3.org/2005/Atom"
+	xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+	xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+	>
+
+<channel>
+	<title>NeurIPS Blog</title>
+	<atom:link href="https://blog.neurips.cc/feed/" rel="self" type="application/rss+xml" />
+	<link>https://blog.neurips.cc</link>
+	<description>NeurIPS conference blog</description>
+	<lastBuildDate>Thu, 27 Aug 2026 17:43:18 +0000</lastBuildDate>
+	<language>en-US</language>
+	<sy:updatePeriod>
+	hourly	</sy:updatePeriod>
+	<sy:updateFrequency>
+	1	</sy:updateFrequency>
+	<generator>https://wordpress.org/?v=7.1</generator>
+	<item>
+		<title>Navigating NeurIPS 2026: A Breakdown of the Multi-Site Registration Process</title>
+		<link>https://blog.neurips.cc/2026/08/27/navigating-neurips-2026-a-breakdown-of-the-multi-site-registration-process/</link>
+		
+		<dc:creator><![CDATA[Communication Chairs 2026]]></dc:creator>
+		<pubDate>Thu, 27 Aug 2026 17:18:47 +0000</pubDate>
+				<category><![CDATA[2026 Conference]]></category>
+		<guid isPermaLink="false">https://blog.neurips.cc/?p=1716</guid>
+
+					<description><![CDATA[With NeurIPS 2026 adopting a distributed, multi-site format across Sydney, Atlanta, and Paris, managing attendance is a significant logistical challenge. Given the size of the conference, our primary goal is to provide fair access to participants worldwide while allocating registrations across the three venues. To help clarify the process, here is a breakdown of how [&#8230;]]]></description>
+		
+		
+		
+			</item>
+		<item>
+		<title>Meet the Organizing Team Behind NeurIPS 2026</title>
+		<link>https://blog.neurips.cc/2026/08/11/meet-the-organizing-team-behind-neurips-2026/</link>
+		
+		<dc:creator><![CDATA[Communication Chairs 2026]]></dc:creator>
+		<pubDate>Wed, 12 Aug 2026 04:00:30 +0000</pubDate>
+				<category><![CDATA[2026 Conference]]></category>
+		<guid isPermaLink="false">https://blog.neurips.cc/?p=1691</guid>
+
+					<description><![CDATA[Every year, the Conference on Neural Information Processing Systems (NeurIPS) relies on the incredible dedication, vision, and hard work of our volunteer organizing committee. We are so excited to introduce the wonderful group of researchers, practitioners, and leaders who will bring NeurIPS 2026 to life! Earlier this year, we put out a Call for Organizer [&#8230;]]]></description>
+		
+		
+		
+			</item>
+		<item>
+		<title>Announcing the NeurIPS 2026 Workshops</title>
+		<link>https://blog.neurips.cc/2026/08/10/announcing-the-neurips-2026-workshops/</link>
+		
+		<dc:creator><![CDATA[Communication Chairs 2026]]></dc:creator>
+		<pubDate>Mon, 10 Aug 2026 19:22:06 +0000</pubDate>
+				<category><![CDATA[2026 Conference]]></category>
+		<guid isPermaLink="false">https://blog.neurips.cc/?p=1686</guid>
+
+					<description><![CDATA[We are excited to announce the list of NeurIPS 2026 workshops. We received 477 submissions (454 valid), a significant increase over last year’s numbers. From this great batch of submissions, we have accepted 102 workshops: 48, 28, and 26, to be hosted in Sydney, Paris, and Atlanta, respectively. The acceptance rates were 21.5%, 25.4%, and [&#8230;]]]></description>
+		
+		
+		
+			</item>
+		<item>
+		<title>NeurIPS Newsletter &#8211; July 2026</title>
+		<link>https://blog.neurips.cc/2026/07/31/neurips-newsletter-july-2026/</link>
+		
+		<dc:creator><![CDATA[Communication Chairs 2026]]></dc:creator>
+		<pubDate>Fri, 31 Jul 2026 23:15:00 +0000</pubDate>
+				<category><![CDATA[2026 Conference]]></category>
+		<category><![CDATA[NeurIPS Newsletters]]></category>
+		<category><![CDATA[neurips2026]]></category>
+		<category><![CDATA[newsletter]]></category>
+		<guid isPermaLink="false">https://blog.neurips.cc/2026/07/30/neurips-newsletter-june-2026-copy/</guid>
+
+					<description><![CDATA[Welcome to the July edition of the NeurIPS monthly Newsletter! The NeurIPS Newsletter aims to provide an easy way to keep up to date with NeurIPS events and planning progress, respond to requests for feedback and participation, and find information about new initiatives. This newsletter will focus on NeurIPS 2026, held in Sydney, Australia, with [&#8230;]]]></description>
+		
+		
+		
+			</item>
+		<item>
+		<title>NeurIPS 2026 Competitions Announced</title>
+		<link>https://blog.neurips.cc/2026/07/28/neurips-2026-competitions-announced/</link>
+		
+		<dc:creator><![CDATA[Communication Chairs 2026]]></dc:creator>
+		<pubDate>Tue, 28 Jul 2026 23:46:56 +0000</pubDate>
+				<category><![CDATA[2026 Conference]]></category>
+		<guid isPermaLink="false">https://blog.neurips.cc/?p=1649</guid>
+
+					<description><![CDATA[We are delighted to announce the competitions that have been accepted to the NeurIPS 2026 Competition Track. As in previous years, the selection process was highly competitive, with many outstanding submissions spanning a broad range of machine learning research areas and real-world applications. After a careful review process, we selected 16 exceptional competitions that reflect [&#8230;]]]></description>
+		
+		
+		
+			</item>
+		<item>
+		<title>NeurIPS Newsletter &#8211; June 2026</title>
+		<link>https://blog.neurips.cc/2026/07/03/neurips-newsletter-june-2026/</link>
+		
+		<dc:creator><![CDATA[Communication Chairs 2026]]></dc:creator>
+		<pubDate>Sat, 04 Jul 2026 03:40:19 +0000</pubDate>
+				<category><![CDATA[2026 Conference]]></category>
+		<category><![CDATA[NeurIPS Newsletters]]></category>
+		<category><![CDATA[neurips2026]]></category>
+		<category><![CDATA[newsletter]]></category>
+		<guid isPermaLink="false">https://blog.neurips.cc/?p=1639</guid>
+
+					<description><![CDATA[Welcome to the June edition of the NeurIPS monthly Newsletter! The NeurIPS Newsletter aims to provide an easy way to keep up to date with NeurIPS events and planning progress, respond to requests for feedback and participation, and find information about new initiatives. This newsletter will focus on NeurIPS 2026, held in Sydney, Australia, with [&#8230;]]]></description>
+		
+		
+		
+			</item>
+		<item>
+		<title>AI-Generated Papers in the NeurIPS 2026 Position Paper Track</title>
+		<link>https://blog.neurips.cc/2026/06/02/ai-generated-papers-in-the-neurips-2026-position-paper-track/</link>
+		
+		<dc:creator><![CDATA[Communication Chairs 2026]]></dc:creator>
+		<pubDate>Tue, 02 Jun 2026 14:00:00 +0000</pubDate>
+				<category><![CDATA[2026 Conference]]></category>
+		<guid isPermaLink="false">https://blog.neurips.cc/?p=1577</guid>
+
+					<description><![CDATA[This year, the NeurIPS 2026 Position Paper Track made the decision to require that all papers be substantially human-written, with AI used for only copy-editing or similar peripheral changes to the main text. While we recognize that thoughtful use of AI can result in productivity gains in research, the use of AI to write papers [&#8230;]]]></description>
+		
+		
+		
+			</item>
+		<item>
+		<title>NeurIPS Newsletter &#8211; May 2026</title>
+		<link>https://blog.neurips.cc/2026/05/29/neurips-newsletter-may-2026/</link>
+		
+		<dc:creator><![CDATA[Communication Chairs 2026]]></dc:creator>
+		<pubDate>Fri, 29 May 2026 07:08:00 +0000</pubDate>
+				<category><![CDATA[2026 Conference]]></category>
+		<category><![CDATA[NeurIPS Newsletters]]></category>
+		<guid isPermaLink="false">https://blog.neurips.cc/2026/05/29/neurips-newsletter-april-2026-copy/</guid>
+
+					<description><![CDATA[Welcome to the May edition of the NeurIPS monthly Newsletter! The NeurIPS Newsletter aims to provide an easy way to keep up to date with NeurIPS events and planning progress, respond to requests for feedback and participation, and find information about new initiatives. This newsletter will focus on NeurIPS 2026, held in Sydney, Australia, with [&#8230;]]]></description>
+		
+		
+		
+			</item>
+		<item>
+		<title>NeurIPS 2026 Call for Ethics Reviewers</title>
+		<link>https://blog.neurips.cc/2026/05/12/neurips-2026-call-for-ethics-reviewers/</link>
+		
+		<dc:creator><![CDATA[Communication Chairs 2026]]></dc:creator>
+		<pubDate>Tue, 12 May 2026 09:42:44 +0000</pubDate>
+				<category><![CDATA[2026 Conference]]></category>
+		<guid isPermaLink="false">https://blog.neurips.cc/?p=1543</guid>
+
+					<description><![CDATA[Ethics in ML research is an important part of ensuring the integrity and impact of scientific work, and NeurIPS 2026 is looking for Ethics Reviewers to support this process. If you are able and willing to participate in the review process, please sign up at this form. Feel free to share this call with your [&#8230;]]]></description>
+		
+		
+		
+			</item>
+		<item>
+		<title>MLRC 2026: Reproducibility as an Official Track at NeurIPS</title>
+		<link>https://blog.neurips.cc/2026/05/04/mlrc-2026-reproducibility-as-an-official-track-at-neurips/</link>
+		
+		<dc:creator><![CDATA[Communication Chairs 2026]]></dc:creator>
+		<pubDate>Tue, 05 May 2026 03:01:24 +0000</pubDate>
+				<category><![CDATA[2026 Conference]]></category>
+		<guid isPermaLink="false">https://blog.neurips.cc/2026/05/04/responsible-ai-metadata-requirements-for-the-evaluations-and-datasets-track-neurips-2026-copy/</guid>
+
+					<description><![CDATA[When Joelle Pineau launched the first Machine Learning Reproducibility Challenge at ICLR 2018, it was a small community experiment: could we systematically invite researchers to reproduce published results and share what they found?&#160; Eight years and eight editions later, we are delighted to announce that MLRC 2026 will be an official track at NeurIPS 2026 [&#8230;]]]></description>
+		
+		
+		
+			</item>
+	</channel>
+</rss>

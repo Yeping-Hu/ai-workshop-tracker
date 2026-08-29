@@ -1,0 +1,119 @@
+# Weekly: reconcile the corpus against each conference-edition's OFFICIAL
+# accepted-workshop list, and report what disagrees.
+#
+# The gap this closes. Every workshop record comes from an OpenReview venue
+# group, and OpenReview creates those during a conference's PROPOSAL phase — so a
+# REJECTED proposal keeps a live group with an open submission invitation and a
+# ticking duedate, indistinguishable from an accepted workshop. Discovery has one
+# input and no second opinion; the conference's own list is the only one there is.
+#
+# This job is ADDITIVE. It does not change OpenReview discovery, which keeps
+# importing workshops for all nine conferences exactly as before and remains the
+# only thing that ever CREATES a record. A conference-year with no configured
+# list is simply not reconciled — no worse off than today.
+#
+# It commits nothing, so — like deadline-review.yml and stale-check.yml — it does
+# NOT join the `data-write` concurrency group; queueing a read-only report behind
+# the data jobs would only delay it. The workflow that acts on a finding
+# (mark-not-running.yml) does write data and does join the group.
+#
+# Weekly rather than daily because the input moves about twice a year: a
+# conference publishes its accepted list once, and the corpus around it changes
+# on the weekly discovery cadence.
+name: Official workshop list check
+
+on:
+  schedule:
+    # 07:11 UTC Sunday — after the weekly discovery run (03:19) has landed
+    # whatever it found, so the reconciliation reflects the same corpus the site
+    # is about to ship, and clear of the daily writers.
+    - cron: '11 7 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Its own issue, not a new section in "deadline-review". Two workflows
+      # maintaining one issue would just take turns closing it — the same reason
+      # discovery's "venues not verified" issue is separate.
+      - run: node scripts/official_list_check.mjs --report official-list.md
+      - name: Create/update the consolidated issue
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.existsSync('official-list.md')
+              ? fs.readFileSync('official-list.md', 'utf8').trim()
+              : '';
+            const title = 'Data health: workshops not on the official list';
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'data-health',
+              per_page: 100,
+            });
+            const existing = open.find((i) => i.title === title);
+            if (!report) {
+              if (existing) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  state: 'closed',
+                });
+              }
+              return;
+            }
+            if (existing) {
+              // Editing an issue body sends NO notification, so an entry could
+              // appear here and sit unread until someone happened to open the
+              // issue. Diff what the old body named against the new one and
+              // comment on whatever is genuinely new; the comment is the part
+              // that actually reaches anyone. Both entry files and candidate
+              // list URLs count as news — a newly published accepted list is the
+              // single most time-sensitive thing this job can find.
+              const named = (text) =>
+                new Set([
+                  ...(String(text || '').match(/data\/workshops\/[\w.-]+\.yml/g) || []),
+                  ...(String(text || '').match(/workshop_list_url: "[^"]+"/g) || []),
+                ]);
+              const before = named(existing.body);
+              const added = [...named(report)].filter((f) => !before.has(f));
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: report,
+              });
+              if (added.length) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body:
+                    `New since the last run — ${added.length} item${added.length === 1 ? '' : 's'}:\n\n` +
+                    added.map((f) => `- \`${f}\``).join('\n') +
+                    '\n\nSee the issue body above for what each one is and the two ways to resolve it.',
+                });
+              }
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body: report,
+                labels: ['data-health'],
+              });
+            }
