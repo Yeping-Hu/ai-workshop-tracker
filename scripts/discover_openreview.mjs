@@ -767,6 +767,30 @@ async function main({ conf, year, dryRun }) {
     // OpenReview venue titles routinely repeat the conference and year the
     // entry is already filed under; every surface that shows the name says that
     // already. Strip it here so it never reaches the YAML in the first place.
+    // A group with no content of its own is not a workshop yet, and must be
+    // judged BEFORE the fallbacks below borrow a name from its id. CoRL 2026
+    // carried both .../Workshop/Learn@Deploy (entirely empty) and
+    // .../Workshop/Learn_Deploy (the real one) — the organizers recreated the id
+    // and left the husk behind. Importing it produced a second entry with the
+    // same derived slug and short name, the naming guard blocked the publish
+    // step, and the whole run's findings were lost. An empty group has nothing
+    // to show anyway: no title, no site, no date.
+    if (!val(c, 'title') && !val(c, 'website') && !val(c, 'date') && !val(c, 'subtitle')) {
+      // …unless it is an empty PARENT whose sub-tracks carry the content. That
+      // shape is real and already supported (ECCV MARINE, ICLR Re-Align, NeurIPS
+      // DBM are all tracked this way), so check the listing we already hold for a
+      // child with content rather than fetching anything.
+      const hasLiveChild = allVenues.some((x) => {
+        if (!x.id.startsWith(`${g.id}/`)) return false;
+        const cc = x.content ?? {};
+        return !!(val(cc, 'title') || val(cc, 'website') || val(cc, 'date') || val(cc, 'subtitle'));
+      });
+      if (!hasLiveChild) {
+        console.log(`  ↳ skipping ${g.id}: no title, website or date, and no sub-track has any`);
+        continue;
+      }
+    }
+
     const confMeta = loadConferences().find((x) => x.id === conf) ?? {};
     const title = stripVenueFromName(String(val(c, 'title') || tail).trim().slice(0, 200), {
       confName: confMeta.name ?? conf,

@@ -61,8 +61,13 @@ console.log('— search returns papers, and they link into the page —');
 await page.waitForSelector('#q', { timeout: 20000 });
 await page.fill('#q', 'learning');
 let searched = true;
-await page.waitForSelector('.pf-paper .pf-ptitle', { timeout: 25000 }).catch(() => { searched = false; });
-check('a keyword search returns paper results', searched, 'no .pf-paper appeared within 25s');
+// 45s, not 25s. Papers come from a second Pagefind index fetched after the input
+// is ready; warm that is ~8s, but run #33 on 2026-08-30 timed out twice against a
+// healthy site — live search was serving 156 paper rows while CI called it
+// broken. A genuinely broken index does not recover in 45s either, so the extra
+// budget costs no signal and saves a false page.
+await page.waitForSelector('.pf-paper .pf-ptitle', { timeout: 45000 }).catch(() => { searched = false; });
+check('a keyword search returns paper results', searched, 'no .pf-paper appeared within 45s');
 
 if (searched) {
   const href = await page.$eval('.pf-paper .pf-ptitle', (a) => a.getAttribute('href'));
