@@ -29,6 +29,32 @@ function check(name, cond, extra = '') {
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 
+// Diagnostics. The paper-search check has failed three times against a site that
+// was demonstrably serving results minutes earlier, and each report said only
+// "no .pf-paper appeared" — which is what sent the last investigation after the
+// wrong cause. Search pulls ~520 index chunks, so a single dropped or refused one
+// leaves the engine silently short. Record enough to tell those apart.
+const consoleErrors = [];
+const netProblems = [];
+const pagefind = { requests: 0, byStatus: {} };
+page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 160)); });
+page.on('response', (r) => {
+  const isPf = r.url().includes('pagefind');
+  if (isPf) { pagefind.requests += 1; pagefind.byStatus[r.status()] = (pagefind.byStatus[r.status()] || 0) + 1; }
+  if (r.status() >= 400) netProblems.push(`${r.status()} ${r.url().slice(0, 120)}`);
+});
+page.on('requestfailed', (r) => netProblems.push(`FAILED ${r.failure()?.errorText ?? '?'} ${r.url().slice(0, 120)}`));
+
+/** What the page looked like when search did not produce results. */
+function describeSearchState() {
+  const statuses = Object.entries(pagefind.byStatus).map(([k, v]) => `${k}×${v}`).join(' ') || 'none';
+  const bits = [`pagefind requests: ${pagefind.requests} (${statuses})`];
+  if (netProblems.length) bits.push(`failed requests: ${netProblems.slice(0, 5).join(' | ')}`);
+  if (consoleErrors.length) bits.push(`console errors: ${consoleErrors.slice(0, 3).join(' | ')}`);
+  if (!netProblems.length && !consoleErrors.length) bits.push('no failed requests and no console errors');
+  return bits.join('; ');
+}
+
 /* --------------------------------------------------------- pages answer --- */
 console.log(`— every page answers (${BASE}) —`);
 for (const path of ['/', '/about/', '/alerts/', '/saved/', '/changes/']) {
@@ -61,13 +87,17 @@ console.log('— search returns papers, and they link into the page —');
 await page.waitForSelector('#q', { timeout: 20000 });
 await page.fill('#q', 'learning');
 let searched = true;
-// 45s, not 25s. Papers come from a second Pagefind index fetched after the input
-// is ready; warm that is ~8s, but run #33 on 2026-08-30 timed out twice against a
-// healthy site — live search was serving 156 paper rows while CI called it
-// broken. A genuinely broken index does not recover in 45s either, so the extra
-// budget costs no signal and saves a false page.
-await page.waitForSelector('.pf-paper .pf-ptitle', { timeout: 45000 }).catch(() => { searched = false; });
-check('a keyword search returns paper results', searched, 'no .pf-paper appeared within 45s');
+// 25s. This was briefly raised to 45s on the theory that the failures were slow
+// runners; run #34 then failed at 45s twice, and the failure reproduced locally
+// once in three runs. It is not slowness — when it fails, results do not appear
+// at all, and more time does not help. Reverted rather than left inflated, since
+// a budget chosen for a cause that turned out to be wrong only delays the alert.
+await page.waitForSelector('.pf-paper .pf-ptitle', { timeout: 25000 }).catch(() => { searched = false; });
+check(
+  'a keyword search returns paper results',
+  searched,
+  searched ? '' : `no .pf-paper within 25s — ${describeSearchState()}`,
+);
 
 if (searched) {
   const href = await page.$eval('.pf-paper .pf-ptitle', (a) => a.getAttribute('href'));
@@ -92,5 +122,9 @@ if (fail) {
   // Picked up by the workflow to title the tracking issue.
   console.log('\nFAILED CHECKS:');
   for (const f of failures) console.log(`- ${f}`);
+  console.log('\nWHAT THE BROWSER SAW:');
+  console.log(`- pagefind requests: ${pagefind.requests} (${Object.entries(pagefind.byStatus).map(([k, v]) => `${k}×${v}`).join(' ') || 'none'})`);
+  console.log(`- failed/4xx/5xx requests: ${netProblems.length ? netProblems.slice(0, 8).join(' | ') : 'none'}`);
+  console.log(`- console errors: ${consoleErrors.length ? consoleErrors.slice(0, 5).join(' | ') : 'none'}`);
 }
 process.exit(fail ? 1 : 0);
