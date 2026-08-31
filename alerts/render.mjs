@@ -352,7 +352,7 @@ function changeBadge(ev) {
  * more, an "and N more →" link into the site with the subscriber's own facets
  * prefilled.
  */
-function section({ heading, subtitle = '', note = '', items = [], groups = null, perGroup = 0, moreUrl, cap = SECTION_CAP }) {
+function section({ heading, subtitle = '', note = '', items = [], groups = null, perGroup = null, moreUrl, cap = SECTION_CAP }) {
   // `groups` is [{label, items}] — used by the deadline-changes section, where
   // a flat list of forty rows from nine conferences is harder to scan than nine
   // short lists. The cap is spent across the groups in order, so a capped
@@ -372,27 +372,41 @@ function section({ heading, subtitle = '', note = '', items = [], groups = null,
 
   let body = '';
   let bodyText = '';
-    if (groups && perGroup) {
-      // Each group gets its own allowance and its own overflow link. A single
-      // budget spent in order gave the first two conferences the whole cap and
-      // left the other seven as one combined "and 69 more", which is how a
-      // nine-conference week rendered as three subheadings.
-      let used = 0;
-      for (const g of groups) {
-        if (used >= limit) break;
-        const take = g.items.slice(0, Math.min(perGroup, limit - used));
-        used += take.length;
-        const rest = g.items.length - take.length;
+    if (groups && perGroup !== null) {
+      // Round-robin, not a fixed share. Groups are unequal — a conference with
+      // one change should not hold a reserved slot while another has fifty — so
+      // the budget is handed out a row at a time, in turn, skipping any group
+      // that has run out. Every group gets one before any gets two, so nothing
+      // is starved by sort order; the leftovers then flow to whoever still has
+      // rows. A subscriber following one conference gets the whole budget.
+      // `perGroup` is a per-group ceiling, not a quota: unset for changes (one
+      // conference may fill the section), small for closing-soon, which is an
+      // "is anything of mine closing" glance rather than a listing.
+      const take = groups.map(() => 0);
+      const ceiling = perGroup > 0 ? perGroup : Infinity;
+      let left = limit;
+      for (let pass = 0; left > 0; pass += 1) {
+        let gave = 0;
+        for (let i = 0; i < groups.length && left > 0; i += 1) {
+          if (take[i] >= groups[i].items.length || take[i] >= ceiling) continue;
+          take[i] += 1; left -= 1; gave += 1;
+        }
+        if (!gave) break; // everyone is exhausted or at their ceiling
+      }
+      groups.forEach((g, i) => {
+        if (!take[i]) return;
+        const shown = g.items.slice(0, take[i]);
+        const rest = g.items.length - shown.length;
         body +=
           `<h3 style="margin:16px 0 6px;font-size:13px;letter-spacing:0.04em;` +
-          `text-transform:uppercase;${MUTED}">${esc(g.label)}</h3>` + ul(take);
+          `text-transform:uppercase;${MUTED}">${esc(g.label)}</h3>` + ul(shown);
         if (rest > 0 && g.moreUrl) {
           body += `<p style="margin:-4px 0 0 20px;font-size:13px;">` +
             `<a href="${esc(g.moreUrl)}" style="${LINK}">and ${rest} more in ${esc(g.label)} \u2192</a></p>`;
         }
-        bodyText += `\n${g.label}\n` + take.map((it) => `* ${it.text}`).join('\n') +
+        bodyText += `\n${g.label}\n` + shown.map((it) => `* ${it.text}`).join('\n') +
           (rest > 0 && g.moreUrl ? `\n  and ${rest} more in ${g.label}: ${g.moreUrl}` : '') + '\n';
-      }
+      });
     } else if (groups) {
     let budget = limit;
     for (const g of groups) {
@@ -414,7 +428,7 @@ function section({ heading, subtitle = '', note = '', items = [], groups = null,
   // back. The section-level link stops being "and N more" and becomes the way
   // to the whole list — still through moreUrl, which carries the subscriber's
   // own facets, so "see everything" means everything THEY follow.
-  const more = groups && perGroup
+  const more = groups && perGroup !== null
     ? `<p style="margin:12px 0 0;font-size:14px;"><a href="${esc(moreUrl)}" style="${LINK}">See every change \u2192</a></p>`
     : extra
       ? `<p style="margin:10px 0 0;font-size:14px;"><a href="${esc(moreUrl)}" style="${LINK}">and ${extra} more \u2192</a></p>`
@@ -648,7 +662,7 @@ export function renderDigest({
       moreUrl: `${SITE_ORIGIN}/saved/`,
       cap: Infinity,
     },
-    { heading: 'Deadline changes this week', groups: changeGroups, perGroup: 3, cap: 24, moreUrl: more },
+    { heading: 'Deadline changes this week', groups: changeGroups, perGroup: 0, cap: 24, moreUrl: more },
     {
       heading: 'New this week',
       subtitle: 'workshops added to the tracker this week',
@@ -663,7 +677,8 @@ export function renderDigest({
       // Its overflow links to the CONFERENCE page, not /changes/: these rows are
       // upcoming deadlines, which is what that page lists.
       groups: closingGroups,
-      perGroup: 2,
+      perGroup: 3,
+      cap: 12,
       moreUrl: moreBoard,
     },
   ];

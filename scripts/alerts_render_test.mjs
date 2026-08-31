@@ -392,7 +392,11 @@ const sub = (over = {}) =>
     // of 3 binds rather than the section cap. That is the trade of per-group
     // allocation — no conference is starved by whoever sorts first, and a
     // single-conference subscriber gets a shorter excerpt with its own link on.
-    check('a single-conference section shows its per-group allowance', listed === 3, String(listed));
+    // One conference, 22 changes, budget 24: the budget is not reserved per
+    // group, so a subscriber who follows a single conference gets all of it
+    // rather than a third of it. Round-robin only starts dividing when there
+    // is more than one group competing.
+    check('a single-conference section gets the whole budget', listed === 22, String(listed));
   // The changes/new sections overflow to /changes/ — the page that shows
   // exactly what they are an excerpt of — carrying the subscriber's own facets.
   // "Closing in 7 days" is not a change, so it still overflows to the board.
@@ -405,10 +409,18 @@ const sub = (over = {}) =>
     facetOut.html.includes('/changes/?conference=NeurIPS'), '');
     // Per-group overflow replaced the single combined line: each conference says
     // what it is holding back and links to that conference's changes.
-    check('a group states its own overflow', /and \d+ more in NeurIPS →/.test(out.html), '');
-    check('the plaintext carries the group overflow too', /and \d+ more in NeurIPS:/.test(out.text), '');
+    // Overflow, with a fixture past the budget: 30 changes, cap 24.
+    const over = {}; const overEv = [];
+    for (let i = 0; i < 30; i++) {
+      const slug = `neurips-2026-o${i}`;
+      over[slug] = ws(slug, { deadline_utc: iso(40 + i), next_stage_utc: iso(40 + i) });
+      overEv.push({ slug, kind: 'extended', days: 2, old_utc: iso(38 + i), new_utc: iso(40 + i) });
+    }
+    const overOut = renderDigest({ sub: sub(), events: overEv, workshops: over, nowMs: NOW, ids });
+    check('a group states its own overflow', /and \d+ more in NeurIPS →/.test(overOut.html), '');
+    check('the plaintext carries the group overflow too', /and \d+ more in NeurIPS:/.test(overOut.text), '');
     check('a group overflow deep-links to that conference',
-      out.html.includes('/changes/?conference=NeurIPS'), '');
+      overOut.html.includes('/changes/?conference=NeurIPS'), '');
 }
 
 /* ---------------------------------------------- "and N more" uses labels, not ids */
