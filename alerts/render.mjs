@@ -505,7 +505,14 @@ function closingItem(w, ids, savedSet, tz, fmt = null, nowMs = null) {
   // The chip has already said "closes today", so the row drops the relative
   // annotation and keeps only the anchor. Otherwise every same-day row reads
   // "[CLOSES TODAY] … · closes today · 25 Aug".
-  const when = today ? fmtStamp(iso) : fmt ? fmt(iso) : fmtWhen(iso, tz);
+  // fmtStamp is UTC. Dropping the relative annotation on a same-day row is right
+  // — the chip already says "closes today" — but it must not drop the zone with
+  // it: those rows then read "31 Aug 2026, 12:00" in a digest whose every other
+  // row is PDT, and 12:00 UTC is 05:00 where the reader lives. Same formatter,
+  // just without the relative half.
+  const when = today
+    ? (fmt ? fmtLocalBare(iso, tz) : fmtStamp(iso))
+    : fmt ? fmt(iso) : fmtWhen(iso, tz);
   return {
     html: `${star}${chip}<a href="${link}" style="${LINK}">${esc(title)}</a><span style="${MUTED}"> · ${esc(when)}${esc(stage)}</span>`,
     text: `${star}${chipText}${title} · ${when}${stage}\n  ${link}`,

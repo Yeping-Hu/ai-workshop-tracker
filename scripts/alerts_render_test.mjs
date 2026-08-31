@@ -658,6 +658,11 @@ const sub = (over = {}) =>
     String((d.html.match(/\d\d:\d\d [A-Z]{2,5}</g) || []).length));
   check('no standalone timezone note when rows carry it',
     !/All times /.test(d.html));
+  // Same-day rows too. They drop the relative annotation because the CLOSES
+  // TODAY chip already carries it, and that branch used to drop the zone with
+  // it — leaving a bare UTC stamp in a digest whose every other row was local.
+  check('a CLOSES TODAY row still names its zone',
+    !/CLOSES TODAY[\s\S]{0,500}?\d\d:\d\d<\/span>/.test(d.html));
   check('a deadline carries a relative annotation', /in \d+ days · /.test(d.html), d.html.slice(0, 0));
 }
 
