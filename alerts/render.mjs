@@ -357,7 +357,8 @@ function changeBadge(ev) {
  * prefilled.
  */
 function section({ heading, subtitle = '', note = '', items = [], groups = null, perGroup = null,
-  moreUrl, cap = SECTION_CAP, extraOverride = null, overflowLabel = null, groupNoun = '' }) {
+  moreUrl, cap = SECTION_CAP, extraOverride = null, overflowLabel = null, groupNoun = '',
+  moreLabel = 'See everything' }) {
   // `groups` is [{label, items}] — used by the deadline-changes section, where
   // a flat list of forty rows from nine conferences is harder to scan than nine
   // short lists. The cap is spent across the groups in order, so a capped
@@ -398,6 +399,9 @@ function section({ heading, subtitle = '', note = '', items = [], groups = null,
         }
         if (!gave) break; // everyone is exhausted or at their ceiling
       }
+      // "1 more new workshops" — drop a trailing s when only one is held back.
+      // "closing" has none to drop, so it is left alone.
+      const noun = (n) => (groupNoun ? ` ${n === 1 ? groupNoun.replace(/s$/, '') : groupNoun}` : '');
       groups.forEach((g, i) => {
         if (!take[i]) return;
         const shown = g.items.slice(0, take[i]);
@@ -407,10 +411,10 @@ function section({ heading, subtitle = '', note = '', items = [], groups = null,
           `text-transform:uppercase;${MUTED}">${esc(g.label)}</h3>` + ul(shown);
         if (rest > 0 && g.moreUrl) {
           body += `<p style="margin:-4px 0 0 20px;font-size:13px;">` +
-            `<a href="${esc(g.moreUrl)}" style="${LINK}">and ${rest} more${groupNoun ? ` ${groupNoun}` : ''} in ${esc(g.label)} \u2192</a></p>`;
+            `<a href="${esc(g.moreUrl)}" style="${LINK}">and ${rest} more${noun(rest)} in ${esc(g.label)} \u2192</a></p>`;
         }
         bodyText += `\n${g.label}\n` + shown.map((it) => `* ${it.text}`).join('\n') +
-          (rest > 0 && g.moreUrl ? `\n  and ${rest} more${groupNoun ? ` ${groupNoun}` : ''} in ${g.label}: ${g.moreUrl}` : '') + '\n';
+          (rest > 0 && g.moreUrl ? `\n  and ${rest} more${noun(rest)} in ${g.label}: ${g.moreUrl}` : '') + '\n';
       });
     } else if (groups) {
     let budget = limit;
@@ -434,7 +438,7 @@ function section({ heading, subtitle = '', note = '', items = [], groups = null,
   // to the whole list — still through moreUrl, which carries the subscriber's
   // own facets, so "see everything" means everything THEY follow.
   const more = groups && perGroup !== null
-    ? `<p style="margin:12px 0 0;font-size:14px;"><a href="${esc(moreUrl)}" style="${LINK}">See every change \u2192</a></p>`
+    ? `<p style="margin:12px 0 0;font-size:14px;"><a href="${esc(moreUrl)}" style="${LINK}">${esc(moreLabel)} \u2192</a></p>`
     : extra
       ? `<p style="margin:10px 0 0;font-size:14px;"><a href="${esc(moreUrl)}" style="${LINK}">${esc(overflowLabel ?? `and ${extra} more`)} \u2192</a></p>`
       : '';
@@ -623,9 +627,21 @@ export function renderDigest({
 
   // 2. New this week — but not ones that are already Past by the time the
   //    digest goes out (a back-filled 2024 edition is not news).
-  const announced = merged
+  const announcedPairs = merged
     .filter((e) => e.kind === 'announced' && workshops[e.slug] && workshops[e.slug].status !== 'past')
-    .map((e) => announcedItem(workshops[e.slug], ids, tz, at));
+    .map((e) => ({ w: workshops[e.slug], item: announcedItem(workshops[e.slug], ids, tz, at) }));
+  const announced = announcedPairs.map((x) => x.item);
+  const announcedGroups = (() => {
+    const by = new Map();
+    for (const { w, item } of announcedPairs) {
+      const label = String(confLabel(ids, w.conference) ?? w.conference);
+      if (!by.has(label)) {
+        by.set(label, { label, items: [], moreUrl: `${SITE_ORIGIN}/changes/?conference=${encodeURIComponent(label)}` });
+      }
+      by.get(label).items.push(item);
+    }
+    return [...by.values()].sort((a, b) => a.label.localeCompare(b.label));
+  })();
 
   // 3. Closing in the next 7 days, from the live projection (not events).
   const closingPairs = Object.values(workshops)
@@ -696,11 +712,20 @@ export function renderDigest({
       overflowLabel: savedHeld === 1 ? 'and 1 more saved' : `and ${savedHeld} more saved`,
       cap: SAVED_CAP,
     },
-    { heading: 'Deadline changes this week', groups: changeGroups, perGroup: 0, cap: 24, groupNoun: 'changes', moreUrl: more },
+    { heading: 'Deadline changes this week', groups: changeGroups, perGroup: 0, cap: 24, groupNoun: 'changes', moreLabel: 'See every change', moreUrl: more },
     {
       heading: 'New this week',
       subtitle: 'workshops added to the tracker this week',
-      items: announced,
+      // Grouped for the same reason the changes are: a conference that announces
+      // its whole programme at once would otherwise fill the section and bury
+      // every other conference's new workshops behind one combined link. New
+      // workshops land in the changes feed as `announced`, so the per-group link
+      // goes there rather than to the conference page.
+      groups: announcedGroups,
+      perGroup: 3,
+      cap: 12,
+      groupNoun: 'new workshops',
+      moreLabel: 'See every change',
       moreUrl: more,
     },
     {
@@ -717,6 +742,10 @@ export function renderDigest({
       // the same text pointing somewhere else — the two read identically when a
       // screen reader lists links out of context.
       groupNoun: 'closing',
+      // Goes to the board, not the change list, so it must not claim otherwise —
+      // both sections printed "See every change" and one of them landed on the
+      // deadline board.
+      moreLabel: 'See every deadline',
       moreUrl: moreBoard,
     },
   ];
