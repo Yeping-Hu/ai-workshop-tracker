@@ -388,7 +388,11 @@ const sub = (over = {}) =>
   }
   const out = renderDigest({ sub: sub(), events, workshops, nowMs: NOW, ids });
   const listed = (out.html.match(/<li /g) || []).length;
-  check(`at most SECTION_CAP (${SECTION_CAP}) items are listed`, listed === SECTION_CAP, String(listed));
+    // Nineteen changes, all NeurIPS: one group, so the per-conference allowance
+    // of 3 binds rather than the section cap. That is the trade of per-group
+    // allocation — no conference is starved by whoever sorts first, and a
+    // single-conference subscriber gets a shorter excerpt with its own link on.
+    check('a single-conference section shows its per-group allowance', listed === 3, String(listed));
   // The changes/new sections overflow to /changes/ — the page that shows
   // exactly what they are an excerpt of — carrying the subscriber's own facets.
   // "Closing in 7 days" is not a change, so it still overflows to the board.
@@ -397,10 +401,14 @@ const sub = (over = {}) =>
   const facetOut = renderDigest({
     sub: sub({ conferences: '["neurips"]' }), events, workshops, nowMs: NOW, ids,
   });
-  check('the overflow link carries the subscriber facets',
+    check('the section still links on with the subscriber facets',
     facetOut.html.includes('/changes/?conference=NeurIPS'), '');
-  check('the overflow is linked as "and N more"', /and 7 more →/.test(out.html));
-  check('the plaintext overflow line is present too', /and 7 more:/.test(out.text));
+    // Per-group overflow replaced the single combined line: each conference says
+    // what it is holding back and links to that conference's changes.
+    check('a group states its own overflow', /and \d+ more in NeurIPS →/.test(out.html), '');
+    check('the plaintext carries the group overflow too', /and \d+ more in NeurIPS:/.test(out.text), '');
+    check('a group overflow deep-links to that conference',
+      out.html.includes('/changes/?conference=NeurIPS'), '');
 }
 
 /* ---------------------------------------------- "and N more" uses labels, not ids */
@@ -620,9 +628,15 @@ const sub = (over = {}) =>
   // ONE timezone in the digest now: no local conversion per row, a bare stamp
   // with a relative annotation, and the zone stated once under the first
   // heading. renderUrgent and renderStarredChanges keep the local reading.
-  check('the digest does not print a local zone per row', !/PDT|PST/.test(d.html));
+  // Still ONE zone, stated once — but the reader's, not UTC. The original
+  // decision was against repeating a second reading on every row, not against
+  // local time itself; fmtLocalBare keeps a row to a single stamp while the note
+  // names the zone. renderUrgent and renderStarredChanges keep "local (UTC)",
+  // where a single deadline warrants both readings.
+  check('the digest prints no per-row second reading', !/\(\d\d:\d\d UTC\)/.test(d.html));
   check('the digest states its timezone exactly once',
-    (d.html.match(/All times UTC/g) || []).length === 1, String((d.html.match(/All times UTC/g) || []).length));
+    (d.html.match(/All times [^.]+\./g) || []).length === 1,
+    String((d.html.match(/All times [^.]+\./g) || []).length));
   check('a deadline carries a relative annotation', /in \d+ days · /.test(d.html), d.html.slice(0, 0));
 }
 
