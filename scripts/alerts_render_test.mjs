@@ -661,8 +661,21 @@ const sub = (over = {}) =>
   // Same-day rows too. They drop the relative annotation because the CLOSES
   // TODAY chip already carries it, and that branch used to drop the zone with
   // it — leaving a bare UTC stamp in a digest whose every other row was local.
-  check('a CLOSES TODAY row still names its zone',
-    !/CLOSES TODAY[\s\S]{0,500}?\d\d:\d\d<\/span>/.test(d.html));
+  // Needs its OWN fixture with a deadline later TODAY: the digest fixture above
+  // has none, so an assertion placed there passed no matter what the same-day
+  // branch did. Found by mutating the branch back and watching nothing fail.
+  {
+    const todayMs = Date.parse('2026-08-13T09:00:00Z');
+    const soonIso = new Date(todayMs + 6 * 3_600_000).toISOString();
+    const tw = { 'neurips-2026-today': ws('neurips-2026-today', { deadline_utc: soonIso, next_stage_utc: soonIso }) };
+    const td = renderDigest({
+      sub: sub({ tz: 'America/Los_Angeles', starred_ws: '["neurips-2026-today"]' }),
+      events: [], workshops: tw, nowMs: todayMs, ids,
+    });
+    check('the fixture exercises the same-day branch', /CLOSES TODAY/.test(td.html));
+    check('a CLOSES TODAY row still names its zone',
+      !/· \d+ \w+ \d{4}, \d\d:\d\d<\/span>/.test(td.html));
+  }
   check('a deadline carries a relative annotation', /in \d+ days · /.test(d.html), d.html.slice(0, 0));
 }
 
