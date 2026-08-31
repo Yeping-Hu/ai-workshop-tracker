@@ -407,6 +407,13 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
     flex-wrap: wrap;
     align-items: baseline;
     gap: 0.2rem 0.6rem;
+    /* The +/− marker is taken out of the flow and pinned to the first line.
+       With `margin-left: auto` it was a flex item, so on a narrow screen — where
+       the hint wraps below the heading — it was pushed onto a THIRD line of its
+       own, leaving a band of empty green under the text. Absolute keeps it
+       beside the heading at every width; the padding reserves its column so a
+       long heading cannot run underneath it. */
+    position: relative;
     font-weight: 600;
     font-size: 0.98rem;
   }
@@ -420,7 +427,9 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
   .alerts-summary-hint { color: var(--muted); font-size: 0.84rem; font-weight: 400; }
   .alerts-signup[data-collapsed] > .alerts-summary::after {
     content: '+';
-    margin-left: auto;
+    position: absolute;
+    right: 0;
+    bottom: 0;
     color: var(--muted);
     font-weight: 400;
     font-family: var(--font-mono);
