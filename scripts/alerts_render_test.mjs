@@ -349,10 +349,13 @@ const sub = (over = {}) =>
     events: [], workshops: lots, nowMs: NOW, ids,
   });
   const savedListed = slugs.filter((sl) => savedOut.html.includes(`/workshop/${sl}/`)).length;
-  check(`the saved section is never capped (${SECTION_CAP + 6} starred, all listed)`,
-    savedListed === SECTION_CAP + 6, String(savedListed));
-  check('an uncapped saved section offers no "and N more" link',
-    !/and \d+ more/.test(savedOut.html.split('Deadline changes this week')[0]));
+  // The saved section used to be uncapped, on the reasoning that someone who
+  // saved forty workshops asked for all forty. In a weekly email that is forty
+  // rows, most of them months away and unchanged since last Monday. Now: the
+  // ones closing inside a week, at most five, with the rest behind a link.
+  check('the saved section is capped at five', savedListed === 5, String(savedListed));
+  check('the saved section says how much of the list it is holding back',
+    /and \d+ more saved/.test(savedOut.html.split('Deadline changes this week')[0]), '');
 
   // Required on every bulk message. Under the placeholder design the renderer
   // cannot emit a real URL — it holds no HMAC secret — so what it guarantees is
@@ -417,8 +420,8 @@ const sub = (over = {}) =>
       overEv.push({ slug, kind: 'extended', days: 2, old_utc: iso(38 + i), new_utc: iso(40 + i) });
     }
     const overOut = renderDigest({ sub: sub(), events: overEv, workshops: over, nowMs: NOW, ids });
-    check('a group states its own overflow', /and \d+ more in NeurIPS →/.test(overOut.html), '');
-    check('the plaintext carries the group overflow too', /and \d+ more in NeurIPS:/.test(overOut.text), '');
+    check('a group states its own overflow', /and \d+ more changes in NeurIPS →/.test(overOut.html), '');
+    check('the plaintext carries the group overflow too', /and \d+ more changes in NeurIPS:/.test(overOut.text), '');
     check('a group overflow deep-links to that conference',
       overOut.html.includes('/changes/?conference=NeurIPS'), '');
 }
@@ -646,9 +649,15 @@ const sub = (over = {}) =>
   // names the zone. renderUrgent and renderStarredChanges keep "local (UTC)",
   // where a single deadline warrants both readings.
   check('the digest prints no per-row second reading', !/\(\d\d:\d\d UTC\)/.test(d.html));
-  check('the digest states its timezone exactly once',
-    (d.html.match(/All times [^.]+\./g) || []).length === 1,
-    String((d.html.match(/All times [^.]+\./g) || []).length));
+  // The zone now rides on every row instead of a note at the top, so a reader
+  // who jumps to one deadline never has to remember a line from four sections
+  // earlier. Still one reading per row — never local AND UTC, which is what
+  // the UTC-only decision was actually avoiding.
+  check('every deadline row names its zone',
+    (d.html.match(/\d\d:\d\d [A-Z]{2,5}</g) || []).length > 0,
+    String((d.html.match(/\d\d:\d\d [A-Z]{2,5}</g) || []).length));
+  check('no standalone timezone note when rows carry it',
+    !/All times /.test(d.html));
   check('a deadline carries a relative annotation', /in \d+ days · /.test(d.html), d.html.slice(0, 0));
 }
 

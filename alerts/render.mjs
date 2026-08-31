@@ -86,10 +86,14 @@ export function fmtLocalBare(iso, tz) {
   try {
     const parts = new Intl.DateTimeFormat('en-US', {
       timeZone: tz, day: 'numeric', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', hour12: false,
+      hour: '2-digit', minute: '2-digit', hour12: false, timeZoneName: 'short',
     }).formatToParts(new Date(iso));
     const get = (t) => parts.find((p) => p.type === t)?.value ?? '';
-    return `${get('day')} ${get('month')} ${get('year')}, ${get('hour')}:${get('minute')}`;
+    // The zone rides on every row rather than being declared once at the top. A
+    // reader scrolling to one deadline should not have to remember a note from
+    // four sections earlier to know what "04:59" means — and a forwarded or
+    // clipped row still says which clock it is on. It is five characters.
+    return `${get('day')} ${get('month')} ${get('year')}, ${get('hour')}:${get('minute')} ${get('timeZoneName')}`;
   } catch {
     return utc;
   }
@@ -352,7 +356,8 @@ function changeBadge(ev) {
  * more, an "and N more →" link into the site with the subscriber's own facets
  * prefilled.
  */
-function section({ heading, subtitle = '', note = '', items = [], groups = null, perGroup = null, moreUrl, cap = SECTION_CAP }) {
+function section({ heading, subtitle = '', note = '', items = [], groups = null, perGroup = null,
+  moreUrl, cap = SECTION_CAP, extraOverride = null, overflowLabel = null, groupNoun = '' }) {
   // `groups` is [{label, items}] — used by the deadline-changes section, where
   // a flat list of forty rows from nine conferences is harder to scan than nine
   // short lists. The cap is spent across the groups in order, so a capped
@@ -363,7 +368,7 @@ function section({ heading, subtitle = '', note = '', items = [], groups = null,
   // asked for all forty; truncating their own list to fifteen and offering a
   // link is the one place the cap would be answering a question nobody asked.
   const limit = Number.isFinite(cap) ? cap : all.length;
-  const extra = Math.max(0, all.length - limit);
+  const extra = extraOverride != null ? Math.max(0, extraOverride) : Math.max(0, all.length - limit);
 
   const ul = (list) =>
     `<ul style="margin:0;padding-left:20px;">\n` +
@@ -402,10 +407,10 @@ function section({ heading, subtitle = '', note = '', items = [], groups = null,
           `text-transform:uppercase;${MUTED}">${esc(g.label)}</h3>` + ul(shown);
         if (rest > 0 && g.moreUrl) {
           body += `<p style="margin:-4px 0 0 20px;font-size:13px;">` +
-            `<a href="${esc(g.moreUrl)}" style="${LINK}">and ${rest} more in ${esc(g.label)} \u2192</a></p>`;
+            `<a href="${esc(g.moreUrl)}" style="${LINK}">and ${rest} more${groupNoun ? ` ${groupNoun}` : ''} in ${esc(g.label)} \u2192</a></p>`;
         }
         bodyText += `\n${g.label}\n` + shown.map((it) => `* ${it.text}`).join('\n') +
-          (rest > 0 && g.moreUrl ? `\n  and ${rest} more in ${g.label}: ${g.moreUrl}` : '') + '\n';
+          (rest > 0 && g.moreUrl ? `\n  and ${rest} more${groupNoun ? ` ${groupNoun}` : ''} in ${g.label}: ${g.moreUrl}` : '') + '\n';
       });
     } else if (groups) {
     let budget = limit;
@@ -431,7 +436,7 @@ function section({ heading, subtitle = '', note = '', items = [], groups = null,
   const more = groups && perGroup !== null
     ? `<p style="margin:12px 0 0;font-size:14px;"><a href="${esc(moreUrl)}" style="${LINK}">See every change \u2192</a></p>`
     : extra
-      ? `<p style="margin:10px 0 0;font-size:14px;"><a href="${esc(moreUrl)}" style="${LINK}">and ${extra} more \u2192</a></p>`
+      ? `<p style="margin:10px 0 0;font-size:14px;"><a href="${esc(moreUrl)}" style="${LINK}">${esc(overflowLabel ?? `and ${extra} more`)} \u2192</a></p>`
       : '';
 
   const blurb = [subtitle, note].filter(Boolean).join(' · ');
@@ -636,8 +641,20 @@ export function renderDigest({
   })();
   const closing = closingPairs.map((x) => x.item);
 
-  // 4. Your saved workshops — next deadlines. Ignores the filters (top 5).
-  const savedRows = [...saved]
+  // 4. Your saved workshops — next deadlines. Ignores the conference and topic
+  //    filters: saving something is a stronger signal than any facet.
+  //
+  //    Uncapped was the old rule, on the reasoning that someone who saved forty
+  //    workshops asked for all forty. In a weekly email that is forty rows, and
+  //    most of them are months away and unchanged since last Monday. So: the
+  //    ones closing inside a week, at most five.
+  //
+  //    If none qualify, the five nearest instead — a subscriber with nothing
+  //    imminent should still see where their list stands, rather than have the
+  //    section vanish and leave them wondering whether it broke.
+  const SAVED_WINDOW_MS = 7 * 86_400_000;
+  const SAVED_CAP = 5;
+  const savedAll = [...saved]
     .map((slug) => workshops[slug])
     .filter(Boolean)
     .map((w) => {
@@ -647,8 +664,12 @@ export function renderDigest({
     })
     .filter(Boolean)
     .sort((a, b) => a.ms - b.ms);
-  const savedNext = savedRows.map(({ w }) => closingItem(w, ids, saved, tz, at, nowMs));
-  const savedSoon = savedRows.filter(({ ms }) => ms < nowMs + 48 * 3_600_000).length;
+  const imminent = savedAll.filter(({ ms }) => ms < nowMs + SAVED_WINDOW_MS);
+  const savedRows = imminent.length ? imminent : savedAll;
+  const savedShown = savedRows.slice(0, SAVED_CAP);
+  const savedHeld = savedAll.length - savedShown.length;
+  const savedNext = savedShown.map(({ w }) => closingItem(w, ids, saved, tz, at, nowMs));
+  const savedSoon = savedAll.filter(({ ms }) => ms < nowMs + 48 * 3_600_000).length;
 
   if (!changes.length && !announced.length && !closing.length && !savedNext.length) return null;
 
@@ -657,12 +678,18 @@ export function renderDigest({
   // that repeats workshops named above — comes last.
   const specs = [
     {
-      heading: 'Your saved workshops — next deadlines',
+      heading: imminent.length
+        ? 'Your saved workshops — closing this week'
+        : 'Your saved workshops — next deadlines',
       items: savedNext,
       moreUrl: `${SITE_ORIGIN}/saved/`,
-      cap: Infinity,
+      // The overflow counts everything saved that is still ahead, not just what
+      // this window held back, so the link says how much of the list is unseen.
+      extraOverride: savedHeld,
+      overflowLabel: savedHeld === 1 ? 'and 1 more saved' : `and ${savedHeld} more saved`,
+      cap: SAVED_CAP,
     },
-    { heading: 'Deadline changes this week', groups: changeGroups, perGroup: 0, cap: 24, moreUrl: more },
+    { heading: 'Deadline changes this week', groups: changeGroups, perGroup: 0, cap: 24, groupNoun: 'changes', moreUrl: more },
     {
       heading: 'New this week',
       subtitle: 'workshops added to the tracker this week',
@@ -679,13 +706,19 @@ export function renderDigest({
       groups: closingGroups,
       perGroup: 3,
       cap: 12,
+      // Distinguishes this link from the changes section's, which otherwise emits
+      // the same text pointing somewhere else — the two read identically when a
+      // screen reader lists links out of context.
+      groupNoun: 'closing',
       moreUrl: moreBoard,
     },
   ];
   // Stated once, on whichever section actually leads — a quiet week can drop
   // any of them, and the note has to follow the first one that survives.
   const lead = specs.find((x) => (x.groups ? x.groups.some((g) => g.items.length) : x.items.length));
-  if (lead) lead.note = `All times ${zoneLabel(tz)}.`;
+  // No zone note: every row carries its own (fmtLocalBare). One that repeats
+  // what each row already says is a line the reader has to parse and discard.
+  if (lead && !tz) lead.note = 'All times UTC.';
   const secs = specs.map(section);
 
   // Subject drops zero-count clauses rather than saying "0 changes".
