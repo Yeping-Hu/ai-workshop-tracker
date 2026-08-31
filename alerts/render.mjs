@@ -231,6 +231,23 @@ function wsTitle(w, ids, { full = false } = {}) {
  * labels**, not ids (`?conference=NeurIPS&topic=Agents`), so ids are mapped
  * back through the vocabulary before they go into a link.
  */
+/**
+ * A per-group link that keeps the subscriber's other facets.
+ *
+ * facetUrl() carries conference AND topic; a group link needs to pin the
+ * conference to that group while leaving topic alone. Building it by hand as
+ * `?conference=X` silently dropped the topic filter, so a subscriber who follows
+ * only Robotics would click "and 58 more changes in NeurIPS" and land on all
+ * NeurIPS changes — more than the email had shown them, with no way to tell why.
+ */
+function groupFacetUrl(sub, ids, path, conferenceLabel, hash = '') {
+  const p = new URLSearchParams();
+  p.set('conference', conferenceLabel);
+  const tops = (sub?.topics ?? []).map((id) => ids?.topics?.find((t) => t.id === id)?.label ?? id);
+  if (tops.length) p.set('topic', tops.join(','));
+  return `${SITE_ORIGIN}${path}?${p.toString()}${hash}`;
+}
+
 export function facetUrl(sub, ids, path = '/') {
   const p = new URLSearchParams();
   const confs = (sub.conferences ?? []).map((id) => confLabel(ids, id));
@@ -622,7 +639,7 @@ export function renderDigest({
       // The board's existing facet contract — `?conference=<label>`, the same one
       // facetUrl() and readFacets() already speak — rather than a second,
       // parallel `?conf=<id>` that /changes/ would have had to learn.
-      moreUrl: `${SITE_ORIGIN}/changes/?conference=${encodeURIComponent(label)}`,
+      moreUrl: groupFacetUrl(sub, ids, '/changes/', label),
     }));
 
   // 2. New this week — but not ones that are already Past by the time the
@@ -638,7 +655,7 @@ export function renderDigest({
       if (!by.has(label)) {
         by.set(label, {
           label, items: [],
-          moreUrl: `${SITE_ORIGIN}/changes/?conference=${encodeURIComponent(label)}#new`,
+          moreUrl: groupFacetUrl(sub, ids, '/changes/', label, '#new'),
         });
       }
       by.get(label).items.push(item);
