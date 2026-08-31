@@ -640,10 +640,6 @@ const sub = (over = {}) =>
     workshops, nowMs: NOW, ids,
   });
   check('the digest shows the full name too', d.html.includes('LLM for Scientific Discovery'));
-  // ONE timezone in the digest now: no local conversion per row, a bare stamp
-  // with a relative annotation, and the zone stated once under the first
-  // heading. renderUrgent and renderStarredChanges keep the local reading.
-  // Still ONE zone, stated once — but the reader's, not UTC. The original
   // decision was against repeating a second reading on every row, not against
   // local time itself; fmtLocalBare keeps a row to a single stamp while the note
   // names the zone. renderUrgent and renderStarredChanges keep "local (UTC)",
@@ -656,8 +652,17 @@ const sub = (over = {}) =>
   check('every deadline row names its zone',
     (d.html.match(/\d\d:\d\d [A-Z]{2,5}</g) || []).length > 0,
     String((d.html.match(/\d\d:\d\d [A-Z]{2,5}</g) || []).length));
-  check('no standalone timezone note when rows carry it',
-    !/All times /.test(d.html));
+  // No note in either case: rows carry the subscriber's zone, or fall back to
+  // fmtUtc, which ends "UTC" itself. A note would repeat every row beneath it.
+  check('no standalone timezone note', !/All times /.test(d.html));
+  {
+      const noTz = renderDigest({ sub: sub({ tz: null }), tz: null,
+        events: [{ slug: 'neurips-2026-lm4sci', kind: 'extended', days: 3, old_utc: iso(-1), new_utc: iso(2) }],
+        workshops, nowMs: NOW, ids });
+    check('a subscriber with no zone still gets one on every row',
+      !noTz || /\d\d:\d\d UTC/.test(noTz.html));
+    check('...and still no note', !noTz || !/All times /.test(noTz.html));
+  }
   // Same-day rows too. They drop the relative annotation because the CLOSES
   // TODAY chip already carries it, and that branch used to drop the zone with
   // it — leaving a bare UTC stamp in a digest whose every other row was local.

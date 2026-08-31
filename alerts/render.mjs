@@ -775,9 +775,10 @@ export function renderDigest({
   // Stated once, on whichever section actually leads — a quiet week can drop
   // any of them, and the note has to follow the first one that survives.
   const lead = specs.find((x) => (x.groups ? x.groups.some((g) => g.items.length) : x.items.length));
-  // No zone note: every row carries its own (fmtLocalBare). One that repeats
-  // what each row already says is a line the reader has to parse and discard.
-  if (lead && !tz) lead.note = 'All times UTC.';
+  // No zone note at all. Every row carries its own zone: fmtLocalBare prints the
+  // subscriber's, and falls back to fmtUtc — which already ends "UTC" — when no
+  // zone was recorded. The note I kept for that fallback turned out to repeat
+  // what all forty rows beneath it were already saying.
   const secs = specs.map(section);
 
   // Subject drops zero-count clauses rather than saying "0 changes".
