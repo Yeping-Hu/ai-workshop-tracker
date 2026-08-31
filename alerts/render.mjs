@@ -112,10 +112,22 @@ export function fmtStamp(iso) {
  * have to do calendar arithmetic to learn whether something is urgent. Today and
  * tomorrow are named rather than counted, because "in 0 days" is not English.
  */
-export function fmtRelative(iso, nowMs) {
+export function fmtRelative(iso, nowMs, tz = null) {
   const ms = Date.parse(iso);
   if (!Number.isFinite(ms)) return '';
-  const days = Math.floor((ms - nowMs) / 86_400_000);
+  // Compare calendar DATES in the reader's zone, not elapsed 24-hour blocks.
+  // Math.floor((ms - nowMs) / 86_400_000) counts blocks: a deadline 47.9h away
+  // floored to 1 and read "closes tomorrow" when it was two dates out — the
+  // alert on 2026-08-30 said CLOSES TOMORROW next to its own "in 47h". It fails
+  // the other way too: at 23:00, a deadline 20h later is the next date but
+  // floors to 0, "closes today". Today and tomorrow are calendar words.
+  const dayStart = (t) => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz || 'UTC', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date(t));
+    return Date.parse(`${parts}T00:00:00Z`);
+  };
+  const days = Math.round((dayStart(ms) - dayStart(nowMs)) / 86_400_000);
   if (days < 0) return 'closed';
   if (days === 0) return 'closes today';
   if (days === 1) return 'closes tomorrow';
@@ -123,10 +135,10 @@ export function fmtRelative(iso, nowMs) {
 }
 
 /** "in 3 days · 27 Aug 2026, 11:59" — annotation first, anchor second. */
-export function fmtDeadline(iso, nowMs) {
+export function fmtDeadline(iso, nowMs, tz = null) {
   const stamp = fmtStamp(iso);
   if (!stamp) return '';
-  const rel = fmtRelative(iso, nowMs);
+  const rel = fmtRelative(iso, nowMs, tz);
   return rel ? `${rel} · ${stamp}` : stamp;
 }
 
@@ -285,8 +297,8 @@ function badgeText(text) {
 
 /** How close an urgent deadline is, as a chip. Same vocabulary as the digest's
  *  CLOSES TODAY, so a reader who gets both recognises the treatment. */
-function urgency(iso, nowMs) {
-  return fmtRelative(iso, nowMs).toUpperCase() || 'CLOSING';
+function urgency(iso, nowMs, tz = null) {
+  return fmtRelative(iso, nowMs, tz).toUpperCase() || 'CLOSING';
 }
 
 /** What a change event's chip says. U+2212 for the minus: a hyphen reads as a
@@ -405,7 +417,7 @@ function closingItem(w, ids, savedSet, tz, fmt = null, nowMs = null) {
   const iso = w.next_stage_utc || w.deadline_utc;
   // Only the day itself earns a chip. Badging everything in a section called
   // "closing in the next 7 days" would say nothing the heading has not.
-  const today = nowMs != null && fmtRelative(iso, nowMs) === 'closes today';
+  const today = nowMs != null && fmtRelative(iso, nowMs, tz) === 'closes today';
   const chip = today ? badge('CLOSES TODAY', 'closing') : '';
   const chipText = today ? badgeText('CLOSES TODAY') : '';
   // The chip has already said "closes today", so the row drops the relative
@@ -667,7 +679,19 @@ export function renderStarredChanges({
     ? `Deadline update: ${wsTitle(first, ids)} — AI Workshop Tracker`
     : `${items.length} deadline updates on your saved workshops — AI Workshop Tracker`;
 
-  const sec = section({ heading: one ? 'A workshop you saved changed' : 'Workshops you saved changed', items, moreUrl: `${SITE_ORIGIN}/saved/` });
+  const sec = section({
+    heading: one ? 'A workshop you saved changed' : 'Workshops you saved changed',
+    // Said once, at the top, rather than per row. The delta is measured against
+    // the previous daily snapshot — which is written every run, sent or not — so
+    // a workshop that moved twice in a day reports the total and can disagree
+    // with the single latest step shown on its page. Without this the reader has
+    // no way to reconcile "+3d" here with "Extended by 1 day" there.
+    subtitle:
+      'Changes are measured since our last daily check, so if a workshop\u2019s deadline moves ' +
+      'multiple times within a day, it appears only once with the total change.',
+    items,
+    moreUrl: `${SITE_ORIGIN}/saved/`,
+  });
 
   const bodyHtml =
     `<h1 style="margin:0 0 6px;font-size:21px;line-height:1.25;">${one ? 'A deadline you follow moved' : 'Deadlines you follow moved'}</h1>` +
@@ -717,13 +741,13 @@ export function renderUrgent({
       return {
         html:
           `<div style="margin:0 0 16px;padding:12px 14px;border:1px solid #dfe2e6;border-radius:8px;">` +
-          badge(urgency(iso, nowMs), 'closing') +
+          badge(urgency(iso, nowMs, tz), 'closing') +
           `<a href="${wsUrl(w.slug)}" style="${LINK}font-weight:600;">${esc(wsTitle(w, ids, { full: true }))}</a><br />` +
           `<span style="${MUTED}">${esc(fmtWhen(iso, tz))}${esc(stage)} · in ${hoursUntil(iso, nowMs)}h</span>` +
           (w.website ? `<br /><a href="${esc(w.website)}" style="${LINK}font-size:14px;">Official page</a>` : '') +
           `</div>`,
         text:
-          `${badgeText(urgency(iso, nowMs))}${wsTitle(w, ids, { full: true })}\n  ${fmtWhen(iso, tz)}${stage} · in ${hoursUntil(iso, nowMs)}h\n  ${wsUrl(w.slug)}` +
+          `${badgeText(urgency(iso, nowMs, tz))}${wsTitle(w, ids, { full: true })}\n  ${fmtWhen(iso, tz)}${stage} · in ${hoursUntil(iso, nowMs)}h\n  ${wsUrl(w.slug)}` +
           (w.website ? `\n  ${w.website}` : ''),
       };
     });

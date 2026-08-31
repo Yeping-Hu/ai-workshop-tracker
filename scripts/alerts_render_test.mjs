@@ -39,6 +39,7 @@ import {
   UNSUB_PLACEHOLDER,
   MANAGE_PLACEHOLDER,
   FOOTER_CAVEAT,
+  fmtRelative,
 } from '../alerts/render.mjs';
 import { SECTION_CAP } from '../alerts/config.mjs';
 import { normalizeSubscriber } from '../alerts/match.mjs';
@@ -686,6 +687,23 @@ const sub = (over = {}) =>
   check('the alerts run passes a clock to renderStarredChanges',
     !!call && /nowMs\s*:/.test(call[0]),
     call ? call[0] : 'no renderStarredChanges call found in scripts/alerts_run.mjs');
+}
+
+console.log('— relative wording is calendar-based, in the reader\'s zone —');
+{
+  const at = (iso, now, tz) => fmtRelative(iso, Date.parse(now), tz);
+  // The alert that prompted this: 47.9h out, but two calendar dates away. The
+  // old 24-hour-block arithmetic floored it to 1 and said "closes tomorrow"
+  // beside its own "in 47h".
+  check('47.9h across two dates is 2 days', at('2026-09-01T11:59:00Z', '2026-08-30T12:08:00Z', 'America/Los_Angeles'), 'in 2 days');
+  // …and the same bug in the other direction: under 24h, but the next date.
+  check('20h across midnight is tomorrow', at('2026-08-31T19:00:00Z', '2026-08-30T23:00:00Z', 'UTC'), 'closes tomorrow');
+  check('same date is today', at('2026-08-30T20:00:00Z', '2026-08-30T18:00:00Z', 'UTC'), 'closes today');
+  check('past is closed', at('2026-08-29T12:00:00Z', '2026-08-30T12:00:00Z', 'UTC'), 'closed');
+  // The zone is the reader's, so one instant can honestly read differently.
+  check('01:00 UTC is still today in Los Angeles', at('2026-08-31T01:00:00Z', '2026-08-30T20:00:00Z', 'America/Los_Angeles'), 'closes today');
+  check('...and tomorrow for a UTC reader', at('2026-08-31T01:00:00Z', '2026-08-30T20:00:00Z', 'UTC'), 'closes tomorrow');
+  check('no zone falls back to UTC', at('2026-09-01T11:59:00Z', '2026-08-30T12:08:00Z', null), 'in 2 days');
 }
 
 console.log(failed === 0 ? '\nRendering OK.' : `\n${failed} test(s) failed.`);
