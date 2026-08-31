@@ -349,10 +349,13 @@ const sub = (over = {}) =>
     events: [], workshops: lots, nowMs: NOW, ids,
   });
   const savedListed = slugs.filter((sl) => savedOut.html.includes(`/workshop/${sl}/`)).length;
-  check(`the saved section is never capped (${SECTION_CAP + 6} starred, all listed)`,
-    savedListed === SECTION_CAP + 6, String(savedListed));
-  check('an uncapped saved section offers no "and N more" link',
-    !/and \d+ more/.test(savedOut.html.split('Deadline changes this week')[0]));
+  // The saved section used to be uncapped, on the reasoning that someone who
+  // saved forty workshops asked for all forty. In a weekly email that is forty
+  // rows, most of them months away and unchanged since last Monday. Now: the
+  // ones closing inside a week, at most five, with the rest behind a link.
+  check('the saved section is capped at five', savedListed === 5, String(savedListed));
+  check('the saved section says how much of the list it is holding back',
+    /and \d+ more saved/.test(savedOut.html.split('Deadline changes this week')[0]), '');
 
   // Required on every bulk message. Under the placeholder design the renderer
   // cannot emit a real URL — it holds no HMAC secret — so what it guarantees is
@@ -388,7 +391,15 @@ const sub = (over = {}) =>
   }
   const out = renderDigest({ sub: sub(), events, workshops, nowMs: NOW, ids });
   const listed = (out.html.match(/<li /g) || []).length;
-  check(`at most SECTION_CAP (${SECTION_CAP}) items are listed`, listed === SECTION_CAP, String(listed));
+    // Nineteen changes, all NeurIPS: one group, so the per-conference allowance
+    // of 3 binds rather than the section cap. That is the trade of per-group
+    // allocation — no conference is starved by whoever sorts first, and a
+    // single-conference subscriber gets a shorter excerpt with its own link on.
+    // One conference, 22 changes, budget 24: the budget is not reserved per
+    // group, so a subscriber who follows a single conference gets all of it
+    // rather than a third of it. Round-robin only starts dividing when there
+    // is more than one group competing.
+    check('a single-conference section gets the whole budget', listed === 22, String(listed));
   // The changes/new sections overflow to /changes/ — the page that shows
   // exactly what they are an excerpt of — carrying the subscriber's own facets.
   // "Closing in 7 days" is not a change, so it still overflows to the board.
@@ -397,10 +408,22 @@ const sub = (over = {}) =>
   const facetOut = renderDigest({
     sub: sub({ conferences: '["neurips"]' }), events, workshops, nowMs: NOW, ids,
   });
-  check('the overflow link carries the subscriber facets',
+    check('the section still links on with the subscriber facets',
     facetOut.html.includes('/changes/?conference=NeurIPS'), '');
-  check('the overflow is linked as "and N more"', /and 7 more →/.test(out.html));
-  check('the plaintext overflow line is present too', /and 7 more:/.test(out.text));
+    // Per-group overflow replaced the single combined line: each conference says
+    // what it is holding back and links to that conference's changes.
+    // Overflow, with a fixture past the budget: 30 changes, cap 24.
+    const over = {}; const overEv = [];
+    for (let i = 0; i < 30; i++) {
+      const slug = `neurips-2026-o${i}`;
+      over[slug] = ws(slug, { deadline_utc: iso(40 + i), next_stage_utc: iso(40 + i) });
+      overEv.push({ slug, kind: 'extended', days: 2, old_utc: iso(38 + i), new_utc: iso(40 + i) });
+    }
+    const overOut = renderDigest({ sub: sub(), events: overEv, workshops: over, nowMs: NOW, ids });
+    check('a group states its own overflow', /and \d+ more changes in NeurIPS →/.test(overOut.html), '');
+    check('the plaintext carries the group overflow too', /and \d+ more changes in NeurIPS:/.test(overOut.text), '');
+    check('a group overflow deep-links to that conference',
+      overOut.html.includes('/changes/?conference=NeurIPS'), '');
 }
 
 /* ---------------------------------------------- "and N more" uses labels, not ids */
@@ -620,9 +643,39 @@ const sub = (over = {}) =>
   // ONE timezone in the digest now: no local conversion per row, a bare stamp
   // with a relative annotation, and the zone stated once under the first
   // heading. renderUrgent and renderStarredChanges keep the local reading.
-  check('the digest does not print a local zone per row', !/PDT|PST/.test(d.html));
-  check('the digest states its timezone exactly once',
-    (d.html.match(/All times UTC/g) || []).length === 1, String((d.html.match(/All times UTC/g) || []).length));
+  // Still ONE zone, stated once — but the reader's, not UTC. The original
+  // decision was against repeating a second reading on every row, not against
+  // local time itself; fmtLocalBare keeps a row to a single stamp while the note
+  // names the zone. renderUrgent and renderStarredChanges keep "local (UTC)",
+  // where a single deadline warrants both readings.
+  check('the digest prints no per-row second reading', !/\(\d\d:\d\d UTC\)/.test(d.html));
+  // The zone now rides on every row instead of a note at the top, so a reader
+  // who jumps to one deadline never has to remember a line from four sections
+  // earlier. Still one reading per row — never local AND UTC, which is what
+  // the UTC-only decision was actually avoiding.
+  check('every deadline row names its zone',
+    (d.html.match(/\d\d:\d\d [A-Z]{2,5}</g) || []).length > 0,
+    String((d.html.match(/\d\d:\d\d [A-Z]{2,5}</g) || []).length));
+  check('no standalone timezone note when rows carry it',
+    !/All times /.test(d.html));
+  // Same-day rows too. They drop the relative annotation because the CLOSES
+  // TODAY chip already carries it, and that branch used to drop the zone with
+  // it — leaving a bare UTC stamp in a digest whose every other row was local.
+  // Needs its OWN fixture with a deadline later TODAY: the digest fixture above
+  // has none, so an assertion placed there passed no matter what the same-day
+  // branch did. Found by mutating the branch back and watching nothing fail.
+  {
+    const todayMs = Date.parse('2026-08-13T09:00:00Z');
+    const soonIso = new Date(todayMs + 6 * 3_600_000).toISOString();
+    const tw = { 'neurips-2026-today': ws('neurips-2026-today', { deadline_utc: soonIso, next_stage_utc: soonIso }) };
+    const td = renderDigest({
+      sub: sub({ tz: 'America/Los_Angeles', starred_ws: '["neurips-2026-today"]' }),
+      events: [], workshops: tw, nowMs: todayMs, ids,
+    });
+    check('the fixture exercises the same-day branch', /CLOSES TODAY/.test(td.html));
+    check('a CLOSES TODAY row still names its zone',
+      !/· \d+ \w+ \d{4}, \d\d:\d\d<\/span>/.test(td.html));
+  }
   check('a deadline carries a relative annotation', /in \d+ days · /.test(d.html), d.html.slice(0, 0));
 }
 

@@ -71,6 +71,46 @@ export function fmtUtc(iso) {
  * here: this runs inside the loop that renders every subscriber's mail, and one
  * bad row would take down the whole send.
  */
+/**
+ * The reader's local wall clock, with no second reading in parentheses.
+ *
+ * fmtWhen appends "(11:59 UTC)" so a single alert about one deadline is
+ * unambiguous. A digest carries twenty rows and states its zone once under the
+ * first heading, so the tail is twenty repetitions of what the note already
+ * said — which is why the digest went UTC-only in the first place. This gives it
+ * the reader's zone back without the verbosity that motivated that decision.
+ */
+export function fmtLocalBare(iso, tz) {
+  const utc = fmtUtc(iso);
+  if (!tz || !utc) return utc;
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, day: 'numeric', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: false, timeZoneName: 'short',
+    }).formatToParts(new Date(iso));
+    const get = (t) => parts.find((p) => p.type === t)?.value ?? '';
+    // The zone rides on every row rather than being declared once at the top. A
+    // reader scrolling to one deadline should not have to remember a note from
+    // four sections earlier to know what "04:59" means — and a forwarded or
+    // clipped row still says which clock it is on. It is five characters.
+    return `${get('day')} ${get('month')} ${get('year')}, ${get('hour')}:${get('minute')} ${get('timeZoneName')}`;
+  } catch {
+    return utc;
+  }
+}
+
+/** "PDT", or the IANA name when no abbreviation is available. */
+export function zoneLabel(tz) {
+  if (!tz) return 'UTC';
+  try {
+    const p = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' })
+      .formatToParts(new Date()).find((x) => x.type === 'timeZoneName')?.value;
+    return p && !/^GMT/.test(p) ? p : tz.split('/').pop().replace(/_/g, ' ');
+  } catch {
+    return 'UTC';
+  }
+}
+
 export function fmtWhen(iso, tz) {
   const utc = fmtUtc(iso);
   if (!tz || !utc) return utc;
@@ -135,8 +175,8 @@ export function fmtRelative(iso, nowMs, tz = null) {
 }
 
 /** "in 3 days · 27 Aug 2026, 11:59" — annotation first, anchor second. */
-export function fmtDeadline(iso, nowMs, tz = null) {
-  const stamp = fmtStamp(iso);
+export function fmtDeadline(iso, nowMs, tz = null, stampFn = null) {
+  const stamp = stampFn ? stampFn(iso, tz) : fmtStamp(iso);
   if (!stamp) return '';
   const rel = fmtRelative(iso, nowMs, tz);
   return rel ? `${rel} · ${stamp}` : stamp;
@@ -191,6 +231,23 @@ function wsTitle(w, ids, { full = false } = {}) {
  * labels**, not ids (`?conference=NeurIPS&topic=Agents`), so ids are mapped
  * back through the vocabulary before they go into a link.
  */
+/**
+ * A per-group link that keeps the subscriber's other facets.
+ *
+ * facetUrl() carries conference AND topic; a group link needs to pin the
+ * conference to that group while leaving topic alone. Building it by hand as
+ * `?conference=X` silently dropped the topic filter, so a subscriber who follows
+ * only Robotics would click "and 58 more changes in NeurIPS" and land on all
+ * NeurIPS changes — more than the email had shown them, with no way to tell why.
+ */
+function groupFacetUrl(sub, ids, path, conferenceLabel, hash = '') {
+  const p = new URLSearchParams();
+  p.set('conference', conferenceLabel);
+  const tops = (sub?.topics ?? []).map((id) => ids?.topics?.find((t) => t.id === id)?.label ?? id);
+  if (tops.length) p.set('topic', tops.join(','));
+  return `${SITE_ORIGIN}${path}?${p.toString()}${hash}`;
+}
+
 export function facetUrl(sub, ids, path = '/') {
   const p = new URLSearchParams();
   const confs = (sub.conferences ?? []).map((id) => confLabel(ids, id));
@@ -316,7 +373,9 @@ function changeBadge(ev) {
  * more, an "and N more →" link into the site with the subscriber's own facets
  * prefilled.
  */
-function section({ heading, subtitle = '', note = '', items = [], groups = null, moreUrl, cap = SECTION_CAP }) {
+function section({ heading, subtitle = '', note = '', items = [], groups = null, perGroup = null,
+  moreUrl, cap = SECTION_CAP, extraOverride = null, overflowLabel = null, groupNoun = '',
+  moreLabel = 'See everything' }) {
   // `groups` is [{label, items}] — used by the deadline-changes section, where
   // a flat list of forty rows from nine conferences is harder to scan than nine
   // short lists. The cap is spent across the groups in order, so a capped
@@ -327,7 +386,7 @@ function section({ heading, subtitle = '', note = '', items = [], groups = null,
   // asked for all forty; truncating their own list to fifteen and offering a
   // link is the one place the cap would be answering a question nobody asked.
   const limit = Number.isFinite(cap) ? cap : all.length;
-  const extra = Math.max(0, all.length - limit);
+  const extra = extraOverride != null ? Math.max(0, extraOverride) : Math.max(0, all.length - limit);
 
   const ul = (list) =>
     `<ul style="margin:0;padding-left:20px;">\n` +
@@ -336,7 +395,45 @@ function section({ heading, subtitle = '', note = '', items = [], groups = null,
 
   let body = '';
   let bodyText = '';
-  if (groups) {
+    if (groups && perGroup !== null) {
+      // Round-robin, not a fixed share. Groups are unequal — a conference with
+      // one change should not hold a reserved slot while another has fifty — so
+      // the budget is handed out a row at a time, in turn, skipping any group
+      // that has run out. Every group gets one before any gets two, so nothing
+      // is starved by sort order; the leftovers then flow to whoever still has
+      // rows. A subscriber following one conference gets the whole budget.
+      // `perGroup` is a per-group ceiling, not a quota: unset for changes (one
+      // conference may fill the section), small for closing-soon, which is an
+      // "is anything of mine closing" glance rather than a listing.
+      const take = groups.map(() => 0);
+      const ceiling = perGroup > 0 ? perGroup : Infinity;
+      let left = limit;
+      for (let pass = 0; left > 0; pass += 1) {
+        let gave = 0;
+        for (let i = 0; i < groups.length && left > 0; i += 1) {
+          if (take[i] >= groups[i].items.length || take[i] >= ceiling) continue;
+          take[i] += 1; left -= 1; gave += 1;
+        }
+        if (!gave) break; // everyone is exhausted or at their ceiling
+      }
+      // "1 more new workshops" — drop a trailing s when only one is held back.
+      // "closing" has none to drop, so it is left alone.
+      const noun = (n) => (groupNoun ? ` ${n === 1 ? groupNoun.replace(/s$/, '') : groupNoun}` : '');
+      groups.forEach((g, i) => {
+        if (!take[i]) return;
+        const shown = g.items.slice(0, take[i]);
+        const rest = g.items.length - shown.length;
+        body +=
+          `<h3 style="margin:16px 0 6px;font-size:13px;letter-spacing:0.04em;` +
+          `text-transform:uppercase;${MUTED}">${esc(g.label)}</h3>` + ul(shown);
+        if (rest > 0 && g.moreUrl) {
+          body += `<p style="margin:-4px 0 0 20px;font-size:13px;">` +
+            `<a href="${esc(g.moreUrl)}" style="${LINK}">and ${rest} more${noun(rest)} in ${esc(g.label)} \u2192</a></p>`;
+        }
+        bodyText += `\n${g.label}\n` + shown.map((it) => `* ${it.text}`).join('\n') +
+          (rest > 0 && g.moreUrl ? `\n  and ${rest} more${noun(rest)} in ${g.label}: ${g.moreUrl}` : '') + '\n';
+      });
+    } else if (groups) {
     let budget = limit;
     for (const g of groups) {
       if (budget <= 0) break;
@@ -353,9 +450,15 @@ function section({ heading, subtitle = '', note = '', items = [], groups = null,
     bodyText = shown.map((it) => `* ${it.text}`).join('\n') + '\n';
   }
 
-  const more = extra
-    ? `<p style="margin:10px 0 0;font-size:14px;"><a href="${esc(moreUrl)}" style="${LINK}">and ${extra} more →</a></p>`
-    : '';
+  // With per-group overflow, each conference already says what it is holding
+  // back. The section-level link stops being "and N more" and becomes the way
+  // to the whole list — still through moreUrl, which carries the subscriber's
+  // own facets, so "see everything" means everything THEY follow.
+  const more = groups && perGroup !== null
+    ? `<p style="margin:12px 0 0;font-size:14px;"><a href="${esc(moreUrl)}" style="${LINK}">${esc(moreLabel)} \u2192</a></p>`
+    : extra
+      ? `<p style="margin:10px 0 0;font-size:14px;"><a href="${esc(moreUrl)}" style="${LINK}">${esc(overflowLabel ?? `and ${extra} more`)} \u2192</a></p>`
+      : '';
 
   const blurb = [subtitle, note].filter(Boolean).join(' · ');
   const sub = blurb
@@ -423,7 +526,14 @@ function closingItem(w, ids, savedSet, tz, fmt = null, nowMs = null) {
   // The chip has already said "closes today", so the row drops the relative
   // annotation and keeps only the anchor. Otherwise every same-day row reads
   // "[CLOSES TODAY] … · closes today · 25 Aug".
-  const when = today ? fmtStamp(iso) : fmt ? fmt(iso) : fmtWhen(iso, tz);
+  // fmtStamp is UTC. Dropping the relative annotation on a same-day row is right
+  // — the chip already says "closes today" — but it must not drop the zone with
+  // it: those rows then read "31 Aug 2026, 12:00" in a digest whose every other
+  // row is PDT, and 12:00 UTC is 05:00 where the reader lives. Same formatter,
+  // just without the relative half.
+  const when = today
+    ? (fmt ? fmtLocalBare(iso, tz) : fmtStamp(iso))
+    : fmt ? fmt(iso) : fmtWhen(iso, tz);
   return {
     html: `${star}${chip}<a href="${link}" style="${LINK}">${esc(title)}</a><span style="${MUTED}"> · ${esc(when)}${esc(stage)}</span>`,
     text: `${star}${chipText}${title} · ${when}${stage}\n  ${link}`,
@@ -459,13 +569,20 @@ export function renderDigest({
   // "closing in 7 days" is not a change, so it still overflows to the board.
   const more = facetUrl(sub, ids, '/changes/');
   const moreBoard = facetUrl(sub, ids);
-  // ONE timezone. The digest previously printed every deadline twice — the
-  // subscriber's local reading and the canonical UTC one — which doubled the
+  // ONE timezone, and it is the reader's. The digest once printed every deadline
+  // twice — local and UTC — which doubled the
   // width of every row to say the same thing. It now states the zone once,
   // under the first heading, and every row is a bare stamp with a relative
   // annotation. `renderUrgent` and `renderStarredChanges` keep the local
   // conversion: those are single-deadline messages where it costs one line.
-  const at = (iso) => fmtDeadline(iso, nowMs);
+  // The subscriber's zone, like every other email. This was the one renderer
+  // formatting in UTC, which put two conventions in front of one reader — and it
+  // mattered most in the two sections people act on, where "closes tomorrow ·
+  // 1 Sep, 11:59" in UTC can be a different calendar day where they live.
+  // The +Nd badge is unaffected: it rounds a DURATION between two instants, so it
+  // reads the same in every zone and stays identical to /changes/ and the
+  // workshop page, which share the same field.
+  const at = (iso) => fmtDeadline(iso, nowMs, tz, fmtLocalBare);
   const weekMs = 7 * 86_400_000;
 
   // 1. Deadline changes this week.
@@ -473,6 +590,12 @@ export function renderDigest({
   // Merge first: a deadline that moved twice this week is one line reporting the
   // net, not two lines with different numbers.
   const merged = mergeEventsBySlug(events);
+  // Both ends, not one. /changes/ says "since 24 Aug 2026" while this said "for
+  // the week ending 31 Aug 2026" — one window described from opposite ends, which
+  // reads as two different windows when someone follows the link.
+  const windowLabel =
+    `${fmtUtc(new Date(nowMs - 7 * 86_400_000).toISOString()).split(',')[0]} – ` +
+    `${fmtUtc(new Date(nowMs).toISOString()).split(',')[0]}`;
   // The window this digest reports — the same seven days the pipeline asked the
   // event store for, and the same `since` that lands in data/changes.json. A
   // deadline already in the past when the window opened is not news: it was
@@ -485,7 +608,7 @@ export function renderDigest({
       const w = workshops[e.slug];
       const iso = e.new_utc || w.next_stage_utc || w.deadline_utc;
       const ms = iso ? Date.parse(iso) : NaN;
-      return { conf: confLabel(ids, w.conference), ms, item: changeItem(e, w, ids, tz, at) };
+      return { conf: confLabel(ids, w.conference), confId: w.conference, ms, item: changeItem(e, w, ids, tz, at) };
     })
     .filter((r) => !Number.isFinite(r.ms) || r.ms >= windowStartMs)
     // Earliest deadline first, matching the page. Nothing here compares against
@@ -502,21 +625,46 @@ export function renderDigest({
   // other order would need a rule nobody asked for.
   const byConf = new Map();
   for (const r of changeRows) {
-    if (!byConf.has(r.conf)) byConf.set(r.conf, []);
-    byConf.get(r.conf).push(r.item);
+    if (!byConf.has(r.conf)) byConf.set(r.conf, { items: [], id: r.confId ?? null });
+    byConf.get(r.conf).items.push(r.item);
   }
+  // Overflow goes to the CHANGES page filtered to that conference, not to the
+  // conference page: this section is about what moved, and the conference page
+  // shows current deadlines with no record of the move.
   const changeGroups = [...byConf.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([label, items]) => ({ label, items }));
+    .map(([label, g]) => ({
+      label,
+      items: g.items,
+      // The board's existing facet contract — `?conference=<label>`, the same one
+      // facetUrl() and readFacets() already speak — rather than a second,
+      // parallel `?conf=<id>` that /changes/ would have had to learn.
+      moreUrl: groupFacetUrl(sub, ids, '/changes/', label),
+    }));
 
   // 2. New this week — but not ones that are already Past by the time the
   //    digest goes out (a back-filled 2024 edition is not news).
-  const announced = merged
+  const announcedPairs = merged
     .filter((e) => e.kind === 'announced' && workshops[e.slug] && workshops[e.slug].status !== 'past')
-    .map((e) => announcedItem(workshops[e.slug], ids, tz, at));
+    .map((e) => ({ w: workshops[e.slug], item: announcedItem(workshops[e.slug], ids, tz, at) }));
+  const announced = announcedPairs.map((x) => x.item);
+  const announcedGroups = (() => {
+    const by = new Map();
+    for (const { w, item } of announcedPairs) {
+      const label = String(confLabel(ids, w.conference) ?? w.conference);
+      if (!by.has(label)) {
+        by.set(label, {
+          label, items: [],
+          moreUrl: groupFacetUrl(sub, ids, '/changes/', label, '#new'),
+        });
+      }
+      by.get(label).items.push(item);
+    }
+    return [...by.values()].sort((a, b) => a.label.localeCompare(b.label));
+  })();
 
   // 3. Closing in the next 7 days, from the live projection (not events).
-  const closing = Object.values(workshops)
+  const closingPairs = Object.values(workshops)
     .map((w) => {
       const iso = w.next_stage_utc || w.deadline_utc;
       const ms = iso ? Date.parse(iso) : NaN;
@@ -524,10 +672,32 @@ export function renderDigest({
     })
     .filter((x) => x && x.ms >= nowMs && x.ms < nowMs + weekMs)
     .sort((a, b) => a.ms - b.ms)
-    .map(({ w }) => closingItem(w, ids, saved, tz, at, nowMs));
+    .map(({ w }) => ({ w, item: closingItem(w, ids, saved, tz, at, nowMs) }));
+  const closingGroups = (() => {
+    const by = new Map();
+    for (const { w, item } of closingPairs) {
+      const label = String(confLabel(ids, w.conference) ?? w.conference);
+      if (!by.has(label)) by.set(label, { label, items: [], moreUrl: `${SITE_ORIGIN}/conference/${w.conference}/` });
+      by.get(label).items.push(item);
+    }
+    return [...by.values()].sort((a, b) => a.label.localeCompare(b.label));
+  })();
+  const closing = closingPairs.map((x) => x.item);
 
-  // 4. Your saved workshops — next deadlines. Ignores the filters (top 5).
-  const savedRows = [...saved]
+  // 4. Your saved workshops — next deadlines. Ignores the conference and topic
+  //    filters: saving something is a stronger signal than any facet.
+  //
+  //    Uncapped was the old rule, on the reasoning that someone who saved forty
+  //    workshops asked for all forty. In a weekly email that is forty rows, and
+  //    most of them are months away and unchanged since last Monday. So: the
+  //    ones closing inside a week, at most five.
+  //
+  //    If none qualify, the five nearest instead — a subscriber with nothing
+  //    imminent should still see where their list stands, rather than have the
+  //    section vanish and leave them wondering whether it broke.
+  const SAVED_WINDOW_MS = 7 * 86_400_000;
+  const SAVED_CAP = 5;
+  const savedAll = [...saved]
     .map((slug) => workshops[slug])
     .filter(Boolean)
     .map((w) => {
@@ -537,8 +707,12 @@ export function renderDigest({
     })
     .filter(Boolean)
     .sort((a, b) => a.ms - b.ms);
-  const savedNext = savedRows.map(({ w }) => closingItem(w, ids, saved, tz, at, nowMs));
-  const savedSoon = savedRows.filter(({ ms }) => ms < nowMs + 48 * 3_600_000).length;
+  const imminent = savedAll.filter(({ ms }) => ms < nowMs + SAVED_WINDOW_MS);
+  const savedRows = imminent.length ? imminent : savedAll;
+  const savedShown = savedRows.slice(0, SAVED_CAP);
+  const savedHeld = savedAll.length - savedShown.length;
+  const savedNext = savedShown.map(({ w }) => closingItem(w, ids, saved, tz, at, nowMs));
+  const savedSoon = savedAll.filter(({ ms }) => ms < nowMs + 48 * 3_600_000).length;
 
   if (!changes.length && !announced.length && !closing.length && !savedNext.length) return null;
 
@@ -547,24 +721,63 @@ export function renderDigest({
   // that repeats workshops named above — comes last.
   const specs = [
     {
-      heading: 'Your saved workshops — next deadlines',
+      heading: imminent.length
+        ? 'Your saved workshops — closing this week'
+        : 'Your saved workshops — next deadlines',
       items: savedNext,
       moreUrl: `${SITE_ORIGIN}/saved/`,
-      cap: Infinity,
+      // The overflow counts everything saved that is still ahead, not just what
+      // this window held back, so the link says how much of the list is unseen.
+      extraOverride: savedHeld,
+      overflowLabel: savedHeld === 1 ? 'and 1 more saved' : `and ${savedHeld} more saved`,
+      cap: SAVED_CAP,
     },
-    { heading: 'Deadline changes this week', groups: changeGroups, moreUrl: more },
+    { heading: 'Deadline changes this week', groups: changeGroups, perGroup: 0, cap: 24, groupNoun: 'changes', moreLabel: 'See every change', moreUrl: more },
     {
       heading: 'New this week',
       subtitle: 'workshops added to the tracker this week',
-      items: announced,
-      moreUrl: more,
+      // Grouped for the same reason the changes are: a conference that announces
+      // its whole programme at once would otherwise fill the section and bury
+      // every other conference's new workshops behind one combined link. New
+      // workshops land in the changes feed as `announced`, so the per-group link
+      // goes there rather than to the conference page.
+      groups: announcedGroups,
+      perGroup: 3,
+      cap: 12,
+      groupNoun: 'new workshops',
+      moreLabel: 'See every new workshop',
+      // Lands on the page's own "New this week" section rather than its top,
+      // where the reader would have to scroll past however long the deadline
+      // list happens to be that week.
+      moreUrl: `${more}#new`,
     },
-    { heading: 'Closing in the next 7 days', items: closing, moreUrl: moreBoard },
+    {
+      heading: 'Closing in the next 7 days',
+      // Grouped like the changes above, and tighter. This section answers "does
+      // my conference have something closing", not "list everything" — two rows
+      // per conference answer that, and the conference page has the rest.
+      // Its overflow links to the CONFERENCE page, not /changes/: these rows are
+      // upcoming deadlines, which is what that page lists.
+      groups: closingGroups,
+      perGroup: 3,
+      cap: 12,
+      // Distinguishes this link from the changes section's, which otherwise emits
+      // the same text pointing somewhere else — the two read identically when a
+      // screen reader lists links out of context.
+      groupNoun: 'closing',
+      // Goes to the board, not the change list, so it must not claim otherwise —
+      // both sections printed "See every change" and one of them landed on the
+      // deadline board.
+      moreLabel: 'See every deadline',
+      moreUrl: moreBoard,
+    },
   ];
   // Stated once, on whichever section actually leads — a quiet week can drop
   // any of them, and the note has to follow the first one that survives.
   const lead = specs.find((x) => (x.groups ? x.groups.some((g) => g.items.length) : x.items.length));
-  if (lead) lead.note = 'All times UTC.';
+  // No zone note: every row carries its own (fmtLocalBare). One that repeats
+  // what each row already says is a line the reader has to parse and discard.
+  if (lead && !tz) lead.note = 'All times UTC.';
   const secs = specs.map(section);
 
   // Subject drops zero-count clauses rather than saying "0 changes".
@@ -609,14 +822,14 @@ export function renderDigest({
   const bodyHtml =
     `<h1 style="margin:0 0 6px;font-size:21px;line-height:1.25;">This week in AI workshops</h1>` +
     (stripLine ? `<p style="margin:0 0 4px;font-size:14.5px;font-weight:600;">${esc(stripLine)}</p>` : '') +
-    `<p style="margin:0;font-size:14px;${MUTED}">Your selection, for the week ending ${esc(fmtUtc(new Date(nowMs).toISOString()).split(',')[0])}.</p>` +
+    `<p style="margin:0;font-size:14px;${MUTED}">Your selection, ${esc(windowLabel)}.</p>` +
     secs.map((s) => s.html).join('') +
     (medianLine ? `<p style="margin:24px 0 0;font-size:13px;${MUTED}">${esc(medianLine)}</p>` : '');
 
   const text =
     `This week in AI workshops\n` +
     (stripLine ? `${stripLine}\n` : '') +
-    `Your selection, for the week ending ${fmtUtc(new Date(nowMs).toISOString()).split(',')[0]}.\n` +
+    `Your selection, ${windowLabel}.\n` +
     secs.map((s) => s.text).join('') +
     (medianLine ? `\n${medianLine}\n` : '') +
     textFooter({ manageUrl, unsubUrl });

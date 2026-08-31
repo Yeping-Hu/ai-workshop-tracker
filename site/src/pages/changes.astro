@@ -271,8 +271,11 @@ const weekOf = feed.since
     </section>
   )}
 
+    <!-- id="new": the digest's "See every new workshop" lands on this section
+         rather than the top of the page, where the reader would otherwise scroll
+         past however long that week's deadline-changes list happens to be. -->
   {addedGroups.length > 0 && (
-    <section class="changes-block">
+    <section class="changes-block" id="new">
       <h2>New this week</h2>
       <p class="muted small">workshops added to the tracker this week</p>
       {addedGroups.map(([conf, list]) => (
