@@ -816,35 +816,17 @@ export function renderDigest({
   }
   const stripLine = strip.join(' · ');
 
-  // Median extension this week. Omitted entirely when nothing was extended —
-  // an empty median is not zero days, and printing NaN or "0 days" would both
-  // be lies. Median rather than mean: one workshop moving six months would drag
-  // an average somewhere no individual extension actually is.
-  const extDays = events
-    .filter((e) => e.kind === 'extended' && Number.isFinite(e.days))
-    .map((e) => e.days)
-    .sort((a, b) => a - b);
-  let medianLine = '';
-  if (extDays.length) {
-    const mid = Math.floor(extDays.length / 2);
-    const med = extDays.length % 2 ? extDays[mid] : (extDays[mid - 1] + extDays[mid]) / 2;
-    const shown = Number.isInteger(med) ? String(med) : med.toFixed(1);
-    medianLine = `Median extension this week: ${shown} ${med === 1 ? 'day' : 'days'}.`;
-  }
-
   const bodyHtml =
     `<h1 style="margin:0 0 6px;font-size:21px;line-height:1.25;">This week in AI workshops</h1>` +
     (stripLine ? `<p style="margin:0 0 4px;font-size:14.5px;font-weight:600;">${esc(stripLine)}</p>` : '') +
     `<p style="margin:0;font-size:14px;${MUTED}">Your selection, ${esc(windowLabel)}.</p>` +
-    secs.map((s) => s.html).join('') +
-    (medianLine ? `<p style="margin:24px 0 0;font-size:13px;${MUTED}">${esc(medianLine)}</p>` : '');
+    secs.map((s) => s.html).join('');
 
   const text =
     `This week in AI workshops\n` +
     (stripLine ? `${stripLine}\n` : '') +
     `Your selection, ${windowLabel}.\n` +
     secs.map((s) => s.text).join('') +
-    (medianLine ? `\n${medianLine}\n` : '') +
     textFooter({ manageUrl, unsubUrl });
 
   return { subject, html: shell({ title: subject, bodyHtml, manageUrl, unsubUrl }), text };

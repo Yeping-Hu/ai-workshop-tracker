@@ -269,10 +269,11 @@ const sub = (over = {}) =>
   check('a saved-change alert reports one row per workshop',
     (twice.html.match(/\/workshop\/neurips-2026-alpha\//g) || []).length === 1);
   check('and nets the hops like the digest', /EXTENDED \+5d/.test(twice.html), '');
-  // Median of 3, 5, 11 is 5 — a mean would be 6.3 and match no real extension.
-  check('the footer states the median extension',
-    /Median extension this week: 5 days\./.test(rich.html), '');
-  check('the median reaches the plaintext', rich.text.includes('Median extension this week: 5 days.'));
+    // The footer used to state a median extension. Dropped: a digest is a list
+    // of what to act on, and a statistic about the spread of other people's
+    // extensions is not something a reader does anything with.
+    check('no median line in the footer', !/Median extension/.test(rich.html));
+    check('nor in the plaintext', !/Median extension/.test(rich.text));
 
   // A week with no extensions must omit the line, not print NaN or "0 days".
   const noExt = renderDigest({
@@ -280,8 +281,8 @@ const sub = (over = {}) =>
     workshops: { ...workshops, 'neurips-2026-eps': ws('neurips-2026-eps', { deadline_utc: iso(40), next_stage_utc: iso(40) }) },
     nowMs: NOW, ids,
   });
-  check('no extensions -> no median line at all', !/Median extension/.test(noExt.html));
-  check('and certainly no NaN', !/NaN/.test(noExt.html) && !/NaN/.test(noExt.text));
+    check('a week with no extensions renders without NaN',
+      !/NaN/.test(noExt.html) && !/NaN/.test(noExt.text));
 
   // "K of your saved close within 48h" — only when some actually do.
   const soon = renderDigest({
