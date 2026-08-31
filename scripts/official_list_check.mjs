@@ -33,7 +33,13 @@
  */
 import fs from 'node:fs';
 import { loadWorkshops, loadEditions, loadConferences, websiteKey } from '../lib/workshops.mjs';
-import { extractListedWorkshops, statedWorkshopCount, selectAnnouncementCandidates, MIN_LISTED } from '../lib/official_list.mjs';
+import {
+  extractListedWorkshops,
+  statedWorkshopCount,
+  selectAnnouncementCandidates,
+  describeResponse,
+  MIN_LISTED,
+} from '../lib/official_list.mjs';
 import { matchOfficialList } from '../lib/official_match.mjs';
 
 /**
@@ -46,6 +52,22 @@ import { matchOfficialList } from '../lib/official_match.mjs';
 const MIN_MATCH_SHARE = 0.5;
 /** How many pages of a conference's announcement feed to walk back. */
 const FEED_PAGES = 5;
+/**
+ * How long to keep re-reading a CONFIGURED list that parses to nothing.
+ *
+ * A 200 that yields no list is not proof of a wrong URL. Both announcement blogs
+ * this job reads sit on one shared host, and it has twice answered a runner with
+ * a short body carrying no list while serving the real page to everyone else —
+ * once for ~2.5 minutes, recovering with no change at either end. The previous
+ * budget, a single retry five seconds later, could not outlast that and filed a
+ * "the URL is probably wrong" issue against a URL that was fine.
+ *
+ * So: span minutes, not seconds. The cost of waiting is a slower weekly job; the
+ * cost of not waiting is a false alarm that stands until the next Sunday.
+ * Candidate probes pass their own empty budget — a missed proposal files
+ * nothing, so it must not buy patience at this price.
+ */
+export const EMPTY_RETRY_BACKOFF_MS = [15_000, 60_000, 180_000];
 
 const args = process.argv.slice(2);
 const getArg = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : null);
@@ -53,7 +75,35 @@ const onlyConf = getArg('--conf');
 const onlyYear = getArg('--year') ? Number(getArg('--year')) : null;
 const reportPath = getArg('--report');
 
-async function get(url) {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Every page this run has already fetched.
+ *
+ * `findCandidate` walks a conference's feed once per unconfigured edition-year,
+ * so ICLR 2025 and ICLR 2024 each re-requested the same five feed pages: 22
+ * requests to one shared host in nine seconds, nine of them byte-identical
+ * repeats. Nothing in a run's lifetime changes underneath us, so the repeats
+ * bought nothing and spent the request budget of a host that visibly rations it.
+ *
+ * Keyed on the URL and holding failures too — re-asking a host that just refused
+ * us is the behaviour being removed, not a fallback. `fresh` is the one bypass,
+ * and only the empty-parse retry uses it, which is the sole case where asking
+ * the same URL again is the entire point.
+ */
+const pageCache = new Map();
+
+/** Drop everything this run has fetched. For tests; a real run never needs it. */
+export const resetPageCache = () => pageCache.clear();
+
+export async function get(url, { fresh = false } = {}) {
+  if (!fresh && pageCache.has(url)) return pageCache.get(url);
+  const res = await fetchPage(url);
+  pageCache.set(url, res);
+  return res;
+}
+
+async function fetchPage(url) {
   // Plain fetch with escalating backoff. Deliberately NOT lib/openreview.mjs's
   // limiter: different hosts, and sharing that budget would slow the four
   // OpenReview jobs for a request that has nothing to do with them.
@@ -76,33 +126,67 @@ async function get(url) {
       return { ok: true, body, status: res.status, bytes: body.length };
     } catch (e) {
       lastErr = e;
-      await new Promise((r) => setTimeout(r, (attempt + 1) * 3000));
+      await sleep((attempt + 1) * 3000);
     }
   }
   return { ok: false, reason: String(lastErr?.message ?? lastErr) };
 }
 
-/** Read a page and refuse it unless it is plausibly a workshop list. */
-async function readList(url, entries, { retryEmpty = true, conferenceWebsite = null } = {}) {
-  const res = await get(url);
-  if (!res.ok) return { ok: false, reason: res.reason };
-  const { items, warnings } = extractListedWorkshops(res.body, { baseUrl: url });
+/** How the report explains each thing `describeResponse` can conclude. */
+const WHAT_CAME_BACK = {
+  refusal: 'a challenge or refusal page, not the list — the host is turning this runner away, which clears on its own',
+  stub: 'too little text to be the page at all — a stub or a JavaScript shell',
+  page: 'a real page, but no list could be extracted from it — this one is the extractor, not the URL',
+};
+
+/**
+ * Read a page and refuse it unless it is plausibly a workshop list.
+ *
+ * `backoff` is the caller's patience, in milliseconds between re-reads, and it
+ * is a parameter because the two callers are not equally invested: a configured
+ * list that reads empty gets filed as a data-health issue, so it is worth
+ * minutes; a candidate probe that reads empty proposes nothing, so it is worth
+ * one attempt. It is also what lets the retry path be tested without waiting.
+ */
+export async function readList(url, entries, { conferenceWebsite = null, backoff = EMPTY_RETRY_BACKOFF_MS } = {}) {
+  let res;
+  let items = [];
+  let warnings = [];
+  let attempts = 0;
+  let waitedMs = 0;
+  for (;;) {
+    // Only a re-read bypasses the cache — a first read of a page some earlier
+    // edition already fetched should reuse it, which is the point of the cache.
+    res = await get(url, { fresh: attempts > 0 });
+    attempts++;
+    if (!res.ok) return { ok: false, reason: res.reason };
+    ({ items, warnings } = extractListedWorkshops(res.body, { baseUrl: url }));
+    if (items.length >= MIN_LISTED || attempts > backoff.length) break;
+    await sleep(backoff[attempts - 1]);
+    waitedMs += backoff[attempts - 1];
+  }
   if (items.length < MIN_LISTED) {
-    // A 200 that parses to nothing is usually a CDN interstitial or a truncated
-    // response rather than a genuinely wrong URL, and those pass on a second
-    // attempt. Retry ONCE, then report — with what we actually received, because
-    // "0 items found" alone cannot distinguish a challenge page from a real page
-    // we failed to parse, and that difference decides whether the fix is in the
-    // config or in the extractor.
-    if (retryEmpty) {
-      await new Promise((r) => setTimeout(r, 5000));
-      return readList(url, entries, { retryEmpty: false, conferenceWebsite });
-    }
+    // A 200 that parses to nothing has two causes needing opposite fixes — a
+    // wrong or restructured URL, and a host refusing this IP — and the count
+    // alone separates them not at all. So report what actually arrived: its
+    // title, its first words, and which of the two it looks like. Whoever reads
+    // the issue should not have to re-run the fetch by hand to learn that much.
+    const seen = describeResponse(res.body);
     return {
       ok: false,
       reason:
         `${items.length} items found, expected at least ${MIN_LISTED}` +
-        ` (HTTP ${res.status}, ${res.bytes} bytes received${res.bytes < 5000 ? ' — too small to be the page, so probably an interstitial or a redirect' : ''})`,
+        ` — after ${attempts} attempt${attempts === 1 ? '' : 's'}` +
+        `${waitedMs ? ` over ${Math.round(waitedMs / 1000)}s` : ''}` +
+        ` (HTTP ${res.status}, ${res.bytes} bytes)`,
+      detail: [
+        `what came back: ${WHAT_CAME_BACK[seen.kind]}`,
+        seen.title ? `its title: “${seen.title}”` : null,
+        seen.sample ? `its first words (${seen.visibleChars} chars of visible text): “${seen.sample}”` : null,
+        seen.kind === 'page'
+          ? null
+          : 'Re-run *Official workshop list check* before changing any config — this shape of failure has cleared on its own before.',
+      ].filter(Boolean),
       warnings,
     };
   }
@@ -135,7 +219,11 @@ async function findCandidate(feedUrl, year, entries, conferenceWebsite = null) {
     for (const c of candidates) {
       if (seen.has(c.url)) continue;
       seen.add(c.url);
-      const probe = await readList(c.url, entries, { conferenceWebsite });
+      // One attempt. Most posts a feed yields are not the list and never will
+      // be, and a probe that reads empty proposes nothing rather than filing
+      // anything — so patience here buys a slower job and a bigger burst
+      // against the very host that rations requests, and nothing else.
+      const probe = await readList(c.url, entries, { conferenceWebsite, backoff: [] });
       if (probe.ok) return { url: c.url, title: c.title, ...probe };
     }
   }
@@ -192,10 +280,15 @@ async function main() {
       conferenceWebsite: confById.get(ed.conference)?.website ?? null,
     });
     if (!read.ok) {
-      // Unlike the deadline cross-check's transient "could not be checked", this
-      // KEEPS the issue open: the cause there is rate-limiting that settles by
-      // itself, here it is a wrong URL in config, which settles never.
-      sections.unreadable.push(`- [ ] **${label}** — ${ed.workshop_list_url}\n      - ${read.reason}`);
+      // This KEEPS the issue open, because one of its two causes — a wrong or
+      // restructured URL — settles never. The other one, a host refusing this
+      // runner, has settled by itself twice. The entry therefore has to carry
+      // enough to tell them apart, which is what `detail` is; the section text
+      // no longer asserts the first cause as though it were the only one.
+      sections.unreadable.push(
+        `- [ ] **${label}** — ${ed.workshop_list_url}\n      - ${read.reason}` +
+          (read.detail ?? []).map((d) => `\n      - ${d}`).join(''),
+      );
       continue;
     }
     const { result: r, stated } = read;
@@ -304,7 +397,10 @@ async function main() {
     parts.push(
       '### Official list could not be read\n\n' +
         '_The configured URL did not yield a usable workshop list, so that conference-year was **not checked at all**. ' +
-        'Unlike a throttled API this does not settle by itself — the URL is probably wrong or the page was restructured._\n\n' +
+        'This says nothing about the workshops themselves — it is the check that failed, not the corpus.\n' +
+        'Two causes look identical from here and need opposite fixes: the URL is wrong or the page was restructured, which ' +
+        'settles never; or the host turned this runner away, which settles by itself and has done. Each entry says what ' +
+        'actually came back, which is the thing that tells them apart — **re-run the job before editing any config**._\n\n' +
         sections.unreadable.join('\n'),
     );
   }
@@ -331,4 +427,8 @@ async function main() {
   else if (reportPath) fs.writeFileSync(reportPath, report);
 }
 
-await main();
+// Only run the CLI when invoked directly, so readList and the page cache can be
+// imported in tests without the module parsing argv and walking two live blogs.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  await main();
+}

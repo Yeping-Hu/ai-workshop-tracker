@@ -20,6 +20,7 @@ import {
   extractListedWorkshops,
   statedWorkshopCount,
   selectAnnouncementCandidates,
+  describeResponse,
   MIN_LISTED,
 } from '../lib/official_list.mjs';
 
@@ -142,6 +143,46 @@ const fixture = (f) => fs.readFileSync(new URL(`./fixtures/${f}`, import.meta.ur
     selectAnnouncementCandidates(synth('Call for Workshop Proposals 2026'), 2026).length, 0);
   check('"Workshops at ICLR 2026" is', selectAnnouncementCandidates(synth('Workshops at ICLR 2026'), 2026).length, 1);
   check('a workshops post for the WRONG year is not', selectAnnouncementCandidates(synth('Workshops at ICLR 2025'), 2026).length, 0);
+}
+
+/* ---- what came back, when it was not a list ----------------------------- */
+// The check twice filed "the URL is probably wrong" against two URLs that were
+// fine: the host had answered the runner with a short body carrying no list. A
+// count of zero cannot tell that from a genuine config error, and the two need
+// opposite fixes — wait, or edit `data/editions.yml`. This is the distinction,
+// so it is pinned rather than re-derived by whoever reads the issue next.
+{
+  // The real pages: extraction works, so this classification never surfaces —
+  // but if it ever did, calling them anything but a real page would send the
+  // reader to the network when the bug was in the extractor.
+  check('a real announcement page reads as a page', describeResponse(fixture('neurips-2026-workshops.html')).kind, 'page');
+  check('...as does ICLR\'s table shape', describeResponse(fixture('iclr-2026-workshops.html')).kind, 'page');
+  check('...and its title is carried through',
+    describeResponse(fixture('iclr-2026-workshops.html')).title, 'Workshops at ICLR 2026 – ICLR Blog');
+
+  // The committed JS shell is the real article: 200, plausible size, no list.
+  const shell = describeResponse(fixture('js-shell-schedule.html'));
+  check('a JS shell reads as a stub, not as a page we misparsed', shell.kind, 'stub');
+  check('...because <script> is not visible text', shell.visibleChars < 400, true);
+
+  // Walls. Each phrase is one a host actually answers a datacenter IP with, and
+  // each must outrank the length test — a wall can be wordy.
+  const wall = (t, b = '') => `<html><head><title>${t}</title></head><body>${b}</body></html>`;
+  for (const t of ['Just a moment...', 'Attention Required! | Cloudflare', 'Access denied', '429 Too Many Requests']) {
+    check(`"${t}" reads as a refusal`, describeResponse(wall(t)).kind, 'refusal');
+  }
+  check('a wall padded out past the length test is still a refusal',
+    describeResponse(wall('Error', `Please enable JavaScript to continue. ${'x '.repeat(400)}`)).kind, 'refusal');
+  check('...and a rate-limit notice in the body counts too',
+    describeResponse(wall('Blog', `You have been rate limited. ${'x '.repeat(400)}`)).kind, 'refusal');
+
+  // A conference blog post says "workshop", never "checking your browser" — so
+  // the refusal words must not fire on ordinary prose that happens to be short.
+  check('a short real page is a stub, never a refusal', describeResponse(wall('Workshops', 'Coming soon.')).kind, 'stub');
+  check('no title is survivable', describeResponse('<html><body>hi</body></html>').title, null);
+  check('empty input', describeResponse('').kind, 'stub');
+  check('null input', describeResponse(null).kind, 'stub');
+  check('the sample is bounded', describeResponse(wall('T', 'y '.repeat(500))).sample.length <= 180, true);
 }
 
 console.log(failed === 0 ? '\nOfficial-list extraction OK.' : `\n${failed} test(s) failed.`);

@@ -85,6 +85,24 @@ Three things follow, and they are the whole design:
   load-bearing rather than tidiness, since without them marking an entry would
   move it off the board and into a daily issue forever.
 
+**"Could not be read" is a failure of the check, never a verdict on the corpus.**
+Both announcement blogs sit on one shared host, and it has twice answered a
+GitHub runner with a short 200 carrying no list while serving the real page to
+everyone else — once recovering on its own two and a half minutes later, with
+nothing changed at either end. The check filed "the URL is probably wrong"
+against two URLs that were correct, and because the job is weekly it stood for
+days. Zero items has two causes needing opposite fixes, so the report now says
+which one it is: `describeResponse` classifies what actually arrived as a
+`refusal` (a wall — wait and re-run), a `stub` (too little text to be the page),
+or a `page` (real, so the bug is the extractor), and quotes its title and first
+words. A configured list is re-read across `EMPTY_RETRY_BACKOFF_MS` — minutes,
+not the five seconds that could not outlast the refusal actually observed —
+while a candidate probe gets one attempt, since a missed proposal files nothing.
+Every page a run fetches is cached, because walking each conference's feed once
+per unconfigured edition-year spent 22 requests on that one host in nine
+seconds, nine of them exact repeats; it is 14 now, and the burst was itself a
+reason to be rationed.
+
 **Adopting from one source declines the other.** Taking the official list's title
 or URL implicitly rejects OpenReview's, and the daily cross-check cannot know
 that — it would open a fresh "renamed on OpenReview" row the next morning for a
