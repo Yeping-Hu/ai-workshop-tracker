@@ -13,7 +13,9 @@
 #
 # On failure it opens — or updates — a single tracking issue, because a red run
 # in the Actions tab is easy not to look at, and the whole point is to not find
-# out about a silent breakage weeks later from a reader.
+# out about a silent breakage weeks later from a reader. On green it CLOSES that
+# issue again, so an open one always means the site is broken now rather than
+# that it was broken once.
 name: Live smoke test
 
 on:
@@ -81,6 +83,25 @@ jobs:
             fi
           done
           exit 1
+
+      # A watchdog that can only ever RAISE an alarm accumulates them and never
+      # retracts one. Issue #50 stayed open through four consecutive green runs,
+      # because nothing here could close it — so an open smoke issue meant "the
+      # site broke at some point", which is not a thing anyone can act on. Every
+      # sibling job already closes its tracking issue when the condition clears
+      # (deadline-review, link-check, discover, official-list-check,
+      # stale-check); this was the only one that could not. Closing on green is
+      # what makes an OPEN smoke issue mean "search is broken right now".
+      - name: Close the tracking issue once the site is green again
+        if: steps.smoke.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          EXISTING=$(gh issue list --state open --label smoke --json number --jq '.[0].number' || true)
+          if [ -n "$EXISTING" ]; then
+            gh issue close "$EXISTING" --reason completed --comment "$(printf 'The live site passed every smoke check again.\n\n**Run:** %s\n\nClosed automatically. A later failure reopens a fresh issue rather than reviving this one, so the dates in each stay honest.' "$RUN_URL")"
+          fi
 
       - name: Open or update the tracking issue
         if: failure() && steps.smoke.outcome == 'failure'

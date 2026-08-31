@@ -45,10 +45,56 @@ page.on('response', (r) => {
 });
 page.on('requestfailed', (r) => netProblems.push(`FAILED ${r.failure()?.errorText ?? '?'} ${r.url().slice(0, 120)}`));
 
+/**
+ * What the PAGE says went wrong.
+ *
+ * The site writes its own diagnosis into the DOM and then stops: when the engine
+ * fails to load, `ensurePagefind`'s catch fills `#searchStatus` and `runSearch`
+ * returns without rendering, because `healAttempted` is still false; when a
+ * search throws twice, `handleSearchFailure` fills `#results`. Either way the
+ * skeleton stays on screen and no `.pf-paper` ever appears — which is exactly
+ * this check's failure signature, results never arriving rather than arriving
+ * late. Those two strings are the site's own sentence about why, they are on
+ * screen at the moment we give up, and they were being thrown away when the
+ * browser closed.
+ *
+ * The counts matter as much. Workshops and papers come from two Pagefind indexes
+ * merged into one engine, so "workshop results but no papers" is a different
+ * fault from "nothing at all", and only the counts tell them apart.
+ */
+async function readSearchUi() {
+  return page
+    .evaluate(() => {
+      const clean = (el) => (el?.textContent ?? '').replace(/\s+/g, ' ').trim();
+      const status = document.querySelector('#searchStatus');
+      const results = document.querySelector('#results');
+      return {
+        status: status && !status.hidden ? clean(status).slice(0, 220) : null,
+        skeleton: !!results?.querySelector('.pf-skeleton'),
+        resultsText: clean(results).slice(0, 220) || null,
+        workshops: document.querySelectorAll('.pf-result').length,
+        papers: document.querySelectorAll('.pf-paper').length,
+      };
+    })
+    .catch((e) => ({ unreadable: String(e).slice(0, 120) }));
+}
+
 /** What the page looked like when search did not produce results. */
-function describeSearchState() {
+function describeSearchState(ui) {
   const statuses = Object.entries(pagefind.byStatus).map(([k, v]) => `${k}×${v}`).join(' ') || 'none';
   const bits = [`pagefind requests: ${pagefind.requests} (${statuses})`];
+  if (ui?.unreadable) {
+    bits.push(`could not read the page: ${ui.unreadable}`);
+  } else if (ui) {
+    bits.push(`rendered: ${ui.workshops} workshop result(s), ${ui.papers} paper row(s)`);
+    // Ordered by how much each one settles: the site's own error text names the
+    // cause outright, a surviving skeleton says search never rendered at all,
+    // and any other #results text is the heal path having given up.
+    if (ui.status) bits.push(`the page says: “${ui.status}”`);
+    else if (ui.skeleton) bits.push('#results is still the loading skeleton — search never rendered');
+    else if (ui.resultsText) bits.push(`#results shows: “${ui.resultsText}”`);
+    else bits.push('#results is empty and the page reports no error');
+  }
   if (netProblems.length) bits.push(`failed requests: ${netProblems.slice(0, 5).join(' | ')}`);
   if (consoleErrors.length) bits.push(`console errors: ${consoleErrors.slice(0, 3).join(' | ')}`);
   if (!netProblems.length && !consoleErrors.length) bits.push('no failed requests and no console errors');
@@ -93,10 +139,13 @@ let searched = true;
 // at all, and more time does not help. Reverted rather than left inflated, since
 // a budget chosen for a cause that turned out to be wrong only delays the alert.
 await page.waitForSelector('.pf-paper .pf-ptitle', { timeout: 25000 }).catch(() => { searched = false; });
+// Read the DOM BEFORE reporting. Whatever the page is saying about itself is on
+// screen right now and gone the moment the browser closes.
+const searchUi = searched ? null : await readSearchUi();
 check(
   'a keyword search returns paper results',
   searched,
-  searched ? '' : `no .pf-paper within 25s — ${describeSearchState()}`,
+  searched ? '' : `no .pf-paper within 25s — ${describeSearchState(searchUi)}`,
 );
 
 if (searched) {
@@ -126,5 +175,6 @@ if (fail) {
   console.log(`- pagefind requests: ${pagefind.requests} (${Object.entries(pagefind.byStatus).map(([k, v]) => `${k}×${v}`).join(' ') || 'none'})`);
   console.log(`- failed/4xx/5xx requests: ${netProblems.length ? netProblems.slice(0, 8).join(' | ') : 'none'}`);
   console.log(`- console errors: ${consoleErrors.length ? consoleErrors.slice(0, 5).join(' | ') : 'none'}`);
+  if (searchUi) console.log(`- the page at the moment search gave up: ${JSON.stringify(searchUi)}`);
 }
 process.exit(fail ? 1 : 0);
