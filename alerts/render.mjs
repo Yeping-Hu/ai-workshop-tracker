@@ -732,7 +732,19 @@ export function renderDigest({
       overflowLabel: savedHeld === 1 ? 'and 1 more saved' : `and ${savedHeld} more saved`,
       cap: SAVED_CAP,
     },
-    { heading: 'Deadline changes this week', groups: changeGroups, perGroup: 0, cap: 24, groupNoun: 'changes', moreLabel: 'See every change', moreUrl: more },
+    {
+      heading: 'Deadline changes this week',
+      groups: changeGroups,
+      // 12, matching the other sections. At 24 this one was 24 of 43 rows — more
+      // than the other three together — so everything below it started a screen
+      // and a half down and the sections a reader might act on were the ones they
+      // never reached. The per-conference links carry the rest.
+      perGroup: 0,
+      cap: 12,
+      groupNoun: 'changes',
+      moreLabel: 'See every change',
+      moreUrl: more,
+    },
     {
       heading: 'New this week',
       subtitle: 'workshops added to the tracker this week',

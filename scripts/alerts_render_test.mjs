@@ -395,11 +395,10 @@ const sub = (over = {}) =>
     // of 3 binds rather than the section cap. That is the trade of per-group
     // allocation — no conference is starved by whoever sorts first, and a
     // single-conference subscriber gets a shorter excerpt with its own link on.
-    // One conference, 22 changes, budget 24: the budget is not reserved per
-    // group, so a subscriber who follows a single conference gets all of it
-    // rather than a third of it. Round-robin only starts dividing when there
-    // is more than one group competing.
-    check('a single-conference section gets the whole budget', listed === 22, String(listed));
+    // One conference, 22 changes, budget 12: the budget is not reserved per
+    // group, so a subscriber following a single conference gets all of it rather
+    // than a share. Round-robin only starts dividing when groups compete.
+    check('a single-conference section gets the whole budget', listed === 12, String(listed));
   // The changes/new sections overflow to /changes/ — the page that shows
   // exactly what they are an excerpt of — carrying the subscriber's own facets.
   // "Closing in 7 days" is not a change, so it still overflows to the board.
