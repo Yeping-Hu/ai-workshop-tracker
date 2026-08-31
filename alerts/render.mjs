@@ -636,7 +636,10 @@ export function renderDigest({
     for (const { w, item } of announcedPairs) {
       const label = String(confLabel(ids, w.conference) ?? w.conference);
       if (!by.has(label)) {
-        by.set(label, { label, items: [], moreUrl: `${SITE_ORIGIN}/changes/?conference=${encodeURIComponent(label)}` });
+        by.set(label, {
+          label, items: [],
+          moreUrl: `${SITE_ORIGIN}/changes/?conference=${encodeURIComponent(label)}#new`,
+        });
       }
       by.get(label).items.push(item);
     }
@@ -725,8 +728,11 @@ export function renderDigest({
       perGroup: 3,
       cap: 12,
       groupNoun: 'new workshops',
-      moreLabel: 'See every change',
-      moreUrl: more,
+      moreLabel: 'See every new workshop',
+      // Lands on the page's own "New this week" section rather than its top,
+      // where the reader would have to scroll past however long the deadline
+      // list happens to be that week.
+      moreUrl: `${more}#new`,
     },
     {
       heading: 'Closing in the next 7 days',
