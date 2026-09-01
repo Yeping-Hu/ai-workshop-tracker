@@ -10,7 +10,9 @@ timezone: UTC
 deadline_notes: OpenReview-synced 2026-08-31 11:59 UTC (as of 2026-08-18) — extensions on OpenReview are applied automatically; verify on the website.
 openreview_venue_id: thecvf.com/ECCV/2026/Workshop/HOI
 submission_portal: openreview
-notes: Topics were auto-suggested and may be imprecise — edits welcome.
+notes: >-
+  Topics were auto-suggested and may be imprecise — edits welcome. Reviewed 2026-09-01: the bot moved this later after the call had already closed, because OpenReview reuses the Submission invitation
+  after submissions end. The workshop is closed; the stored value is kept as reviewed rather than edited.
 added: '2026-06-16'
 deadline_history:
   - value: 2026-08-01 11:59
@@ -20,3 +22,5 @@ deadline_history:
     recorded: '2026-08-18'
     timezone: UTC
 location: Malmö, Sweden
+review_ack:
+  submission_deadline: 2026-08-31 11:59
