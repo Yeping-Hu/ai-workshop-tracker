@@ -9,14 +9,17 @@ openreview_venue_id: IEEE.org/IROS/2026/Workshop/AIM-Ctrl
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
 added: '2026-06-10'
-submission_deadline: 2026-08-31 03:59
+submission_deadline: 2026-09-01 20:59
 timezone: UTC
-deadline_notes: OpenReview-synced 2026-08-31 03:59 UTC (as of 2026-08-18) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_notes: OpenReview-synced 2026-09-01 20:59 UTC (as of 2026-09-01) — extensions on OpenReview are applied automatically; verify on the website.
 deadline_history:
   - value: 2026-08-20 03:59
     recorded: '2026-07-15'
     timezone: UTC
   - value: 2026-08-31 03:59
     recorded: '2026-08-18'
+    timezone: UTC
+  - value: 2026-09-01 20:59
+    recorded: '2026-09-01'
     timezone: UTC
 location: Pittsburgh, US
