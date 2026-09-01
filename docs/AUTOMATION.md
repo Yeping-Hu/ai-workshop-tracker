@@ -1,8 +1,9 @@
 # Automation
 
-Scheduled GitHub Actions keep the data fresh with near-zero maintenance. The
-maintainer's whole job is to review PRs and skim a few auto-updated "Data health"
-issues (~1–2 h/week in deadline season, ~0 otherwise).
+Scheduled GitHub Actions do the routine data work unattended, so the maintainer's
+job is the part that needs judgement: reviewing PRs and working through the
+auto-updated "Data health" issues (~1–2 h/week in deadline season, less
+otherwise).
 
 **Publishing is zero-touch for OpenReview data.** The weekly discovery job, the
 daily imminent-deadline re-check, and the monthly paper refresh validate their

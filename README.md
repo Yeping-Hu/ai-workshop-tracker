@@ -40,11 +40,17 @@ GitHub repo (single source of truth)
  └── .github/workflows/        CI validation + scheduled automation
 ```
 
-The guiding principle is **zero hosting cost and near-zero maintenance**: the Git
-repo is the only source of truth, the site is fully static (no backend, no
-database), accepted-paper lists are cached from OpenReview by a scheduled job,
-and deadline statuses are derived at build time rather than stored. Contributions
-are validated by CI, not by hand.
+The guiding principle is to **keep the moving parts few**: the Git repo is the
+only source of truth, the site is fully static (no backend, no database),
+accepted-paper lists are cached from OpenReview by a scheduled job, and deadline
+statuses are derived at build time rather than stored. Contributions are
+validated by CI, not by hand.
+
+That keeps the infrastructure simple and the hosting free — but not the project.
+The domain is paid for, and the data behind it takes continual work: deadlines
+that move, workshops that rename themselves, upstream feeds that go quiet, and
+new features on top. If the site saves you a deadline, [sponsorship](https://ko-fi.com/aiworkshoptracker)
+helps keep it running.
 
 For the reasoning behind these choices and the behavior details that matter when
 modifying the site (search semantics, the deploy-resilient search engine,
@@ -75,7 +81,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Short version: use the **"Add a workshop
 
 ## Automation
 
-Scheduled GitHub Actions keep the data fresh with near-zero maintenance: a weekly
+Scheduled GitHub Actions do the routine data work unattended: a weekly
 OpenReview discovery job, a daily imminent-deadline re-check, and a monthly paper
 refresh each validate their changes and commit straight to `main`, while
 issue-form submissions arrive as pull requests for review. The full workflow

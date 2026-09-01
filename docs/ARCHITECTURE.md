@@ -5,8 +5,9 @@ modifying it. For setup, deployment, and contribution, see the
 [README](../README.md) and [CONTRIBUTING](../CONTRIBUTING.md); this document is
 for people changing how the thing works.
 
-Everything here serves one overriding goal: **zero hosting cost and near-zero
-maintenance.** Most decisions are downstream of that.
+Everything here serves one overriding goal: **keep the moving parts few.** The
+hosting is free and the routine data work is unattended because of it; the domain
+and the judgement calls are not. Most decisions are downstream of that.
 
 ## No backend, no database
 
