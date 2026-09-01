@@ -1,8 +1,6 @@
 <div align="center">
 
-<img src="./site/public/favicon.svg" alt="" width="76" height="76">
-
-# AI Workshop Tracker
+# <img src="./site/public/favicon.svg" alt="" width="38" height="38" align="absmiddle"> AI Workshop Tracker
 
 **Every workshop. Every paper. One search.**
 
