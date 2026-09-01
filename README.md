@@ -49,7 +49,10 @@ validated by CI, not by hand.
 That keeps the infrastructure simple and the hosting free, but keeping everything
 accurate still takes a lot of human oversight. Workshop updates can behave in
 unexpected ways, so unusual changes often need to be manually checked and
-verified, on top of the ongoing work to improve the site and add new features.
+verified, on top of the ongoing work to improve the site and add new features. If
+the site has been useful to you and you'd like to support the work behind it, even
+a small [sponsorship](https://ko-fi.com/aiworkshoptracker) would mean a lot and
+help me keep improving it.
 
 For the reasoning behind these choices and the behavior details that matter when
 modifying the site (search semantics, the deploy-resilient search engine,
