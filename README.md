@@ -46,11 +46,10 @@ accepted-paper lists are cached from OpenReview by a scheduled job, and deadline
 statuses are derived at build time rather than stored. Contributions are
 validated by CI, not by hand.
 
-That keeps the infrastructure simple and the hosting free — but not the project.
-The domain is paid for, and the data behind it takes continual work: deadlines
-that move, workshops that rename themselves, upstream feeds that go quiet, and
-new features on top. If the site saves you a deadline, [sponsorship](https://ko-fi.com/aiworkshoptracker)
-helps keep it running.
+That keeps the infrastructure simple and the hosting free, but keeping everything
+accurate still takes a lot of human oversight. Workshop updates can behave in
+unexpected ways, so unusual changes often need to be manually checked and
+verified, on top of the ongoing work to improve the site and add new features.
 
 For the reasoning behind these choices and the behavior details that matter when
 modifying the site (search semantics, the deploy-resilient search engine,
