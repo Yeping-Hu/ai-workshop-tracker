@@ -1,6 +1,15 @@
+<div align="center">
+
 # AI Workshop Tracker
 
-**Live at [aiworkshoptracker.com](https://aiworkshoptracker.com)**
+**Every workshop. Every paper. One search.**
+Deadlines, past editions, and accepted papers for AI/ML/Robotics conference workshops.
+
+[![Live site](https://img.shields.io/badge/live-aiworkshoptracker.com-0f766e?style=flat-square&labelColor=1a1a1a)](https://aiworkshoptracker.com) [![Workshop editions](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Faiworkshoptracker.com%2Fapi%2Fworkshops.json&query=%24.count&label=workshop%20editions&style=flat-square&color=0f766e&labelColor=1a1a1a)](https://aiworkshoptracker.com) [![Validate data](https://github.com/Yeping-Hu/ai-workshop-tracker/actions/workflows/validate.yml/badge.svg)](https://github.com/Yeping-Hu/ai-workshop-tracker/actions/workflows/validate.yml) [![Build & deploy](https://github.com/Yeping-Hu/ai-workshop-tracker/actions/workflows/deploy.yml/badge.svg)](https://github.com/Yeping-Hu/ai-workshop-tracker/actions/workflows/deploy.yml)
+
+[![Code: MIT](https://img.shields.io/badge/code-MIT-blue?style=flat-square&labelColor=1a1a1a)](./LICENSE) [![Data: CC BY 4.0](https://img.shields.io/badge/data-CC%20BY%204.0-blue?style=flat-square&labelColor=1a1a1a)](./CONTRIBUTOR_TERMS.md)
+
+</div>
 
 A static website that aggregates **AI/ML/Robotics conference workshop** information in one place:
 
