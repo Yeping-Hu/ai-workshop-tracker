@@ -1,6 +1,6 @@
 ---
 import Base from '../../components/Base.astro';
-import { workshops, conferenceById, editionByKey, topicById, loadPaperCache, workshopShortName } from '../../lib/data';
+import { workshops, conferenceById, editionByKey, topicById, loadPaperCache, workshopShortName, nameTokens } from '../../lib/data';
 import { href, REPO_URL, CALENDAR_ENABLED } from '../../lib/site';
 import MarkdownExport from '../../components/MarkdownExport.astro';
 import { formatSingleWorkshopInfo } from '../../lib/markdown';
@@ -204,18 +204,24 @@ const metaDesc = [70, 55].reduce((out, n) => (out.length <= 160 ? out : describe
 // every workshop page links to a few of its neighbours, by one rule for the
 // whole corpus, in two parts:
 //
-//   ring    the siblings on either side of this one in the hub's own order
-//           (open calls first, then by next deadline, then name). Every page in a
-//           conference-year of three or more is therefore linked from at least
-//           two others — a guarantee, not a hope. Picking "the most relevant"
-//           alone was tried first and left 217 pages still at one link,
-//           because relevance keeps choosing the same popular few.
-//   topic   up to four more that share a topic, most urgent first.
+//   ring       the siblings on either side of this one in the hub's own order
+//              (open calls first, then by next deadline, then name). Every page
+//              in a conference-year of three or more is therefore linked from
+//              at least two others — a guarantee, not a hope. Picking "the most
+//              relevant" alone was tried first and left 217 pages still at one
+//              link, because relevance keeps choosing the same popular few.
+//   relevance  the rest of the six: the siblings sharing the most topics with
+//              this one (the catch-all `other` does not count), ties broken by
+//              words the two names share — "embodied", "reasoning"; stopwords
+//              and the conference name excluded — then by hub order, so the
+//              more urgent of two equally related workshops comes first.
 //
-// Capped at six so it stays a footnote, not a second board. Tracks and other
-// editions of this same workshop are already linked in their own sections
-// and are left out. Deterministic: same input, same links, so the daily
-// rebuild is stable.
+// The list is SHOWN in relevance order, ring neighbours included: a reader of
+// a robotics workshop sees the robotics workshops first, and the neighbour
+// that is only there for the link guarantee last. Capped at six so it stays a
+// footnote, not a second board. Tracks and other editions of this same
+// workshop are already linked in their own sections and are left out.
+// Deterministic: same input, same links, so the daily rebuild is stable.
 const RELATED_MAX = 6;
 const RING_EACH_SIDE = 1;
 const already = new Set<string>([
@@ -223,7 +229,15 @@ const already = new Set<string>([
   ...(w.relatedTracks ?? []).map((t: any) => t.slug),
   ...(w.relatedEditions ?? []).map((e: any) => e.slug),
 ]);
-const myTopics = new Set<string>(w.topics ?? []);
+const myTopics = new Set<string>((w.topics ?? []).filter((t: string) => t !== 'other'));
+// A name's distinctive words, minus its track label's: "(Paper Track)" must
+// not make "paper" a word two workshops share.
+const wordsOf = (o: any) => {
+  const out = nameTokens(o.name);
+  for (const t of nameTokens(o.trackLabel ?? '')) out.delete(t);
+  return out;
+};
+const myWords = wordsOf(w);
 // The same comparator as conference/[conf].astro, so the neighbours named
 // here are the neighbours a reader sees in the hub list: open calls, then
 // deadline unknown, then closed; within a band by the next actionable date
@@ -249,10 +263,21 @@ if (me >= 0 && group.length > 1) {
     take(group[(me - d + group.length) % group.length]);
   }
 }
-const sharesTopic = (o: any) => (o.topics ?? []).some((t: string) => myTopics.has(t));
-for (const o of group.filter(sharesTopic)) take(o);
+const sharedTopics = (o: any) => (o.topics ?? []).filter((t: string) => myTopics.has(t)).length;
+const sharedWords = (o: any) => [...wordsOf(o)].filter((t: string) => myWords.has(t)).length;
+const byRelevance = (a: any, b: any) =>
+  sharedTopics(b) - sharedTopics(a) || sharedWords(b) - sharedWords(a) || byHubOrder(a, b);
+// One row per workshop: once a track of some workshop is in, its sibling
+// tracks add nothing a reader can act on that the first row's page does not
+// already link. (The ring above is exempt — its links are the guarantee.)
+const trackOfPicked = (o: any) => (o.relatedTracks ?? []).some((t: any) => picked.some((p) => p.slug === t.slug));
+for (const o of [...group].sort(byRelevance)) {
+  if (sharedTopics(o) === 0) break;
+  if (!trackOfPicked(o)) take(o);
+}
 // A tiny conference-year, or one with no topic overlap: fill from the group.
 if (picked.length < 3) for (const o of group) take(o);
+picked.sort(byRelevance);
 
 const related = picked.map((o: any) => ({
   slug: o.slug,
@@ -546,14 +571,15 @@ const related = picked.map((o: any) => ({
         <h2>More {conf.name} {w.year} workshops</h2>
         <ul class="tracks-list">
           {related.map((r) => (
-            <li>
-              <span class="track-name"><a href={href(`/workshop/${r.slug}/`)} title={r.name}>{r.label}</a></span>
+            <li class="related-row">
+              <span class="track-name"><a href={href(`/workshop/${r.slug}/`)}>{r.label}</a></span>
+              <span class="related-name">{r.name}</span>
               {r.deadline ? (
-                <span class={r.open ? '' : 'muted'}>
+                <span class={`related-when${r.open ? '' : ' muted'}`}>
                   <span class="mono">{r.deadline}</span>{r.open ? '' : ' · closed'}
                 </span>
               ) : (
-                <span class="muted">deadline not yet announced</span>
+                <span class="related-when muted">deadline not yet announced</span>
               )}
             </li>
           ))}

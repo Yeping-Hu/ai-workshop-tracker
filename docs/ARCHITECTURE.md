@@ -1117,15 +1117,23 @@ carry an Event. Each gains it the moment its entry has both, with no code
 change.
 
 **Internal links between workshop pages.** Every workshop page ends with a
-"More {conference} {year} workshops" list — its neighbours on either side in
-the hub's own ordering (so every page in a conference-year of three or more is
-linked from at least two others, guaranteed rather than hoped) plus up to four
-that share a topic, six at most. Before this, over half of all workshop pages
-had exactly one incoming link, the hub, and the pages Google had discovered
-but never crawled were overwhelmingly those; a page linked from one place
-looks like a leaf. The list is `data-pagefind-ignore`, so a search for a
-workshop's name still returns only its own page. Not-running editions are
-never suggested as neighbours.
+"More {conference} {year} workshops" list, six at most, chosen by two rules.
+Its neighbours on either side in the hub's own ordering are always in, so
+every page in a conference-year of three or more is linked from at least two
+others, guaranteed rather than hoped. The remaining slots go to the siblings
+that share the most topics with it (the catch-all `other` does not count),
+ties broken by distinctive words the two names share ("embodied",
+"reasoning"; stopwords, the conference name and the track label excluded),
+then by hub order so the more urgent of two equally related workshops comes
+first; one row per workshop, so sibling tracks do not fill the list with
+near-duplicates. The list is *shown* in that relevance order, ring neighbours
+included, and each row carries the workshop's short label and its full name.
+Before this, over half of all workshop pages had exactly one incoming link,
+the hub, and the pages Google had discovered but never crawled were
+overwhelmingly those; a page linked from one place looks like a leaf. The
+list is `data-pagefind-ignore`, so a search for a workshop's name still
+returns only its own page. Not-running editions are never suggested as
+neighbours.
 
 **Index hygiene.** `site/src/lib/seo.mjs` is one list of pages that exist for a
 visitor mid-workflow rather than for a searcher — the `/alerts/` state pages
