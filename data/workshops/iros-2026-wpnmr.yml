@@ -6,11 +6,18 @@ website: https://www.marinerobotics.info/
 topics:
   - vision
   - robotics
-submission_deadline: 2026-09-01 05:00
+submission_deadline: 2026-09-03 05:00
 timezone: UTC
-deadline_notes: OpenReview-synced 2026-09-01 05:00 UTC (as of 2026-07-07) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_notes: OpenReview-synced 2026-09-03 05:00 UTC (as of 2026-09-02) — extensions on OpenReview are applied automatically; verify on the website.
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/WPNMR
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
 added: '2026-07-07'
 location: Pittsburgh
+deadline_history:
+  - value: 2026-09-01 05:00
+    recorded: '2026-07-07'
+    timezone: UTC
+  - value: 2026-09-03 05:00
+    recorded: '2026-09-02'
+    timezone: UTC
