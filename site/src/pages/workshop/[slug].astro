@@ -182,16 +182,25 @@ const clip = (str: string, n: number) => {
 // Sibling tracks of one workshop share a `name`, so without the track label
 // three GenAI4Health pages published one identical description — Semrush's
 // "duplicate meta description", and a searcher who can't tell the tracks apart.
-const describe = (nameMax: number) =>
-  [
+// But most track entries already state the track in the name ("… (Paper
+// Track)", "… - ARR Commitment"), and appending it again gave 44 pages a
+// "(Paper Track) (Paper Track)" description. So the label is added only when
+// the name — as clipped here, since clipping can be what removes it — does not
+// already say it, compared with case and punctuation folded away.
+const fold = (str: string) => String(str).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const describe = (nameMax: number) => {
+  const name = clip(String(w.name), nameMax);
+  const track = shortName.track && !fold(name).includes(fold(shortName.track)) ? ` (${shortName.track})` : '';
+  return [
     w.status === 'not_running' ? 'Not running —' : '',
-    `${clip(String(w.name), nameMax)}${shortName.track ? ` (${shortName.track})` : ''} — ${conf.name} ${w.year}.`,
+    `${name}${track} — ${conf.name} ${w.year}.`,
     w.deadlineWallClock ? `Submission deadline: ${w.deadlineWallClock}.` : 'Submission deadline: TBA.',
     w.workshopDateLabel ? `Workshop date: ${w.workshopDateLabel}.` : '',
     w.paperCount > 0 ? `${w.paperCount} accepted papers listed.` : '',
   ]
     .filter(Boolean)
     .join(' ');
+};
 // Search results show roughly 160 characters. Tighten the (highly variable)
 // name until the deadline and paper count — the parts a searcher is actually
 // scanning for — fit inside that, rather than letting them be cut off.
