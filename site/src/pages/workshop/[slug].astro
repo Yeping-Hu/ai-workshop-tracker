@@ -158,11 +158,19 @@ const breadcrumbLd = {
 // `shortName` (above) supplies the identity: venue noise stripped, sibling
 // tracks told apart. The track label sits after "Workshop" rather than inside
 // the name, so the line reads "CVEU Workshop (Extended Abstracts) @ CVPR 2026".
-const titleTxt =
-  `${shortName.base}${/workshop/i.test(shortName.base) ? '' : ' Workshop'}` +
+const titleFor = (suffix: string, sayWorkshop: boolean) =>
+  `${shortName.base}${sayWorkshop && !/workshop/i.test(shortName.base) ? ' Workshop' : ''}` +
   `${shortName.track ? ` (${shortName.track})` : ''}` +
-  ` @ ${conf.name} ${w.year} — ` +
-  (w.paperCount > 0 ? 'Papers & Deadline' : 'Deadline');
+  ` @ ${conf.name} ${w.year} — ${suffix}`;
+// A result shows about 60 characters of a <title>; past that, what a searcher
+// typed is what gets cut. So the full form is preferred and, when it runs
+// long, "Papers &" goes first (the description still states the paper
+// count), then the word "Workshop". The track label and the venue never go:
+// they are what tell sibling pages apart.
+const fullSuffix = w.paperCount > 0 ? 'Papers & Deadline' : 'Deadline';
+const titleTxt =
+  [titleFor(fullSuffix, true), titleFor('Deadline', true), titleFor('Deadline', false)].find((t) => t.length <= 60) ??
+  titleFor('Deadline', false);
 /** Word-boundary trim for the description's (highly variable) workshop name. */
 const clip = (str: string, n: number) => {
   if (str.length <= n) return str;
@@ -188,23 +196,37 @@ const clip = (str: string, n: number) => {
 // the name — as clipped here, since clipping can be what removes it — does not
 // already say it, compared with case and punctuation folded away.
 const fold = (str: string) => String(str).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-const describe = (nameMax: number) => {
+// The topics are the words a searcher types ("robotics workshop neurips"), and
+// an entry with a short name and no deadline yet otherwise publishes a
+// 45-character description that says nothing ("DBM — NeurIPS 2025.
+// Submission deadline: TBA."). The catch-all "Other" is not a topic.
+const topicLabels: string[] = (w.topics ?? [])
+  .filter((t: string) => t !== 'other')
+  .map((t: string) => topicById.get(t)?.label ?? t);
+const describe = (nameMax: number, { date = true, topics = true } = {}) => {
   const name = clip(String(w.name), nameMax);
   const track = shortName.track && !fold(name).includes(fold(shortName.track)) ? ` (${shortName.track})` : '';
   return [
     w.status === 'not_running' ? 'Not running —' : '',
     `${name}${track} — ${conf.name} ${w.year}.`,
     w.deadlineWallClock ? `Submission deadline: ${w.deadlineWallClock}.` : 'Submission deadline: TBA.',
-    w.workshopDateLabel ? `Workshop date: ${w.workshopDateLabel}.` : '',
+    date && w.workshopDateLabel ? `Workshop date: ${w.workshopDateLabel}.` : '',
     w.paperCount > 0 ? `${w.paperCount} accepted papers listed.` : '',
+    topics && topicLabels.length ? `Topics: ${topicLabels.join(', ')}.` : '',
   ]
     .filter(Boolean)
     .join(' ');
 };
-// Search results show roughly 160 characters. Tighten the (highly variable)
-// name until the deadline and paper count — the parts a searcher is actually
-// scanning for — fit inside that, rather than letting them be cut off.
-const metaDesc = [70, 55].reduce((out, n) => (out.length <= 160 ? out : describe(n)), describe(90));
+// Search results show roughly 160 characters. The first form that fits wins:
+// the (highly variable) name is clipped first, then the topics go, then the
+// workshop date — the deadline and the paper count, the parts a searcher is
+// actually scanning for, are never the ones cut off.
+const attempts = [
+  describe(90), describe(70), describe(55),
+  describe(90, { topics: false }), describe(70, { topics: false }), describe(55, { topics: false }),
+  describe(55, { topics: false, date: false }),
+];
+const metaDesc = attempts.find((d) => d.length <= 160) ?? attempts[attempts.length - 1];
 
 // --- Related workshops (internal links) ---
 // Over half of all workshop pages had exactly one incoming link — the
