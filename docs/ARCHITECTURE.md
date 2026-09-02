@@ -1082,15 +1082,27 @@ The dataset is the point of the site, so several build-time outputs exist purely
 to make it findable and citable — by search engines and by AI assistants — with
 no added runtime cost.
 
-**Conference hub pages.** `/conference/<id>/`
-(`site/src/pages/conference/[conf].astro`) is a static page per conference: every
-tracked edition for that conference, grouped by year and, within each year,
-ordered by status — open calls first, then deadline-unknown, then past, with the
-soonest deadline breaking ties. It gives each conference one stable, crawlable
-URL listing its workshops, plus a data-driven FAQ. `getStaticPaths` iterates
-`conferences`, so a new conference gets a hub with no further edits. (Astro quirk:
-`getStaticPaths` runs in an isolated scope and can't see module-level helpers, so
-the status-rank comparator is defined inside it.)
+**Conference hub and conference-year pages.** `/conference/<id>/`
+(`site/src/pages/conference/[conf].astro`) is a static page per conference, and
+`/conference/<id>/<year>/` (`[conf]/[year].astro`) one per conference edition.
+Within a year the listing is ordered by status — open calls first, then
+deadline-unknown, then past, with the soonest deadline breaking ties — and both
+pages render it through one component, `ConferenceWorkshopList.astro`, so they
+cannot drift. The split exists because of what search actually asks for: the
+queries this site is shown for are overwhelmingly conference-plus-year ("iclr
+2026 workshops", "neurips 2025 workshops"), and one hub spanning three years
+ranked on page four for all of them — its title could not say the year, and its
+list was three times longer than the answer. So the year page's title says
+exactly that query, and the hub lists only its latest year in full (plus any
+earlier year that still has an open call), summarising the others with a link,
+so no two pages publish the same list and compete. Each carries a data-driven
+FAQ and a `BreadcrumbList`; every workshop page's breadcrumb and "All <conf>
+<year> workshops" link point at its year page, so each year page has hundreds
+of incoming links from the day it exists. `getStaticPaths` iterates
+`conferences` (and, for year pages, the years present in the data), so a new
+conference or year gets its pages with no further edits. (Astro quirk:
+`getStaticPaths` runs in an isolated scope and can't see module-level helpers,
+so the status-rank comparator is defined inside it, in each file.)
 
 **Structured data (JSON-LD).** Pages emit schema.org metadata through a named
 `head` slot in `Base.astro`: each workshop page carries a `BreadcrumbList` and,

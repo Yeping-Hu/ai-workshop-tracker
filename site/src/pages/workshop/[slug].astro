@@ -146,8 +146,9 @@ const breadcrumbLd = {
   '@type': 'BreadcrumbList',
   itemListElement: [
     { '@type': 'ListItem', position: 1, name: 'Home', item: abs('/') },
-    { '@type': 'ListItem', position: 2, name: `${confLabel} workshops`, item: abs(`/conference/${w.conference}/`) },
-    { '@type': 'ListItem', position: 3, name: w.acronym || w.name },
+    { '@type': 'ListItem', position: 2, name: `${conf.name} workshops`, item: abs(`/conference/${w.conference}/`) },
+    { '@type': 'ListItem', position: 3, name: confLabel, item: abs(`/conference/${w.conference}/${w.year}/`) },
+    { '@type': 'ListItem', position: 4, name: w.acronym || w.name },
   ],
 };
 
@@ -616,7 +617,7 @@ const related = picked.map((o: any) => ({
           ))}
         </ul>
         <div class="muted small">
-          <a href={href(`/conference/${w.conference}/`)}>All {conf.name} workshops →</a>
+          <a href={href(`/conference/${w.conference}/${w.year}/`)}>All {conf.name} {w.year} workshops →</a>
         </div>
       </section>
     )}

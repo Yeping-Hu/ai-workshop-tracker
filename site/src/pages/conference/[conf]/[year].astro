@@ -1,0 +1,255 @@
+---
+import Base from '../../../components/Base.astro';
+import AlertsSignup from '../../../components/AlertsSignup.astro';
+import MarkdownExport from '../../../components/MarkdownExport.astro';
+import ConferenceWorkshopList from '../../../components/ConferenceWorkshopList.astro';
+import { workshops, conferences, editionByKey } from '../../../lib/data';
+import { href, REPO_URL } from '../../../lib/site';
+import { formatDateYmd } from '../../../../../lib/dates.mjs';
+
+// One page per conference EDITION — /conference/neurips/2026/ — beside the
+// per-conference hub. The queries this site is shown for are overwhelmingly
+// conference-plus-year ("iclr 2026 workshops", "cvpr 2026 workshops",
+// "neurips 2025 workshops"), and a hub spanning three years ranked on page
+// four or five for all of them: its title could not say the year a searcher
+// typed, and its list was three times longer than the answer. This page says
+// exactly that, once. The hub keeps only its latest year in full and links
+// here for the rest, so the two never publish the same list.
+//
+// No data-pf-ws / data-pf-papers attributes, so it stays out of the search
+// index like the hub does. Joins the sitemap automatically.
+export function getStaticPaths() {
+  // status order for listings: open call -> unknown -> past -> not running
+  const rank = (w: any) =>
+    w.statusLabel === 'Open call'
+      ? 0
+      : w.statusLabel === 'Deadline unknown'
+        ? 1
+        : w.statusLabel === 'Not running'
+          ? 3
+          : 2;
+  const out: any[] = [];
+  for (const c of conferences as any[]) {
+    const mine = workshops.filter((w: any) => w.conference === c.id);
+    const years = [...new Set(mine.map((w: any) => w.year).filter((y: any) => typeof y === 'number'))].sort(
+      (a: any, b: any) => b - a,
+    );
+    for (const year of years) {
+      const list = mine
+        .filter((w: any) => w.year === year)
+        .sort(
+          (a: any, b: any) =>
+            rank(a) - rank(b) ||
+            // Order by the NEXT actionable date, so a two-stage workshop whose
+            // abstract registration closes sooner is listed where a reader
+            // would expect it (same ordering rule as the board and the hub).
+            ((a.nextStageUtcMs ?? a.deadlineUtcMs) ?? Infinity) -
+              ((b.nextStageUtcMs ?? b.deadlineUtcMs) ?? Infinity) ||
+            (a.name || '').localeCompare(b.name || ''),
+        );
+      out.push({ params: { conf: c.id, year: String(year) }, props: { conf: c, year, list, years } });
+    }
+  }
+  return out;
+}
+
+const { conf, year, list, years } = Astro.props as { conf: any; year: number; list: any[]; years: number[] };
+const confName: string = conf.name;
+const confFull: string = conf.full_name || conf.name;
+const edition = editionByKey.get(`${conf.id}-${year}`);
+
+const running = list.filter((w) => w.statusLabel !== 'Not running');
+const notRunning = list.length - running.length;
+const openCalls = list.filter((w) => w.statusLabel === 'Open call');
+const nextOpen =
+  [...openCalls].filter((w) => w.deadlineUtcMs != null).sort((a, b) => a.deadlineUtcMs - b.deadlineUtcMs)[0] ?? null;
+const lastClosed =
+  [...running].filter((w) => w.deadlineUtcMs != null).sort((a, b) => b.deadlineUtcMs - a.deadlineUtcMs)[0] ?? null;
+const paperTotal = list.reduce((n, w) => n + (w.paperCount ?? 0), 0);
+const papersFmt = paperTotal.toLocaleString('en-US');
+
+// Where the conference is: one city said once, in the heading, unless the
+// edition is split across cities (NeurIPS 2026: Sydney, Paris, Atlanta), in
+// which case every row carries its own marker instead. Same rule as the hub.
+const labels = list.map((w: any) => w.locationLabel).filter(Boolean);
+const sharedLocation =
+  !list.some((w: any) => w.locationDistinguishes) && labels.length && new Set(labels).size === 1 ? labels[0] : null;
+// A split edition's labels arrive in several spellings of the same few cities
+// ("Sydney", "Sydney, Australia"), so the heading names each city once, by
+// its first segment.
+const cities = list.some((w: any) => w.locationDistinguishes)
+  ? [...new Set(labels.map((l: string) => String(l).split(',')[0].trim()))].sort((a, b) => a.localeCompare(b))
+  : [];
+
+// "Dec 6–13, 2026" from the edition's start/end; either date alone if that
+// is all data/editions.yml has.
+const dateSpan = (() => {
+  const s = edition?.start ? formatDateYmd(String(edition.start)) : null;
+  const e = edition?.end ? formatDateYmd(String(edition.end)) : null;
+  if (s && e) {
+    const [sm, sd] = s.split(/[ ,]+/);
+    const [em, ed, ey] = e.split(/[ ,]+/);
+    return sm === em ? `${sm} ${sd}–${ed}, ${ey}` : `${sm} ${sd} – ${em} ${ed}, ${ey}`;
+  }
+  return s ?? e ?? null;
+})();
+const whenWhere = [dateSpan, sharedLocation ?? (cities.length ? cities.join(', ') : null)].filter(Boolean).join(' · ');
+
+const SITE = Astro.site;
+const abs = (p: string) => (SITE ? new URL(href(p), SITE).href : href(p));
+const pageUrl = SITE ? new URL(Astro.url.pathname, SITE).href : href(`/conference/${conf.id}/${year}/`);
+
+const intro =
+  `${confName} ${year} has ${running.length} workshop${running.length === 1 ? '' : 's'} tracked here` +
+  (notRunning ? ` (plus ${notRunning} announced but not running)` : '') +
+  (paperTotal ? `, with ${papersFmt} accepted papers` : '') +
+  (whenWhere ? `. The conference runs ${whenWhere}` : '') +
+  '. ' +
+  (openCalls.length
+    ? `${openCalls.length} workshop${openCalls.length === 1 ? ' has' : 's have'} an open call for papers right now` +
+      (nextOpen ? `; the next deadline is ${nextOpen.deadlineWallClock}.` : '.')
+    : lastClosed
+      ? `Every call for papers has closed; the last deadline was ${lastClosed.deadlineWallClock}.`
+      : `No workshop deadline is known yet — deadlines are imported automatically as workshops announce them.`);
+
+// <title> says exactly the query: "<conf> <year> workshops". No site suffix, as
+// on the hub and the workshop pages: it pushed the searched-for words past
+// what a result shows. The description leads with the same words.
+const title = `${confName} ${year} Workshops — Deadlines & Accepted Papers`;
+const description =
+  `${confName} ${year} workshop submission deadlines, dates, topics, official websites, and accepted papers: ` +
+  `${running.length} workshops` +
+  (paperTotal ? `, ${papersFmt} papers` : '') +
+  (openCalls.length ? `, ${openCalls.length} open call${openCalls.length === 1 ? '' : 's'}` : '') +
+  `. Updated daily.`;
+
+// FAQ rendered visibly below AND mirrored as FAQPage JSON-LD (Google requires
+// the answer text to be present on the page). Answers are data-driven.
+const faqs: { q: string; a: string; url?: string }[] = [
+  {
+    q: `When are ${confName} ${year} workshop paper submission deadlines?`,
+    a: openCalls.length
+      ? `Deadlines vary by workshop. ${openCalls.length} ${confName} ${year} workshop${openCalls.length === 1 ? ' has' : 's have'} an open call right now` +
+        (nextOpen ? `, the soonest closing on ${nextOpen.deadlineWallClock}. ` : '. ') +
+        `Every workshop is listed above with its own deadline.`
+      : lastClosed
+        ? `All ${confName} ${year} workshop calls have closed; the last deadline was ${lastClosed.deadlineWallClock}. Each workshop above still shows the deadline it had, and its accepted papers where they are published.`
+        : `No ${confName} ${year} workshop has announced a deadline yet. Deadlines are imported automatically as workshops publish their calls for papers.`,
+  },
+  {
+    q: `How many workshops does ${confName} ${year} have?`,
+    a:
+      `${running.length} ${confName} ${year} workshop${running.length === 1 ? ' is' : 's are'} tracked here` +
+      (notRunning ? `, and ${notRunning} more ${notRunning === 1 ? 'was' : 'were'} announced but ${notRunning === 1 ? 'is' : 'are'} not running` : '') +
+      (paperTotal ? `. Together they list ${papersFmt} accepted papers.` : '.'),
+  },
+  ...(edition?.workshop_list_url
+    ? [
+        {
+          q: `Where is the official ${confName} ${year} workshop list?`,
+          a: `The conference publishes its own list of accepted workshops at ${edition.workshop_list_url}. This page is cross-checked against it weekly, and adds each workshop's deadline, website, topics, and accepted papers.`,
+          url: String(edition.workshop_list_url),
+        },
+      ]
+    : []),
+  {
+    q: `Where can I find ${confName} ${year} workshop accepted papers?`,
+    a: paperTotal
+      ? `Each workshop's page lists its accepted papers, sourced from OpenReview where the workshop uses it. Across ${confName} ${year} workshops, ${papersFmt} papers are currently listed and searchable.`
+      : `None are published yet. Each workshop's page will list its accepted papers once its decisions are out; lists are imported from OpenReview monthly for the workshops that use it.`,
+  },
+  ...(whenWhere
+    ? [
+        {
+          q: `When and where is ${confName} ${year}?`,
+          a: `${confFull} ${year} runs ${whenWhere}. Workshops are usually held on the first or last days of the conference; each workshop's page shows its own date once announced.`,
+        },
+      ]
+    : []),
+];
+
+const faqLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map((f) => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+};
+const breadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: abs('/') },
+    { '@type': 'ListItem', position: 2, name: `${confName} workshops`, item: abs(`/conference/${conf.id}/`) },
+    { '@type': 'ListItem', position: 3, name: `${confName} ${year}`, item: pageUrl },
+  ],
+};
+const otherYears = years.filter((y) => y !== year);
+---
+
+<Base title={title} description={description} siteSuffix={false}>
+  <Fragment slot="head">
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(faqLd)} />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbLd)} />
+  </Fragment>
+
+  <section class="detail-head">
+    <p class="eyebrow">{confFull}{whenWhere ? ` · ${whenWhere}` : ''}</p>
+    <h1>{confName} {year} workshops</h1>
+    <p class="conf-intro">{intro}</p>
+    <div class="statline">
+      <span><strong>{running.length}</strong> workshops</span>
+      {paperTotal > 0 && <span><strong>{papersFmt}</strong> papers</span>}
+      <span><strong>{openCalls.length}</strong> open calls</span>
+    </div>
+    <p class="conf-years-nav muted small">
+      <a href={href(`/conference/${conf.id}/`)}>All {confName} workshops</a>
+      {otherYears.length > 0 && (
+        <Fragment>
+          {' · '}Other years:{' '}
+          {otherYears.map((y, i) => (
+            <Fragment>{i > 0 ? ' · ' : ''}<a href={href(`/conference/${conf.id}/${y}/`)}>{confName} {y}</a></Fragment>
+          ))}
+        </Fragment>
+      )}
+    </p>
+  </section>
+
+  <AlertsSignup collapsed tight />
+
+  <section class="conf-year">
+    <h2>All {list.length} workshops{sharedLocation && <span class="conf-year-where"> · {sharedLocation}</span>}</h2>
+    <MarkdownExport
+      exportUrl={href(`/exports/${conf.id}-${year}-workshops.md`)}
+      filename={`${conf.id}-${year}-workshops.md`}
+    />
+    <ConferenceWorkshopList workshops={list} confName={confName} />
+  </section>
+
+  <section class="conf-faq">
+    <h2>Frequently asked questions</h2>
+    <dl>
+      {faqs.map((f) => (
+        <Fragment>
+          <dt>{f.q}</dt>
+          <dd>{f.url ? <Fragment>{f.a.split(f.url)[0]}<a href={f.url} rel="noopener">{f.url}</a>{f.a.split(f.url)[1]}</Fragment> : f.a}</dd>
+        </Fragment>
+      ))}
+    </dl>
+  </section>
+
+  <p class="muted small" style="margin-top: 2rem;">
+    Missing a {confName} {year} workshop? <a href={`${REPO_URL}/issues/new?template=add-workshop.yml&conference=${conf.id}`}>Add it →</a>
+  </p>
+
+  <style>
+    .conf-intro { font-size: 1.04rem; line-height: 1.55; color: var(--muted); max-width: 48rem; margin: 0.4rem 0 1rem; }
+    .conf-years-nav { margin: 0.8rem 0 0; }
+    .conf-year { margin: 1.6rem 0; }
+    .conf-faq { margin: 2.4rem 0; max-width: 48rem; }
+    .conf-faq dt { font-weight: 600; margin-top: 1rem; }
+    .conf-faq dd { margin: 0.3rem 0 0; color: var(--muted); }
+  </style>
+</Base>
