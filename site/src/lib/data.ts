@@ -12,6 +12,7 @@ import {
   loadProposalCalls,
   sortByDeadline,
   workshopShortName,
+  nameTokens,
 } from '../../../lib/workshops.mjs';
 
 export type Workshop = Record<string, any>;
@@ -55,4 +56,4 @@ export const paperCount = workshops.reduce((n: number, w: Workshop) => {
 }, 0);
 
 /** Re-exported for pages that need a workshop's one-line identity. */
-export { workshopShortName };
+export { workshopShortName, nameTokens };

@@ -557,6 +557,17 @@ h2 .count { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 400;
 .tracks-list { list-style: none; margin: 0; padding: 0; }
 .tracks-list li { display: flex; gap: 0.6rem; align-items: baseline; padding: 0.15rem 0; flex-wrap: wrap; }
 .tracks-list .track-name { font-weight: 600; min-width: 4rem; }
+/* The related-workshops list names each neighbour in full beside its short
+   label. Wide: label, name (taking the slack), deadline at the row's end. A
+   phone has no row to spare, so there the label runs into the name as one
+   sentence and the deadline sits underneath it, small. */
+.tracks-list .related-name { flex: 1 1 16rem; }
+@media (max-width: 40rem) {
+  .tracks-list li.related-row { display: block; padding: 0.3rem 0; }
+  .tracks-list li.related-row .track-name { display: inline; min-width: 0; margin-right: 0.4rem; }
+  .tracks-list li.related-row .related-name { display: inline; }
+  .tracks-list li.related-row .related-when { display: block; font-size: 0.86rem; }
+}
 
 /* ---- Deadline provenance ------------------------------------------------
    Extensions read as accent (pine), the dangerous "moved earlier" case as the
