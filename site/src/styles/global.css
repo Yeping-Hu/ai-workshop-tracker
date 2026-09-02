@@ -557,16 +557,36 @@ h2 .count { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 400;
 .tracks-list { list-style: none; margin: 0; padding: 0; }
 .tracks-list li { display: flex; gap: 0.6rem; align-items: baseline; padding: 0.15rem 0; flex-wrap: wrap; }
 .tracks-list .track-name { font-weight: 600; min-width: 4rem; }
-/* The related-workshops list names each neighbour in full beside its short
-   label. Wide: label, name (taking the slack), deadline at the row's end. A
-   phone has no row to spare, so there the label runs into the name as one
-   sentence and the deadline sits underneath it, small. */
-.tracks-list .related-name { flex: 1 1 16rem; }
+/* ---------- related workshops (workshop page) ----------
+   One grid for the whole list, four columns — label, name, deadline, state —
+   so every row's name starts on the same edge and every date ends on the
+   same edge, whatever the label's width. Each row is a subgrid of it (a
+   real <li>, not display:contents, which strips list semantics in some
+   screen readers). Where subgrid is unsupported a row falls back to its own
+   copy of the columns: still tidy within the row, just not aligned across
+   rows. A phone has no row to spare, so there the label runs into the name
+   as one sentence and the deadline sits underneath it, small. */
+.related-list { list-style: none; margin: 0.6rem 0; padding: 0; display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content max-content;
+  column-gap: 0.8rem; row-gap: 0.4rem; }
+.related-list li { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items: baseline; }
+@supports not (grid-template-columns: subgrid) {
+  .related-list li { grid-template-columns: max-content minmax(0, 1fr) max-content max-content; }
+}
+.related-list .related-label { font-weight: 600; white-space: nowrap; }
+.related-list .related-name { line-height: 1.4; }
+.related-list .related-when { white-space: nowrap; justify-self: end; }
+.related-list .related-state { min-width: 3rem; }
 @media (max-width: 40rem) {
-  .tracks-list li.related-row { display: block; padding: 0.3rem 0; }
-  .tracks-list li.related-row .track-name { display: inline; min-width: 0; margin-right: 0.4rem; }
-  .tracks-list li.related-row .related-name { display: inline; }
-  .tracks-list li.related-row .related-when { display: block; font-size: 0.86rem; }
+  .related-list, .related-list li { display: block; }
+  .related-list li { padding: 0.3rem 0; }
+  .related-list .related-label { display: inline; white-space: normal; margin-right: 0.4rem; }
+  .related-list .related-name { display: inline; }
+  /* justify-self now applies to block boxes in Chrome, so it is reset here
+     or the date would sit flush right under left-aligned text. */
+  .related-list .related-when { display: block; justify-self: auto; font-size: 0.86rem; }
+  .related-list .related-state { display: inline; min-width: 0; margin-left: 0.4rem; }
+  .related-list .related-state:empty { display: none; }
 }
 
 /* ---- Deadline provenance ------------------------------------------------
