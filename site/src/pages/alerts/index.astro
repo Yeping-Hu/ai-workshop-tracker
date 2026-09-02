@@ -11,11 +11,15 @@ import AlertsSignup from '../../components/AlertsSignup.astro';
 import { ALERTS_API, href } from '../../lib/site';
 
 const enabled = !!ALERTS_API;
+// The one alerts URL search should find, so its <title> is the query it should
+// answer. /alerts/manage/ and the state pages carried this same title and
+// Semrush read them as duplicates; they are noindex now (site/src/lib/seo.mjs).
+
 ---
 
 <Base
-  title="Email alerts"
-  description="Optional email alerts for AI/ML workshop deadlines: a weekly digest, plus alerts when a saved deadline moves or is about to close. No account needed."
+  title="AI Workshop Deadline Email Alerts"
+  description="Get email alerts for AI, machine learning, computer vision, and robotics workshop deadlines: a weekly digest, plus a warning when a saved deadline moves or is about to close. No account needed."
 >
   <section class="masthead">
     <p class="eyebrow">Optional</p>

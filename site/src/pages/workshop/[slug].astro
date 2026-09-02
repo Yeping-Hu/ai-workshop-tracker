@@ -1,6 +1,6 @@
 ---
 import Base from '../../components/Base.astro';
-import { workshops, conferenceById, topicById, loadPaperCache, workshopShortName } from '../../lib/data';
+import { workshops, conferenceById, editionByKey, topicById, loadPaperCache, workshopShortName } from '../../lib/data';
 import { href, REPO_URL, CALENDAR_ENABLED } from '../../lib/site';
 import MarkdownExport from '../../components/MarkdownExport.astro';
 import { formatSingleWorkshopInfo } from '../../lib/markdown';
@@ -73,48 +73,73 @@ const confFull = (conf as any).full_name ? `${(conf as any).full_name} (${conf.n
 const keywordList = (w.topics ?? []).map((t: string) => topicById.get(t)?.label ?? t);
 
 // schema.org/Event has no native "submission deadline" field, so the deadline
-// lives in the description (and prominently on-page, where AI search weights it
-// most). Venue isn't in the dataset, so `location` is omitted: the markup stays
-// valid and useful for AI extraction, though Google "Event" rich-result
-// eligibility specifically wants both a location and a startDate.
-const eventLd: Record<string, any> = {
-  '@context': 'https://schema.org',
-  '@type': 'Event',
-  // Asserting a plain Event for an edition we know is not taking place would be
-  // a false claim to every crawler that reads this. schema.org has the exact
-  // vocabulary for it.
-  ...(w.status === 'not_running' ? { eventStatus: 'https://schema.org/EventCancelled' } : {}),
-  name: w.acronym ? `${w.name} (${w.acronym})` : w.name,
-  url: pageUrl,
-  description: [
-    w.deadlineWallClock
-      ? `Paper submission deadline: ${w.deadlineWallClock}.`
-      : 'Paper submission deadline to be announced.',
-    `A workshop at ${confFull} ${w.year}.`,
-    w.paperCount > 0 ? `${w.paperCount} accepted papers listed.` : '',
-  ].filter(Boolean).join(' '),
-  // schema.org wants ISO 8601 here; `workshopDateLabel` is the human-readable
-  // rendering ("Dec 6, 2026") and was never valid. The raw `workshop_date` is
-  // YYYY-MM-DD (schema/workshop.schema.json enforces the pattern, CI validates
-  // it). Guarded on the raw field so the derived fallbacks in workshops.mjs
-  // (conference end date, typical month) are never asserted as the event's
-  // official start. Same 5 workshops as before — this fixes the format, not
-  // the coverage; filling in `workshop_date` is what would widen that.
-  ...(typeof w.workshop_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(w.workshop_date.trim())
-    ? { startDate: w.workshop_date.trim() }
-    : {}),
-  ...(w.website ? { sameAs: w.website } : {}),
-  superEvent: {
-    '@type': 'Event',
-    name: confLabel,
-    ...((conf as any).full_name ? { alternateName: (conf as any).full_name } : {}),
-    ...((conf as any).website ? { url: (conf as any).website } : {}),
-  },
-  ...(Array.isArray(w.organizers) && w.organizers.length
-    ? { organizer: w.organizers.map((n: string) => ({ '@type': 'Person', name: n })) }
-    : {}),
-  ...(keywordList.length ? { keywords: keywordList.join(', ') } : {}),
-};
+// lives in the description (and prominently on-page). Google's Event rich
+// result requires BOTH a `startDate` and a `location`, and it reports every
+// Event that lacks either as an error — this page did, on all 938 workshops,
+// because the markup was emitted regardless (and `superEvent` is itself an
+// Event, so Semrush counted 1,876 invalid items). Invalid markup is ignored,
+// not penalised, but it buries every real problem in the Search Console
+// report, so the rule is now: emit the Event only when it can be complete.
+//
+//   startDate  the raw `workshop_date` (YYYY-MM-DD, schema-validated) — never
+//              the derived fallbacks in workshops.mjs (conference end date,
+//              typical month), which are not the event's official start.
+//   location   `locationLabel`, the tidied per-workshop city from OpenReview,
+//              exactly as the "Location" row on this page shows it. No
+//              inference from sibling workshops: structured data must describe
+//              what the page visibly says.
+//
+// Both are still sparse in the data, so today this is a handful of pages; each
+// workshop gains the markup the moment its two facts are filled in, with no
+// code change. The BreadcrumbList below is emitted for every page regardless.
+const eventStart =
+  typeof w.workshop_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(w.workshop_date.trim())
+    ? w.workshop_date.trim()
+    : null;
+const eventPlace = w.locationLabel
+  ? { '@type': 'Place', name: w.locationLabel, address: w.locationLabel }
+  : null;
+const edition = editionByKey.get(`${w.conference}-${w.year}`);
+const eventLd: Record<string, any> | null = eventStart && eventPlace
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'Event',
+      // Asserting a plain Event for an edition we know is not taking place
+      // would be a false claim to every crawler that reads this. schema.org
+      // has the exact vocabulary for it.
+      ...(w.status === 'not_running' ? { eventStatus: 'https://schema.org/EventCancelled' } : {}),
+      name: w.acronym ? `${w.name} (${w.acronym})` : w.name,
+      url: pageUrl,
+      description: [
+        w.deadlineWallClock
+          ? `Paper submission deadline: ${w.deadlineWallClock}.`
+          : 'Paper submission deadline to be announced.',
+        `A workshop at ${confFull} ${w.year}.`,
+        w.paperCount > 0 ? `${w.paperCount} accepted papers listed.` : '',
+      ].filter(Boolean).join(' '),
+      startDate: eventStart,
+      location: eventPlace,
+      ...(w.website ? { sameAs: w.website } : {}),
+      // The conference is a nested Event and gets validated like one, so it
+      // carries its own dates (data/editions.yml) and — when the conference
+      // sits in a single city, which `locationDistinguishes` being false means
+      // — the same place. A split conference (NeurIPS 2026: Sydney, Paris,
+      // Atlanta) gets no location rather than one third of the truth.
+      superEvent: {
+        '@type': 'Event',
+        name: confLabel,
+        ...((conf as any).full_name ? { alternateName: (conf as any).full_name } : {}),
+        ...((conf as any).website ? { url: (conf as any).website } : {}),
+        ...(edition?.start ? { startDate: String(edition.start) } : {}),
+        ...(edition?.end ? { endDate: String(edition.end) } : {}),
+        ...(!w.locationDistinguishes ? { location: eventPlace } : {}),
+      },
+      ...(Array.isArray(w.organizers) && w.organizers.length
+        ? { organizer: w.organizers.map((n: string) => ({ '@type': 'Person', name: n })) }
+        : {}),
+      ...(keywordList.length ? { keywords: keywordList.join(', ') } : {}),
+    }
+  : null;
 
 const breadcrumbLd = {
   '@context': 'https://schema.org',
@@ -154,10 +179,13 @@ const clip = (str: string, n: number) => {
 // that fact: a snippet is often all a searcher reads, and the deadline below it
 // is no longer live. The <title> is deliberately left alone (link stability);
 // the pill and the notice carry it on the page itself.
+// Sibling tracks of one workshop share a `name`, so without the track label
+// three GenAI4Health pages published one identical description — Semrush's
+// "duplicate meta description", and a searcher who can't tell the tracks apart.
 const describe = (nameMax: number) =>
   [
     w.status === 'not_running' ? 'Not running —' : '',
-    `${clip(String(w.name), nameMax)} — ${conf.name} ${w.year}.`,
+    `${clip(String(w.name), nameMax)}${shortName.track ? ` (${shortName.track})` : ''} — ${conf.name} ${w.year}.`,
     w.deadlineWallClock ? `Submission deadline: ${w.deadlineWallClock}.` : 'Submission deadline: TBA.',
     w.workshopDateLabel ? `Workshop date: ${w.workshopDateLabel}.` : '',
     w.paperCount > 0 ? `${w.paperCount} accepted papers listed.` : '',
@@ -169,11 +197,76 @@ const describe = (nameMax: number) =>
 // scanning for — fit inside that, rather than letting them be cut off.
 const metaDesc = [70, 55].reduce((out, n) => (out.length <= 160 ? out : describe(n)), describe(90));
 
+// --- Related workshops (internal links) ---
+// Over half of all workshop pages had exactly one incoming link — the
+// conference hub — and the pages Google had discovered but not crawled were
+// overwhelmingly those. A page linked from one place looks like a leaf. So
+// every workshop page links to a few of its neighbours, by one rule for the
+// whole corpus, in two parts:
+//
+//   ring    the siblings on either side of this one in the hub's own order
+//           (open calls first, then by next deadline, then name). Every page in a
+//           conference-year of three or more is therefore linked from at least
+//           two others — a guarantee, not a hope. Picking "the most relevant"
+//           alone was tried first and left 217 pages still at one link,
+//           because relevance keeps choosing the same popular few.
+//   topic   up to four more that share a topic, most urgent first.
+//
+// Capped at six so it stays a footnote, not a second board. Tracks and other
+// editions of this same workshop are already linked in their own sections
+// and are left out. Deterministic: same input, same links, so the daily
+// rebuild is stable.
+const RELATED_MAX = 6;
+const RING_EACH_SIDE = 1;
+const already = new Set<string>([
+  w.slug,
+  ...(w.relatedTracks ?? []).map((t: any) => t.slug),
+  ...(w.relatedEditions ?? []).map((e: any) => e.slug),
+]);
+const myTopics = new Set<string>(w.topics ?? []);
+// The same comparator as conference/[conf].astro, so the neighbours named
+// here are the neighbours a reader sees in the hub list: open calls, then
+// deadline unknown, then closed; within a band by the next actionable date
+// (abstract registration when that is sooner); then name.
+const rank = (o: any) => (o.statusLabel === 'Open call' ? 0 : o.statusLabel === 'Deadline unknown' ? 1 : 2);
+const byHubOrder = (a: any, b: any) =>
+  rank(a) - rank(b) ||
+  ((a.nextStageUtcMs ?? a.deadlineUtcMs) ?? Infinity) - ((b.nextStageUtcMs ?? b.deadlineUtcMs) ?? Infinity) ||
+  (a.name || '').localeCompare(b.name || '') ||
+  String(a.slug).localeCompare(String(b.slug));
+const group = workshops
+  .filter((o: any) => o.conference === w.conference && o.year === w.year && o.status !== 'not_running')
+  .sort(byHubOrder);
+const picked: any[] = [];
+const take = (o: any) => {
+  if (!o || already.has(o.slug) || picked.some((p) => p.slug === o.slug)) return;
+  if (picked.length < RELATED_MAX) picked.push(o);
+};
+const me = group.findIndex((o: any) => o.slug === w.slug);
+if (me >= 0 && group.length > 1) {
+  for (let d = 1; d <= RING_EACH_SIDE; d++) {
+    take(group[(me + d) % group.length]);
+    take(group[(me - d + group.length) % group.length]);
+  }
+}
+const sharesTopic = (o: any) => (o.topics ?? []).some((t: string) => myTopics.has(t));
+for (const o of group.filter(sharesTopic)) take(o);
+// A tiny conference-year, or one with no topic overlap: fill from the group.
+if (picked.length < 3) for (const o of group) take(o);
+
+const related = picked.map((o: any) => ({
+  slug: o.slug,
+  label: workshopShortName(o, conf.name).full,
+  name: o.name,
+  open: o.status === 'upcoming',
+  deadline: o.deadlineWallClock ?? null,
+}));
+
 ---
 
 <Base title={titleTxt} description={metaDesc} ogType="article" siteSuffix={false}>
   <Fragment slot="head">
-    <script is:inline type="application/ld+json" set:html={JSON.stringify(eventLd)} />
+    {eventLd && <script is:inline type="application/ld+json" set:html={JSON.stringify(eventLd)} />}
     <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbLd)} />
   </Fragment>
   <article>
@@ -442,6 +535,32 @@ const metaDesc = [70, 55].reduce((out, n) => (out.length <= 160 ? out : describe
             </li>
           ))}
         </ul>
+      </section>
+    )}
+
+    {/* Ignored by Pagefind: these are other workshops' names, and indexing
+        them here would make a search for "GenBio" return every page that
+        merely lists GenBio as a neighbour. */}
+    {related.length > 0 && (
+      <section data-pagefind-ignore>
+        <h2>More {conf.name} {w.year} workshops</h2>
+        <ul class="tracks-list">
+          {related.map((r) => (
+            <li>
+              <span class="track-name"><a href={href(`/workshop/${r.slug}/`)} title={r.name}>{r.label}</a></span>
+              {r.deadline ? (
+                <span class={r.open ? '' : 'muted'}>
+                  <span class="mono">{r.deadline}</span>{r.open ? '' : ' · closed'}
+                </span>
+              ) : (
+                <span class="muted">deadline not yet announced</span>
+              )}
+            </li>
+          ))}
+        </ul>
+        <div class="muted small">
+          <a href={href(`/conference/${w.conference}/`)}>All {conf.name} workshops →</a>
+        </div>
       </section>
     )}
 

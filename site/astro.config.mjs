@@ -1,6 +1,7 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
-import { lastDataChange } from '../lib/workshops.mjs';
+import { lastDataChange, mergedSlugRedirects } from '../lib/workshops.mjs';
+import { isNoindex } from './src/lib/seo.mjs';
 
 // Deployment knobs (set as env vars in CI; sensible local defaults):
 //   SITE_URL  e.g. https://yourname.github.io  or  https://ml-workshops.pages.dev
@@ -25,15 +26,30 @@ export default defineConfig({
     // The site imports shared code + data from the repo root (../lib, ../data).
     server: { fs: { allow: ['..'] } },
   },
+  // Static output can't send a real 301 on GitHub Pages, so each of these
+  // becomes a tiny page: an instant `<meta http-equiv="refresh">`, a `noindex`,
+  // and a canonical pointing at the destination — which Google documents as
+  // equivalent to a permanent redirect. They are also left out of the sitemap.
   redirects: {
     '/archive': '/',
     '/search': '/',
     '/contribute': '/about',
     '/calendar': '/about',
+    // A workshop that was imported twice and merged keeps its old URL alive.
+    // Derived from `merged_venue_ids` in the data (see mergedSlugRedirects),
+    // so a merge never has to remember to add a line here.
+    ...Object.fromEntries(
+      [...mergedSlugRedirects()].map(([from, to]) => [`/workshop/${from}`, `/workshop/${to}/`]),
+    ),
   },
   trailingSlash: 'ignore',
   integrations: [
     sitemap({
+      // A sitemap is a list of pages worth indexing. The workflow states under
+      // /alerts/ and the browser-local /saved/ page are `noindex` (Base.astro
+      // reads the same list), so listing them would only send Googlebot to
+      // fetch pages it is then told to drop.
+      filter: (page) => !isNoindex(new URL(page).pathname, BASE),
       // `lastmod` tells a crawler which pages are worth re-fetching, so it has
       // to be honest: each workshop reports the date git says its own data last
       // changed, and only the handful of pages that genuinely track the whole

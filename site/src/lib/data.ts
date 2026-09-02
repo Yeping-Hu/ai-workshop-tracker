@@ -6,6 +6,7 @@
 import {
   loadWorkshops,
   loadConferences,
+  loadEditions,
   loadTopics,
   loadPaperCache,
   loadProposalCalls,
@@ -21,6 +22,10 @@ export const workshops: Workshop[] = loadWorkshops();
 export const conferences: Conference[] = loadConferences();
 export const topics: Topic[] = loadTopics();
 export const conferenceById = new Map(conferences.map((c: Conference) => [c.id, c]));
+/** Conference edition dates (data/editions.yml), keyed `conf-year`. */
+export const editionByKey = new Map<string, Record<string, any>>(
+  loadEditions().map((e: Record<string, any>) => [`${e.conference}-${e.year}`, e]),
+);
 export const topicById = new Map(topics.map((t: Topic) => [t.id, t]));
 export { loadPaperCache, sortByDeadline };
 

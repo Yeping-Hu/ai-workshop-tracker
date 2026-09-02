@@ -120,7 +120,7 @@
         "type": "string",
         "maxLength": 200
       },
-      "description": "Other OpenReview venue ids that are this same workshop — organizers occasionally create a second group. Recorded so discovery skips them instead of re-creating a duplicate entry."
+      "description": "Other OpenReview venue ids that are this same workshop — organizers occasionally create a second group. Recorded so discovery skips them instead of re-creating a duplicate entry, and so the site keeps the merged entry's old URL alive as a redirect to this one."
     },
     "proceedings_url": {
       "type": "string",

@@ -1093,14 +1093,56 @@ URL listing its workshops, plus a data-driven FAQ. `getStaticPaths` iterates
 the status-rank comparator is defined inside it.)
 
 **Structured data (JSON-LD).** Pages emit schema.org metadata through a named
-`head` slot in `Base.astro`: each workshop page carries an `Event` (with its
-conference as `superEvent`) plus a `BreadcrumbList`; each hub carries a `FAQPage`
-plus a `BreadcrumbList`; the homepage carries a `Dataset` pointing at the
-`/api/workshops.json` download. This targets machine extraction and Google
-Dataset Search, not visual rich results — Google retired FAQ rich results in 2026
-and `Event` rich results need a venue the dataset doesn't store, so the markup
-earns its keep through AI extraction and Dataset eligibility. The visible HTML
-stays the source of truth for what a reader (or model) actually sees.
+`head` slot in `Base.astro`: each workshop page carries a `BreadcrumbList` and,
+when it can be complete, an `Event` (with its conference as `superEvent`); each
+hub carries a `FAQPage` plus a `BreadcrumbList`; the homepage carries a `Dataset`
+pointing at the `/api/workshops.json` download. This targets machine extraction
+and Google Dataset Search, not visual rich results — Google retired FAQ rich
+results in 2026, and the markup earns its keep through AI extraction and Dataset
+eligibility. The visible HTML stays the source of truth for what a reader (or
+model) actually sees.
+
+The `Event` is conditional because Google's validator requires both a
+`startDate` and a `location` and reports every Event lacking either as an
+error — which, when the markup was emitted unconditionally, meant 938 flagged
+pages (1,876 items: the nested `superEvent` is an Event too) burying anything
+real in the Search Console report. Invalid markup is ignored rather than
+penalised, so the fix is hygiene, but hygiene worth having. The two facts come
+straight from the entry — the raw `workshop_date` (never the derived fallbacks)
+and `locationLabel`, exactly as the page's own "Location" row shows it; nothing
+is inferred from sibling workshops, because structured data must describe what
+the page visibly says. Both fields are still sparse (`location` arrives with
+the OpenReview crawl; `workshop_date` is hand-entered), so today few pages
+carry an Event. Each gains it the moment its entry has both, with no code
+change.
+
+**Internal links between workshop pages.** Every workshop page ends with a
+"More {conference} {year} workshops" list — its neighbours on either side in
+the hub's own ordering (so every page in a conference-year of three or more is
+linked from at least two others, guaranteed rather than hoped) plus up to four
+that share a topic, six at most. Before this, over half of all workshop pages
+had exactly one incoming link, the hub, and the pages Google had discovered
+but never crawled were overwhelmingly those; a page linked from one place
+looks like a leaf. The list is `data-pagefind-ignore`, so a search for a
+workshop's name still returns only its own page. Not-running editions are
+never suggested as neighbours.
+
+**Index hygiene.** `site/src/lib/seo.mjs` is one list of pages that exist for a
+visitor mid-workflow rather than for a searcher — the `/alerts/` state pages
+and the browser-local `/saved/`. `Base.astro` gives each a
+`<meta name="robots" content="noindex,follow">` (and no canonical) and
+`astro.config.mjs` keeps the same URLs out of the sitemap, so the two signals
+can never disagree. `/alerts/` itself stays indexable: it is the feature's
+landing page. Old URLs are handled by Astro's `redirects` — instant
+meta-refresh stubs, since GitHub Pages cannot send a 301, which Google treats as
+permanent — and the map includes every slug a merged duplicate once had,
+derived from `merged_venue_ids` (`mergedSlugRedirects()` in
+`lib/workshops.mjs`), so a merge never strands a URL. Titles and descriptions
+drop the " · AI Workshop Tracker" suffix on hubs as they already did on
+workshop pages (it pushed the searched-for words past what a result shows),
+and sibling tracks of one workshop carry their track label in the description
+so no two pages publish the same one. `scripts/slug_redirects_test.mjs` pins
+the redirect derivation and the short-name rules.
 
 **`llms.txt`.** `/llms.txt` (`site/src/pages/llms.txt.ts`, a static endpoint like
 `rss.xml.ts`) is the [llms.txt](https://llmstxt.org/) summary: what the site is,
