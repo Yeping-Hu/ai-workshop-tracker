@@ -2,7 +2,8 @@
 import Base from '../../components/Base.astro';
 import AlertsSignup from '../../components/AlertsSignup.astro';
 import MarkdownExport from '../../components/MarkdownExport.astro';
-import { workshops, conferences, workshopShortName } from '../../lib/data';
+import ConferenceWorkshopList from '../../components/ConferenceWorkshopList.astro';
+import { workshops, conferences } from '../../lib/data';
 import { href, REPO_URL } from '../../lib/site';
 
 // One hub page per conference, generated from the same data the rest of the
@@ -10,6 +11,13 @@ import { href, REPO_URL } from '../../lib/site';
 // so these pages stay out of the workshop/paper search index (they're
 // navigation/overview, not search results). They join the sitemap
 // automatically via @astrojs/sitemap.
+//
+// The hub lists its latest year in full (and any earlier year that still has
+// an open call) and summarises the rest with a link to that year's own page,
+// /conference/<id>/<year>/. Two pages publishing the same 240-row list would
+// compete with each other for "neurips 2025 workshops"; this way the hub
+// answers "<conf> workshops" and each year page answers "<conf> <year>
+// workshops", and both link to the other.
 export function getStaticPaths() {
   // status order for listings: open call -> unknown -> past -> not running
   const rank = (w: any) =>
@@ -58,6 +66,23 @@ for (const w of list) {
   byYear.get(w.year)!.push(w);
 }
 const yearGroups = [...byYear.entries()].sort((a, b) => b[0] - a[0]);
+// Which years the hub lists row by row: the latest, plus any that still has
+// an open call (a reader arriving here is looking for something to submit
+// to). Everything else is a one-line summary pointing at the year page.
+const inFull = (year: number, ws: any[]) => year === yearMax || ws.some((w) => w.statusLabel === 'Open call');
+
+// A conference hub answers "where is this?" differently depending on the
+// conference. NeurIPS 2026 is split across Sydney, Paris and Atlanta, so
+// each workshop needs its own marker. ECCV 2026 is entirely in Malmö —
+// repeating that on all 81 rows would be noise, but saying it nowhere
+// leaves the reader of a page *about ECCV* still not knowing. So it is
+// said once, in the heading.
+const sharedLocation = (ws: any[]) => {
+  const labels = ws.map((w: any) => w.locationLabel).filter(Boolean);
+  return !ws.some((w: any) => w.locationDistinguishes) && labels.length && new Set(labels).size === 1
+    ? labels[0]
+    : null;
+};
 
 const SITE = Astro.site;
 const abs = (p: string) => (SITE ? new URL(href(p), SITE).href : href(p));
@@ -68,11 +93,11 @@ const span =
 // <title> and meta description. The suffix " · AI Workshop Tracker" is dropped
 // here as it is on workshop pages: with it, every hub title ran 60–75
 // characters and Semrush flagged all nine as too long, and the words a
-// searcher types ("neurips workshops 2026 deadlines") were the ones being cut.
-// The year is the tracked range, not just the latest: the page really does
-// cover 2024–2026, and "neurips 2025 workshops" is a query too. The full
-// conference name stays out of the description — it ate 60 characters of a
-// 160-character snippet and the H1 area already spells it out.
+// searcher types were the ones being cut. The year range lives in the
+// description, not the title: "neurips 2025 workshops" is the year page's
+// query now, and this page's is "neurips workshops". The full conference name
+// stays out of the description — it ate 60 characters of a 160-character
+// snippet and the H1 area already spells it out.
 const yearRange =
   yearMin && yearMax ? (yearMin === yearMax ? String(yearMax) : `${yearMin}–${yearMax}`) : '';
 const intro =
@@ -128,27 +153,10 @@ const breadcrumbLd = {
     { '@type': 'ListItem', position: 2, name: `${confName} workshops`, item: pageUrl },
   ],
 };
-
-const statusPill = (w: any) =>
-  w.statusLabel === 'Open call'
-    ? 'upcoming'
-    : w.statusLabel === 'Deadline unknown'
-      ? 'unknown'
-      : w.statusLabel === 'Not running'
-        ? 'not_running'
-        : 'past';
-// "Deadline unknown" is nearly twice the width of the other labels, which made
-// its pill dominate the row. Break it across two lines at its existing space.
-// Done by splitting the words rather than with a max-width, so the wrap point is
-// exact and can't shift with font metrics.
-const statusLines = (w: any): string[] =>
-  statusPill(w) === 'unknown' ? String(w.statusLabel).split(' ') : [String(w.statusLabel)];
-// ^ only "Deadline unknown" splits: "Not running" is comfortably narrower than
-//   the widest single-line label already in use.
 ---
 
 <Base
-  title={`${confName} Workshops${yearRange ? ` ${yearRange}` : ''} — Deadlines & Accepted Papers`}
+  title={`${confName} Workshops — Deadlines & Accepted Papers`}
   description={
     `${confName} workshop submission deadlines, dates, topics, official websites, and accepted papers` +
     (yearRange ? `, ${yearRange}` : '') +
@@ -170,6 +178,14 @@ const statusLines = (w: any): string[] =>
       <span><strong>{paperTotal.toLocaleString('en-US')}</strong> papers</span>
       <span><strong>{openCalls.length}</strong> open calls</span>
     </div>
+    {yearGroups.length > 1 && (
+      <p class="conf-years-nav muted small">
+        By year:{' '}
+        {yearGroups.map(([year], i) => (
+          <Fragment>{i > 0 ? ' · ' : ''}<a href={href(`/conference/${conf.id}/${year}/`)}>{confName} {year}</a></Fragment>
+        ))}
+      </p>
+    )}
   </section>
 
   {/* Conference hubs are where most visitors arrive from search, so the offer
@@ -178,60 +194,30 @@ const statusLines = (w: any): string[] =>
   <AlertsSignup collapsed tight />
 
   {yearGroups.map(([year, ws]) => {
-    // A conference hub answers "where is this?" differently depending on the
-    // conference. NeurIPS 2026 is split across Sydney, Paris and Atlanta, so
-    // each workshop needs its own marker. ECCV 2026 is entirely in Malmö —
-    // repeating that on all 81 rows would be noise, but saying it nowhere
-    // leaves the reader of a page *about ECCV* still not knowing. So it is
-    // said once, in the heading.
-    const labels = ws.map((w: any) => w.locationLabel).filter(Boolean);
-    const sharedLocation =
-      !ws.some((w: any) => w.locationDistinguishes) && labels.length && new Set(labels).size === 1
-        ? labels[0]
-        : null;
-    return (
-    <section class="conf-year">
-      <h2>{confName} {year}{sharedLocation && <span class="conf-year-where"> · {sharedLocation}</span>}</h2>
-      <MarkdownExport
-        exportUrl={href(`/exports/${conf.id}-${year}-workshops.md`)}
-        filename={`${conf.id}-${year}-workshops.md`}
-      />
-      <ul class="conf-ws-list">
-        {ws.map((w) => (
-          <li>
-            <span class={`pill ${statusPill(w)}`}>{statusLines(w).map((line, i) => <Fragment>{i > 0 && <br />}{line}</Fragment>)}</span>
-            <div class="ws-head">
-              <a href={href(`/workshop/${w.slug}/`)}>{workshopShortName(w, confName).full}</a>
-              {/* Same control as the board and the workshop page — this list was
-                  the only place a visitor could not save without opening the
-                  entry first. Always rendered, never hover-revealed: most of the
-                  traffic here is phones, where there is no hover. */}
-              <button
-                class="star-btn"
-                type="button"
-                data-star-ws={w.slug}
-                aria-pressed="false"
-                aria-label={`Save ${workshopShortName(w, confName).full}`}
-              >☆</button>
-              {w.deadlineWallClock && (
-                <span class="muted mono small">{w.statusLabel === 'Open call' ? 'due ' : ''}{w.deadlineWallClock}</span>
-              )}
-              {w.abstractDeadlineWallClock && (
-                <span class={`mono small ${w.abstractDeadlinePassed ? 'muted' : 'abs-open'}`}
-                >· abstract {w.abstractDeadlinePassed ? 'closed ' : 'by '}{w.abstractDeadlineWallClock}</span>
-              )}
-              {w.paperCount > 0 && <span class="muted small">· {w.paperCount} papers</span>}
-              {/* Only where the conference is genuinely split; otherwise the
-                  year heading above has already said it once. */}
-              {w.locationDistinguishes && <span class="ws-where small">{w.locationLabel}</span>}
-            </div>
-            {w.name && w.name !== workshopShortName(w, confName).full && (
-              <div class="ws-full">{w.name}</div>
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
+    const where = sharedLocation(ws);
+    const yearUrl = href(`/conference/${conf.id}/${year}/`);
+    const open = ws.filter((w: any) => w.statusLabel === 'Open call').length;
+    const papers = ws.reduce((n: number, w: any) => n + (w.paperCount ?? 0), 0);
+    return inFull(year, ws) ? (
+      <section class="conf-year">
+        <h2><a href={yearUrl}>{confName} {year}</a>{where && <span class="conf-year-where"> · {where}</span>}</h2>
+        <MarkdownExport
+          exportUrl={href(`/exports/${conf.id}-${year}-workshops.md`)}
+          filename={`${conf.id}-${year}-workshops.md`}
+        />
+        <ConferenceWorkshopList workshops={ws} confName={confName} />
+        <p class="muted small"><a href={yearUrl}>{confName} {year} workshops: dates, deadlines and FAQ →</a></p>
+      </section>
+    ) : (
+      <section class="conf-year conf-year-summary">
+        <h2><a href={yearUrl}>{confName} {year}</a>{where && <span class="conf-year-where"> · {where}</span>}</h2>
+        <p class="muted">
+          {ws.length} workshop{ws.length === 1 ? '' : 's'}
+          {papers > 0 && <Fragment> · {papers.toLocaleString('en-US')} accepted papers</Fragment>}
+          {open > 0 && <Fragment> · {open} open call{open === 1 ? '' : 's'}</Fragment>}
+          {' · '}<a href={yearUrl}>All {confName} {year} workshops →</a>
+        </p>
+      </section>
     );
   })}
 
@@ -253,38 +239,12 @@ const statusLines = (w: any): string[] =>
 
   <style>
     .conf-intro { font-size: 1.04rem; line-height: 1.55; color: var(--muted); max-width: 48rem; margin: 0.4rem 0 1rem; }
+    .conf-years-nav { margin: 0.8rem 0 0; }
     .conf-year { margin: 1.6rem 0; }
-    .conf-ws-list { list-style: none; padding: 0; margin: 0.6rem 0; display: grid; row-gap: 0.75rem; }
-    /* Per-row two-column grid: the row's own pill, then the workshop. The pill
-       column is sized to that row's pill, so the acronym sits directly beside it
-       (0.5rem, as in the original flex row) — rows with different status labels
-       deliberately do NOT share a column. The title caption goes in the second
-       column's second row, so it starts exactly where its own acronym starts. */
-    .conf-ws-list li {
-      display: grid; grid-template-columns: max-content 1fr;
-      column-gap: 0.5rem; row-gap: 0.15rem; align-items: baseline;
-    }
-    .conf-ws-list li > .pill { grid-row: 1; grid-column: 1; justify-self: start; }
-    /* A two-line pill is taller than the acronym beside it, and in row 1 alone that
-       extra height inflated the row and pushed the title caption ~13px further down
-       than on single-line rows. Spanning both rows lets the height be absorbed
-       across them instead, so the caption sits the same distance below the acronym
-       whatever the status label. Only where a caption exists, so rows without one
-       keep their natural height. */
-    .conf-ws-list li:has(.ws-full) > .pill { grid-row: 1 / span 2; align-self: start; }
-    /* Two-line label: centre it and tighten the leading so the pill stays compact. */
-    .conf-ws-list li > .pill.unknown { text-align: center; line-height: 1.2; }
-    /* Make it exactly as wide as the "Open call" pill without hard-coding a
-       measurement: an invisible zero-height copy of that label sets the pill's
-       intrinsic width, so it is rendered in the same font, size and
-       letter-spacing and matches at any zoom or font fallback. */
-    .conf-ws-list li > .pill.unknown::after {
-      content: "Open call";
-      display: block; height: 0; overflow: hidden; visibility: hidden;
-    }
-    .conf-ws-list .ws-head { grid-row: 1; grid-column: 2; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
-    .conf-ws-list .ws-full { grid-row: 2; grid-column: 2; color: var(--muted); font-size: 0.83rem; line-height: 1.4; max-width: 60rem; }
-    .conf-ws-list .abs-open { color: var(--warn); }
+    .conf-year h2 a { color: inherit; text-decoration: none; }
+    .conf-year h2 a:hover { text-decoration: underline; }
+    .conf-year-summary { margin: 1.2rem 0; }
+    .conf-year-summary p { margin: 0.2rem 0 0; }
     .conf-faq { margin: 2.4rem 0; max-width: 48rem; }
     .conf-faq dt { font-weight: 600; margin-top: 1rem; }
     .conf-faq dd { margin: 0.3rem 0 0; color: var(--muted); }
