@@ -601,18 +601,16 @@ const related = picked.map((o: any) => ({
     {related.length > 0 && (
       <section data-pagefind-ignore>
         <h2>More {conf.name} {w.year} workshops</h2>
-        <ul class="tracks-list">
+        {/* Four columns shared by every row — label, name, deadline, state —
+            so the names start on one edge and the dates end on one, whatever
+            the label's width. A flex row per item left every column ragged. */}
+        <ul class="related-list">
           {related.map((r) => (
-            <li class="related-row">
-              <span class="track-name"><a href={href(`/workshop/${r.slug}/`)}>{r.label}</a></span>
+            <li>
+              <span class="related-label"><a href={href(`/workshop/${r.slug}/`)}>{r.label}</a></span>
               <span class="related-name">{r.name}</span>
-              {r.deadline ? (
-                <span class={`related-when${r.open ? '' : ' muted'}`}>
-                  <span class="mono">{r.deadline}</span>{r.open ? '' : ' · closed'}
-                </span>
-              ) : (
-                <span class="related-when muted">deadline not yet announced</span>
-              )}
+              <span class={`related-when mono${r.open ? '' : ' muted'}`}>{r.deadline ?? 'TBA'}</span>
+              <span class="related-state muted small">{r.deadline && !r.open ? 'closed' : ''}</span>
             </li>
           ))}
         </ul>
