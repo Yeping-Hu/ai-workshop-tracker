@@ -93,6 +93,15 @@ function check(label, ok, detail = '') {
     fam('NeurIPS.cc/2026/Workshop/IAB_Competition_Paper_Track').key.endsWith('/iab')
       && fam('NeurIPS.cc/2026/Workshop/IAB_Competition_Paper_Track').suffixLabel === 'Competition Paper Track');
   check('HOW_Non-Proceedings_Track', fam('thecvf.com/CVPR/2026/Workshop/HOW_Non-Proceedings_Track').key.endsWith('/how'));
+  // "Demo" is the short form organisers actually register (ESR_Demo_Track);
+  // without it in the vocabulary only `_Track` came off, the stem was `ESR_Demo`,
+  // and the sibling's label read as a bare "Track".
+  check('ESR_Demo_Track strips both words',
+    fam('NeurIPS.cc/2026/Workshop/ESR_Demo_Track').key.endsWith('/esr')
+      && fam('NeurIPS.cc/2026/Workshop/ESR_Demo_Track').suffixLabel === 'Demo Track',
+    JSON.stringify(fam('NeurIPS.cc/2026/Workshop/ESR_Demo_Track')));
+  check('...so it shares a stem with ESR_Paper_Track',
+    fam('NeurIPS.cc/2026/Workshop/ESR_Demo_Track').key === fam('NeurIPS.cc/2026/Workshop/ESR_Paper_Track').key);
   check('CV4CHL_Non-proceeding', fam('thecvf.com/CVPR/2026/Workshop/CV4CHL_Non-proceeding').key.endsWith('/cv4chl'));
   check('DDADS_Track_1 (numbered track)',
     fam('thecvf.com/CVPR/2025/Workshop/DDADS_Track_1').key.endsWith('/ddads')
@@ -105,6 +114,9 @@ function check(label, ok, detail = '') {
   check('a plain venue id is its own stem, with no label',
     fam('NeurIPS.cc/2025/Workshop/NeurReps').suffixLabel === null);
   check('GenSign is not stripped', fam('thecvf.com/CVPR/2026/Workshop/GenSign').key.endsWith('/gensign'));
+  check('DemoDiv is a name, not a demo suffix', fam('thecvf.com/CVPR/2025/Workshop/DemoDiv').key.endsWith('/demodiv'));
+  check('a workshop named DEMO keeps its name',
+    fam('ICML.cc/2026/Workshop/DEMO').key.endsWith('/demo') && fam('ICML.cc/2026/Workshop/DEMO').suffixLabel === null);
   check('a stem is never emptied',
     fam('NeurIPS.cc/2026/Workshop/Competition').key.endsWith('/competition'),
     'a workshop named Competition is a name, not a suffix of nothing');
