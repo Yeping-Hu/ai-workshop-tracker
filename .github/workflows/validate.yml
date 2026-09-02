@@ -91,6 +91,8 @@ jobs:
         run: node scripts/issue_form_test.mjs
       - name: Test location normalization
         run: node scripts/location_test.mjs
+      - name: Test merged-venue redirects and short-name titles
+        run: node scripts/slug_redirects_test.mjs
       - name: Test the OpenReview rate limiter
         run: node scripts/openreview_rate_test.mjs
       - name: Validate workshop data

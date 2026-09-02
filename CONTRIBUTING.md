@@ -42,7 +42,7 @@ One YAML file per workshop **edition** (same series ⇒ new file each year).
 | `notification_date` |  | `YYYY-MM-DD` |
 | `workshop_date` |  | `YYYY-MM-DD` |
 | `openreview_venue_id` |  | e.g. `NeurIPS.cc/2026/Workshop/MATH-AI`. Does two jobs: it enables the automatic paper list, and its trailing short name is how a workshop is recognised as **the same series** year to year, which is what puts "Other editions" on the page. Worth filling in even for a workshop whose papers are elsewhere — without it an entry links to no other edition |
-| `merged_venue_ids` |  | Other OpenReview ids that are this *same* workshop, when organizers created a second group. Recorded so discovery skips them rather than re-creating a duplicate entry |
+| `merged_venue_ids` |  | Other OpenReview ids that are this *same* workshop, when organizers created a second group. Recorded so discovery skips them rather than re-creating a duplicate entry, and so the merged entry's old `/workshop/…/` URL redirects here instead of returning 404 |
 | `proceedings_url` |  | Accepted-papers page for non-OpenReview workshops |
 | `submission_portal` |  | `openreview` \| `cmt` \| `email` \| `other` \| `unknown` |
 | `submission_url` |  | Where authors actually submit, when that is **not** OpenReview — a CMT site, a Google Form, an EasyChair track. An `openreview_venue_id` already links itself, so leave this empty for those. Without it a `cmt` portal renders as the bare word "CMT" with nothing to click. |

@@ -65,6 +65,16 @@ const pageUrl = SITE ? new URL(Astro.url.pathname, SITE).href : href(`/conferenc
 
 const span =
   yearMin && yearMax ? (yearMin === yearMax ? ` from ${yearMin}` : ` from ${yearMin} to ${yearMax}`) : '';
+// <title> and meta description. The suffix " · AI Workshop Tracker" is dropped
+// here as it is on workshop pages: with it, every hub title ran 60–75
+// characters and Semrush flagged all nine as too long, and the words a
+// searcher types ("neurips workshops 2026 deadlines") were the ones being cut.
+// The year is the tracked range, not just the latest: the page really does
+// cover 2024–2026, and "neurips 2025 workshops" is a query too. The full
+// conference name stays out of the description — it ate 60 characters of a
+// 160-character snippet and the H1 area already spells it out.
+const yearRange =
+  yearMin && yearMax ? (yearMin === yearMax ? String(yearMax) : `${yearMin}–${yearMax}`) : '';
 const intro =
   `This page tracks ${list.length} ${confName} workshop edition${list.length === 1 ? '' : 's'}${span}, ` +
   `with ${paperTotal.toLocaleString('en-US')} accepted papers. ` +
@@ -138,12 +148,13 @@ const statusLines = (w: any): string[] =>
 ---
 
 <Base
-  title={`${confName} Workshops${yearMax ? ` ${yearMax}` : ''} — Submission Deadlines & Papers`}
+  title={`${confName} Workshops${yearRange ? ` ${yearRange}` : ''} — Deadlines & Accepted Papers`}
   description={
-    `Submission deadlines, dates, and accepted papers for ${confFull} (${confName}) workshops` +
-    (yearMin && yearMax ? (yearMin === yearMax ? `, ${yearMax}` : `, ${yearMin}–${yearMax}`) : '') +
-    `. ${list.length} editions and ${paperTotal.toLocaleString('en-US')} papers tracked.`
+    `${confName} workshop submission deadlines, dates, topics, official websites, and accepted papers` +
+    (yearRange ? `, ${yearRange}` : '') +
+    `. ${list.length} editions and ${paperTotal.toLocaleString('en-US')} papers tracked, updated daily.`
   }
+  siteSuffix={false}
 >
   <Fragment slot="head">
     <script is:inline type="application/ld+json" set:html={JSON.stringify(faqLd)} />

@@ -39,7 +39,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, loadConferences, stripVenueFromName, cleanAcronym, normalizeAcronym, isNotRunning } from '../lib/workshops.mjs';
+import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, loadConferences, stripVenueFromName, cleanAcronym, normalizeAcronym, isNotRunning, slugify } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 import { openreviewFetch, recordUnverified, getUnverified } from '../lib/openreview.mjs';
 
@@ -336,8 +336,8 @@ export function parseGroupAbstractDeadline(dateStr) {
   return parseLabelledDate(dateStr, 'Abstract Registration');
 }
 
-const slugify = (s) =>
-  String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'workshop';
+// `slugify` comes from lib/workshops.mjs: mergedSlugRedirects() there must
+// reproduce exactly the file name chosen here, so there is one definition.
 
 /** Convert an OpenReview epoch-ms duedate to our deadline shape, always as
  *  exact UTC so every stored deadline shares one timezone (the instant is the

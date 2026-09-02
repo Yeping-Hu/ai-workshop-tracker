@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import { SITE_NAME, SITE_TAGLINE, REPO_URL, CALENDAR_ENABLED, SUPPORT_URL, ALERTS_API, href } from '../lib/site';
 import { conferences } from '../lib/data';
+import { isNoindex } from '../lib/seo.mjs';
 
 interface Props {
   title?: string;
@@ -16,12 +17,22 @@ interface Props {
    * a separate field from the title.
    */
   siteSuffix?: boolean;
+  /**
+   * Keep this page out of search results (`noindex,follow`). Defaults to the
+   * shared list in lib/seo.mjs — the alerts workflow states and /saved/ — so a
+   * page never has to know it is one of them; pass it explicitly only for a
+   * one-off. The same list keeps these URLs out of the sitemap.
+   */
+  noindex?: boolean;
 }
 const { title, description = SITE_TAGLINE, ogType = 'website', siteSuffix = true } = Astro.props;
+const noindex = Astro.props.noindex ?? isNoindex(Astro.url.pathname, import.meta.env.BASE_URL);
 const pageTitle = title
   ? (siteSuffix ? `${title} · ${SITE_NAME}` : title)
   : `${SITE_NAME} — AI workshop deadlines & papers`;
-const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : undefined;
+// A noindex page gets no canonical: "index this URL as itself" and "do not
+// index this" are contradictory signals, and Google says to pick one.
+const canonical = Astro.site && !noindex ? new URL(Astro.url.pathname, Astro.site).href : undefined;
 
 // /changes/ is deliberately NOT here. It is the published edition of the weekly
 // digest, and a nav entry would offer the newsletter's content as a destination
@@ -85,6 +96,7 @@ const ALERTS_BOOTSTRAP = `
     {ALERTS_API && <meta name="alerts-api" content={ALERTS_API} />}
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex,follow" />}
     {canonical && <link rel="canonical" href={canonical} />}
     <link rel="icon" type="image/svg+xml" href={href('/favicon.svg')} />
     <link rel="icon" type="image/png" sizes="32x32" href={href('/icon-32.png')} />
