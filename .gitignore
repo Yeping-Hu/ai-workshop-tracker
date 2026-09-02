@@ -14,3 +14,6 @@ site/dist/
 .dev.vars
 .wrangler/
 alerts/worker/node_modules/
+
+# Astro's per-machine update-check timestamp; the generated types beside it stay tracked
+site/.astro/settings.json
