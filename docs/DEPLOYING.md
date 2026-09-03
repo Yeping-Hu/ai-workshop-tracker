@@ -27,7 +27,8 @@ Forking without the custom domain? In `deploy.yml`, set `SITE_URL` to `https://<
 |---|---|---|---|
 | `SITE_URL` | site build | Canonical origin (sitemap, RSS, OG tags) | `https://ai-workshop-tracker.pages.dev` |
 | `SITE_BASE` | site build | Path prefix for GitHub *project* pages | `/` |
-| `PUBLIC_REPO_URL` | site build | "Edit"/"Add a workshop" links | placeholder — **set this** |
+| `PUBLIC_REPO_URL` | site build | "Edit"/"Add a workshop" links | the upstream repo — **set this on a fork**, or its edit links point at upstream |
+| `BUILD_ID` | site build | Stamped into every page and `/version.json`; a back/forward-cache page from an older build reloads itself once when they differ | `dev` — CI passes the commit SHA |
 | `PUBLIC_GOATCOUNTER` | site build | Enables [GoatCounter](https://www.goatcounter.com) analytics (set to your site code; repo Action variable `GOATCOUNTER_CODE` — currently enabled as `aiworkshoptracker`) | off |
 | `PUBLIC_CF_ANALYTICS_TOKEN` | site build | Enables Cloudflare Web Analytics (repo Action variable `CF_ANALYTICS_TOKEN`) | off |
 | `PUBLIC_ALERTS_API` | site build | Base URL of the alerts Worker. **Empty ⇒ every email-alerts UI element is absent from the build** | off |

@@ -29,13 +29,13 @@ change here, confirm:
       `node scripts/docs_sync_test.mjs`,
       `node scripts/validate.mjs`, and the gated UI suite (§4).
 
-These four files are the ones that historically fall behind. The two
-`*_test.mjs` guards run in `.github/workflows/validate.yml` on every push.
+These four files are the ones that historically fall behind. The three
+`*_test.mjs` guards run in `.github/workflows/validate.yml` on every push;
+`npm test` runs every standalone suite locally.
 
 ## 0. Environment
 
-If `/home/claude/ml-workshop-tracker` (or another checkout) already exists in
-this session, use it. Otherwise:
+If a checkout of the repo already exists in this session, use it. Otherwise:
 
 ```bash
 git clone https://github.com/Yeping-Hu/ai-workshop-tracker.git
@@ -114,6 +114,12 @@ done
 node scripts/validate.mjs
 ```
 
+Add a `data/editions.yml` row for each imported year now (`{conference, year,
+end, optional start/source}` — from the official site). It is what flips a
+deadline-less workshop to "Past" the day the conference ends; without it the
+status falls back to the blunter `typical_month`, and `validate.mjs` warns about
+every tracked current/future year that lacks one.
+
 Lines like `(skipped N archival/non-archival track twin(s))` are normal —
 workshops often register duplicate track venues and discovery merges them.
 
@@ -181,19 +187,24 @@ list appears in the features bullet **in the dropdown's order** (plain JS
 "across all N conferences" and the edition count.
 
 Run the UI suite **gated on the real exit code** — never on a pipeline's
-tail status (that masking once let a red suite push):
+tail status (that masking once let a red suite push). Serve the build with
+`astro preview`, exactly as `pr-build-check.yml` does: Pagefind fetches its
+index chunks in parallel and a single-threaded `python -m http.server` stalls
+on them, producing intermittent red that means nothing.
 
 ```bash
-(nohup python3 -m http.server 4321 -d site/dist > /tmp/http.log 2>&1 &); sleep 1
-node scripts/ui_test.mjs > /tmp/suite.log 2>&1; EXIT=$?
-tail -2 /tmp/suite.log
+npm test                                                 # every standalone suite
+(npm run preview --prefix site > /tmp/preview.log 2>&1 &); sleep 2
+node scripts/ui_test.mjs http://localhost:4321 > /tmp/suite.log 2>&1; EXIT=$?
+tail -2 /tmp/suite.log; pkill -f "astro preview"
 # if EXIT != 0: read the ✗ lines, fix, rerun. Push ONLY on green:
 git add -A && git commit -m "feat: add <NAME> (<n> editions)" && git push
 ```
 
 The deploy workflow publishes automatically on push (~2 min). The weekly
-Tuesday discovery keeps importing new venues and backfilling deadlines for
-this conference forever after — no further action.
+Sunday discovery keeps importing new venues and backfilling deadlines for
+this conference forever after, and the daily deadline jobs pick it up the
+same day — no further action.
 
 ## 5. Optional: announcement draft
 
@@ -229,11 +240,6 @@ season is when the site spreads.
 - The eyebrow ↔ dropdown order is pinned by a test; both use plain `.sort()`.
 - Prefer `add_conference.mjs` over manual edits; verify anchors if you must
   hand-edit, and `assert` before replacing.
-- Add a `data/editions.yml` row per imported year ({conference, year, end,
-  optional start/source — use the official site}). It flips deadline-unknown
-  workshops to "Past" the day the conference ends; without it, status falls
-  back to the blunter `typical_month`. `validate.mjs` warns about tracked
-  current/future years that lack a row.
 - Updating this skill: the canonical copy lives in the repo at
   `skills/add-conference/`; if you change it, offer the user a fresh zip for
   their claude.ai upload so the two copies don't drift.

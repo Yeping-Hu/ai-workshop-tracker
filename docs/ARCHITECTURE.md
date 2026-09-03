@@ -662,7 +662,7 @@ Pinned by `scripts/abstract_deadline_test.mjs`.
 
 Every entry whose deadline the automation touches accumulates a
 `deadline_history` of `{ value, recorded, timezone }`, oldest first, appended by
-all seven write sites (see AUTOMATION.md). It answers "did this move, and when did
+all nine write sites (see AUTOMATION.md, "Every deadline write is logged"). It answers "did this move, and when did
 we notice?" without a database.
 
 Three deliberate constraints:
@@ -837,7 +837,7 @@ provider cutover — is in [ALERTS.md](ALERTS.md).
 
 ## External links open a new tab; internal navigation stays in place
 
-A single delegated, click-time handler in the base layout decides link targets
+A single delegated, click-time handler in `site/src/components/Base.astro` decides link targets
 by **host**. A link to a different host (a workshop's own website, an arXiv or
 OpenReview PDF) opens in a **new tab**, so the tracker stays available behind it;
 a link within the site (a workshop page, a nested paper anchor, the saved list)
@@ -925,8 +925,10 @@ stripping a venue year the label already carries. Over the corpus that is 566
 workshops showing an acronym and 355 not, and it is what stops a stem like
 `NeurReps_Extended_Abstracts` reaching an inbox as though it were one. The rule
 is pure and lives in `lib/` because the Worker bundles it and the site imports
-it; `alerts-worker-deploy.yml` therefore triggers on that file as well as
-`alerts/**`.
+it; `alerts-worker-deploy.yml` therefore triggers on that file (and on
+`lib/events.mjs`, which the digest also bundles) as well as `alerts/**`, and
+`alerts-ci.yml` runs the suites on the same paths so a lib change cannot ship
+an untested Worker.
 
 ### `/changes/` — the same week, as a public page
 

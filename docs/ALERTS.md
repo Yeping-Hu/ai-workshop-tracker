@@ -6,8 +6,9 @@ alerts satellite. For *why* it is built this way, see the "Email alerts
 original design decisions, [the original plan](plans/email-alerts.md).
 
 The one-line summary: **the tracker does not depend on this.** Delete `alerts/`,
-the two alerts workflows and the `PUBLIC_ALERTS_API` build variable, and the
-site is exactly what it was.
+the three alerts workflows and the `PUBLIC_ALERTS_API` build variable, and the
+site is what it was — except `/changes/`, which is fed by this job and would
+render its empty state (see the removal list at the end).
 
 ## Current deployment
 
@@ -78,7 +79,7 @@ reports "unverified".
 | Worker | `alerts/worker/` | Cloudflare Worker `aiwt-alerts` + D1 database `aiwt-alerts` |
 | Pipeline | `scripts/alerts_run.mjs` | Run daily by `.github/workflows/alerts.yml` |
 | Site UI | `site/src/components/AlertsSignup.astro`, `site/src/pages/alerts/` | All hidden when `PUBLIC_ALERTS_API` is empty |
-| Tests | `scripts/alerts_*_test.mjs` | Run by `.github/workflows/alerts-ci.yml` |
+| Tests | `scripts/alerts_*_test.mjs` | The pure-logic suites run in `.github/workflows/alerts-ci.yml`; `alerts_ui_test.mjs` needs a built site and runs in `pr-build-check.yml` |
 
 ## First-time setup
 
@@ -111,6 +112,16 @@ repo needs editing except `database_id`.
 
 4. **Repo secrets:** `ALERTS_API_BASE` (the Worker's URL, no trailing slash),
    `ALERTS_ADMIN_TOKEN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`.
+   The pipeline reads the feed from `SITE_ORIGIN` in `alerts/config.mjs`;
+   `WORKSHOPS_JSON_URL` overrides that for a local run against a preview.
+
+4b. **Worker vars** (`[vars]` in `alerts/worker/wrangler.toml`, all public
+   identifiers): `SITE_ORIGIN` (links in every email), `MAIL_FROM` (the sender;
+   the site's `ALERTS_FROM` in `site/src/lib/site.ts` must match it, since the
+   signup copy is display text with no view of the Worker), `GOATCOUNTER_SITE`
+   (which site the dashboard's traffic section reads — pairs with the
+   `GOATCOUNTER_TOKEN` secret), and `ACCESS_TEAM` / `ACCESS_AUD` (the dashboard
+   lock, see below).
 
 5. **Build variables** in the site's build environment: `PUBLIC_ALERTS_API` and
    `PUBLIC_TURNSTILE_SITE_KEY`. Until these are set, the site builds with no
@@ -638,8 +649,14 @@ backstop against a signup flood; it is not the provider limit.
 2. Delete `.github/workflows/alerts.yml`, `alerts-worker-deploy.yml`, `alerts-ci.yml`.
 3. `npx wrangler delete` the Worker and drop the D1 database.
 4. Delete `alerts/`, `scripts/alerts_*`, `scripts/gen_alerts_ids.mjs`,
-   `site/src/components/AlertsSignup.astro`, `site/src/pages/alerts/`, and the
-   sync block in `site/src/scripts/favorites.js`.
+   `site/src/components/AlertsSignup.astro`, `site/src/pages/alerts/`,
+   `site/src/scripts/alerts-session.js`, `site/src/scripts/star-merge.js`, and
+   the sync block in `site/src/scripts/favorites.js`.
+5. Decide about `/changes/`. `site/src/pages/changes.astro` renders
+   `data/changes.json`, which only this job writes; with the job gone the page
+   shows its empty state forever. Either delete the page together with
+   `data/changes.json`, `scripts/validate_changes_feed.mjs` and
+   `scripts/changes_feed_test.mjs`, or keep the file as the last published week.
 
 Nothing else references them. Saved lists in visitors' browsers keep working —
 they never depended on the server.

@@ -56,8 +56,9 @@ export const RL_NEW_SUBS_PER_DAY = 200;
 export const SEND_CHUNK = 50;
 
 /** Events older than this are pruned by the daily maintenance call. The weekly
- *  digest only ever looks back 7 days; the rest is history for a future
- *  /changes/ page (site/src/pages/changes.astro, fed by data/changes.json). */
+ *  digest only ever looks back 7 days, and the /changes/ page shows the same
+ *  week (site/src/pages/changes.astro, fed by data/changes.json); the rest is
+ *  history for diagnosis. */
 export const EVENT_RETENTION_DAYS = 90;
 
 /** Public site origin — the canonical base for every link in an email. */

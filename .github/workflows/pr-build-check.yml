@@ -44,6 +44,10 @@ jobs:
             package-lock.json
             site/package-lock.json
       - run: npm ci
+      # Before `npm ci --prefix site`, so a lockfile with dangling records fails
+      # with a named cause rather than npm's generic "not in sync".
+      - name: Check both lockfiles are self-consistent
+        run: node scripts/lockfile_test.mjs
       - name: Validate data
         run: node scripts/validate.mjs
       - run: npm ci --prefix site

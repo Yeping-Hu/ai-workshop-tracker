@@ -15,7 +15,7 @@ acronym: ""                    # short name, e.g. "MATH-AI"; leave "" if none.
                                # automatically from openreview_venue_id.
 conference: neurips            # (required) one of the ids in data/conferences.yml
 year: 2026                     # (required)
-website: "https://"            # (required) official workshop website
+website: "https://"            # official workshop website — strongly recommended; leave unset only if none exists yet
 # location: "Sydney, Australia" # (optional) filled by the weekly OpenReview sync
 topics: [other]                # (required) 1-5 ids from data/topics.yml
 

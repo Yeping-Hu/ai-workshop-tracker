@@ -28,9 +28,9 @@ One YAML file per workshop **edition** (same series ⇒ new file each year).
 |---|---|---|
 | `name` | ✅ | Full official name, **without the conference or year** — "Workshop on Machine Learning for Health", not "NeurIPS 2026 Workshop on Machine Learning for Health". Every page that shows a name already says which conference-year it belongs to. Submitted either way: a leading `<CONF> <YEAR>` and a trailing `@ <CONF> <YEAR>` are removed automatically |
 | `acronym` |  | Short name; `""` if none. Leave the conference and year out (`MATH-AI`, not `MATH-AI @ NeurIPS 2026`) — an "acronym" that is only the venue is dropped. Don't hand-write a track suffix either: sibling tracks are labelled automatically from `openreview_venue_id`, so a `…/CVEU_Extended_Abstract_Track` venue already renders as "CVEU (Extended Abstract Track)" and a parenthetical typed here would be shown twice |
-| `conference` | ✅ | An id from `data/conferences.yml` (`icml`, `iclr`, `neurips`) |
+| `conference` | ✅ | An id from `data/conferences.yml` (nine today — `neurips`, `icml`, `iclr`, `cvpr`, `eccv`, `corl`, `icra`, `iros`, `colm`) |
 | `year` | ✅ | Integer |
-| `website` | ✅ | Full `http(s)` URL |
+| `website` | — | Full `http(s)` URL. Strongly recommended, and the add form requires it; leave it unset only when the workshop has no site yet — the page then shows a "help us add it" prompt and `validate.mjs` warns rather than fails. The weekly OpenReview sync fills a blank one when the venue publishes it |
 | `location` | — | Where it takes place, e.g. `Sydney, Australia`. Maintained by the weekly OpenReview sync; spellings are tidied for display, so leave it as published |
 | `topics` | ✅ | 1–5 ids from `data/topics.yml` (the add/edit issue forms offer these as a multi-select picker, so there are no typos or unknown ids) |
 | `submission_deadline` |  | `YYYY-MM-DD HH:MM` or `YYYY-MM-DD` (means 23:59) — **wall-clock time in `timezone`**. The add/edit issue forms collect this via year/month/day/hour/minute dropdowns. |
@@ -97,6 +97,11 @@ The `validate` workflow runs on every PR and enforces:
 - Deadline parses, is within ±2 years of today, and precedes `workshop_date`
 - No duplicate entries (same conference + year + near-identical name)
 
+`npm test` runs every one of these suites locally in one command
+(`scripts/run_tests.mjs`); CI runs them as named steps so the failing one is
+visible in the Actions UI. The browser suites need a built site — see
+`.github/workflows/pr-build-check.yml` for the exact commands.
+
 `node scripts/docs_sync_test.mjs` — every field in the schema is documented in
 this file's Field reference table and in `_template.yml` (so new fields can't
 ship undocumented), and every `scripts/*_test.mjs` is actually run by a workflow
@@ -156,18 +161,27 @@ leaves identity and unrelated fields untouched.
 
 Validation failures are posted as a PR comment listing every problem at once.
 
+## Workshop proposal calls
+
+`data/proposal_calls.yml` holds the *call for workshop proposals* deadline of
+each conference cycle — when organizers can apply to host a workshop, not when
+authors submit papers. The homepage shows the open ones. One row per
+conference-year (`conference`, `year`, `proposal_deadline`, `timezone`, `url`,
+`notes`); add a cycle when a conference announces it, and leave past ones in
+place — they drop off the page on their own.
+
 ## Paper lists
 
 Don't paste papers by hand. Set `openreview_venue_id` and the monthly `openreview-refresh` workflow fetches the accepted papers into `cache/openreview/<slug>.json` (a maintainer can also run `node scripts/fetch_openreview.mjs --slug <slug>` immediately). For workshops elsewhere, set `proceedings_url`.
 
 ## For maintainers
 
-- **Review queue:** PRs from contributors and from the two bots (`issue-to-pr`, `openreview-refresh`). CI has already validated data PRs — skim and merge.
+- **Review queue:** PRs from contributors via the two issue-form bots (`issue-to-pr`, `edit-to-pr`), plus dependabot's monthly bumps. CI has already validated data PRs — skim and merge. Every other data job (discovery, the daily deadline syncs, the monthly paper-cache refresh) validates and commits straight to `main` with no PR.
 - **Auto-synced deadlines:** the weekly `discover` job keeps OpenReview-imported deadlines in step with extensions (later-only by default) and records each change in its commit message — no PR. A deadline (or its `deadline_notes`) you edit by hand is **frozen**: the bot won't re-sync it. Notes beginning `OpenReview-synced …` are bot-stamped; changing the date or replacing the note hands that deadline to manual control. To also follow earlier corrections, flip `ALLOW_EARLIER` in `scripts/discover_openreview.mjs`.
 - **Daily imminent re-check:** a daily `recheck-imminent` job re-checks only deadlines within `[−7d, +14d]` and applies OpenReview extensions within ~24h instead of waiting for the weekly run — so a near-deadline extension, including one announced a day or two *after* the original date (the look-back window), lands fast. Same gates as the weekly sync (later-only, plausibility, frozen-on-hand-edit) and same no-PR commit; it never enumerates or adopts, so new-venue discovery and legacy adoption stay weekly. It's the fast path; the weekly run is the backstop for anything outside the band.
 - **Fixing a stale/extended deadline now:** rather than hand-editing the time (easy to get the timezone wrong), re-pull it from OpenReview — Actions → **Re-sync deadline from OpenReview** → enter the slug (or locally `node scripts/resync_deadline.mjs --slug <slug>`). It sets the deadline to OpenReview's current duedate, in either direction, and re-stamps it for future auto-sync.
 - **Deadline review issue:** a daily `deadline-review` workflow keeps one self-maintaining issue ("Data health: deadlines to review", `data-health` label) listing only deadlines the auto-sync won't fix itself — ones you hand-edited that now disagree with OpenReview, and bot-managed ones OpenReview moved *earlier* (the bot is later-only). Each item links the re-sync command; resolve by re-syncing (trust OpenReview) or leaving it (keep yours). The issue closes itself when nothing's outstanding. Bot-managed later moves and legacy entries never appear — they sync automatically.
 - **Re-tagging auto-suggested topics:** topics on bot-imported entries are keyword-guessed from the title (and flagged "auto-suggested" in `notes`). If you improve the keyword table in `scripts/discover_openreview.mjs`, run `node scripts/retag_topics.mjs --dry-run` to preview, then `node scripts/retag_topics.mjs` to apply — it re-guesses **only** entries still tagged `other` with that auto note, so anything a human has curated is left untouched.
-- **Health issues:** two auto-maintained issues labelled `data-health` (stale entries, broken links). They update in place and close themselves when clean.
+- **Health issues:** five auto-maintained issues labelled `data-health` — deadlines to review, workshops not on the official list, venues not verified, stale entries, broken links. Each updates in place and closes itself when clean; the smoke test keeps a sixth, labelled `smoke`, for the live site.
 - **Seed data:** entries whose `notes` contain `SEED DATA` are unverified placeholders from the initial build — verify or replace them.
 - Data is licensed CC-BY-4.0; by contributing you agree your additions are too.

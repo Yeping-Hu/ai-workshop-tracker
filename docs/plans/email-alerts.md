@@ -1,7 +1,13 @@
 # Email Alerts & Cross-Device Saved Lists — Implementation Plan
 
 **Repo:** `Yeping-Hu/ai-workshop-tracker` (aiworkshoptracker.com)
-**Status:** Approved plan, ready to implement.
+**Status:** Implemented, August 2026. Kept as the record of the original
+decisions — several code comments cite its sections — but the specifics have
+moved on: the current runbook is [docs/ALERTS.md](../ALERTS.md), the
+independent-notification model replaced the single `cadence` (ALERTS.md, "What
+a subscription can express"), the saved-list merge became the outbox model in
+`site/src/scripts/star-merge.js`, and the deferred `/changelog` page shipped as
+`/changes/`. Do not implement from this document.
 **Audience:** This document is written for a coding agent. Follow it as the source of truth. Where it says DECIDED, do not relitigate. Where it says HUMAN, stop and ask the maintainer — do not improvise credentials, DNS, or account setup.
 
 ---

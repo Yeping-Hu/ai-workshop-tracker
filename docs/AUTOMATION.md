@@ -23,7 +23,7 @@ for human review, as do dependency updates.
 | `recheck-imminent.yml` | daily | Re-checks only deadlines within `[−7d, +14d]` for extensions (one lookup each, later-only) → commits to `main` |
 | `backfill-deadlines.yml` | daily | `scripts/backfill_deadlines.mjs` — fills a **blank** `submission_deadline` for OpenReview-linked, single-deadline entries (fill-only, never overwrites) → commits to `main` |
 | `sync-tracks.yml` | daily | `scripts/sync_tracks.mjs` — refreshes the per-track deadlines of **multi-track** venues from their sub-track child groups (fill blanks, later-only per track), re-deriving the headline → commits to `main` |
-| `openreview-refresh.yml` | monthly | Re-fetch paper caches for recent years → auto-PR on diff |
+| `openreview-refresh.yml` | monthly | Re-fetch paper caches for recent years (`scripts/fetch_openreview.mjs --recent`) → commits to `main` |
 | `issue-to-pr.yml` | "Add a workshop" issue form | Converts the form to a YAML file + PR, validates, reports back |
 | `edit-to-pr.yml` | "Edit a workshop" issue form | Applies the edit to the existing YAML + PR (timezone-safe), validates, reports back |
 | `resync-deadline.yml` | manual | Re-pull one workshop's deadline from OpenReview's duedate (either direction) |
@@ -33,8 +33,8 @@ for human review, as do dependency updates.
 | `stale-check.yml` | weekly | One consolidated issue listing entries needing follow-up |
 | `link-check.yml` | monthly | One consolidated issue listing broken URLs Before running, `scripts/lychee_exclusions.mjs` appends every `review_ack.website` to `.lycheeignore`, so a URL deliberately removed as dead is not re-reported each month. |
 | `alerts.yml` | daily, manual | `scripts/alerts_run.mjs` — diffs `/api/workshops.json` against yesterday's snapshot, records events, sends urgent starred-deadline alerts, and on Mondays the weekly digests, committing that week's `data/changes.json` for the `/changes/` page. |
-| `alerts-worker-deploy.yml` | push touching `alerts/**` | `wrangler deploy` of the alerts Worker, after checking `alerts/ids.json` is in sync with the data vocabulary |
-| `alerts-ci.yml` | PRs & pushes touching `alerts/**` or `scripts/alerts_*` | The four pure-logic alerts suites (tokens, diff, matching, rendering) plus the ids sync check |
+| `alerts-worker-deploy.yml` | push touching `alerts/**`, `lib/identity.mjs` or `lib/events.mjs`; manual | `wrangler deploy` of the alerts Worker, after checking `alerts/ids.json` is in sync with the data vocabulary. The two `lib/` files are inside the Worker bundle |
+| `alerts-ci.yml` | PRs & pushes touching `alerts/**`, `scripts/alerts_*`, the `lib/` files the Worker bundles, the two site sync scripts, or the conference/topic vocabularies | The eleven pure-logic alerts suites (tokens, diff, matching, rendering, sending, rate limits, mail, star-merge, session, dashboard, log hygiene) plus the ids sync check |
 
 ## An OpenReview venue is not proof a workshop was accepted
 
@@ -164,7 +164,7 @@ bearer token, and all state lives in the Worker's database. See
 All nine places that write a `submission_deadline` — the three in the weekly
 importer, the daily re-check, the daily blank-fill, the daily multi-track sync, the
 manual re-sync, and both issue forms (add and edit) — record to that entry's
-`deadline_history`. Eight of them call `recordDeadlineObservation()`; the two that
+`deadline_history`. Seven of them call `recordDeadlineObservation()`; the two that
 *create* an entry (the importer's new-venue path and the add form) set the first
 log entry directly, because the helper seeds from the value being replaced and so
 correctly reports "no change" when nothing is being replaced. The log is what powers the "Extended by N days"
@@ -338,14 +338,36 @@ conference:
 Contributors adding a workshop by hand should leave `deadline_history` out
 entirely — `_template.yml` says so, and the automation fills it in.
 
-### Re-running the one-time name sweep
+### Maintainer sweeps (idempotent, run by hand)
 
-`scripts/strip_venue_names.mjs` swept the entries that predated the import-time
-normalisation. It is a no-op on a clean tree and should stay one: preview with
-`node scripts/strip_venue_names.mjs`, apply with `--write`. If
-`acronym_identity_test.mjs` ever reports that a name repeats its own
-conference-year, that is the script to run — but ask first how the entry got past
-the importer, because that is the actual defect.
+Each of these re-applies a rule the importer already enforces on arrival to the
+entries that predate it. All are no-ops on a clean tree and safe to re-run; each
+takes `--dry-run` (or prints a preview by default) and writes only what changed.
+
+| Script | Re-applies | When to run |
+|---|---|---|
+| `scripts/strip_venue_names.mjs` (`--write` to apply) | the venue-stripping of `name` | if `acronym_identity_test.mjs` reports a name repeating its own conference-year — and ask first how the entry got past the importer, because that is the actual defect |
+| `scripts/normalize_stored_identity.mjs` | the full identity normalisation (`name` + `acronym`) | when `identity_fixed_point_test.mjs` fails; its message names this script |
+| `scripts/backfill_websites.mjs` | filling a **blank** `website` from the venue's OpenReview field, through the same reader and `review_ack` guard as import | after the website reader's rules widen (e.g. accepting a scheme-less host), so entries skipped under the old rules are filled |
+| `scripts/retag_topics.mjs` | the title→topics keyword guess, only on entries still tagged `other` with the auto-suggested note | after improving the keyword table in `discover_openreview.mjs` |
+| `scripts/digest_fixture.mjs [render.mjs] [name]` | renders one fixed digest through a given `alerts/render.mjs` | to diff an email template change against `main` with the code as the only variable (its header shows the worktree recipe) |
+
+### Flags the workflows do not use
+
+- `scripts/resync_deadline.mjs --slug <slug> [--dry-run] [--force] [--unmark]` — `--force` is required to touch an entry marked `not_running`; `--unmark` clears that marking as part of the re-sync.
+- `scripts/discover_openreview.mjs --conf <id> --year <y> [--dry-run]`.
+- `scripts/sync_tracks.mjs [--slug <slug>] [--dry-run]` and `scripts/backfill_deadlines.mjs [--dry-run]`, `scripts/recheck_imminent.mjs [--dry-run]`.
+- `scripts/fetch_openreview.mjs [--slug <slug> | --recent | --all] [--abstracts]` — the workflow passes `--recent`.
+- `scripts/official_list_check.mjs [--conf <id>] [--year <y>] [--slug <slug>] [--report <path>|-]`, plus `--field name|website --adopt|--decline` on one slug, which `official-list-decision.yml` wraps.
+- `scripts/alerts_stats.mjs [--days N] [--json]`.
+
+### The one remaining manual step
+
+Dependabot's monthly PRs (root, `site/`, and the actions) are merged by hand
+after CI passes — every one so far has been. Repo Settings → General → *Allow
+auto-merge* plus a branch rule requiring `Validate data` and `Build check` would
+let a small workflow enable auto-merge on them; until that setting is flipped,
+this is the only routine job that waits for a person.
 
 
 ## Adding a conference
@@ -363,4 +385,4 @@ probe script. The same folder zips into a Claude skill for use in fresh sessions
 node scripts/discover_openreview.mjs --conf neurips --year 2026
 ```
 
-Run it when a conference announces its accepted workshop list (NeurIPS announces ~July, ICLR ~January, ICML ~March). The repo ships with all of 2024-2026 imported (~330 editions). To populate accepted-paper caches for them, run `node scripts/fetch_openreview.mjs` (fetches everything missing; the monthly workflow keeps recent years fresh).
+Run it when a conference announces its accepted workshop list (NeurIPS announces ~July, ICLR ~January, ICML ~March). The repo ships with all of 2024-2026 imported (900+ editions across nine conferences). To populate accepted-paper caches for them, run `node scripts/fetch_openreview.mjs` (fetches everything missing; the monthly workflow keeps recent years fresh).

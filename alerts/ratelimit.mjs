@@ -7,6 +7,7 @@
  *
  *   sub:<hash(ip)>:<hour>     per-IP signup limit
  *   magic:<email>:<hour>      per-address sign-in-link limit
+ *   confirm:<email>:<hour>    per-address confirmation-mail limit (re-subscribing)
  *   newsubs:<date>            global daily brake on new addresses
  *   magicused:<hash(token)>   a magic token's one and only use
  *

@@ -32,6 +32,9 @@ GitHub repo (single source of truth)
  ├── data/conferences.yml      conference metadata
  ├── data/editions.yml         per-edition conference dates, and each edition's official accepted-workshop list
  ├── data/topics.yml           controlled topic vocabulary
+ ├── data/proposal_calls.yml   call-for-workshop-proposals deadlines, shown on the homepage
+ ├── data/changes.json         this week's dataset changes, written by the alerts job for /changes/
+ ├── schema/                   JSON Schema for a workshop file (validate.mjs enforces it)
  ├── cache/openreview/*.json   committed paper-list caches (fetched monthly)
  ├── lib/                      shared date/AoE, data-loading, and ICS code
  ├── scripts/                  validation, OpenReview fetcher, automation helpers
@@ -60,13 +63,14 @@ favorites storage, link handling), see **[docs/ARCHITECTURE.md](docs/ARCHITECTUR
 
 ## Quickstart (local)
 
-Requires Node 20+.
+Requires Node 22.12 or newer (Astro 7's floor; every workflow runs on 22).
 
 ```bash
 npm ci                         # root deps (validation/scripts)
 npm ci --prefix site           # site deps (Astro, Pagefind)
 
 node scripts/validate.mjs      # validate all workshop data
+npm test                       # every standalone test suite (scripts/*_test.mjs)
 npm run dev --prefix site      # dev server at localhost:4321 (search needs a full build)
 npm run build --prefix site    # full build incl. search index -> site/dist
 ```
@@ -96,6 +100,7 @@ list, the "add a conference" procedure, and bulk-importing workshop lists are in
 - Markdown exports: `/exports/<conference>-<year>-workshops.md` — one file per conference edition, also regenerated on every deploy
 - Forum ids of papers with no PDF (supports saved-paper PDF links): `/api/papers-without-pdf.json`
 - New-workshop announcements: `/rss.xml`
+- What changed this week (the published edition of the weekly digest): `/changes/`
 - LLM-friendly site summary ([llms.txt](https://llmstxt.org/)): `/llms.txt`
 - Calendar feeds (paused — see `CALENDAR_ENABLED`): `/feeds/all.ics`, `/feeds/<conference>.ics`, `/feeds/topic-<id>.ics`, `/feeds/ws-<slug>.ics`
 
