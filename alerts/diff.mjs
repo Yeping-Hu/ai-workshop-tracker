@@ -143,6 +143,20 @@ export function diffSnapshot(prev, live, observed) {
 }
 
 /**
+ * Has the feed been rebuilt since the stored snapshot was taken? The site
+ * stamps every build with `generated_at`, and the snapshot keeps the stamp it
+ * was projected from, so equal stamps mean the daily deploy has not run yet —
+ * GitHub's cron drifts by hours on a busy day, and the 73-minute offset between
+ * the two schedules is the only ordering there is. Diffing an unchanged feed
+ * finds nothing by construction, so the caller waits for a rebuild before
+ * deciding the day was quiet.
+ */
+export function feedUnchanged(snapshot, live) {
+  const prev = snapshot?.generated_at;
+  return !!prev && prev === live?.generated_at;
+}
+
+/**
  * Workshops whose next actionable stage falls inside [now, now + windowMs).
  * Shared by the "closing soon" digest section and the urgent pass, so the two
  * can never disagree about what "imminent" means.

@@ -853,12 +853,15 @@ async function main() {
     }
     let g = groupById.get(raw.openreview_venue_id);
     if (!g) {
-      clearUnverified();
+      // Tell a lookup that never completed apart from one that found nothing by
+      // whether THIS call added to the unverified list — not by clearing the
+      // list, which would wipe every earlier failure in the run.
+      const unverifiedBefore = getUnverified().length;
       g = await fetchGroupById(raw.openreview_venue_id);
       if (!g) {
         // A completed lookup that found nothing is a permanent fault; a lookup
         // that never completed is the transient case handled above.
-        if (getUnverified().length) continue;
+        if (getUnverified().length > unverifiedBefore) continue;
         const meta = { slug: s2, file: f2, name: raw.name, conf: String(raw.conference || '').toUpperCase(), year: raw.year };
         const moved = await findMovedVenue(raw);
         deadVenues.push({ ...meta, venueId: raw.openreview_venue_id, moved });

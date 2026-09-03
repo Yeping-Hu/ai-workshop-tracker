@@ -18,6 +18,11 @@
  * Pure: no I/O, no Node built-ins. Runs unchanged in a Worker and in node.
  */
 
+/* `created` is written by the Worker as an ISO-8601 stamp ("…T12:00:00.000Z"),
+ * so the cutoff is rendered in that same shape. SQLite's `datetime('now')`
+ * gives "YYYY-MM-DD HH:MM:SS" — a space where the ISO form has a "T" — and a
+ * string comparison of the two included every row on the cutoff day whatever
+ * its time, because "T" sorts after " ". */
 /** Days are interpolated into SQL, so they must be an integer, not a string. */
 const days = (n) => {
   const d = Math.floor(Number(n));
@@ -45,7 +50,7 @@ export const SQL = {
 
   signupsSince: (n) => `
     SELECT COUNT(*) AS n FROM subscribers
-    WHERE created >= datetime('now', '-${days(n)} days')`,
+    WHERE created >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-${days(n)} days')`,
 
   /**
    * Ascending, unlike the terminal script's DESC — a chart reads left to right
@@ -54,7 +59,7 @@ export const SQL = {
   signupsByDay: (n) => `
     SELECT substr(created, 1, 10) AS day, COUNT(*) AS n
     FROM subscribers
-    WHERE created >= datetime('now', '-${days(n)} days')
+    WHERE created >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-${days(n)} days')
     GROUP BY day ORDER BY day ASC`,
 
   /** Raw cadence strings; fold them with foldCadence() rather than reading directly. */

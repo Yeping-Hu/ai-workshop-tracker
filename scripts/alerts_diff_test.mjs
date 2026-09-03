@@ -17,7 +17,10 @@
  *
  * Pure logic — no network. Run: node scripts/alerts_diff_test.mjs
  */
-import { projectFeed, diffSnapshot, deltaDays, closingWithin } from '../alerts/diff.mjs';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { projectFeed, diffSnapshot, deltaDays, closingWithin, feedUnchanged } from '../alerts/diff.mjs';
 import { MIN_CHANGE_MS, SNAPSHOT_SHRINK_GUARD } from '../alerts/config.mjs';
 import { deriveDeadlineChange } from '../lib/workshops.mjs';
 
@@ -244,6 +247,42 @@ const snap = (list) => projectFeed(feed(list));
   // ...and because the slug STAYS in the feed, it cannot count against the
   // shrink guard on a bulk cleanup, nor re-announce itself if ever unmarked.
   check('the slug stays in the feed', Object.keys(after.workshops).includes('marked'));
+}
+
+/* ----------------------------------------------------------- feedUnchanged */
+// The daily job runs 73 minutes after the daily deploy by cron, and GitHub's
+// cron drifts by hours either way. Equal build stamps mean "not rebuilt yet";
+// the pipeline waits on that rather than recording a quiet day.
+{
+  const a = { generated_at: '2026-08-14T05:50:00.000Z' };
+  const b = { generated_at: '2026-08-15T05:50:00.000Z' };
+  check('same build stamp -> unchanged', feedUnchanged(a, a) === true);
+  check('a newer build -> changed', feedUnchanged(a, b) === false);
+  check('no snapshot (first run) -> not "unchanged"', feedUnchanged(null, b) === false);
+  check('a snapshot without a stamp -> not "unchanged"', feedUnchanged({}, b) === false);
+}
+
+/* ---------------------------------------------- one definition of imminent */
+// closingWithin carries the not_running gate. It was once "shared" only on
+// paper: both real callers had private copies of the window arithmetic and
+// neither checked status, so this suite was green while the shipped code could
+// mail "41h left" for a workshop that is not happening. Structural, like
+// alerts_session_test: the callers must import it, and must not keep a private
+// window filter beside it.
+{
+  const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const run = fs.readFileSync(path.join(ROOT, 'scripts', 'alerts_run.mjs'), 'utf8');
+  const render = fs.readFileSync(path.join(ROOT, 'alerts', 'render.mjs'), 'utf8');
+  check('alerts_run.mjs imports closingWithin', /import \{[^}]*\bclosingWithin\b[^}]*\} from '\.\.\/alerts\/diff\.mjs'/.test(run));
+  check('the urgent pass goes through closingWithin', /function starredImminent[\s\S]*?closingWithin\(/.test(run));
+  check('render.mjs imports closingWithin', /import \{[^}]*\bclosingWithin\b[^}]*\} from '\.\/diff\.mjs'/.test(render));
+  check('the digest\'s "closing soon" section goes through closingWithin', /closingPairs = closingWithin\(/.test(render));
+  check('the digest\'s saved section goes through closingWithin', /savedAll = closingWithin\(/.test(render));
+  // The tell of a re-inlined window filter: a `ms < nowMs + <window>` comparison
+  // outside closingWithin itself.
+  const inlineWindow = /\bms\s*<\s*nowMs\s*\+\s*(weekMs|URGENT_WINDOW_MS|windowMs)\b/;
+  check('render.mjs keeps no private copy of the window filter', !inlineWindow.test(render));
+  check('alerts_run.mjs keeps no private copy of the window filter', !/NOW_MS\s*\+\s*URGENT_WINDOW_MS/.test(run.replace(/closingWithin\([^)]*\)/g, '')));
 }
 
 console.log(failed === 0 ? '\nDiff/classification logic OK.' : `\n${failed} test(s) failed.`);

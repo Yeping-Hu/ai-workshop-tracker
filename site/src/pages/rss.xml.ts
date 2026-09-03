@@ -21,7 +21,7 @@ export const GET: APIRoute = ({ site }) => {
    <link>${esc(link)}</link>
    <guid isPermaLink="true">${esc(link)}</guid>
    <pubDate>${new Date(`${w.added}T12:00:00Z`).toUTCString()}</pubDate>
-   <description>${esc(`${deadline} ${w.website}`)}</description>
+   <description>${esc(`${deadline} ${w.website ?? ''}`.trim())}</description>
   </item>`;
     })
     .join('\n');

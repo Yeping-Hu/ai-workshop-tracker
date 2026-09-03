@@ -96,7 +96,7 @@ const rows = mergeEventsBySlug(Array.isArray(feed.events) ? feed.events : [])
       conference: conf?.name ?? w.conference,
       color: conf?.color ?? null,
       topics: (w.topics ?? []).map((t: string) => topicById.get(t)?.label ?? t).filter(Boolean),
-      whenIso: e.new_utc ?? w.deadlineUtc ?? null,
+      whenIso: e.new_utc ?? w.deadlineIso ?? null,
       status: w.status ?? null,
       url: href(`/workshop/${w.slug}/`),
     };

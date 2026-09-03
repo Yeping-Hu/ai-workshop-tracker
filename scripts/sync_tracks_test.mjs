@@ -15,7 +15,7 @@
  *   - OR track still TBA            -> ignored (nothing to fill)
  */
 import { mergeTracks, DEADLINE_LOOKBACK_MS, syncNote } from './discover_openreview.mjs';
-import { isBotManaged } from './sync_tracks.mjs';
+import { isBotManaged, earliestTrack } from './sync_tracks.mjs';
 
 // These fixtures use fixed July/August 2026 dates, so "now" is pinned too. The
 // merge is time-dependent — a track closed longer than the look-back is no
@@ -135,6 +135,27 @@ const find = (tracks, name) => tracks.find((t) => t.name === name) || {};
     }),
     false,
   );
+}
+
+// --- a garbled track can never become the headline ---------------------------
+// `null <= number` is true in JS, so a track whose deadline does not resolve to
+// an instant used to WIN the earliest-track reduce and be written as the stamped
+// headline — which validation then rejected, blocking the whole commit.
+{
+  const good = dl('Full', '2026-08-01 04:00');
+  const bad = { name: 'Short', submission_deadline: '2026-02-30', timezone: 'UTC' }; // rolls over in JS, rejected by us
+  check('earliestTrack: the unparseable track loses', earliestTrack([bad, good]).name, 'Full');
+  check('earliestTrack: order does not matter', earliestTrack([good, bad]).name, 'Full');
+  check('earliestTrack: only unparseable tracks -> no headline', earliestTrack([bad]), null);
+  check('earliestTrack: TBA tracks are skipped', earliestTrack([dl('Late'), good]).name, 'Full');
+  check('earliestTrack: soonest instant wins', earliestTrack([dl('A', '2026-08-02 00:00'), dl('B', '2026-08-01 23:00')]).name, 'B');
+
+  // The merge refuses it in every branch — a blank track filled with a garbled
+  // read would be the next sync's headline.
+  const r = mergeTracks([dl('Short')], [bad], at());
+  check('mergeTracks: a garbled OpenReview value never fills a blank track', find(r.tracks, 'Short').submission_deadline, undefined);
+  const r2 = mergeTracks([], [bad], at());
+  check('mergeTracks: ...nor creates a new one', r2.tracks.length, 0);
 }
 
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nAll mergeTracks checks passed.');

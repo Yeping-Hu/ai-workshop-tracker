@@ -231,7 +231,11 @@ const ALERTS_BOOTSTRAP = `
         if (!e.persisted) return;
         const mine = document.querySelector('meta[name="build-id"]')?.content;
         if (!mine) return;
-        fetch('/version.json', { cache: 'no-store' })
+        // Built from the base path, not root-absolute: on a project-pages
+        // fork (SITE_BASE=/<repo>) '/version.json' is a 404, `r.ok` is false
+        // and the guard silently never fires.
+        const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
+        fetch(`${base}/version.json`, { cache: 'no-store' })
           .then((r) => r.ok ? r.json() : null)
           .then((v) => { if (v && v.build && v.build !== mine) location.reload(); })
           .catch(() => {});

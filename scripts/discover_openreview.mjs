@@ -276,19 +276,25 @@ const MONTHS = { Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8,
 //   "Submission Start: Jul 01 2026 11:59PM UTC-0, Abstract Registration: Jul 15
 //    2026 11:59PM UTC-0, Submission Deadline: Jul 20 2026 11:59PM UTC-0"
 // Shared so every labelled component is parsed identically.
-const LABELLED_DATE = String.raw`\s*([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{4})(?:\s+(\d{1,2}):(\d{2})(AM|PM))?\s*UTC\s*([+-]\d+(?:\.5)?)?`;
+// The offset takes both spellings OpenReview's form accepts: decimal hours
+// ("UTC+5.5") and hours:minutes ("UTC+5:30"). The minutes group is separate so
+// a ":30" is folded into the offset rather than left behind and dropped — an
+// unanchored `[+-]\d+` matched "+5" of "+5:30" and stored a deadline half an
+// hour late.
+const LABELLED_DATE = String.raw`\s*([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{4})(?:\s+(\d{1,2}):(\d{2})(AM|PM))?\s*UTC\s*([+-]\d{1,2}(?:\.\d+)?)?(?::(\d{2}))?`;
 
 function parseLabelledDate(dateStr, label) {
   if (typeof dateStr !== 'string') return null;
   const m = dateStr.match(new RegExp(label + ':' + LABELLED_DATE));
   if (!m) return null;
-  const [, mon, d, y, hh, mm, ap, off] = m;
+  const [, mon, d, y, hh, mm, ap, off, offMin] = m;
   const month = MONTHS[mon];
   if (!month) return null;
   let hour = hh != null ? Number(hh) % 12 : 23;
   if (hh != null && ap === 'PM') hour += 12;
   const minute = hh != null ? Number(mm) : 59;
-  const offset = off != null ? Number(off) : 0;
+  let offset = off != null ? Number(off) : 0;
+  if (off != null && offMin != null) offset += (off.startsWith('-') ? -1 : 1) * (Number(offMin) / 60);
   const pad = (n) => String(n).padStart(2, '0');
   // Normalize every offset (including AoE = UTC-12) to exact UTC, so all
   // stored deadlines share one timezone. The instant is unchanged.
@@ -512,6 +518,11 @@ export function mergeTracks(storedTracks, openreviewTracks, { allowEarlier = fal
   }
   for (const ot of openreviewTracks || []) {
     if (!ot || !ot.submission_deadline) continue; // still TBA on OpenReview -> nothing to apply
+    // A value that does not resolve to an instant is a garbled read, not a
+    // deadline. It must never be written in ANY branch below: a blank track
+    // filled with it would become the stamped headline on the next sync.
+    const fetchedMs = resolveDeadlineUtcMs(ot.submission_deadline, ot.timezone || 'UTC');
+    if (fetchedMs == null) continue;
     const cur = byName.get(ot.name);
     if (!cur) {
       byName.set(ot.name, { name: ot.name, submission_deadline: ot.submission_deadline, timezone: ot.timezone || 'UTC' });
@@ -523,7 +534,6 @@ export function mergeTracks(storedTracks, openreviewTracks, { allowEarlier = fal
       changes.push(`${ot.name}: (blank) -> ${ot.submission_deadline} UTC`);
     } else {
       const storedMs = resolveDeadlineUtcMs(cur.submission_deadline, cur.timezone || 'UTC');
-      const fetchedMs = resolveDeadlineUtcMs(ot.submission_deadline, ot.timezone || 'UTC');
       // Same look-back as the single-deadline sync: a track whose deadline closed
       // over a week ago is not auto-extended either. A per-track Submission
       // invitation is reused exactly like a venue-level one.

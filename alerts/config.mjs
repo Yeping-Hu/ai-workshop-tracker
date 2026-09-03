@@ -57,7 +57,7 @@ export const SEND_CHUNK = 50;
 
 /** Events older than this are pruned by the daily maintenance call. The weekly
  *  digest only ever looks back 7 days; the rest is history for a future
- *  /changelog page (see §12 of docs/plans/email-alerts.md). */
+ *  /changes/ page (site/src/pages/changes.astro, fed by data/changes.json). */
 export const EVENT_RETENTION_DAYS = 90;
 
 /** Public site origin — the canonical base for every link in an email. */

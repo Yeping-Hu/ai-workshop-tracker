@@ -92,3 +92,12 @@ MAIL_FROM = "AI Workshop Tracker <alerts@mail.aiworkshoptracker.com>"
 SITE_ORIGIN = "https://aiworkshoptracker.com"
 MAIL_FROM = "AI Workshop Tracker <alerts@mail.aiworkshoptracker.com>"
 DEV = "1"
+
+# Bindings are not inherited by a named environment, so without this block
+# `wrangler dev --env dev` starts a Worker with no `env.DB` and every endpoint
+# answers `server_error`. Same database as production; `wrangler dev`
+# simulates it locally unless `--remote` is passed.
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "aiwt-alerts"
+database_id = "e6831c9d-452a-4a25-a2d3-04e5c46fc8e5"

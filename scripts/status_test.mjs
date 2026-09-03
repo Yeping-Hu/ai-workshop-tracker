@@ -14,7 +14,7 @@
  * Pure logic — no network, no build. Run: node scripts/status_test.mjs
  */
 import { computeStatus } from '../lib/dates.mjs';
-import { resolveWorkshop, deriveStatusLabel } from '../lib/workshops.mjs';
+import { resolveWorkshop, deriveStatusLabel, isNotRunning } from '../lib/workshops.mjs';
 
 let failed = 0;
 function check(label, got, expect) {
@@ -128,6 +128,14 @@ check('notRunning defaults to false for every existing caller',
   noDl.paperCount = 12;
   check('the paper-count nudge cannot relabel it', deriveStatusLabel(noDl), 'Not running');
 }
+
+// --- isNotRunning: the single predicate six scripts branch on -----------------
+// Any truthy stored observation counts; nothing else does. If this widens (say
+// to a `status` field) every deadline job changes what it freezes.
+check('isNotRunning: a recorded observation', isNotRunning({ not_running: { reason: 'withdrawn', recorded: '2026-08-01' } }), true);
+check('isNotRunning: absent', isNotRunning({ name: 'x' }), false);
+check('isNotRunning: null entry', isNotRunning(null), false);
+check('isNotRunning: a derived status alone is not an observation', isNotRunning({ status: 'not_running' }), false);
 
 console.log(failed === 0 ? '\nStatus logic OK.' : `\n${failed} test(s) failed.`);
 process.exit(failed === 0 ? 0 : 1);

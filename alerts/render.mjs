@@ -29,6 +29,10 @@ import { displayAcronym, displayLabel } from '../lib/identity.mjs';
 // /changes/ applies, so the email and the page cannot disagree about how many
 // times a workshop moved.
 import { mergeEventsBySlug } from '../lib/events.mjs';
+// The one definition of "imminent", shared with the urgent pass — it carries
+// the not_running gate, so a rejected proposal's still-ticking OpenReview
+// deadline can reach neither a digest section nor a 72h alert.
+import { closingWithin } from './diff.mjs';
 
 export const MANAGE_PLACEHOLDER = '{{MANAGE_URL}}';
 export const UNSUB_PLACEHOLDER = '{{UNSUB_URL}}';
@@ -664,15 +668,8 @@ export function renderDigest({
   })();
 
   // 3. Closing in the next 7 days, from the live projection (not events).
-  const closingPairs = Object.values(workshops)
-    .map((w) => {
-      const iso = w.next_stage_utc || w.deadline_utc;
-      const ms = iso ? Date.parse(iso) : NaN;
-      return Number.isFinite(ms) ? { w, ms } : null;
-    })
-    .filter((x) => x && x.ms >= nowMs && x.ms < nowMs + weekMs)
-    .sort((a, b) => a.ms - b.ms)
-    .map(({ w }) => ({ w, item: closingItem(w, ids, saved, tz, at, nowMs) }));
+  const closingPairs = closingWithin(workshops, nowMs, weekMs)
+    .map((w) => ({ w, ms: w.next_ms, item: closingItem(w, ids, saved, tz, at, nowMs) }));
   const closingGroups = (() => {
     const by = new Map();
     for (const { w, item } of closingPairs) {
@@ -697,16 +694,11 @@ export function renderDigest({
   //    section vanish and leave them wondering whether it broke.
   const SAVED_WINDOW_MS = 7 * 86_400_000;
   const SAVED_CAP = 5;
-  const savedAll = [...saved]
-    .map((slug) => workshops[slug])
-    .filter(Boolean)
-    .map((w) => {
-      const iso = w.next_stage_utc || w.deadline_utc;
-      const ms = iso ? Date.parse(iso) : NaN;
-      return Number.isFinite(ms) && ms >= nowMs ? { w, ms } : null;
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.ms - b.ms);
+  const savedPool = {};
+  for (const slug of saved) if (workshops[slug]) savedPool[slug] = workshops[slug];
+  // Every future stage, soonest first — the same rule as "closing soon" with
+  // no far edge, so a not-running edition is excluded here exactly as there.
+  const savedAll = closingWithin(savedPool, nowMs, Infinity).map((w) => ({ w, ms: w.next_ms }));
   const imminent = savedAll.filter(({ ms }) => ms < nowMs + SAVED_WINDOW_MS);
   const savedRows = imminent.length ? imminent : savedAll;
   const savedShown = savedRows.slice(0, SAVED_CAP);

@@ -36,6 +36,7 @@ import { extractListedWorkshops } from '../lib/official_list.mjs';
 import { matchOfficialList } from '../lib/official_match.mjs';
 import { declinedUpstreamValue } from './deadline_crosscheck.mjs';
 import { fetchGroupById } from './recheck_imminent.mjs';
+import { get as fetchListPage } from './official_list_check.mjs';
 
 const args = process.argv.slice(2);
 const getArg = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : null);
@@ -66,11 +67,12 @@ if (!edition?.workshop_list_url) {
 // Re-derive the official value rather than taking it on the command line: the
 // value must be the one the report actually saw, or an ack can be recorded
 // against something the list never said and the row keeps reporting.
-const res = await fetch(edition.workshop_list_url, {
-  headers: { 'user-agent': 'aiworkshoptracker/apply-official-list (+https://aiworkshoptracker.com)', accept: 'text/html' },
-});
-if (!res.ok) die(`Could not read ${edition.workshop_list_url}: HTTP ${res.status}`);
-const { items } = extractListedWorkshops(await res.text(), { baseUrl: edition.workshop_list_url });
+// Through the report's own fetcher — same headers, same escalating retry on a
+// 429/5xx or a dropped connection — so a transient refusal is retried rather
+// than surfacing as a raw stack trace from a bare fetch().
+const res = await fetchListPage(edition.workshop_list_url);
+if (!res.ok) die(`Could not read ${edition.workshop_list_url}: ${res.reason}`);
+const { items } = extractListedWorkshops(res.body, { baseUrl: edition.workshop_list_url });
 
 const entries = loadWorkshops().filter((w) => w.conference === raw.conference && w.year === raw.year);
 const conferenceWebsite = loadConferences().find((c) => c.id === raw.conference)?.website ?? null;

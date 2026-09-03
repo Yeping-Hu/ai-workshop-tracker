@@ -34,27 +34,42 @@ function fmtRemaining(ms) {
   return `${m}m ${String(s).padStart(2, '0')}s`;
 }
 
+// Each tick writes to the DOM only where the text actually changed: at most
+// one countdown a second shows a new value, so a page of a hundred rows used to
+// rewrite a hundred nodes and the ticker's innerHTML every second for nothing.
+// The node list is re-read every tick on purpose — a countdown added after
+// load (the saved page's twin does this, and the UI suite injects one) must
+// start ticking without anything re-registering it.
+const ticker = document.getElementById('next-deadline');
+let tickerHtml = null;
+
 function tick() {
   const now = Date.now();
   let best = null;
   for (const el of $$('[data-deadline-ms]')) {
     const rem = Number(el.dataset.deadlineMs) - now;
-    el.classList.remove('is-soon', 'is-critical', 'is-over');
     if (rem <= 0) {
-      el.textContent = 'passed';
-      el.classList.add('is-over');
+      if (!el.classList.contains('is-over')) {
+        el.textContent = 'passed';
+        el.classList.remove('is-soon', 'is-critical');
+        el.classList.add('is-over');
+      }
       continue;
     }
-    el.textContent = fmtRemaining(rem);
-    if (rem < 48 * HOUR) el.classList.add('is-critical');
-    else if (rem < 7 * DAY) el.classList.add('is-soon');
+    const text = fmtRemaining(rem);
+    if (el.textContent !== text) el.textContent = text;
+    el.classList.toggle('is-critical', rem < 48 * HOUR);
+    el.classList.toggle('is-soon', rem >= 48 * HOUR && rem < 7 * DAY);
     if (!best || rem < best.rem) best = { rem, name: el.dataset.name || 'next deadline' };
   }
-  const ticker = document.getElementById('next-deadline');
   if (ticker) {
-    ticker.innerHTML = best
+    const html = best
       ? `Next deadline: <b>${escapeHtml(best.name)}</b> in <b>${fmtRemaining(best.rem)}</b>`
       : 'No upcoming deadlines right now — new cycles are imported automatically.';
+    if (html !== tickerHtml) {
+      ticker.innerHTML = html;
+      tickerHtml = html;
+    }
   }
 }
 

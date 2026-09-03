@@ -30,8 +30,8 @@ function toEvent(w: Record<string, any>) {
     uid: `${w.slug}@ai-workshop-tracker`,
     dateYmd: String(w.submission_deadline).slice(0, 10),
     summary: `${w.acronym || w.name} deadline (${conf?.name ?? w.conference} ${w.year})`,
-    description: `${w.name}\nDeadline: ${w.deadlineWallClock}${w.deadline_notes ? `\nNote: ${w.deadline_notes}` : ''}\n${w.website}`,
-    url: w.website,
+    description: `${w.name}\nDeadline: ${w.deadlineWallClock}${w.deadline_notes ? `\nNote: ${w.deadline_notes}` : ''}${w.website ? `\n${w.website}` : ''}`,
+    url: w.website || undefined,
   };
 }
 

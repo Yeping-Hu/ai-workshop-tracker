@@ -72,15 +72,15 @@ export function isBotManaged(raw) {
 /** Earliest dated track — the value we store as the headline `submission_deadline`
  *  (same "earliest child" convention the importer uses; the site re-derives the
  *  display headline from the tracks at build time regardless). */
-function earliestTrack(tracks) {
-  const dated = (tracks || []).filter((t) => t.submission_deadline);
+export function earliestTrack(tracks) {
+  // Compare instants, and only tracks that HAVE one. `null <= number` is true
+  // in JS, so an unparseable track used to win the reduce and be written as the
+  // stamped headline — which validation then rejected, blocking the commit.
+  const dated = (tracks || [])
+    .map((t) => ({ t, ms: t?.submission_deadline ? resolveDeadlineUtcMs(t.submission_deadline, t.timezone || 'UTC') : null }))
+    .filter((x) => x.ms != null);
   if (!dated.length) return null;
-  return dated.reduce((a, b) =>
-    resolveDeadlineUtcMs(a.submission_deadline, a.timezone || 'UTC') <=
-    resolveDeadlineUtcMs(b.submission_deadline, b.timezone || 'UTC')
-      ? a
-      : b,
-  );
+  return dated.reduce((a, b) => (a.ms <= b.ms ? a : b)).t;
 }
 
 async function main({ slug, dryRun }) {

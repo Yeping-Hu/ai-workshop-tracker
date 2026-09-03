@@ -303,6 +303,18 @@ alert's rows. Running the pipeline twice in one day therefore sends once.
 the offset exists so the diff always reads *today's* `workshops.json`. **If
 deploy.yml's cron moves, move this one too.**
 
+The offset is a hope, not a guarantee: GitHub starts scheduled jobs hours late
+on a busy day, in either order. So the run checks rather than assumes. The feed
+carries its build stamp (`generated_at`) and the snapshot keeps the stamp it was
+projected from; if the two are equal the site has not been rebuilt since the
+last run, and the job re-fetches every two minutes for up to thirty
+(`ALERTS_FEED_WAIT_MS` / `ALERTS_FEED_POLL_MS`, both overridable — set the first
+to `0` locally). If the rebuild still has not landed it logs a `::warning::` and
+proceeds: the diff is empty by construction, urgent alerts still go out on the
+data in hand, and the next day's run diffs both days. It never fails the job,
+and it never re-triggers itself — the weekly digest has no send-log, so a
+second Monday run would mail everyone twice.
+
 Each run: fetch the feed → diff against the stored snapshot → record events →
 urgent pass → weekly pass (Mondays only) → maintenance. A failure fails the job
 loudly; GitHub's failure email is the alert channel, as with every other job here.
@@ -600,9 +612,11 @@ moment is step 7.
 Append-only, no PII: one row per dataset change we observed, with the same
 "`observed` is when *we* noticed, not when organizers changed it" semantics as
 `deadline_history` in the workshop YAML. It powers the weekly digest's "what
-changed this week", and it is deliberately shaped to power a public `/changelog`
-page later (see §12 of the plan). Rows older than 90 days are pruned by the
-daily maintenance call.
+changed this week" and the public [`/changes/`](https://aiworkshoptracker.com/changes/)
+page (ARCHITECTURE.md, "`/changes/` — the same week, as a public page"). Rows
+older than 90 days are pruned by the daily maintenance call, and so are
+`urgent_log` rows older than that — they dedupe the 72 h alert on a deadline
+value, and one that old has long passed.
 
 ## Growing past the free tier
 

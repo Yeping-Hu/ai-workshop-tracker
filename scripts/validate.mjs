@@ -158,9 +158,6 @@ for (const filePath of listWorkshopFiles()) {
         });
       }
     }
-  if (!w.website) {
-    warnings.push({ file: rel, msg: 'No `website` — the site will show a "help us add it" prompt.' });
-  }
   } else if (w.year >= new Date(NOW).getUTCFullYear()) {
     const edEnd = editionEnds.get(`${w.conference}-${w.year}`);
     if (edEnd != null && NOW > edEnd + DAY_MS) {
@@ -171,6 +168,13 @@ for (const filePath of listWorkshopFiles()) {
     } else {
       warnings.push({ file: rel, msg: 'No `submission_deadline` set for a current/future edition (will show as TBA).' });
     }
+  }
+
+  // Independent of the deadline branch above: an entry with neither a deadline
+  // nor a website used to get no warning at all, because this sat inside the
+  // has-deadline arm.
+  if (!w.website) {
+    warnings.push({ file: rel, msg: 'No `website` — the site will show a "help us add it" prompt.' });
   }
 
   // `not_running` and `review_ack.official_list` are the two opposite verdicts on

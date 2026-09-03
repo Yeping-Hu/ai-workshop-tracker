@@ -100,7 +100,12 @@ const nextAbstract = fromLine
   : (raw.abstract_deadline ?? null);
 
 const before = raw.submission_deadline ?? '(none)';
-if (raw.submission_deadline === dl.submission_deadline && (raw.timezone || 'UTC') === 'UTC') {
+const deadlineUnchanged = raw.submission_deadline === dl.submission_deadline && (raw.timezone || 'UTC') === 'UTC';
+const abstractUnchanged = nextAbstract === (raw.abstract_deadline ?? null);
+// Both stages count. A venue that moved only its abstract registration used to
+// hit this early exit, so the one command the review issue prints could not fix
+// it.
+if (deadlineUnchanged && abstractUnchanged) {
   console.log(`${slug}: already in sync with OpenReview (${before} UTC) — nothing to do.`);
   process.exit(0);
 }
@@ -114,7 +119,11 @@ raw.deadline_notes = syncNote(dl.submission_deadline, today);
 if (nextAbstract) raw.abstract_deadline = nextAbstract;
 else delete raw.abstract_deadline;
 
-console.log(`${slug}: ${before} -> ${dl.submission_deadline} UTC  (re-synced from OpenReview)`);
+console.log(
+  deadlineUnchanged
+    ? `${slug}: paper deadline unchanged (${before} UTC); abstract ${raw.abstract_deadline ?? '(none)'} -> ${nextAbstract ?? '(none)'}  (re-synced from OpenReview)`
+    : `${slug}: ${before} -> ${dl.submission_deadline} UTC  (re-synced from OpenReview)`,
+);
 if (dryRun) {
   console.log('(dry-run — no file written)');
   process.exit(0);

@@ -79,6 +79,39 @@ const ws = (slug, over = {}) => ({
 const sub = (over = {}) =>
   normalizeSubscriber({ email: 'a@example.com', nonce: 'n', cadence: 'weekly', confirmed_at: 'x', ...over });
 
+/* --------------------------------------------- not_running reaches nothing */
+// A rejected proposal keeps a live OpenReview group whose deadline ticks down
+// like any other, and the feed keeps its last deadline_utc so the slug does not
+// vanish. Neither the "closing soon" section nor the saved-workshops section
+// may show it — the same gate the urgent pass uses (closingWithin).
+{
+  const workshops = {
+    'neurips-2026-live': ws('neurips-2026-live', { deadline_utc: iso(2), next_stage_utc: iso(2) }),
+    'neurips-2026-dead': ws('neurips-2026-dead', {
+      status: 'not_running', status_label: 'Not running',
+      deadline_utc: iso(1), next_stage_utc: null,
+    }),
+  };
+  const out = renderDigest({ sub: sub(), events: [], workshops, nowMs: NOW, ids });
+  check('closing soon lists the live workshop', !!out && /neurips-2026-live/.test(out.html));
+  check('closing soon omits the not-running one, however imminent', !!out && !/neurips-2026-dead/.test(out.html) && !/neurips-2026-dead/.test(out.text));
+
+  // Alone in the feed and saved: with nothing else to report, the digest must
+  // be empty rather than carry a "your saved workshops" row for it.
+  const onlyDead = { 'neurips-2026-dead': workshops['neurips-2026-dead'] };
+  const saved = renderDigest({
+    sub: sub({ starred_ws: '["neurips-2026-dead"]', scope: 'starred' }),
+    events: [], workshops: onlyDead, nowMs: NOW, ids,
+  });
+  check('a saved not-running workshop produces no saved section (digest is empty)', saved === null, saved ? saved.subject : '');
+  const both = renderDigest({
+    sub: sub({ starred_ws: '["neurips-2026-dead","neurips-2026-live"]', scope: 'starred' }),
+    events: [], workshops, nowMs: NOW, ids,
+  });
+  check('the saved section keeps the live one and drops the not-running one',
+    !!both && /neurips-2026-live/.test(both.html) && !/neurips-2026-dead/.test(both.html));
+}
+
 /* ------------------------------------------------------------- date helpers */
 {
   check('fmtUtc renders an unambiguous UTC stamp',

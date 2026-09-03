@@ -27,6 +27,8 @@ jobs:
         run: node scripts/tracks_test.mjs
       - name: Test timezone normalization (import -> UTC)
         run: node scripts/tz_normalize_test.mjs
+      - name: Test the shared date parsers (impossible dates, H:MM offsets)
+        run: node scripts/dates_test.mjs
       - name: Test contributor timezone conversion (bot -> UTC)
         run: node scripts/issue_tz_test.mjs
       - name: Test deadline-sync logic (later-only, freeze-on-touch)

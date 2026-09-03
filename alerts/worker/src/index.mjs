@@ -968,11 +968,16 @@ async function handleAdmin(request, env, path) {
     const un = await env.DB.prepare('DELETE FROM subscribers WHERE confirmed_at IS NULL AND created < ?')
       .bind(stale)
       .run();
+    // urgent_log dedupes the 72h alert on (email, slug, deadline value). A row
+    // older than the event retention concerns a deadline long passed, and
+    // nothing else ever deletes it — the table only grew, one row per alert.
+    const ur = await env.DB.prepare('DELETE FROM urgent_log WHERE sent < ?').bind(cutoff).run();
     return json({
       ok: true,
       rate_limit_rows: rl.meta?.changes ?? 0,
       events_pruned: ev.meta?.changes ?? 0,
       unconfirmed_pruned: un.meta?.changes ?? 0,
+      urgent_log_pruned: ur.meta?.changes ?? 0,
     });
   }
 

@@ -48,7 +48,7 @@ import {
   SEND_CHUNK,
   SITE_ORIGIN,
 } from '../alerts/config.mjs';
-import { projectFeed, diffSnapshot } from '../alerts/diff.mjs';
+import { projectFeed, diffSnapshot, closingWithin, feedUnchanged } from '../alerts/diff.mjs';
 import {
   normalizeSubscriber,
   matchingEvents,
@@ -71,6 +71,12 @@ const ADMIN = process.env.ALERTS_ADMIN_TOKEN || '';
 const FEED = process.env.WORKSHOPS_JSON_URL || `${SITE_ORIGIN}/api/workshops.json`;
 const DRY_RUN = process.env.DRY_RUN === '1';
 const FORCE_WEEKLY = process.env.FORCE_WEEKLY === '1';
+// How long to wait for the daily rebuild when the feed is still yesterday's.
+// The cron offset assumes deploy.yml ran on time; on a busy day GitHub starts
+// both jobs hours late and in either order. Bounded, and overridable to 0 so a
+// local run never sits here.
+const FEED_WAIT_MS = Number(process.env.ALERTS_FEED_WAIT_MS ?? 30 * 60_000);
+const FEED_POLL_MS = Number(process.env.ALERTS_FEED_POLL_MS ?? 2 * 60_000);
 
 const NOW = new Date();
 const NOW_MS = NOW.getTime();
@@ -180,19 +186,28 @@ async function send(messages, label) {
 
 /* ------------------------------------------------------------------ helpers */
 
-/** Live projections for a subscriber's starred slugs, with a parsed next stage. */
+/** Live projections for a subscriber's starred slugs inside the urgent window,
+ *  soonest first. Through `closingWithin` — the one definition of "imminent",
+ *  shared with the digest — so its not_running gate applies here too: a
+ *  rejected proposal keeps a ticking OpenReview deadline, and a private
+ *  re-implementation once read that deadline and would have mailed "41h left"
+ *  for a workshop that is not happening. */
 function starredImminent(sub, workshops) {
-  const out = [];
-  for (const slug of sub.starred_ws ?? []) {
-    const w = workshops[slug];
-    if (!w) continue;
-    const iso = w.next_stage_utc || w.deadline_utc;
-    if (!iso) continue;
-    const ms = Date.parse(iso);
-    if (!Number.isFinite(ms)) continue;
-    if (ms >= NOW_MS && ms < NOW_MS + URGENT_WINDOW_MS) out.push({ ...w, next_ms: ms, deadline_key: iso });
-  }
-  return out.sort((a, b) => a.next_ms - b.next_ms);
+  const mine = {};
+  for (const slug of sub.starred_ws ?? []) if (workshops[slug]) mine[slug] = workshops[slug];
+  return closingWithin(mine, NOW_MS, URGENT_WINDOW_MS)
+    .map((w) => ({ ...w, deadline_key: w.next_stage_utc || w.deadline_utc }));
+}
+
+const waitMs = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Fetch and project the public feed; refuses an empty or failed read. */
+async function fetchFeed() {
+  const res = await fetch(FEED, { headers: { 'User-Agent': 'aiwt-alerts/1.0' } });
+  if (!res.ok) die(`could not fetch ${FEED}: HTTP ${res.status}`);
+  const live = projectFeed(await res.json());
+  if (live.count === 0) die('the workshops feed contained no entries — refusing to proceed');
+  return live;
 }
 
 /* --------------------------------------------------------------------- main */
@@ -246,15 +261,29 @@ async function main() {
   log(`alerts run ${NOW.toISOString()}${DRY_RUN ? '  [DRY RUN]' : ''}`);
 
   /* 1. fetch + project ---------------------------------------------------- */
-  const res = await fetch(FEED, { headers: { 'User-Agent': 'aiwt-alerts/1.0' } });
-  if (!res.ok) die(`could not fetch ${FEED}: HTTP ${res.status}`);
-  const feed = await res.json();
-  const live = projectFeed(feed);
-  if (live.count === 0) die('the workshops feed contained no entries — refusing to proceed');
+  let live = await fetchFeed();
   log(`1. feed: ${live.count} workshops (generated ${live.generated_at})`);
 
   /* 2-3. diff, record, snapshot ------------------------------------------- */
   const { snapshot } = await admin('/admin/kv/snapshot');
+  // Self-heal before warn: an unchanged stamp means today's deploy has not
+  // landed yet, so wait for it rather than record a quiet day that was really
+  // an early start. If it never comes, proceed anyway — the diff is empty by
+  // construction, urgent alerts still go out on the data we have, and
+  // tomorrow's run picks up today's changes. Never a failure.
+  if (feedUnchanged(snapshot, live) && FEED_WAIT_MS > 0) {
+    log(`   feed unchanged since the last run — waiting up to ${Math.round(FEED_WAIT_MS / 60_000)} min for the daily rebuild`);
+    const until = Date.now() + FEED_WAIT_MS;
+    while (Date.now() < until && feedUnchanged(snapshot, live)) {
+      await waitMs(Math.min(FEED_POLL_MS, Math.max(0, until - Date.now())));
+      live = await fetchFeed();
+    }
+    if (feedUnchanged(snapshot, live)) {
+      log(`::warning::alerts ran against a feed generated ${live.generated_at}, the same build as the last run — deploy.yml has not rebuilt today. Nothing is lost; the next run diffs both days.`);
+    } else {
+      log(`   feed rebuilt: ${live.count} workshops (generated ${live.generated_at})`);
+    }
+  }
   const diff = diffSnapshot(snapshot, live, TODAY);
 
   if (diff.status === 'abort') {
@@ -440,7 +469,7 @@ async function main() {
   /* 6. maintenance -------------------------------------------------------- */
   if (!DRY_RUN) {
     const m = await admin('/admin/maintenance', { method: 'POST' });
-    log(`6. maintenance: ${priv(m.rate_limit_rows)} rate-limit row(s), ${m.events_pruned} old event(s), ${priv(m.unconfirmed_pruned)} abandoned signup(s)`);
+    log(`6. maintenance: ${priv(m.rate_limit_rows)} rate-limit row(s), ${m.events_pruned} old event(s), ${priv(m.unconfirmed_pruned)} abandoned signup(s), ${priv(m.urgent_log_pruned)} expired urgent-log row(s)`);
   } else {
     log('6. [dry-run] maintenance skipped');
   }

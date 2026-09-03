@@ -149,9 +149,13 @@ What it *does* need is ordering against `deploy.yml`: the diff must read the
 `workshops.json` that today's rebuild produced, or it compares yesterday's feed
 against yesterday's snapshot and reports nothing. `deploy.yml`'s daily cron is
 05:17 UTC and the alerts cron is 06:30 UTC — 73 minutes later. **Moving either
-cron means moving both.** Everything else about the job is stateless: it holds
-no credentials beyond a bearer token, and all state lives in the Worker's
-database. See [ALERTS.md](ALERTS.md).
+cron means moving both.** The offset only orders the schedules, not the runs —
+GitHub's cron drifts by hours on a busy day — so the job also compares the
+feed's build stamp with the snapshot's and waits up to thirty minutes for a
+rebuild before it decides the day was quiet (ALERTS.md, "Daily operation").
+Everything else about the job is stateless: it holds no credentials beyond a
+bearer token, and all state lives in the Worker's database. See
+[ALERTS.md](ALERTS.md).
 
 ## Every deadline write is logged
 

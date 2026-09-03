@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS subscribers (
 CREATE INDEX IF NOT EXISTS subscribers_mailable ON subscribers(confirmed_at, suppressed_at, cadence);
 
 -- Append-only observation log of dataset changes (NO PII). Powers the weekly
--- digest ("what changed in the last 7 days") and, later, a public /changelog
+-- digest ("what changed in the last 7 days") and the public /changes/
 -- page rendered from the same table (docs/plans/email-alerts.md §12).
 CREATE TABLE IF NOT EXISTS events (
   id       INTEGER PRIMARY KEY AUTOINCREMENT,
