@@ -56,7 +56,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
 import { listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, isNotRunning } from '../lib/workshops.mjs';
-import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
+import { resolveDeadlineUtcMs, plausibleDeadline } from '../lib/dates.mjs';
 import {
   syncNote,
   deadlineFromInvitation,
@@ -67,20 +67,16 @@ import {
 // duplicate the hardening. Importing is side-effect-free — that module only runs
 // its CLI under the `import.meta.url` guard.
 import { fetchGroupById } from './recheck_imminent.mjs';
-import { retryUnverified, writeUnverified } from '../lib/openreview.mjs';
+import { unwrap, retryUnverified, writeUnverified } from '../lib/openreview.mjs';
 
 const DAY = 86_400_000;
 // Same plausibility guard as the imminent re-check / weekly sync: reject absurd
 // reads rather than fill a blank with a value that would fail validation or
 // mislead. A fetched deadline must be at most two years out and land in a year
 // within ±1 of the record's own year.
-const TWO_YEARS_MS = 2 * 366 * DAY;
 
 // OpenReview wraps some content values as { value: … }; unwrap if so.
-const val = (c, k) => {
-  const x = c?.[k];
-  return x && typeof x === 'object' && 'value' in x ? x.value : x;
-};
+const val = (c, k) => unwrap(c?.[k]);
 
 /**
  * Eligibility predicate — pure over the stored record, so it is unit-tested with
@@ -128,11 +124,7 @@ async function main({ dryRun }) {
 
     const fetchedMs = resolveDeadlineUtcMs(fetched.submission_deadline, fetched.timezone || 'UTC');
     const fetchedYear = Number(String(fetched.submission_deadline).slice(0, 4));
-    const plausible =
-      fetchedMs != null &&
-      fetchedMs - Date.now() <= TWO_YEARS_MS &&
-      Number.isFinite(fetchedYear) &&
-      Math.abs(fetchedYear - raw.year) <= 1;
+    const plausible = plausibleDeadline(fetchedMs, fetchedYear, raw.year);
     if (!plausible) {
       console.warn(`  ⚠ ${path.basename(fp)}: OpenReview deadline "${fetched.submission_deadline}" looks implausible — left blank`);
       return true;

@@ -17,15 +17,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
-import {
-  REPO_ROOT,
+import { REPO_ROOT,
   listWorkshopFiles,
   readWorkshopFile,
   loadConferences,
   loadTopics,
-  loadEditions,
-} from '../lib/workshops.mjs';
-import { resolveDeadlineUtcMs, parseDateUtcMs, isValidTimezone, DAY_MS } from '../lib/dates.mjs';
+  loadEditions, slugOfFile } from '../lib/workshops.mjs';
+import { resolveDeadlineUtcMs, parseDateUtcMs, isValidTimezone, DAY_MS, TWO_YEARS_MS } from '../lib/dates.mjs';
 import { validateChangesFeed } from './validate_changes_feed.mjs';
 
 const reportFlag = process.argv.indexOf('--report');
@@ -57,7 +55,6 @@ const normalizeName = (s) =>
     .trim();
 
 const NOW = Date.now();
-const TWO_YEARS = 2 * 366 * DAY_MS;
 
 for (const filePath of listWorkshopFiles()) {
   const rel = path.relative(REPO_ROOT, filePath);
@@ -144,7 +141,7 @@ for (const filePath of listWorkshopFiles()) {
       });
     } else {
       // Sanity: catch typos without rejecting historical entries.
-      if (deadlineMs - NOW > TWO_YEARS) {
+      if (deadlineMs - NOW > TWO_YEARS_MS) {
         errors.push({
           file: rel,
           msg: '`submission_deadline` is more than 2 years in the future — please double-check the year.',
@@ -360,7 +357,7 @@ for (const filePath of listWorkshopFiles()) {
       const slugs = new Set();
       const addedBySlug = new Map();
       for (const f of listWorkshopFiles()) {
-        const slug = path.basename(f, '.yml');
+        const slug = slugOfFile(f);
         slugs.add(slug);
         try {
           const { raw } = readWorkshopFile(f);

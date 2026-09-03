@@ -8,7 +8,21 @@
  *
  * Run: node scripts/deadline_crosscheck_test.mjs
  */
-import { classifyDeadlineDiff, reviewCategory, isWithinReviewWindow, websiteDrift, normalizeWebsite, titleDrift, acronymDrift, needsDirectLookup, buildReport, siblingVenueCandidates, lateResurrection, declinedUpstreamValue } from './deadline_crosscheck.mjs';
+import {
+  classifyDeadlineDiff,
+  reviewCategory,
+  isWithinReviewWindow,
+  websiteDrift,
+  titleDrift,
+  acronymDrift,
+  needsDirectLookup,
+  buildReport,
+  siblingVenueCandidates,
+  lateResurrection,
+  declinedUpstreamValue,
+} from './deadline_crosscheck.mjs';
+// From its own module: the crosscheck no longer re-exports it.
+import { normalizeWebsite } from './discover_openreview.mjs';
 import { syncNote, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
 
 let failed = 0;

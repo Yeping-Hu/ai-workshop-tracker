@@ -28,18 +28,12 @@ export const editionByKey = new Map<string, Record<string, any>>(
   loadEditions().map((e: Record<string, any>) => [`${e.conference}-${e.year}`, e]),
 );
 export const topicById = new Map(topics.map((t: Topic) => [t.id, t]));
-export { loadPaperCache, sortByDeadline };
+export { loadPaperCache };
 
 export const upcoming = sortByDeadline(workshops.filter((w: Workshop) => w.status === 'upcoming'));
 export const upcomingWithDeadline = upcoming.filter((w: Workshop) => w.deadlineUtcMs != null);
 export const upcomingTba = upcoming.filter((w: Workshop) => w.deadlineUtcMs == null);
 export const proposalCalls = loadProposalCalls();
-export const deadlinePassed = sortByDeadline(
-  workshops.filter((w: Workshop) => w.status === 'deadline_passed'),
-);
-export const past = workshops
-  .filter((w: Workshop) => w.status === 'past')
-  .sort((a: Workshop, b: Workshop) => b.year - a.year || a.name.localeCompare(b.name));
 
 /**
  * Editions recorded as not taking place. `status: 'not_running'` is why none of
@@ -50,10 +44,9 @@ export const past = workshops
  */
 export const notRunning = workshops.filter((w: Workshop) => w.status === 'not_running');
 
-export const paperCount = workshops.reduce((n: number, w: Workshop) => {
-  const c = loadPaperCache(w.slug);
-  return n + (c?.paper_count ?? 0);
-}, 0);
+/** Summed from what loadWorkshops() already attached to each entry, rather
+ *  than re-reading every paper cache a second time. */
+export const paperCount = workshops.reduce((n: number, w: Workshop) => n + (w.paperCount ?? 0), 0);
 
 /** Re-exported for pages that need a workshop's one-line identity. */
 export { workshopShortName, nameTokens };

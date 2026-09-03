@@ -12,9 +12,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { WORKSHOPS_DIR, recordDeadlineObservation, loadConferences, stripVenueFromName, cleanAcronym, normalizeAcronym } from '../lib/workshops.mjs';
+import { WORKSHOPS_DIR, recordDeadlineObservation, loadConferences, stripVenueFromName, normalizeAcronym, slugify } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs, isValidTimezone, assembleDeadline } from '../lib/dates.mjs';
-import { parseTopics } from '../lib/issue_form.mjs';
+import { parseTopics, parseSections } from '../lib/issue_form.mjs';
 
 const body = process.env.ISSUE_BODY;
 if (!body) {
@@ -22,15 +22,7 @@ if (!body) {
   process.exit(1);
 }
 
-// Parse "### Label\n\nvalue" sections.
-const sections = {};
-const re = /^###\s+(.+?)\s*\r?\n([\s\S]*?)(?=^###\s+|\s*$(?![\s\S]))/gm;
-let m;
-while ((m = re.exec(body)) !== null) {
-  let value = m[2].trim();
-  if (value === '_No response_' || value === 'None') value = '';
-  sections[m[1].trim().toLowerCase()] = value;
-}
+const sections = parseSections(body);
 const get = (label) => sections[label.toLowerCase()] ?? '';
 
 const errors = [];
@@ -69,9 +61,6 @@ if (errors.length) {
   console.error('Could not create a workshop entry from this issue:\n- ' + errors.join('\n- '));
   process.exit(1);
 }
-
-const slugify = (s) =>
-  s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'workshop';
 
 // Contributors copy the workshop's own CFP heading, which routinely leads with
 // the venue ("NeurIPS 2026 Workshop on Machine Learning for Health"), and type

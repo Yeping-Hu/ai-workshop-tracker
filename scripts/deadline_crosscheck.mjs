@@ -32,10 +32,9 @@
  *   node scripts/deadline_crosscheck.mjs --strict                      # exit 1 if anything to review
  */
 import fs from 'node:fs';
-import { listWorkshopFiles, readWorkshopFile, loadConferences, stripVenueFromName, cleanAcronym, normalizeAcronym, isNotRunning } from '../lib/workshops.mjs';
+import { listWorkshopFiles, readWorkshopFile, loadConferences, stripVenueFromName, normalizeAcronym, isNotRunning } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 import { isAcronymShaped } from '../lib/identity.mjs';
-export { normalizeWebsite } from './discover_openreview.mjs';
 import {
   deadlineFromInvitation,
   parseGroupDeadline,
@@ -47,13 +46,10 @@ import {
 } from './discover_openreview.mjs';
 import { fetchGroupById } from './recheck_imminent.mjs';
 import { CONF_TEMPLATE, DEADLINE_LOOKBACK_MS } from './discover_openreview.mjs';
-import { openreviewFetch, recordUnverified, writeUnverified, getUnverified, clearUnverified } from '../lib/openreview.mjs';
+import { unwrap, openreviewFetch, recordUnverified, writeUnverified, getUnverified, clearUnverified } from '../lib/openreview.mjs';
 
 // OpenReview wraps some content values as { value: … }; unwrap if so.
-const val = (c, k) => {
-  const x = c?.[k];
-  return x && typeof x === 'object' && 'value' in x ? x.value : x;
-};
+const val = (c, k) => unwrap(c?.[k]);
 
 const HOUR = 3_600_000;
 const DAY = 86_400_000;
@@ -648,7 +644,8 @@ async function main() {
   // matters whenever it happens, so identity checks run over EVERY entry with a
   // venue. Listings are per conference-year, so covering the whole dataset costs
   // ~24 requests rather than one per entry.
-  const confMetaById = new Map(loadConferences().map((x) => [x.id, x]));
+  const conferenceList = loadConferences();
+  const confMetaById = new Map(conferenceList.map((x) => [x.id, x]));
   const identityEntries = slug ? allEntries.filter((e) => e.slug === slug) : allEntries;
   const prefixes = [
     ...new Set(identityEntries.map((e) => venuePrefix(e.raw.openreview_venue_id)).filter(Boolean)),
@@ -874,7 +871,9 @@ async function main() {
     const ack = raw.review_ack ?? {};
     const wd = websiteDrift(raw.website, websiteFromContent(c), ack.website);
     if (wd) { drift.push({ ...meta, ...wd }); console.log(`•  WEBSITE   ${s2}: ours ${wd.stored} vs OpenReview ${wd.openreview}`); }
-    const up = upstreamIdentity(c, raw);
+    // The list is passed in: the default argument re-read and re-parsed
+    // conferences.yml once per entry, ~940 times a run.
+    const up = upstreamIdentity(c, raw, conferenceList);
     const cm = confMetaById.get(raw.conference) ?? {};
     const venueCtx = { confName: cm.name ?? raw.conference, confFullName: cm.full_name, year: raw.year, conf: raw.conference };
     const td = titleDrift(raw.name, up.name, raw.conference, ack.name, venueCtx);

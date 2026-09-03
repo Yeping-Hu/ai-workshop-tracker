@@ -23,6 +23,7 @@ import {
   listWorkshopFiles,
   readWorkshopFile,
   isNotRunning,
+  workshopFilePath,
 } from '../lib/workshops.mjs';
 import {
   deadlineFromInvitation,
@@ -32,12 +33,10 @@ import {
   syncNote,
 } from './discover_openreview.mjs';
 import { fetchGroupById } from './recheck_imminent.mjs';
+import { unwrap } from '../lib/openreview.mjs';
 
 // OpenReview wraps some content values as { value: … }; unwrap if so.
-const val = (c, k) => {
-  const x = c?.[k];
-  return x && typeof x === 'object' && 'value' in x ? x.value : x;
-};
+const val = (c, k) => unwrap(c?.[k]);
 
 const args = process.argv.slice(2);
 const getArg = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : null);
@@ -50,7 +49,7 @@ if (!slug) {
   process.exit(1);
 }
 
-const fp = listWorkshopFiles().find((p) => readWorkshopFile(p).slug === slug);
+const fp = workshopFilePath(slug);
 if (!fp) {
   console.error(`No workshop file found for slug "${slug}".`);
   process.exit(1);

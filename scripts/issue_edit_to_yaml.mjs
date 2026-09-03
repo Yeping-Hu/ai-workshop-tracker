@@ -17,7 +17,7 @@ import path from 'node:path';
 import * as yaml from 'js-yaml';
 import { WORKSHOPS_DIR, recordDeadlineObservation } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs, isValidTimezone, assembleDeadline } from '../lib/dates.mjs';
-import { parseTopics } from '../lib/issue_form.mjs';
+import { parseTopics, parseSections } from '../lib/issue_form.mjs';
 import { syncedValue, LEGACY_IMPORT_NOTE, isAutoTopicsNote } from './discover_openreview.mjs';
 
 /**
@@ -108,15 +108,7 @@ function main() {
   const body = process.env.ISSUE_BODY;
   if (!body) { console.error('ISSUE_BODY env var is empty.'); process.exit(1); }
 
-  // Parse "### Label\n\nvalue" sections (same format the add path uses).
-  const sections = {};
-  const re = /^###\s+(.+?)\s*\r?\n([\s\S]*?)(?=^###\s+|\s*$(?![\s\S]))/gm;
-  let m;
-  while ((m = re.exec(body)) !== null) {
-    let value = m[2].trim();
-    if (value === '_No response_' || value === 'None') value = '';
-    sections[m[1].trim().toLowerCase()] = value;
-  }
+  const sections = parseSections(body);
   const get = (label) => sections[label.toLowerCase()] ?? '';
 
   const slug = get('Entry to edit').trim();

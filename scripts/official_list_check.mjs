@@ -32,7 +32,7 @@
  *   node scripts/official_list_check.mjs --report -        # stdout
  */
 import fs from 'node:fs';
-import { loadWorkshops, loadEditions, loadConferences, websiteKey } from '../lib/workshops.mjs';
+import { loadWorkshops, loadEditions, loadConferences } from '../lib/workshops.mjs';
 import {
   extractListedWorkshops,
   statedWorkshopCount,
@@ -126,7 +126,7 @@ async function fetchPage(url) {
       return { ok: true, body, status: res.status, bytes: body.length };
     } catch (e) {
       lastErr = e;
-      await sleep((attempt + 1) * 3000);
+      if (attempt < 2) await sleep((attempt + 1) * 3000); // no pause after the last try
     }
   }
   return { ok: false, reason: String(lastErr?.message ?? lastErr) };

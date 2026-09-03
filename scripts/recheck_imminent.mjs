@@ -50,8 +50,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
 import { listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, isNotRunning } from '../lib/workshops.mjs';
-import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
-import { openreviewFetch, recordUnverified, retryUnverified, writeUnverified } from '../lib/openreview.mjs';
+import { resolveDeadlineUtcMs, plausibleDeadline } from '../lib/dates.mjs';
+import { unwrap, openreviewFetch, recordUnverified, retryUnverified, writeUnverified } from '../lib/openreview.mjs';
 import {
   syncNote,
   syncedValue,
@@ -78,16 +78,12 @@ const LOOKBACK_MS = DEADLINE_LOOKBACK_MS;
 const LOOKAHEAD_MS = 14 * DAY;
 // Same plausibility guard as the weekly sync: reject absurd reads rather than
 // clobber a good value or fail validation for the whole run.
-const TWO_YEARS_MS = 2 * 366 * DAY;
 // Later-only by default, identical to the weekly sync: extensions flow in,
 // earlier moves are left for the daily cross-check / deadline-review issue.
 const ALLOW_EARLIER = false;
 
 // OpenReview wraps some content values as { value: … }; unwrap if so.
-const val = (c, k) => {
-  const x = c?.[k];
-  return x && typeof x === 'object' && 'value' in x ? x.value : x;
-};
+const val = (c, k) => unwrap(c?.[k]);
 
 /**
  * Fetch a single OpenReview group by its exact id. Returns the group object (so
@@ -196,10 +192,7 @@ async function main({ dryRun }) {
     const storedMs = resolveDeadlineUtcMs(raw.submission_deadline, raw.timezone || 'UTC');
     const fetchedMs = fetched ? resolveDeadlineUtcMs(fetched.submission_deadline, fetched.timezone || 'UTC') : null;
     const fetchedYear = fetched ? Number(String(fetched.submission_deadline).slice(0, 4)) : null;
-    const plausible =
-      fetchedMs != null &&
-      fetchedMs - Date.now() <= TWO_YEARS_MS &&
-      fetchedYear != null && Math.abs(fetchedYear - raw.year) <= 1;
+    const plausible = plausibleDeadline(fetchedMs, fetchedYear, raw.year);
     const decision = plausible
       ? decideDeadlineUpdate(storedMs, fetchedMs, { allowEarlier: ALLOW_EARLIER })
       : { update: false, reason: 'implausible' };

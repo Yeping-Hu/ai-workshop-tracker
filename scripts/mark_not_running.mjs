@@ -23,7 +23,12 @@
  */
 import fs from 'node:fs';
 import * as yaml from 'js-yaml';
-import { listWorkshopFiles, readWorkshopFile, loadEditions } from '../lib/workshops.mjs';
+import {
+  listWorkshopFiles,
+  readWorkshopFile,
+  loadEditions,
+  workshopFilePath,
+} from '../lib/workshops.mjs';
 
 const REASONS = ['not_on_official_list', 'withdrawn', 'cancelled'];
 
@@ -47,7 +52,7 @@ if ([reason, ack || null, unmark || null].filter(Boolean).length !== 1) {
 }
 if (reason && !REASONS.includes(reason)) die(`--reason must be one of: ${REASONS.join(', ')}`);
 
-const fp = listWorkshopFiles().find((p) => readWorkshopFile(p).slug === slug);
+const fp = workshopFilePath(slug);
 if (!fp) die(`No workshop file found for slug "${slug}".`);
 const { raw } = readWorkshopFile(fp);
 

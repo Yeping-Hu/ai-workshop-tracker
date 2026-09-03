@@ -39,9 +39,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, loadConferences, stripVenueFromName, cleanAcronym, normalizeAcronym, isNotRunning, slugify } from '../lib/workshops.mjs';
-import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
-import { openreviewFetch, recordUnverified, getUnverified } from '../lib/openreview.mjs';
+import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, loadConferences, stripVenueFromName, normalizeAcronym, isNotRunning, slugify, slugOfFile } from '../lib/workshops.mjs';
+import { resolveDeadlineUtcMs, plausibleDeadline } from '../lib/dates.mjs';
+import { unwrap, openreviewFetch, recordUnverified, getUnverified, writeUnverified } from '../lib/openreview.mjs';
 
 // Prepended to new entries that lack a deadline, so anyone editing the raw YAML
 // directly (e.g. via the raw-YAML link in the edit form's intro) sees exactly
@@ -71,7 +71,6 @@ export const LEGACY_IMPORT_NOTE = 'imported from OpenReview — check the websit
 // the dangerous failure mode. Flip to true to also follow earlier corrections
 // (riskier; leans on validate.mjs's sanity checks as the net).
 const ALLOW_EARLIER = false;
-const TWO_YEARS_MS = 2 * 366 * 86_400_000;
 /**
  * How long after its own deadline a workshop may still be auto-extended.
  *
@@ -153,10 +152,7 @@ export const CONF_TEMPLATE = {
   eccv: 'thecvf.com/ECCV/{year}/Workshop',
 };
 
-const val = (c, k) => {
-  const x = c?.[k];
-  return x && typeof x === 'object' && 'value' in x ? x.value : x;
-};
+const val = (c, k) => unwrap(c?.[k]);
 
 /** The `website` of an OpenReview group's content, validated: a bare http(s)
  *  URL, length-capped. Shared by every reader of the field — venue creation,
@@ -554,6 +550,7 @@ export function mergeTracks(storedTracks, openreviewTracks, { allowEarlier = fal
 
 async function main({ conf, year, dryRun }) {
   const prefix = CONF_TEMPLATE[conf].replace('{year}', String(year));
+  const conferenceList = loadConferences(); // once per cycle, not once per new venue
   // Through the limiter like everything else — and being the first request of
   // a cycle, it is what teaches the limiter the current budget before the
   // per-venue burst starts.
@@ -590,7 +587,7 @@ async function main({ conf, year, dryRun }) {
   for (const f of listWorkshopFiles()) {
     const e = readWorkshopFile(f);
     if (e.raw?.openreview_venue_id) known.set(e.raw.openreview_venue_id, { path: f, raw: e.raw });
-    for (const id of e.raw?.merged_venue_ids ?? []) merged.set(String(id), path.basename(f, '.yml'));
+    for (const id of e.raw?.merged_venue_ids ?? []) merged.set(String(id), slugOfFile(f));
   }
   const today = new Date().toISOString().slice(0, 10);
   let created = 0, skipped = 0, backfilled = 0, updated = 0, adopted = 0;
@@ -725,10 +722,7 @@ async function main({ conf, year, dryRun }) {
           const fetchedMs = fetched ? resolveDeadlineUtcMs(fetched.submission_deadline, fetched.timezone || 'UTC') : null;
           const fetchedYear = fetched ? Number(String(fetched.submission_deadline).slice(0, 4)) : null;
           // Skip absurd values rather than failing validate for the whole run.
-          const plausible =
-            fetchedMs != null &&
-            fetchedMs - Date.now() <= TWO_YEARS_MS &&
-            fetchedYear != null && Math.abs(fetchedYear - raw.year) <= 1;
+          const plausible = plausibleDeadline(fetchedMs, fetchedYear, raw.year);
           // A deadline that closed more than the look-back ago is not extended
           // automatically, however plausible the new value looks on its own.
           //
@@ -801,7 +795,7 @@ async function main({ conf, year, dryRun }) {
       }
     }
 
-    const confMeta = loadConferences().find((x) => x.id === conf) ?? {};
+    const confMeta = conferenceList.find((x) => x.id === conf) ?? {};
     const title = stripVenueFromName(String(val(c, 'title') || tail).trim().slice(0, 200), {
       confName: confMeta.name ?? conf,
       confFullName: confMeta.full_name,
@@ -873,14 +867,6 @@ async function main({ conf, year, dryRun }) {
   // totals, because "116 venues, 116 already tracked" read as a complete pass
   // even on the run where five of them were never checked at all.
   const missed = getUnverified();
-  if (missed.length && process.env.OPENREVIEW_UNVERIFIED) {
-    // A file, not module state: the workflow runs each conference-year as its
-    // own `node` process, mirroring how $DEADLINE_CHANGELOG is accumulated.
-    fs.appendFileSync(
-      process.env.OPENREVIEW_UNVERIFIED,
-      missed.map((m) => `${conf}	${year}	${m.id}	${m.reason}`).join('\n') + '\n',
-    );
-  }
   console.log(
     `${conf} ${year}: ${venues.length} venues on OpenReview — ${created} created, ${skipped} already tracked` +
     `${backfilled ? `, ${backfilled} deadline(s) backfilled` : ''}` +
@@ -889,7 +875,10 @@ async function main({ conf, year, dryRun }) {
     `${missed.length ? `, ${missed.length} UNVERIFIED (see warnings)` : ''}.`,
   );
   for (const c of changes) console.log(`    ↳ ${c}`);
-  for (const m of missed) console.log(`    ⚠ unverified: ${m.id} — ${m.reason}`);
+  // Named on stdout and appended to $OPENREVIEW_UNVERIFIED through the shared
+  // writer — the same TSV the workflow turns into the "venues not verified"
+  // issue, so discovery feeds one report like every other OpenReview job.
+  writeUnverified(missed.map((m) => ({ conf, year, ...m })));
 }
 
 // Only run the CLI when invoked directly, so the exported helpers

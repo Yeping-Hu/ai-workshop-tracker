@@ -171,7 +171,6 @@ h3 { font-size: 1.12rem; margin: 1.6rem 0 0.4rem; }
   padding: 0.45rem 0.7rem;
 }
 .filterbar input[type="search"]::placeholder { color: var(--muted); }
-.f-group { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; }
 .check { display: inline-flex; align-items: center; gap: 0.38rem; font-size: 0.9rem; cursor: pointer; user-select: none; }
 .check input { accent-color: var(--accent); width: 0.95rem; height: 0.95rem; }
 .conf-dot { width: 0.62rem; height: 0.62rem; border-radius: 50%; background: var(--conf, var(--muted)); display: inline-block; }
@@ -341,22 +340,6 @@ details.dd .dd-panel {
 .paper details summary { cursor: pointer; font-size: 0.82rem; color: var(--accent); }
 .paper details p { font-size: 0.88rem; color: var(--muted); margin: 0.4rem 0 0; max-width: 46rem; }
 
-/* ---------- archive ---------- */
-.year-block { margin: 1.6rem 0; }
-.year-block h3 { display: flex; align-items: baseline; gap: 0.7rem; }
-.year-block h3 .mono { color: var(--muted); font-size: 0.8rem; font-weight: 400; }
-.arch-row { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; align-items: baseline; padding: 0.5rem 0.2rem; border-bottom: 1px solid var(--line); }
-.arch-row .ws-name { font-size: 1rem; }
-.arch-row .links { margin-left: auto; font-size: 0.84rem; display: flex; gap: 0.9rem; }
-
-/* ---------- calendar / feeds ---------- */
-.feed-list { list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: 0.55rem; }
-.feed-list li { display: flex; flex-wrap: wrap; gap: 0.4rem 0.9rem; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.6rem 0.85rem; }
-.feed-list .feed-name { font-weight: 600; font-size: 0.93rem; min-width: 11rem; }
-.feed-list code.feed-url { flex: 1 1 16rem; overflow-x: auto; background: var(--paper); font-size: 0.78rem; padding: 0.3rem 0.5rem; white-space: nowrap; }
-.copybtn { font: inherit; font-size: 0.8rem; cursor: pointer; background: var(--accent-soft); color: var(--accent); border: none; border-radius: 6px; padding: 0.32rem 0.7rem; }
-.copybtn:hover { filter: brightness(0.97); }
-
 /* prose pages */
 .prose { max-width: 44rem; }
 .prose p { margin: 0.8rem 0; }
@@ -411,12 +394,6 @@ details.tba-section > summary { cursor: pointer; color: var(--muted); font-size:
   color: var(--muted); padding: 0.3rem 0.55rem;
 }
 .theme-toggle:hover { color: var(--ink); border-color: var(--accent); }
-.arch-conf { display: flex; align-items: baseline; gap: 0.8rem; margin-top: 3rem; }
-.arch-conf .badge { font-size: 0.95rem; padding: 0.32rem 0.95rem; }
-.arch-conf-full { color: var(--muted); font-size: 0.85rem; font-weight: 400; font-family: var(--font-body); letter-spacing: 0; }
-.year-block { border-left: 3px solid var(--conf, var(--line)); padding-left: 1.1rem; margin: 1.3rem 0 2.1rem; }
-.year-block h3 { font-size: 1.5rem; margin-top: 0.4rem; }
-.arch-row:hover { background: var(--surface); }
 
 /* ---------- search-first homepage ---------- */
 .hero { text-align: center; padding: 3.2rem 0 1.6rem; }
@@ -430,22 +407,12 @@ details.tba-section > summary { cursor: pointer; color: var(--muted); font-size:
 .kw-box.hero-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .hero .statline, .hero .nextline { justify-content: center; text-align: center; }
 .facetbar { margin-top: 0.4rem; }
-.board-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 1.4rem; margin-top: 2.4rem; }
-.board-head h2 { margin: 0; }
 .result-meta { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.25rem; }
 .result-meta .badge { font-size: 0.7rem; }
-
-.type-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.type-seg .seg { font: inherit; font-size: 0.85rem; padding: 0.38rem 0.85rem; background: var(--surface); border: none; cursor: pointer; color: var(--muted); }
-.type-seg .seg + .seg { border-left: 1px solid var(--line); }
-.type-seg .seg.is-on { background: var(--accent); color: var(--accent-ink); }
 .pill.unknown { background: transparent; border: 1px dashed var(--line); color: var(--muted); }
 
 /* per-paper search results & anchored paper headings */
 .paper .p-title { margin: 0; font-size: 1rem; font-family: var(--font-body); font-weight: 600; line-height: 1.4; }
-.pf-from { margin: 0.15rem 0 0; font-size: 0.82rem; color: var(--muted); }
-.pf-from a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
-.pf-from a:hover { color: var(--accent); }
 .pill.paper { background: transparent; border: 1px solid var(--line); color: var(--muted); }
 .pf-more { padding: 0.5rem 0 0.9rem; font-size: 0.85rem; }
 

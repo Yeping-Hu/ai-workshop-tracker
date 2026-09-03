@@ -41,7 +41,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
 import { listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, isNotRunning } from '../lib/workshops.mjs';
-import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
+import { resolveDeadlineUtcMs, plausibleDeadline } from '../lib/dates.mjs';
 import {
   subTrackInfo,
   fetchGroups,
@@ -55,7 +55,6 @@ import { fetchGroupById } from './recheck_imminent.mjs';
 import { retryUnverified, writeUnverified } from '../lib/openreview.mjs';
 
 const ALLOW_EARLIER = false; // later-only, same default as the single-deadline sync
-const TWO_YEARS_MS = 2 * 366 * 86_400_000;
 
 /** True while the entry is still bot-managed and human-untouched: its note holds
  *  the value the bot last wrote, or the pre-sync legacy marker. Any human edit to
@@ -119,7 +118,7 @@ async function main({ slug, dryRun }) {
       if (!t.submission_deadline) return true;
       const yr = Number(String(t.submission_deadline).slice(0, 4));
       const ms = resolveDeadlineUtcMs(t.submission_deadline, t.timezone || 'UTC');
-      const ok = Number.isFinite(yr) && Math.abs(yr - raw.year) <= 1 && ms - Date.now() <= TWO_YEARS_MS;
+      const ok = plausibleDeadline(ms, yr, raw.year);
       if (!ok) console.warn(`  ⚠ ${path.basename(fp)}: track "${t.name}" OpenReview date "${t.submission_deadline}" looks implausible — ignored`);
       return ok;
     });

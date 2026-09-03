@@ -31,12 +31,14 @@ import {
   loadEditions,
   loadConferences,
   websiteKey,
+  workshopFilePath,
 } from '../lib/workshops.mjs';
 import { extractListedWorkshops } from '../lib/official_list.mjs';
 import { matchOfficialList } from '../lib/official_match.mjs';
 import { declinedUpstreamValue } from './deadline_crosscheck.mjs';
 import { fetchGroupById } from './recheck_imminent.mjs';
 import { get as fetchListPage } from './official_list_check.mjs';
+import { unwrap } from '../lib/openreview.mjs';
 
 const args = process.argv.slice(2);
 const getArg = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : null);
@@ -55,7 +57,7 @@ if (!slug || !['name', 'website'].includes(field ?? '') || adopt === decline) {
   die('Usage: node scripts/apply_official_list.mjs --slug <slug> --field name|website (--adopt | --decline) [--dry-run]');
 }
 
-const fp = listWorkshopFiles().find((p) => readWorkshopFile(p).slug === slug);
+const fp = workshopFilePath(slug);
 if (!fp) die(`No workshop file found for slug "${slug}".`);
 const { raw } = readWorkshopFile(fp);
 
@@ -126,10 +128,7 @@ if (decline) {
 async function ackOpenReviewIfItDisagrees(record, which) {
   if (!record.openreview_venue_id) return;
   const group = await fetchGroupById(record.openreview_venue_id);
-  const val = (k) => {
-    const x = group?.content?.[k];
-    return x && typeof x === 'object' && 'value' in x ? x.value : x;
-  };
+  const val = (k) => unwrap(group?.content?.[k]);
   const declined = declinedUpstreamValue(record, which, which === 'name' ? val('title') : val('website'));
   if (!declined) return;
   record.review_ack = { ...(record.review_ack ?? {}), [which]: declined };
