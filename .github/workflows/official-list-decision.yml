@@ -64,6 +64,7 @@ permissions:
 jobs:
   mark:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -104,28 +105,9 @@ jobs:
       # Validation passed — publish directly. A failed validation fails the job
       # before anything is committed.
       - name: Publish if changed
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if [ -z "$(git status --porcelain data/workshops)" ]; then
-            echo "No change — that decision was already recorded."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/workshops
-          git commit -m "data: ${{ inputs.slug }} — ${{ inputs.action }} (manual dispatch)"
-          # Rebase-retry: the concurrency group should keep the sibling data jobs
-          # off our toes, but a merge, an admin push or a re-run can still move
-          # `main` between checkout and push.
-          for attempt in 1 2 3; do
-            git push && break
-            if [ "$attempt" = 3 ]; then
-              echo "::error::push failed after 3 attempts (main kept moving)" && exit 1
-            fi
-            git fetch origin main && git rebase origin/main || exit 1
-            sleep $((attempt * 5))
-          done
-          # Pushes made with GITHUB_TOKEN don't trigger on:push workflows,
-          # so kick the deploy explicitly.
-          gh workflow run deploy.yml --ref main
+        uses: ./.github/actions/publish-data
+        with:
+          paths: data/workshops
+          subject: 'data: ${{ inputs.slug }} — ${{ inputs.action }} (manual dispatch)'
+          nothing-message: 'No change — that decision was already recorded.'
+          token: ${{ github.token }}

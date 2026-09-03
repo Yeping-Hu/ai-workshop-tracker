@@ -25,6 +25,7 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -37,28 +38,9 @@ jobs:
       - name: Validate
         run: node scripts/validate.mjs
       - name: Publish cache changes (if any)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if [ -z "$(git status --porcelain cache/openreview)" ]; then
-            echo "No cache changes this month."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add cache/openreview
-          git commit -m "data: monthly paper-cache refresh (auto-published)"
-          # Push with rebase-retry. The concurrency group above should prevent a
-          # sibling data job from racing us, but a merge, an admin push or a
-          # re-run can still move `main` between checkout and push — so rebase
-          # onto whatever landed and try again rather than failing with the work
-          # already computed.
-          for attempt in 1 2 3; do
-            git push && break
-            if [ "$attempt" = 3 ]; then
-              echo "::error::push failed after 3 attempts (main kept moving)" && exit 1
-            fi
-            git fetch origin main && git rebase origin/main || exit 1
-            sleep $((attempt * 5))
-          done
-          gh workflow run deploy.yml --ref main
+        uses: ./.github/actions/publish-data
+        with:
+          paths: cache/openreview
+          subject: 'data: monthly paper-cache refresh (auto-published)'
+          nothing-message: 'No cache changes this month.'
+          token: ${{ github.token }}

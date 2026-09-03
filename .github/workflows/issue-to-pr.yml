@@ -16,6 +16,7 @@ jobs:
   convert:
     if: contains(github.event.issue.labels.*.name, 'add-workshop')
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

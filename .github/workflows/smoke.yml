@@ -37,6 +37,7 @@ concurrency:
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     # A deploy that itself failed has nothing worth smoke-testing; the schedule
     # and manual runs carry no conclusion to check.
     if: >-
@@ -54,11 +55,19 @@ jobs:
         id: pw
         run: echo "version=$(node -p "require('./node_modules/playwright/package.json').version")" >> "$GITHUB_OUTPUT"
       - name: Cache the browser
+        id: pw-cache
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
-      - run: npx playwright install --with-deps chromium
+      # Same split as pr-build-check.yml: the browser comes from the cache on a
+      # hit, but the OS libraries are never cacheable and are installed either way.
+      - name: Install Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install Chromium system libraries
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
 
       # A fresh deploy can take a moment to be served everywhere. One retry
       # keeps a propagation lag from reading as an outage.

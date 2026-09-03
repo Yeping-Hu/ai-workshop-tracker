@@ -32,7 +32,7 @@ for human review, as do dependency updates.
 | `official-list-decision.yml` | manual | Records one decision the official-list report asked for — `not_running` / `review_ack.official_list` via `scripts/mark_not_running.mjs`, or adopting/declining a drifted name or website via `scripts/apply_official_list.mjs` → commits to `main` |
 | `stale-check.yml` | weekly | One consolidated issue listing entries needing follow-up |
 | `link-check.yml` | monthly | One consolidated issue listing broken URLs Before running, `scripts/lychee_exclusions.mjs` appends every `review_ack.website` to `.lycheeignore`, so a URL deliberately removed as dead is not re-reported each month. |
-| `alerts.yml` | daily, manual | `scripts/alerts_run.mjs` — diffs `/api/workshops.json` against yesterday's snapshot, records events, sends urgent starred-deadline alerts, and on Mondays the weekly digests. Commits nothing. |
+| `alerts.yml` | daily, manual | `scripts/alerts_run.mjs` — diffs `/api/workshops.json` against yesterday's snapshot, records events, sends urgent starred-deadline alerts, and on Mondays the weekly digests, committing that week's `data/changes.json` for the `/changes/` page. |
 | `alerts-worker-deploy.yml` | push touching `alerts/**` | `wrangler deploy` of the alerts Worker, after checking `alerts/ids.json` is in sync with the data vocabulary |
 | `alerts-ci.yml` | PRs & pushes touching `alerts/**` or `scripts/alerts_*` | The four pure-logic alerts suites (tokens, diff, matching, rendering) plus the ids sync check |
 
@@ -141,9 +141,11 @@ anchors, which is indistinguishable from "everything was rejected".
 
 ## The alerts job is outside the data-write group
 
-`alerts.yml` never commits to the repo, so it deliberately does **not** join the
-`data-write` concurrency group described below — queueing it behind the data jobs
-would only delay mail. It has its own `alerts` group so two runs can't overlap.
+`alerts.yml` commits exactly one file — `data/changes.json`, on the weekly pass —
+and still deliberately does **not** join the `data-write` concurrency group
+described below: queueing it behind a slow discovery run would only delay mail,
+and the shared publish action's rebase-retry absorbs a collision with a data job.
+It has its own `alerts` group so two runs can't overlap.
 
 What it *does* need is ordering against `deploy.yml`: the diff must read the
 `workshops.json` that today's rebuild produced, or it compares yesterday's feed
@@ -219,6 +221,19 @@ between, backing off 5s then 10s), because the group can't prevent a move from
 outside it — a merge, an admin push, or a re-run. The crons are 30 minutes apart,
 but discovery can take ~35 minutes on a slow OpenReview day and a manual dispatch
 ignores the schedule entirely.
+
+The commit-push-dispatch sequence itself is one composite action,
+`.github/actions/publish-data`, that every committing workflow calls with its
+paths, subject and change log — eight copies of the same shell block used to sit
+in eight files. It also carries the `gh workflow run deploy.yml` that follows a
+successful push: a push made with `GITHUB_TOKEN` does not trigger `on: push`, so
+without it new data would sit on `main` unbuilt until the next daily deploy.
+
+Every job carries a `timeout-minutes` well under GitHub's six-hour default —
+150 for discovery, 45 for the other network jobs — so a hung OpenReview socket
+cannot hold the `data-write` lock for the rest of the day. The bounds are
+generous on purpose: a killed run loses its computed work, which is worse than a
+slow one.
 
 
 ## OpenReview's rate limit

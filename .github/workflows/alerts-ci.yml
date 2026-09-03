@@ -14,6 +14,11 @@ on:
       - 'alerts/**'
       - 'scripts/alerts_*'
       - 'scripts/gen_alerts_ids.mjs'
+      # render.mjs imports these, so they are inside the Worker bundle and
+      # alerts-worker-deploy.yml ships on them; the suites must run on them too.
+      - 'lib/identity.mjs'
+      - 'lib/events.mjs'
+      - 'lib/dates.mjs'
       - 'site/src/scripts/star-merge.js'
       - 'site/src/scripts/alerts-session.js'
       - 'data/conferences.yml'
@@ -25,6 +30,11 @@ on:
       - 'alerts/**'
       - 'scripts/alerts_*'
       - 'scripts/gen_alerts_ids.mjs'
+      # render.mjs imports these, so they are inside the Worker bundle and
+      # alerts-worker-deploy.yml ships on them; the suites must run on them too.
+      - 'lib/identity.mjs'
+      - 'lib/events.mjs'
+      - 'lib/dates.mjs'
       - 'site/src/scripts/star-merge.js'
       - 'site/src/scripts/alerts-session.js'
       - 'data/conferences.yml'
@@ -36,6 +46,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

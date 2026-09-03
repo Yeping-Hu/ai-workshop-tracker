@@ -43,6 +43,7 @@ permissions:
 jobs:
   discover:
     runs-on: ubuntu-latest
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -150,46 +151,16 @@ jobs:
         run: node scripts/acronym_identity_test.mjs
       # Validation passed above — publish directly. A failed validation fails
       # the job before anything is committed (GitHub emails the owner).
+      # The commit/push/deploy-dispatch itself lives in .github/actions/publish-data.
       - name: Publish new/updated entries (if any)
-        env:
-          GH_TOKEN: ${{ github.token }}
-          DEADLINE_CHANGELOG: ${{ github.workspace }}/.deadline-changes.md
-        run: |
-          if [ -z "$(git status --porcelain data/workshops)" ]; then
-            echo "No new or updated workshops this week."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/workshops
-          # Commit message: a fixed subject plus, when the bot re-synced any
-          # deadlines, the per-deadline change log (old -> new) — so every
-          # automated edit is recorded in history rather than applied silently.
-          {
-            echo "data: weekly OpenReview discovery (auto-published after validation)"
-            if [ -s "$DEADLINE_CHANGELOG" ]; then
-              echo
-              echo "Deadline changes synced from OpenReview (later-only):"
-              cat "$DEADLINE_CHANGELOG"
-            fi
-          } > "$RUNNER_TEMP/commit-msg.txt"
-          git commit -F "$RUNNER_TEMP/commit-msg.txt"
-          # Push with rebase-retry. The concurrency group above should prevent a
-          # sibling data job from racing us, but a merge, an admin push or a
-          # re-run can still move `main` between checkout and push — so rebase
-          # onto whatever landed and try again rather than failing with the work
-          # already computed.
-          for attempt in 1 2 3; do
-            git push && break
-            if [ "$attempt" = 3 ]; then
-              echo "::error::push failed after 3 attempts (main kept moving)" && exit 1
-            fi
-            git fetch origin main && git rebase origin/main || exit 1
-            sleep $((attempt * 5))
-          done
-          # Pushes made with GITHUB_TOKEN don't trigger on:push workflows,
-          # so kick the deploy explicitly.
-          gh workflow run deploy.yml --ref main
+        uses: ./.github/actions/publish-data
+        with:
+          paths: data/workshops
+          subject: 'data: weekly OpenReview discovery (auto-published after validation)'
+          changelog: ${{ github.workspace }}/.deadline-changes.md
+          changelog-heading: 'Deadline changes synced from OpenReview (later-only):'
+          nothing-message: 'No new or updated workshops this week.'
+          token: ${{ github.token }}
 
       # Anything that failed twice becomes a consolidated issue, modelled on
       # deadline-review.yml: one issue, edited in place, and **closed when the

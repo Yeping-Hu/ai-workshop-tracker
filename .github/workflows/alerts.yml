@@ -9,8 +9,10 @@
 # so it always diffs the rebuilt feed, never yesterday's. If deploy.yml's cron
 # moves, move this one with it.
 #
-# This job never commits to the repo, so it deliberately does NOT join the
-# `data-write` concurrency group (see docs/AUTOMATION.md); it has its own.
+# This job commits exactly one file, data/changes.json, on the weekly pass. It
+# still stays OUT of the `data-write` concurrency group (see docs/AUTOMATION.md):
+# queueing behind a slow discovery run would only delay mail, and the publish
+# action's rebase-retry absorbs a collision. It has its own group.
 name: Email alerts
 
 on:
@@ -45,6 +47,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     # Skipped entirely in forks and wherever the feature is unconfigured, so a
     # fork's Actions tab isn't full of red runs it can never fix.
     if: github.repository_owner == 'Yeping-Hu'
@@ -99,30 +102,9 @@ jobs:
       # touching a subscriber. The guard that used to sit here made a dry run
       # compute the right answer and then throw it away.
       - name: Commit this week's changes feed
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if [ -z "$(git status --porcelain data/changes.json)" ]; then
-            echo "no change to data/changes.json — nothing to commit"
-            exit 0
-          fi
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/changes.json
-          git commit -m "data: this week's changes feed (auto-published)"
-          # Push with rebase-retry, the same shape discover.yml uses: the daily
-          # data workflows also commit to main, and one can land between this
-          # job's checkout and its push. Rebase onto whatever arrived rather
-          # than failing with the work already done.
-          for attempt in 1 2 3; do
-            git push origin HEAD:main && break
-            if [ "$attempt" = 3 ]; then
-              echo "::error::push failed after 3 attempts (main kept moving)" && exit 1
-            fi
-            git fetch origin main && git rebase origin/main || exit 1
-            sleep $((attempt * 5))
-          done
-          # A push made with GITHUB_TOKEN does not trigger `on: push`, so the
-          # site would not rebuild until the next daily deploy — up to ~23h
-          # later, on a page headed "this week". Kick it explicitly.
-          gh workflow run deploy.yml --ref main
+        uses: ./.github/actions/publish-data
+        with:
+          paths: data/changes.json
+          subject: "data: this week's changes feed (auto-published)"
+          nothing-message: 'no change to data/changes.json — nothing to commit'
+          token: ${{ github.token }}

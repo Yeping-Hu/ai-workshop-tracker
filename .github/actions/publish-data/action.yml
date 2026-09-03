@@ -1,0 +1,98 @@
+# Commit data straight to `main` with the bot identity, push with a bounded
+# rebase-retry, and kick deploy.yml. Eight workflows carried this block
+# verbatim — comments included — and each drifted a little (one used
+# `git push origin HEAD:main`, one skipped the changelog). One copy now.
+#
+# Two things about it are load-bearing:
+#
+#   - The rebase-retry. Every workflow that commits shares the `data-write`
+#     concurrency group, but a merge, an admin push or a re-run can still move
+#     `main` between checkout and push. Rebasing onto whatever landed and
+#     trying again is what stops a job failing with its work computed but
+#     unpublished. Bounded, so a `main` that keeps moving fails loudly instead
+#     of looping.
+#   - The deploy dispatch. A push made with GITHUB_TOKEN does not trigger
+#     `on: push`, so without it the data would sit on `main` unbuilt until the
+#     next daily deploy — up to ~23 h. Everything here inherits this.
+#
+# Inputs arrive through `env`, never interpolated into the script, so a
+# subject built from a workflow_dispatch input cannot reach the shell.
+name: Publish data to main
+description: Commit the given paths to main as the bot, push with rebase-retry, and dispatch a deploy.
+
+inputs:
+  paths:
+    description: 'Space-separated paths to stage; "anything to publish?" is measured on these too'
+    required: true
+  subject:
+    description: 'Commit subject line'
+    required: true
+  changelog:
+    description: 'Optional file whose contents become the commit body (skipped when absent or empty)'
+    required: false
+    default: ''
+  changelog-heading:
+    description: 'Line printed above the changelog in the commit body'
+    required: false
+    default: ''
+  nothing-message:
+    description: 'Logged when there is nothing to commit'
+    required: false
+    default: 'Nothing to publish.'
+  dispatch-deploy:
+    description: 'Run deploy.yml after a successful push'
+    required: false
+    default: 'true'
+  token:
+    description: 'GITHUB_TOKEN, for `gh workflow run`'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Commit, push (rebase-retry), dispatch deploy
+      shell: bash
+      env:
+        PATHS: ${{ inputs.paths }}
+        SUBJECT: ${{ inputs.subject }}
+        CHANGELOG: ${{ inputs.changelog }}
+        CHANGELOG_HEADING: ${{ inputs.changelog-heading }}
+        NOTHING_MESSAGE: ${{ inputs.nothing-message }}
+        DISPATCH_DEPLOY: ${{ inputs.dispatch-deploy }}
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+        # Word-split on purpose: PATHS is a space-separated list of repo paths.
+        # shellcheck disable=SC2086
+        if [ -z "$(git status --porcelain -- $PATHS)" ]; then
+          echo "$NOTHING_MESSAGE"
+          exit 0
+        fi
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        # shellcheck disable=SC2086
+        git add -- $PATHS
+        # A fixed subject plus, when the job kept one, its change log (old ->
+        # new per entry), so every automated edit is recorded in history
+        # rather than applied silently.
+        {
+          echo "$SUBJECT"
+          if [ -n "$CHANGELOG" ] && [ -s "$CHANGELOG" ]; then
+            echo
+            if [ -n "$CHANGELOG_HEADING" ]; then echo "$CHANGELOG_HEADING"; fi
+            cat "$CHANGELOG"
+          fi
+        } > "$RUNNER_TEMP/commit-msg.txt"
+        git commit -F "$RUNNER_TEMP/commit-msg.txt"
+        for attempt in 1 2 3; do
+          git push && break
+          if [ "$attempt" = 3 ]; then
+            echo "::error::push failed after 3 attempts (main kept moving)"
+            exit 1
+          fi
+          git fetch origin main && git rebase origin/main || exit 1
+          sleep $((attempt * 5))
+        done
+        if [ "$DISPATCH_DEPLOY" = "true" ]; then
+          gh workflow run deploy.yml --ref main
+        fi

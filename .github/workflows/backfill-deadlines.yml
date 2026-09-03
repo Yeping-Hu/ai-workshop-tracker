@@ -35,6 +35,7 @@ permissions:
 jobs:
   backfill:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -50,46 +51,13 @@ jobs:
         run: node scripts/validate.mjs
       # Validation passed above — publish directly. A failed validation fails
       # the job before anything is committed (GitHub emails the owner).
+      # The commit/push/deploy-dispatch itself lives in .github/actions/publish-data.
       - name: Publish backfilled deadlines (if any)
-        env:
-          GH_TOKEN: ${{ github.token }}
-          DEADLINE_CHANGELOG: ${{ github.workspace }}/.deadline-changes.md
-        run: |
-          if [ -z "$(git status --porcelain data/workshops)" ]; then
-            echo "No blank deadlines backfilled today."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/workshops
-          # Commit message: a fixed subject plus the per-deadline fill log
-          # ((blank) -> new), so every automated edit is recorded in history
-          # rather than applied silently — same convention as the weekly run.
-          {
-            echo "data: daily blank-deadline backfill (auto-published after validation)"
-            if [ -s "$DEADLINE_CHANGELOG" ]; then
-              echo
-              echo "Deadlines backfilled from OpenReview:"
-              cat "$DEADLINE_CHANGELOG"
-            fi
-          } > "$RUNNER_TEMP/commit-msg.txt"
-          git commit -F "$RUNNER_TEMP/commit-msg.txt"
-          # Two daily jobs now push to main (imminent re-check ~30m earlier); if
-          # its push landed after this job checked out, rebase onto it and retry
-          # so a race can never drop a fill.
-          # Push with rebase-retry. The concurrency group above should prevent a
-          # sibling data job from racing us, but a merge, an admin push or a
-          # re-run can still move `main` between checkout and push — so rebase
-          # onto whatever landed and try again rather than failing with the work
-          # already computed.
-          for attempt in 1 2 3; do
-            git push && break
-            if [ "$attempt" = 3 ]; then
-              echo "::error::push failed after 3 attempts (main kept moving)" && exit 1
-            fi
-            git fetch origin main && git rebase origin/main || exit 1
-            sleep $((attempt * 5))
-          done
-          # Pushes made with GITHUB_TOKEN don't trigger on:push workflows,
-          # so kick the deploy explicitly.
-          gh workflow run deploy.yml --ref main
+        uses: ./.github/actions/publish-data
+        with:
+          paths: data/workshops
+          subject: 'data: daily blank-deadline backfill (auto-published after validation)'
+          changelog: ${{ github.workspace }}/.deadline-changes.md
+          changelog-heading: 'Deadlines backfilled from OpenReview:'
+          nothing-message: 'No blank deadlines backfilled today.'
+          token: ${{ github.token }}

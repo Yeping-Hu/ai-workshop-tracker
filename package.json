@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Data, validation, and automation scripts for the ML Workshop Tracker",
+  "description": "Data, validation, and automation scripts for the AI Workshop Tracker",
   "scripts": {
+    "test": "node scripts/run_tests.mjs",
     "validate": "node scripts/validate.mjs",
     "fetch:openreview": "node scripts/fetch_openreview.mjs",
     "stale": "node scripts/stale_check.mjs",
