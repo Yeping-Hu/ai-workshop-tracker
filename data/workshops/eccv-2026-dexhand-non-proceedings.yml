@@ -5,9 +5,9 @@ year: 2026
 website: https://hands-workshop.org/workshop2026.html
 topics:
   - robotics
-submission_deadline: 2026-08-31 23:59
+submission_deadline: 2026-09-08 23:59
 timezone: UTC
-deadline_notes: OpenReview-synced 2026-08-31 23:59 UTC (as of 2026-08-16) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_notes: OpenReview-synced 2026-09-08 23:59 UTC (as of 2026-09-04) — extensions on OpenReview are applied automatically; verify on the website.
 openreview_venue_id: thecvf.com/ECCV/2026/Workshop/DexHAND_Non-Proceedings
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
@@ -18,5 +18,8 @@ deadline_history:
     timezone: UTC
   - value: 2026-08-31 23:59
     recorded: '2026-08-16'
+    timezone: UTC
+  - value: 2026-09-08 23:59
+    recorded: '2026-09-04'
     timezone: UTC
 location: Malmö, Sweden
