@@ -270,21 +270,7 @@ check('ack is irrelevant when we already agree', titleDrift('Same Title', 'Same 
 // and the id we already hold must never be proposed back to us.
 {
   const conf = siblingVenueCandidates('NeurIPS.cc/2026/Workshop/ML4PS', { acronym: 'ML4PS', year: 2026 });
-  check('conference namespace -> the workshop\'s own', conf[0], 'ML4PS/2026/Workshop');
-  // Own namespaces are usually domains, so the bare tail alone is not enough.
-  check('...and its domain forms too',
-    ['org', 'cc', 'com', 'ai', 'io'].every((t) => conf.includes(`ML4PS.${t}/2026/Workshop`)), true);
-
-  // UniReps 2026 left NeurIPS.cc for UniReps.org mid-season. Before the domain
-  // forms were proposed the report said "no replacement found" for a workshop
-  // that was live all along, and the site kept linking a venue guests get a 403 on.
-  check('a .org move is proposed',
-    siblingVenueCandidates('NeurIPS.cc/2026/Workshop/UniReps', { acronym: 'UniReps 2026', year: 2026 })
-      .includes('UniReps.org/2026/Workshop'), true);
-  // ...and the same move read backwards has to shed the TLD to form the leaf.
-  check('a domain namespace sheds its TLD going back',
-    siblingVenueCandidates('UniReps.org/2026/Workshop', { acronym: 'UniReps', year: 2026 })
-      .includes('NeurIPS.cc/2026/Workshop/UniReps'), true);
+  check('conference namespace -> the workshop\'s own', conf, ['ML4PS/2026/Workshop']);
 
   const own = siblingVenueCandidates('ML4PS/2026/Workshop', { acronym: 'ML4PS', year: 2026 });
   check('own namespace -> every conference namespace', own.includes('NeurIPS.cc/2026/Workshop/ML4PS'), true);
@@ -297,13 +283,13 @@ check('ack is irrelevant when we already agree', titleDrift('Same Title', 'Same 
 
   // The year comes from the id when the record does not carry one.
   check('the year is read off the id when absent',
-    siblingVenueCandidates('NeurIPS.cc/2025/Workshop/ML4PS', {})[0], 'ML4PS/2025/Workshop');
+    siblingVenueCandidates('NeurIPS.cc/2025/Workshop/ML4PS', {}), ['ML4PS/2025/Workshop']);
   check('no year anywhere -> no guessing', siblingVenueCandidates('some/opaque/id', {}), []);
   check('no id -> nothing', siblingVenueCandidates('', { year: 2026 }), []);
   // An acronym that would not form a legal id is not turned into one.
   check('a spaced acronym is not made into an id',
-    siblingVenueCandidates('NeurIPS.cc/2026/Workshop/X', { acronym: 'Not An Acronym', year: 2026 })
-      .every((c) => c.startsWith('X/') || c.startsWith('X.')), true);
+    siblingVenueCandidates('NeurIPS.cc/2026/Workshop/X', { acronym: 'Not An Acronym', year: 2026 }),
+    ['X/2026/Workshop']);
 }
 
 // --- the dead-venue section --------------------------------------------------

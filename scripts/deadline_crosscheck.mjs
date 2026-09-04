@@ -418,14 +418,6 @@ export function lateResurrection(raw, lookbackMs = DEADLINE_LOOKBACK_MS) {
   return { from: prev.value, to: cur.value, on: cur.recorded, closedForDays: Math.round(closedForMs / 86_400_000) };
 }
 
-// The TLDs a workshop's own OpenReview namespace is registered under. `.org`,
-// `.cc` and `.com` are the three present in the corpus (conferences included:
-// `IEEE.org`, `NeurIPS.cc`, `thecvf.com`); `.ai` and `.io` are the other two
-// domains ML workshops routinely own. Ordered by how often they turn up, since
-// each one costs the caller a live group fetch.
-const OWN_NS_TLDS = ['org', 'cc', 'com', 'ai', 'io'];
-const OWN_NS_TLD_RE = new RegExp(`\\.(?:${OWN_NS_TLDS.join('|')})$`, 'i');
-
 /**
  * Where a venue may have moved to.
  *
@@ -434,14 +426,10 @@ const OWN_NS_TLD_RE = new RegExp(`\\.(?:${OWN_NS_TLDS.join('|')})$`, 'i');
  * (`ML4PS/2026/Workshop`), and organisers move between the two mid-season —
  * ML4PS was imported from the NeurIPS listing on 2026-08-23 and had left it by
  * the 28th, leaving a link on the site that OpenReview answers with an empty
- * page. The own namespace is written either bare (`ML4PS`) or, far more often,
- * as the domain the organisers own (`UniReps.org`, `robot-learning.org`,
- * `colmweb.org`) — mirroring the conferences' own `NeurIPS.cc` / `IEEE.org` —
- * so both forms are proposed in each direction. Those two conventions are the
- * only places worth looking, so this proposes ids rather than searching; the
- * caller offers one only when the group actually exists AND its title still
- * matches ours, which makes the suggestion a checked fact rather than a guess.
- * Pure + exported for tests.
+ * page. The two conventions are the only places worth looking, so this proposes
+ * ids rather than searching; the caller offers one only when the group actually
+ * exists AND its title still matches ours, which makes the suggestion a checked
+ * fact rather than a guess. Pure + exported for tests.
  */
 export function siblingVenueCandidates(venueId, { acronym, year } = {}) {
   const id = String(venueId || '');
@@ -457,24 +445,12 @@ export function siblingVenueCandidates(venueId, { acronym, year } = {}) {
     .filter((t) => t && /^[\w.-]+$/.test(t));
   const ownNamespace = /^[\w.-]+\/(19|20)\d{2}\/Workshop$/.test(id);
   for (const t of tails) {
-    // Bare first, then the domain forms. A group that owns its namespace
-    // usually registers it as its own domain, exactly as the conferences do:
-    // across the corpus every own-namespace but ML4PS is a host —
-    // `robot-learning.org`, `colmweb.org`, `UniReps.org` — so proposing only
-    // the bare tail misses the common case and reports "no replacement found"
-    // for a workshop that simply moved (UniReps 2026, 2026-09-04).
-    if (!ownNamespace) {
-      out.add(`${t}/${yr}/Workshop`);
-      for (const tld of OWN_NS_TLDS) out.add(`${t}.${tld}/${yr}/Workshop`);
-    }
+    if (!ownNamespace) out.add(`${t}/${yr}/Workshop`);
   }
-  // ...and back the other way, for a venue that moved INTO a conference. The
-  // conference namespace keys on the bare acronym, so a domain-style namespace
-  // has to shed its TLD to form the leaf (`UniReps.org` -> `UniReps`).
+  // ...and back the other way, for a venue that moved INTO a conference.
   if (ownNamespace) {
-    const leaves = [parts[0], parts[0].replace(OWN_NS_TLD_RE, '')].filter(Boolean);
     for (const [, tmpl] of Object.entries(CONF_TEMPLATE)) {
-      for (const leaf of leaves) out.add(`${tmpl.replace('{year}', yr)}/${leaf}`);
+      out.add(`${tmpl.replace('{year}', yr)}/${parts[0]}`);
     }
   }
   out.delete(id);
