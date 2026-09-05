@@ -12,7 +12,7 @@
  */
 import fs from 'node:fs';
 import { extractListedWorkshops } from '../lib/official_list.mjs';
-import { matchOfficialList, classifyNameDrift, classifyWebsiteDrift } from '../lib/official_match.mjs';
+import { matchOfficialList, classifyNameDrift, classifyWebsiteDrift, hostedByConference } from '../lib/official_match.mjs';
 import { loadWorkshops } from '../lib/workshops.mjs';
 
 let failed = 0;
@@ -277,6 +277,51 @@ const slugsOf = (list) => list.map((e) => e.slug).sort();
   check('...but is counted', run([marked]).counts.marked, 1);
 }
 
+/* ------------------------------------------ independent: left the conference */
+// Off the list AND outside the conference's OpenReview namespace is the
+// organisers running the event on their own: UniReps 2026 and ML4PS 2026 were
+// both imported from NeurIPS.cc during the proposal phase and had moved to their
+// own namespaces within days of the accepted list appearing. An acknowledgement
+// recorded before such a move was a verdict on a different fact, so it is
+// reported again rather than staying silent forever.
+{
+  const NS = 'NeurIPS.cc/2026/Workshop';
+  check('under the namespace -> hosted', hostedByConference('NeurIPS.cc/2026/Workshop/WiML', NS), true);
+  check('own namespace -> not hosted', hostedByConference('ML4PS/2026/Workshop', NS), false);
+  check('own domain namespace -> not hosted', hostedByConference('UniReps.org/2026/Workshop', NS), false);
+  check('a longer segment is not the namespace', hostedByConference('NeurIPS.cc/2026/Workshops/X', NS), false);
+  check('a trailing slash on the namespace is tolerated', hostedByConference('NeurIPS.cc/2026/Workshop/X', `${NS}/`), true);
+  check('no venue id -> unknown, not either answer', hostedByConference('', NS), null);
+  check('no namespace -> unknown', hostedByConference('ML4PS/2026/Workshop', null), null);
+
+  const runNs = (entries) =>
+    matchOfficialList(entries, listed, { listUrl: LIST_URL, conferenceWebsite: 'https://neurips.cc', venueNamespace: NS });
+  const ack = { official_list: LIST_URL };
+  const affinity = ws({
+    slug: 'wiml', name: 'Women in Machine Learning Workshop', website: 'https://www.wiml.example/',
+    openreview_venue_id: 'NeurIPS.cc/2026/Workshop/WiML', review_ack: ack,
+  });
+  const left = ws({
+    slug: 'ml4ps', name: 'Machine Learning and the Physical Sciences', website: 'https://ml4ps.example/',
+    openreview_venue_id: 'ML4PS/2026/Workshop', review_ack: ack,
+  });
+  const r = runNs([affinity, left]);
+  check('only the acknowledged entry that left the namespace is reported', slugsOf(r.independent), ['ml4ps']);
+  check('...both still count as acknowledged', r.counts.acked, 2);
+  check('...and the departed one is counted', r.counts.independent, 1);
+  check('neither is in the off-list bucket', r.offList.length, 0);
+  // Only acknowledged entries: an unacknowledged one is already off-list, where
+  // its own row says the same thing.
+  const unacked = { ...left, review_ack: undefined };
+  check('an unacknowledged departed entry is off-list, not independent',
+    [runNs([unacked]).offList.length, runNs([unacked]).independent.length], [1, 0]);
+  check('a marked entry is neither',
+    runNs([{ ...left, status: 'not_running', statusLabel: 'Not running' }]).independent.length, 0);
+  check('an acknowledgement against a different list is off-list again, not independent',
+    runNs([{ ...left, review_ack: { official_list: 'https://blog.neurips.cc/2027/some-other-post/' } }]).independent.length, 0);
+  check('without a namespace nothing can be judged, so nothing is reported', run([left]).independent.length, 0);
+}
+
 /* ------------------------------------------------------------- missing */
 {
   // The only bucket that can ever surface a workshop with no OpenReview presence
@@ -342,6 +387,13 @@ const slugsOf = (list) => list.map((e) => e.slug).sort();
   check('...ten acknowledged as running', r.counts.acked, 10);
   check('...one marked as not running', r.counts.marked, 1);
   check('and nothing on the official list is untracked', r.counts.missing, 0);
+  // The namespace rule against the corpus as it stands: ML4PS 2026 was
+  // acknowledged while still under NeurIPS.cc, then moved to its own namespace
+  // and had its id updated. Until that verdict is revisited it is reported.
+  const rNs = matchOfficialList(entries, listed, {
+    listUrl: LIST_URL, conferenceWebsite: 'https://neurips.cc', venueNamespace: 'NeurIPS.cc/2026/Workshop',
+  });
+  check('one acknowledged entry has since left the conference namespace', slugsOf(rNs.independent), ['neurips-2026-ml4ps']);
 }
 
 console.log(failed === 0 ? '\nOfficial-list matching OK.' : `\n${failed} test(s) failed.`);

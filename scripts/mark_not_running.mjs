@@ -6,8 +6,11 @@
  * the weekly official-list check reports candidates and a human decides, because
  * an official accepted-workshop list is authoritative for PRESENCE, not for
  * ABSENCE. A workshop can be running and simply not be a "workshop" in that
- * list's sense — an affinity event, a competition, a co-located event in its own
- * OpenReview namespace. Those get `review_ack.official_list` instead (--ack).
+ * list's sense — an affinity event, a competition — while the conference still
+ * hosts it under its own OpenReview namespace. Those get `review_ack.official_list`
+ * instead (--ack). An event that has moved to its own namespace is the opposite
+ * case: co-located or not, it is no longer the conference's workshop and is
+ * marked, with --note saying where it runs now.
  *
  * Marking an entry does NOT delete it, and must not: OpenReview keeps a rejected
  * proposal's venue group live, so the next weekly crawl would simply re-create a

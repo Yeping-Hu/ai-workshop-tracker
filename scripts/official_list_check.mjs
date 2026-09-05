@@ -22,8 +22,13 @@
  * And it never concludes "rejected" on its own, because an official list is
  * authoritative for PRESENCE, not for ABSENCE: a workshop can be running and
  * merely not be a "workshop" in that list's sense — an affinity event, a
- * competition, a co-located event in its own OpenReview namespace. UniReps 2026
- * is exactly that shape. So `off-list` means "a human should look".
+ * competition — while the conference still hosts it under its own OpenReview
+ * namespace. So `off-list` means "a human should look". The one signature it
+ * does name is off the list AND outside the conference's namespace: the
+ * organisers run the event on their own (UniReps 2026 and ML4PS 2026 both left
+ * NeurIPS.cc within days of the accepted list appearing), and the expected
+ * verdict is `not_on_official_list`. An acknowledgement recorded before such a
+ * move is reported again, because its premise has changed.
  *
  * Usage:
  *   node scripts/official_list_check.mjs
@@ -40,7 +45,8 @@ import {
   describeResponse,
   MIN_LISTED,
 } from '../lib/official_list.mjs';
-import { matchOfficialList } from '../lib/official_match.mjs';
+import { matchOfficialList, hostedByConference } from '../lib/official_match.mjs';
+import { CONF_TEMPLATE } from './discover_openreview.mjs';
 
 /**
  * A page must account for at least this share of the entries we already track
@@ -148,7 +154,7 @@ const WHAT_CAME_BACK = {
  * minutes; a candidate probe that reads empty proposes nothing, so it is worth
  * one attempt. It is also what lets the retry path be tested without waiting.
  */
-export async function readList(url, entries, { conferenceWebsite = null, backoff = EMPTY_RETRY_BACKOFF_MS } = {}) {
+export async function readList(url, entries, { conferenceWebsite = null, venueNamespace = null, backoff = EMPTY_RETRY_BACKOFF_MS } = {}) {
   let res;
   let items = [];
   let warnings = [];
@@ -190,7 +196,7 @@ export async function readList(url, entries, { conferenceWebsite = null, backoff
       warnings,
     };
   }
-  const r = matchOfficialList(entries, items, { listUrl: url, conferenceWebsite });
+  const r = matchOfficialList(entries, items, { listUrl: url, conferenceWebsite, venueNamespace });
   const share = entries.length ? r.counts.matched / Math.min(entries.length, items.length) : 1;
   if (share < MIN_MATCH_SHARE) {
     return {
@@ -207,7 +213,7 @@ export async function readList(url, entries, { conferenceWebsite = null, backoff
  * adopting it is a human's dispatch, because a mis-read page would declare the
  * whole corpus rejected.
  */
-async function findCandidate(feedUrl, year, entries, conferenceWebsite = null) {
+async function findCandidate(feedUrl, year, entries, conferenceWebsite = null, venueNamespace = null) {
   const seen = new Set();
   for (let page = 1; page <= FEED_PAGES; page++) {
     // WordPress feeds hold ten items; a weekly job against a busy blog needs to
@@ -223,7 +229,7 @@ async function findCandidate(feedUrl, year, entries, conferenceWebsite = null) {
       // be, and a probe that reads empty proposes nothing rather than filing
       // anything — so patience here buys a slower job and a bigger burst
       // against the very host that rations requests, and nothing else.
-      const probe = await readList(c.url, entries, { conferenceWebsite, backoff: [] });
+      const probe = await readList(c.url, entries, { conferenceWebsite, venueNamespace, backoff: [] });
       if (probe.ok) return { url: c.url, title: c.title, ...probe };
     }
   }
@@ -233,7 +239,9 @@ async function findCandidate(feedUrl, year, entries, conferenceWebsite = null) {
 function fmtCounts(c) {
   return `${c.listed} listed · ${c.tracked} tracked · ${c.matched} matched · ${c.offList} off-list · ${c.missing} missing${
     c.acked ? ` · ${c.acked} acknowledged` : ''
-  }${c.marked ? ` · ${c.marked} already marked not running` : ''}`;
+  }${c.independent ? ` · ${c.independent} acknowledged but no longer under the conference namespace` : ''}${
+    c.marked ? ` · ${c.marked} already marked not running` : ''
+  }`;
 }
 
 async function main() {
@@ -243,7 +251,7 @@ async function main() {
   if (onlyConf) editions = editions.filter((e) => e.conference === onlyConf);
   if (onlyYear) editions = editions.filter((e) => e.year === onlyYear);
 
-  const sections = { offList: [], missing: [], drifted: [], unreadable: [], candidates: [] };
+  const sections = { offList: [], independent: [], missing: [], drifted: [], unreadable: [], candidates: [] };
   const headers = [];
 
   for (const ed of editions.sort((a, b) => b.year - a.year || a.conference.localeCompare(b.conference))) {
@@ -251,13 +259,17 @@ async function main() {
     if (!entries.length) continue;
     const confName = confById.get(ed.conference)?.name ?? ed.conference;
     const label = `${confName} ${ed.year}`;
+    // The conference-year's own OpenReview namespace, the same one discovery
+    // crawls. It is what separates an off-list event the conference hosts from
+    // one the organisers run on their own — see hostedByConference().
+    const venueNamespace = CONF_TEMPLATE[ed.conference]?.replace('{year}', String(ed.year)) ?? null;
 
     if (!ed.workshop_list_url) {
       // No list configured. Nothing is reconciled — and nothing is broken; the
       // OpenReview crawl for this conference-year runs exactly as before.
       const feed = confById.get(ed.conference)?.announcement_feed;
       if (!feed) continue;
-      const cand = await findCandidate(feed, ed.year, entries, confById.get(ed.conference)?.website ?? null);
+      const cand = await findCandidate(feed, ed.year, entries, confById.get(ed.conference)?.website ?? null, venueNamespace);
       if (cand) {
         const disagrees = cand.stated != null && cand.stated !== cand.result.counts.listed;
         sections.candidates.push(
@@ -278,6 +290,7 @@ async function main() {
 
     const read = await readList(ed.workshop_list_url, entries, {
       conferenceWebsite: confById.get(ed.conference)?.website ?? null,
+      venueNamespace,
     });
     if (!read.ok) {
       // This KEEPS the issue open, because one of its two causes — a wrong or
@@ -312,14 +325,30 @@ async function main() {
       (a, b) => rank(a) - rank(b) || (a.deadlineUtcMs ?? Infinity) - (b.deadlineUtcMs ?? Infinity) || a.slug.localeCompare(b.slug),
     )) {
       const open = e.statusLabel === 'Open call';
+      // Where the evidence already decides, the row says so instead of offering
+      // two verdicts: a venue outside the conference's namespace is the
+      // organisers' own statement that this is not the conference's workshop.
+      const outside = hostedByConference(e.openreview_venue_id, venueNamespace) === false;
       sections.offList.push(
         `- [ ] \`data/workshops/${e.slug}.yml\` — **${e.name}** (${label})` +
           `${open ? ' — 🔴 still showing an Open call' : ` — _${e.statusLabel}_`}\n` +
           `      - deadline it advertises: ${e.deadlineWallClock ?? '(none)'}` +
           `${e.openreview_venue_id ? ` · venue \`${e.openreview_venue_id}\`` : ''}` +
           `${e.website ? ` · ${e.website}` : ' · no website recorded'}\n` +
-          `      - **not running?** run *Record an official-list decision* with slug \`${e.slug}\`, action \`not_on_official_list\`\n` +
-          `      - **running, just not on this list** (affinity event, competition, co-located)? same workflow, action \`ack\``,
+          (outside
+            ? `      - its venue is not under \`${venueNamespace}\` — off the list *and* outside the conference's OpenReview namespace is the independent-event signature: the organisers run it on their own\n` +
+              `      - run *Record an official-list decision* with slug \`${e.slug}\`, action \`not_on_official_list\`, and a note saying where it runs now`
+            : `      - **not running?** run *Record an official-list decision* with slug \`${e.slug}\`, action \`not_on_official_list\`\n` +
+              `      - **running, just not on this list** (an affinity event or competition the conference hosts under its own namespace)? same workflow, action \`ack\``),
+      );
+    }
+
+    for (const e of r.independent) {
+      sections.independent.push(
+        `- [ ] \`data/workshops/${e.slug}.yml\` — **${e.name}** (${label}) — _${e.statusLabel}_\n` +
+          `      - acknowledged as absent from this list, but its venue \`${e.openreview_venue_id}\` is no longer under \`${venueNamespace}\`` +
+          `${e.website ? ` · ${e.website}` : ''}\n` +
+          `      - run *Record an official-list decision* with slug \`${e.slug}\`, action \`not_on_official_list\`, and a note saying where it runs now`,
       );
     }
 
@@ -365,8 +394,9 @@ async function main() {
   parts.push(
     'These entries disagree with the conference\'s own **accepted-workshop list**, or are workshops it names that we do not track. ' +
       'Nothing here is applied automatically.\n' +
-      'A list is authoritative for what it *includes*, never for what it omits — affinity events, competitions and co-located ' +
-      'workshops are legitimately absent from one.',
+      'A list is authoritative for what it *includes*, never for what it omits — affinity events and competitions the conference ' +
+      'hosts under its own OpenReview namespace are legitimately absent from one. Off the list *and* outside that namespace is an ' +
+      'independent event the organisers run on their own, and is recorded not running.',
   );
   if (headers.length) parts.push(headers.join('\n\n'));
   if (sections.offList.length) {
@@ -374,9 +404,20 @@ async function main() {
       '### Tracked, but not on the official list\n\n' +
         '_OpenReview creates a venue group during a conference\'s **proposal** phase, so a rejected proposal keeps a live group ' +
         'with a ticking deadline — the site can end up advertising a call for a workshop that will never happen. But an official ' +
-        'list is authoritative for presence, not absence: affinity events, competitions and co-located workshops are legitimately ' +
-        'absent from it. Decide per entry; nothing here is applied automatically._\n\n' +
+        'list is authoritative for presence, not absence: affinity events and competitions the conference hosts under its own ' +
+        'OpenReview namespace are legitimately absent from it. An entry that is off the list *and* outside that namespace is an ' +
+        'independent event, however co-located, and is recorded not running. Decide per entry; nothing here is applied automatically._\n\n' +
         sections.offList.join('\n'),
+    );
+  }
+  if (sections.independent.length) {
+    parts.push(
+      '### Acknowledged as off-list, but no longer hosted by the conference\n\n' +
+        '_These were acknowledged as running and merely absent from the list while their venue still sat under the conference\'s ' +
+        'OpenReview namespace. It no longer does: the organisers have moved the event to their own namespace, which is what an ' +
+        'independent event looks like. The acknowledgement\'s premise has changed, so it is reported again; the expected verdict ' +
+        'is `not_on_official_list`, with a note saying where the event runs now._\n\n' +
+        sections.independent.join('\n'),
     );
   }
   if (sections.missing.length) {
@@ -406,7 +447,8 @@ async function main() {
   }
 
   const actionable =
-    sections.offList.length + sections.missing.length + sections.drifted.length + sections.unreadable.length + sections.candidates.length;
+    sections.offList.length + sections.independent.length + sections.missing.length + sections.drifted.length +
+    sections.unreadable.length + sections.candidates.length;
   const report = actionable ? parts.join('\n\n') : '';
 
   // `headers` only holds conference-years that were successfully READ, so an

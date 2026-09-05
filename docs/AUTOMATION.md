@@ -28,7 +28,7 @@ for human review, as do dependency updates.
 | `edit-to-pr.yml` | "Edit a workshop" issue form | Applies the edit to the existing YAML + PR (timezone-safe), validates, reports back |
 | `resync-deadline.yml` | manual | Re-pull one workshop's deadline from OpenReview's duedate (either direction) |
 | `deadline-review.yml` | daily | One consolidated issue listing deadlines that need a human decision — including ones OpenReview reopened after they had closed, where the site says shut and OpenReview says open — daily because it is the only job that ever looks at a **human-edited** deadline, which freeze-on-touch excludes from every automatic sync. Comments when a workshop first appears, since editing an issue body notifies nobody. Also reports a `website` that changed on OpenReview (reported, never applied), a stored `openreview_venue_id` that no longer resolves — with the verified replacement when the workshop merely moved namespaces, or the not-running decision when the entry was already acknowledged as absent from the official list, since off the list *and* gone from the conference's OpenReview namespace is what an independent event looks like (see *An OpenReview venue is not proof a workshop was accepted*) — and names any entry OpenReview could not answer for rather than counting it. |
-| `official-list-check.yml` | weekly | Reconciles the corpus against each conference-edition's **official accepted-workshop list** (`data/editions.yml` → `workshop_list_url`), and proposes one from the conference's `announcement_feed` where none is configured. One consolidated issue: entries we track that are not on the list (ranked so a still-open call comes first), listed workshops we do not track, and title/website drift. Reports only — see below. |
+| `official-list-check.yml` | weekly | Reconciles the corpus against each conference-edition's **official accepted-workshop list** (`data/editions.yml` → `workshop_list_url`), and proposes one from the conference's `announcement_feed` where none is configured. One consolidated issue: entries we track that are not on the list (ranked so a still-open call comes first), acknowledged entries whose venue has since left the conference's OpenReview namespace (the independent-event signature — see below), listed workshops we do not track, and title/website drift. Reports only — see below. |
 | `official-list-decision.yml` | manual | Records one decision the official-list report asked for — `not_running` / `review_ack.official_list` via `scripts/mark_not_running.mjs`, or adopting/declining a drifted name or website via `scripts/apply_official_list.mjs` → commits to `main` |
 | `stale-check.yml` | weekly | One consolidated issue listing entries needing follow-up |
 | `link-check.yml` | monthly | One consolidated issue listing broken URLs Before running, `scripts/lychee_exclusions.mjs` appends every `review_ack.website` to `.lycheeignore`, so a URL deliberately removed as dead is not re-reported each month. |
@@ -53,13 +53,32 @@ Three things follow, and they are the whole design:
   announcement feed to propose one — is simply not reconciled, exactly as before.
 - **The check reports; it never applies.** An official list is authoritative for
   *presence*, not for *absence*. A workshop can be running and merely not be a
-  "workshop" in that list's sense: affinity events (WiML, QueerInAI, LXAI…),
-  competitions, and co-located workshops in their own OpenReview namespace are
-  all legitimately off-list. UniReps 2026 is exactly that shape — a live site, a
-  4th edition, absent from the 102. So off-list means *a human should look*, and
-  the two verdicts are recorded by dispatching `official-list-decision.yml`:
-  `not_running` for an edition that is not happening, `review_ack.official_list`
-  for one that is and should stop being reported.
+  "workshop" in that list's sense: affinity events (WiML, QueerInAI, LXAI…) and
+  competitions are legitimately off-list, and the conference still hosts them
+  under its own OpenReview namespace (`NeurIPS.cc/2026/Workshop/WiML`). So
+  off-list means *a human should look*, and the two verdicts are recorded by
+  dispatching `official-list-decision.yml`: `not_running` for an edition that is
+  not the conference's, `review_ack.official_list` for one that is and should
+  stop being reported.
+- **Off the list *and* outside the conference's namespace is the organisers' own
+  statement.** The line between the two verdicts is the OpenReview namespace,
+  not anyone's reading of a website. UniReps 2026 and ML4PS 2026 were both
+  imported from `NeurIPS.cc/2026/Workshop` during the proposal phase, were absent
+  from the 102 accepted, and within days had moved to their own namespaces
+  (`UniReps.org/2026/Workshop`, `ML4PS/2026/Workshop`) with websites that no
+  longer claimed NeurIPS. Such an event is independent — co-located in time and
+  city, not the conference's workshop — and is recorded `not_running`
+  (`not_on_official_list`, with a `note` saying where it runs, so the page keeps
+  pointing readers at the real call). The corpus bears the criterion out: when
+  the rule was written (2026-09-04) 935 of 936 OpenReview-linked entries sat in
+  their conference's namespace, and the one that did not was ML4PS. Both checks
+  apply it — `hostedByConference()` in `lib/official_match.mjs` is the predicate:
+  the weekly one reports an acknowledged entry whose id has left the namespace
+  (`independent`) and says outright which verdict an off-list entry outside it
+  should get, the daily review reports an acknowledged entry whose group has
+  gone, and each asks for the decision rather than a new id. Still a human's
+  dispatch, because a wrong marking hides a live call and does not self-heal —
+  every job skips a marked entry.
 - **A name or website that disagrees with the list is classified, not just
   reported.** Three real NeurIPS 2026 cases were three different situations, so
   "always adopt the list" is wrong: our stub name loses to the official title

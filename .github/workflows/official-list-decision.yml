@@ -11,8 +11,11 @@
 # still-live group. Marking it is what makes the decision stick, and it keeps the
 # page alive for anyone who already saved or linked it.
 #
-# Use `ack` instead of a reason for an entry that IS running and is merely absent
-# from that list: an affinity event, a competition, a co-located workshop.
+# Use `ack` instead of a reason for an entry that IS the conference's and is
+# merely absent from that list: an affinity event or competition hosted under the
+# conference's own OpenReview namespace. An event whose venue has left that
+# namespace is independent, however co-located, and gets `not_on_official_list`
+# with a note saying where it runs now.
 #
 # The same report also flags a name or website that disagrees with the list, and
 # the adopt_*/decline_* actions record those. One workflow for all of it, because
