@@ -10,8 +10,6 @@ openreview_venue_id: NeurIPS.cc/2026/Workshop/UniReps
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
 added: '2026-08-29'
-review_ack:
-  official_list: https://blog.neurips.cc/2026/08/10/announcing-the-neurips-2026-workshops/
 deadline_history:
   - value: 2026-09-25 22:00
     recorded: '2026-09-01'
@@ -19,3 +17,10 @@ deadline_history:
 submission_deadline: 2026-09-25 22:00
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-09-25 22:00 UTC (as of 2026-09-01) — extensions on OpenReview are applied automatically; verify on the website.
+not_running:
+  reason: not_on_official_list
+  recorded: '2026-09-05'
+  source: https://blog.neurips.cc/2026/08/10/announcing-the-neurips-2026-workshops/
+  note: >-
+    It runs independently in Paris in December 2026, alongside NeurIPS but not as part of it: the call for papers is on unireps.org, with submissions on OpenReview (UniReps.org/2026/Workshop) due 5
+    October 2026, 12:00 UTC.

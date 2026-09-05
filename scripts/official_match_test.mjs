@@ -375,25 +375,27 @@ const slugsOf = (list) => list.map((e) => e.slug).sort();
     r.offList.some((e) => /neurreps|genai4health|infpriv|tccml|vericodegen|iab-/.test(e.slug)), false);
 }
 
-// SECOND: the corpus as it actually stands. Each of those ten now carries a
-// decision — nine acknowledged as real events that are simply not "workshops" in
-// this list's sense, one marked as a rejected proposal — so the weekly report is
-// empty and the issue closes. A new off-list entry appearing here (UniReps is
-// due on the next crawl) turns this red, which is the point.
+// SECOND: the corpus as it actually stands. Each of those eleven now carries a
+// decision — eight acknowledged as events the conference hosts under its own
+// namespace and simply does not call "workshops" (affinity events, a
+// competition), three marked as not the conference's: one rejected proposal
+// (EIML) and two independent events that left NeurIPS.cc for their own
+// namespaces (ML4PS, UniReps) — so the weekly report is empty and the issue
+// closes. A new off-list entry appearing here turns this red, which is the point.
 {
   const entries = loadWorkshops().filter((w) => w.conference === 'neurips' && w.year === 2026);
   const r = run(entries);
   check('every off-list entry has a recorded decision', r.counts.offList, 0);
-  check('...ten acknowledged as running', r.counts.acked, 10);
-  check('...one marked as not running', r.counts.marked, 1);
+  check('...eight acknowledged as running', r.counts.acked, 8);
+  check('...three marked as not running', r.counts.marked, 3);
   check('and nothing on the official list is untracked', r.counts.missing, 0);
-  // The namespace rule against the corpus as it stands: ML4PS 2026 was
-  // acknowledged while still under NeurIPS.cc, then moved to its own namespace
-  // and had its id updated. Until that verdict is revisited it is reported.
+  // The namespace rule against the corpus as it stands: every acknowledged
+  // entry still sits under NeurIPS.cc. ML4PS, which had moved and was reported
+  // here until 2026-09-04, is now marked, so nothing awaits a verdict.
   const rNs = matchOfficialList(entries, listed, {
     listUrl: LIST_URL, conferenceWebsite: 'https://neurips.cc', venueNamespace: 'NeurIPS.cc/2026/Workshop',
   });
-  check('one acknowledged entry has since left the conference namespace', slugsOf(rNs.independent), ['neurips-2026-ml4ps']);
+  check('no acknowledged entry has left the conference namespace', slugsOf(rNs.independent), []);
 }
 
 console.log(failed === 0 ? '\nOfficial-list matching OK.' : `\n${failed} test(s) failed.`);
