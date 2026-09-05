@@ -559,7 +559,7 @@ export function buildReport(items, drift = [], renames = [], unchecked = [], dea
   if (dead.length) {
     out.push(
       '### OpenReview venue no longer exists',
-      '_The stored `openreview_venue_id` returns nothing. Organisers move a workshop between the conference namespace (`NeurIPS.cc/2026/Workshop/ML4PS`) and their own (`ML4PS/2026/Workshop`) mid-season, and the id we imported stops resolving. The site still links it, and the link checker cannot catch this — OpenReview answers `200` for a group that does not exist. Update the id in the entry._',
+      '_The stored `openreview_venue_id` returns nothing. Organisers move a workshop between the conference namespace (`NeurIPS.cc/2026/Workshop/ML4PS`) and their own (`ML4PS/2026/Workshop`) mid-season, and the id we imported stops resolving. The site still links it, and the link checker cannot catch this — OpenReview answers `200` for a group that does not exist. For a workshop on the conference\'s official list, update the id. For one already acknowledged as absent from that list, the group going too means the organisers have left the conference altogether: record it not running instead._',
       '',
     );
     for (const d of dead) {
@@ -568,7 +568,14 @@ export function buildReport(items, drift = [], renames = [], unchecked = [], dea
         `      - ours: \`${d.venueId}\` (gone)\n` +
         (d.moved
           ? `      - found at: \`${d.moved}\` — same title, verified live`
-          : '      - no replacement found under the sibling naming convention; check the workshop website'),
+          : '      - no replacement found under the sibling naming convention; check the workshop website') +
+        // Off the official list AND no longer under the conference on OpenReview
+        // is what an independent event looks like, so this row asks for the
+        // decision, not for a new id — the id would only make the site call a
+        // non-conference event a conference workshop with a working link.
+        (d.acked
+          ? `\n      - acknowledged as legitimately absent from ${d.acked}, and its OpenReview group has since gone too. Off the list *and* no longer under the conference on OpenReview is the independent-event signature: the organisers now run it on their own. Record it — run *Record an official-list decision* with slug \`${d.slug}\`, action \`not_on_official_list\`, and a note saying where it runs now.`
+          : ''),
       );
     }
     out.push('');
@@ -861,7 +868,17 @@ async function main() {
         if (getUnverified().length > unverifiedBefore) continue;
         const meta = { slug: s2, file: f2, name: raw.name, conf: String(raw.conference || '').toUpperCase(), year: raw.year };
         const moved = await findMovedVenue(raw);
-        deadVenues.push({ ...meta, venueId: raw.openreview_venue_id, moved });
+        // Whether a human has already recorded this entry as absent from the
+        // conference's official list. A dead group on such an entry is not a
+        // moved id to chase: off the list AND gone from the conference's
+        // OpenReview namespace is what an independent event looks like —
+        // UniReps 2026 and ML4PS 2026 both left NeurIPS.cc within days of being
+        // acknowledged — so the report asks for the not-running decision rather
+        // than a new id. The weekly official-list check applies the same rule
+        // to an acknowledged entry whose id was already updated to its own
+        // namespace (`independent` in lib/official_match.mjs).
+        const acked = raw.review_ack?.official_list ?? null;
+        deadVenues.push({ ...meta, venueId: raw.openreview_venue_id, moved, acked });
         console.log(`•  GONE      ${s2}: ${raw.openreview_venue_id} no longer exists on OpenReview${moved ? ` — found at ${moved}` : ''}`);
         continue;
       }

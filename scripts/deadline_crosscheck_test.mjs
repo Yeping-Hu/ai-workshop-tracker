@@ -308,6 +308,24 @@ check('ack is irrelevant when we already agree', titleDrift('Same Title', 'Same 
   const noMove = buildReport([], [], [], [], [{ ...dead[0], moved: null }]);
   check('with no replacement found, it says so rather than guessing',
     noMove.includes('no replacement found'), true);
+  check('an ordinary dead id asks for a new id, not a verdict', r.includes('not_on_official_list'), false);
+
+  // An entry a human already acknowledged as absent from the official list is
+  // the other case. Its group going too is the independent-event signature
+  // (UniReps 2026, ML4PS 2026: both left NeurIPS.cc days after being
+  // acknowledged), so the row asks for the not-running decision — updating the
+  // id would only give a non-conference event a working link under the
+  // conference's name.
+  const LIST = 'https://blog.neurips.cc/2026/08/10/announcing-the-neurips-2026-workshops/';
+  const left = buildReport([], [], [], [], [{ ...dead[0], slug: 'neurips-2026-unireps', moved: null, acked: LIST }]);
+  check('an acknowledged off-list entry is told to record not running', left.includes('action `not_on_official_list`'), true);
+  check('...by slug', left.includes('slug `neurips-2026-unireps`'), true);
+  check('...naming the list it was acknowledged against', left.includes(LIST), true);
+  // A found replacement is still shown — it is where the event went, which is
+  // what the note on the marked page should say — but the advice is unchanged.
+  const leftMoved = buildReport([], [], [], [], [{ ...dead[0], acked: LIST }]);
+  check('a replacement is still named for an acknowledged entry', leftMoved.includes('ML4PS/2026/Workshop'), true);
+  check('...and the advice is still the decision, not the id', leftMoved.includes('action `not_on_official_list`'), true);
 }
 
 // --- lateResurrection --------------------------------------------------------
