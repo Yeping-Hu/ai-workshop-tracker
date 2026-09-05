@@ -391,7 +391,10 @@ const related = picked.map((o: any) => ({
             <> <a href={w.notRunning.source} rel="noopener">See the source ↗</a></>
           )}
           {w.notRunning.note && <> {w.notRunning.note}</>}
-          {' '}Any deadline below is the last one we recorded and is <strong>no longer live</strong>.
+          {/* "No longer kept in sync", not "no longer live": for an independent event
+              that left the conference (UniReps 2026, ML4PS 2026) the call IS live,
+              and the note above says where — what stops is our tracking of it. */}
+          {' '}Any deadline below is the last one we recorded and is <strong>no longer kept in sync</strong>.
           This page is kept because it may already have been saved or linked.
         </p>
       )}
