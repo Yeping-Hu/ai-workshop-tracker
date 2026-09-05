@@ -86,6 +86,8 @@ jobs:
         run: node scripts/official_list_test.mjs
       - name: Test official-list reconciliation against the corpus
         run: node scripts/official_match_test.mjs
+      - name: Test official-list decisions (a later verdict supersedes the earlier one)
+        run: node scripts/mark_not_running_test.mjs
       - name: Test official-list fetching (page cache, empty-read retry budget)
         run: node scripts/official_list_fetch_test.mjs
       - name: Test the sitemap reports honest per-page lastmod dates
