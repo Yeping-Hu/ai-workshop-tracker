@@ -137,14 +137,15 @@ h3 { font-size: 1.12rem; margin: 1.6rem 0 0.4rem; }
 .filterbar {
   position: sticky; top: 0; z-index: 5;
   background: var(--paper);
-  /* One rule, not two. `border-block` drew a line above AND below, so with the
-     search box directly above it, the bar read as a pair of stray full-width lines
-     68px apart. The bottom edge is the one doing work: it separates the sticky bar
-     from the content scrolling under it. */
-  border-bottom: 1px solid var(--line);
+  /* The bottom rule separates the sticky bar from content scrolling under it,
+     and only then: at rest it read as a stray line under the search box, so it
+     is transparent until index.astro's observer marks the bar stuck. Always
+     1px so the bar's height never changes. */
+  border-bottom: 1px solid transparent;
   padding: 0.65rem 0;
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.55rem 1rem;
 }
+.filterbar.is-stuck { border-bottom-color: var(--line); }
 .kw-box {
   flex: 1 1 16rem; min-width: 12rem;
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem;
@@ -376,7 +377,7 @@ details.dd .dd-panel {
 .hero:has(~ .alerts-signup) { padding-bottom: 0.5rem; }
 .hero:has(~ .alerts-signup) .nextline { margin-bottom: 0.5rem; }
 
-.conf-ticker { position: relative; margin: 0.5rem 0 1.1rem; overflow: hidden; padding: 0.15rem 0;
+.conf-ticker { position: relative; margin: 0.9rem 0 0; overflow: hidden; padding: 0.15rem 0; text-align: left;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 34px, #000 calc(100% - 34px), transparent);
   mask-image: linear-gradient(90deg, transparent, #000 34px, #000 calc(100% - 34px), transparent); }
 .conf-ticker-track { display: flex; align-items: baseline; gap: 1.6rem; width: max-content;

@@ -160,25 +160,12 @@ const datasetLd: Record<string, any> = {
       <span><strong>{upcomingWithDeadline.length}</strong> open calls</span>
     </div>
     <p class="nextline" id="next-deadline" aria-live="off">Next deadline: …</p>
-  </section>
-
-  {/* Renders nothing unless PUBLIC_ALERTS_API is set at build time. Collapsed,
-      so it costs one line above the board rather than a screenful — and it sits
-      above the board because at the foot of the page nobody found it. */}
-  <AlertsSignup collapsed tight />
-
-  <!-- search mode -->
-  <section id="searchPanel" hidden>
-    <ol class="pf-results" id="results"></ol>
-    <p class="muted" id="searchStatus" hidden></p>
-  </section>
-
-  <!-- default mode -->
-  <div id="homeDefault">
-    {/* The conferences at a glance, before the board, so the page answers
-        "what is coming up where" without a scroll. Hidden with the board while
-        searching — a facet selection IS the board, filtered. Not a heading:
-        the first <h2> on the page stays "Upcoming deadlines".
+    {/* The conferences at a glance, as the last line of the hero: after the
+        counts and the next deadline, before the alerts line — three lines of
+        ambient status together, and the alerts bar stays next to the board it
+        serves. Like the eyebrow above it, it is navigation and stays put while
+        searching. Not a heading: the first <h2> on the page stays "Upcoming
+        deadlines".
 
         One scrolling line rather than a grid of cards. The grid was 395px tall
         and put the first deadline row at y=1005 — below the fold on a 900px
@@ -212,6 +199,21 @@ const datasetLd: Record<string, any> = {
         ))}
       </div>
     </nav>
+  </section>
+
+  {/* Renders nothing unless PUBLIC_ALERTS_API is set at build time. Collapsed,
+      so it costs one line above the board rather than a screenful — and it sits
+      above the board because at the foot of the page nobody found it. */}
+  <AlertsSignup collapsed tight />
+
+  <!-- search mode -->
+  <section id="searchPanel" hidden>
+    <ol class="pf-results" id="results"></ol>
+    <p class="muted" id="searchStatus" hidden></p>
+  </section>
+
+  <!-- default mode -->
+  <div id="homeDefault">
     <h2>Upcoming deadlines</h2>
     {upcomingWithDeadline.length > 0 ? (
       <section class="board" aria-label="Workshop deadlines">
@@ -283,6 +285,20 @@ const datasetLd: Record<string, any> = {
   </div>
 
   <script src="../scripts/board.js"></script>
+  <script>
+    // The sticky filter bar's bottom rule separates it from content scrolling
+    // under it. At rest, directly under the search box, it read as a stray
+    // line across the page — so it is drawn only while the bar is stuck. The
+    // observer fires the moment the bar's top edge crosses 1px above the
+    // viewport, which with `top: 0` is exactly when it starts sticking.
+    const bar = document.querySelector('.filterbar');
+    if (bar && 'IntersectionObserver' in window) {
+      new IntersectionObserver(([e]) => bar.classList.toggle('is-stuck', e.intersectionRatio < 1), {
+        threshold: [1],
+        rootMargin: '-1px 0px 0px 0px',
+      }).observe(bar);
+    }
+  </script>
   {/* The results render the board's row through the shared client renderer.
       The search script below is inline (define:vars) and cannot import, so
       the renderer is bridged onto window — the pattern favorites.js uses for

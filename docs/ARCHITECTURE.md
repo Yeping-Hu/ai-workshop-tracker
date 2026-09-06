@@ -18,17 +18,24 @@ lists are committed JSON caches under `cache/openreview/`. Builds read these at
 build time and never touch a live API or a database.
 
 The core UI is a small, fixed set of pages: a search-first homepage (a large
-search box, a one-line conference ticker, then the deadline board and the
-workshop-proposal deadlines; searching swaps the strip and board for faceted
-results), a device-local
+search box, the counts and next deadline with a one-line conference ticker
+under them, then the deadline board and the workshop-proposal deadlines;
+searching swaps the board for faceted results while the hero, ticker included,
+stays put), a device-local
 **Saved** list, and **About**, plus a static per-conference hub at
 `/conference/<id>/` (see *Discoverability* below). Legacy `/archive`,
 `/search`, `/contribute`, and `/calendar` URLs redirect into these.
 
 **The conference strip.** One scrolling line, one item per conference: a colour
 dot, the name, the open-call count, and that edition's dates in parentheses. It
-replaced a grid of cards that stood 395px tall and pushed the first deadline row
-below the fold on both desktop and phone — on a site whose point is countdowns.
+is the last line of the hero — after the counts and the next deadline, before
+the alerts line — so the ambient status sits together and the alerts bar stays
+next to the board it serves; like the eyebrow, it is navigation and stays put
+while searching. It replaced a grid of cards that stood 395px tall and pushed
+the first deadline row below the fold on both desktop and phone — on a site
+whose point is countdowns. (The sticky filter bar above it draws its bottom rule
+only while stuck, via a one-line `IntersectionObserver` in `index.astro`; at rest
+the rule read as a stray line under the search box.)
 
 Which edition an item names is unchanged (`conferenceCard` in
 `lib/workshops.mjs`): the year of the conference's open calls when it has any,
