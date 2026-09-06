@@ -12,11 +12,8 @@ import {
   proposalCalls,
   conferenceById,
   loadPaperCache,
-  editions,
-  conferenceCard,
 } from '../lib/data';
 import { href, REPO_URL } from '../lib/site';
-import { formatDateSpan } from '../../../lib/dates.mjs';
 
 const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
 // conference display-name -> color, for badges on search results
@@ -78,27 +75,16 @@ const _confNames = [...conferences].map((c) => c.name).sort((a, b) => a.localeCo
 const confListText = _confNames.length > 1
   ? `${_confNames.slice(0, -1).join(', ')}, and ${_confNames[_confNames.length - 1]}`
   : _confNames.join('');
-// One item per conference in the ticker above the board: the edition a reader
-// can act on (conferenceCard in lib/workshops.mjs decides which), how many
-// calls are open, and that edition's dates. Order, count and content all come
-// from the data, so a tenth conference gets an item with no edit here; the
-// eyebrow, the facet and the ticker share one ordering. The proposal calls
-// have their own section below the board.
-const stripCards = [...conferences]
+// The conferences with an open call right now, in the eyebrow's order, for the
+// one-line summary under the counts. Same definition of "open" as the statline
+// (upcomingWithDeadline), so the two never disagree; conferences with nothing
+// open are left out so the line stays one line.
+const openByConf = new Map<string, number>();
+for (const w of upcomingWithDeadline) openByConf.set(w.conference, (openByConf.get(w.conference) ?? 0) + 1);
+const openConfs = [...conferences]
   .sort((a, b) => a.name.localeCompare(b.name))
-  .map((c) => {
-    const card = conferenceCard(c.id, { workshops, editions });
-    return {
-      id: c.id,
-      name: c.name,
-      full: c.full_name ?? c.name,
-      color: c.color,
-      year: card.year,
-      when: card.edition ? formatDateSpan(card.edition.start, card.edition.end) : null,
-      upcoming: card.upcoming,
-      open: card.openCalls,
-    };
-  });
+  .filter((c) => openByConf.has(c.id))
+  .map((c) => ({ id: c.id, name: c.name, full: c.full_name ?? c.name, color: c.color, open: openByConf.get(c.id)! }));
 
 const datasetLd: Record<string, any> = {
   '@context': 'https://schema.org',
@@ -160,45 +146,26 @@ const datasetLd: Record<string, any> = {
       <span><strong>{upcomingWithDeadline.length}</strong> open calls</span>
     </div>
     <p class="nextline" id="next-deadline" aria-live="off">Next deadline: …</p>
-    {/* The conferences at a glance, as the last line of the hero: after the
-        counts and the next deadline, before the alerts line — three lines of
-        ambient status together, and the alerts bar stays next to the board it
-        serves. Like the eyebrow above it, it is navigation and stays put while
-        searching. Not a heading: the first <h2> on the page stays "Upcoming
-        deadlines".
-
-        One scrolling line rather than a grid of cards. The grid was 395px tall
-        and put the first deadline row at y=1005 — below the fold on a 900px
-        window and on a phone, so nobody saw a countdown without scrolling. The
-        track is duplicated so the loop is seamless (the second copy is
-        aria-hidden and unfocusable); it pauses on hover and on keyboard focus,
-        and does not animate at all under prefers-reduced-motion. No touch
-        handling and no pause button, deliberately: the established marquees
-        (zag.js, shadcn, Preline, Framer) do neither, and a touch pause here
-        combined with :focus-within to freeze the strip for good after one tap. */}
-    <nav class="conf-ticker" aria-label="Conferences at a glance">
-      <div class="conf-ticker-track">
-        {[...stripCards, ...stripCards].map((c, i) => (
-          <a
-            class="conf-tick"
-            href={href(`/conference/${c.id}/`)}
-            title={`${c.full} workshops`}
-            aria-hidden={i >= stripCards.length ? 'true' : undefined}
-            tabindex={i >= stripCards.length ? -1 : undefined}
-          >
+    {/* Which conferences have an open call, as the last line of the hero —
+        after the counts and the next deadline, before the alerts line — so the
+        ambient status sits together and the alerts bar stays next to the board
+        it serves. Static and one line: a scrolling ticker was distracting, and
+        before it a grid of cards stood 395px tall and pushed the first deadline
+        row below the fold. Conferences with nothing open are omitted rather
+        than listed as "no open calls"; the eyebrow above already names every
+        conference. Like the eyebrow, it is navigation and stays put while
+        searching. Not a heading: the first <h2> stays "Upcoming deadlines". */}
+    {openConfs.length > 0 && (
+      <nav class="conf-line" aria-label="Conferences with open calls">
+        {openConfs.map((c) => (
+          <a class="conf-tick" href={href(`/conference/${c.id}/`)} title={`${c.full} workshops`}>
             <i class="conf-tick-dot" style={`background:${c.color}`} aria-hidden="true"></i>
             <span class="conf-tick-name">{c.name}</span>
-            <span class="conf-tick-dash" aria-hidden="true">—</span>
-            <span class={`conf-tick-open${c.open ? '' : ' muted'}`}>
-              {c.open ? `${c.open} open call${c.open === 1 ? '' : 's'}` : 'no open calls'}
-            </span>
-            <span class="conf-tick-when">
-              ({c.when ? (c.upcoming ? c.when : `held ${c.when}`) : 'dates TBA'})
-            </span>
+            <span class="conf-tick-open">{c.open} open call{c.open === 1 ? '' : 's'}</span>
           </a>
         ))}
-      </div>
-    </nav>
+      </nav>
+    )}
   </section>
 
   {/* Renders nothing unless PUBLIC_ALERTS_API is set at build time. Collapsed,

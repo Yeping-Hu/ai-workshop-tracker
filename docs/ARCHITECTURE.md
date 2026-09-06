@@ -18,48 +18,32 @@ lists are committed JSON caches under `cache/openreview/`. Builds read these at
 build time and never touch a live API or a database.
 
 The core UI is a small, fixed set of pages: a search-first homepage (a large
-search box, the counts and next deadline with a one-line conference ticker
-under them, then the deadline board and the workshop-proposal deadlines;
-searching swaps the board for faceted results while the hero, ticker included,
-stays put), a device-local
+search box, the counts and next deadline with a one-line list of the
+conferences that have open calls under them, then the deadline board and the
+workshop-proposal deadlines; searching swaps the board for faceted results
+while the hero stays put), a device-local
 **Saved** list, and **About**, plus a static per-conference hub at
 `/conference/<id>/` (see *Discoverability* below). Legacy `/archive`,
 `/search`, `/contribute`, and `/calendar` URLs redirect into these.
 
-**The conference strip.** One scrolling line, one item per conference: a colour
-dot, the name, the open-call count, and that edition's dates in parentheses. It
-is the last line of the hero — after the counts and the next deadline, before
-the alerts line — so the ambient status sits together and the alerts bar stays
-next to the board it serves; like the eyebrow, it is navigation and stays put
-while searching. It replaced a grid of cards that stood 395px tall and pushed
-the first deadline row below the fold on both desktop and phone — on a site
-whose point is countdowns. (The sticky filter bar above it draws its bottom rule
-only while stuck, via a one-line `IntersectionObserver` in `index.astro`; at rest
-the rule read as a stray line under the search box.)
-
-Which edition an item names is unchanged (`conferenceCard` in
-`lib/workshops.mjs`): the year of the conference's open calls when it has any,
-else the soonest edition still to end, else the latest tracked, with that year's
-dates from `data/editions.yml` (`formatDateSpan`, shared with the conference-year
-page). A year with open calls but no editions row says "dates TBA" rather than
-borrowing the previous year's dates. Each item is a single link to the hub.
-Order, count and content are data-driven; the eyebrow, the facet and the strip
-share one ordering, pinned by `ui_test.mjs`, and the edition rules by
-`conference_strip_test.mjs`.
-
-The track is duplicated so the loop is seamless — the second copy is `aria-hidden`
-and unfocusable so the list is not announced twice. It pauses on hover and on
-`:has(:focus-visible)`; NOT on `:focus-within`, which also matches focus left by a
-click or a tap and so froze the strip after a Back navigation and permanently
-after the first tap on a phone. There is no touch handling and no pause button,
-matching how established marquees behave; `prefers-reduced-motion` disables the
-animation entirely and leaves a scrollable row.
+**The open-calls line.** The last line of the hero — after the counts and the
+next deadline, before the alerts line — names each conference that has an open
+call, as a colour dot, the name and the count, linking to its hub. It uses the
+statline's own definition of "open" (`upcomingWithDeadline`), so the two never
+disagree; conferences with nothing open are omitted, since the eyebrow above
+already names every conference, and that is what keeps it one line (it wraps
+only if a season opens more calls than fit). Order is the eyebrow's and the
+facet's, pinned by `ui_test.mjs`. Static by design: a scrolling ticker here was
+distracting, and before it a grid of cards stood 395px tall and pushed the first
+deadline row below the fold on both desktop and phone — on a site whose point is
+countdowns. The sticky filter bar above it draws its bottom rule only while
+stuck, via a one-line `IntersectionObserver` in `index.astro`; at rest the rule
+read as a stray line under the search box.
 
 **Workshop-proposal deadlines** are their own section below the board: one row
 per call with the wall-clock date, a countdown while open or a "Closed" pill
-after, and a link to the call, newest cycle first. The ticker above the board
-does not repeat them; the conference hub links the same call. Kept current by
-the daily OpenReview proposal sync.
+after, and a link to the call, newest cycle first; the conference hub links
+the same call. Kept current by the daily OpenReview proposal sync.
 
 ## Search (Pagefind, static, dual-index)
 

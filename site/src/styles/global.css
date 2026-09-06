@@ -368,12 +368,6 @@ details.dd .dd-panel {
   .filterbar { position: static; }
 }
 
-/* ---------- conference ticker (homepage) ---------- */
-/* One item per conference above the board — a colour dot, the name, the
-   open-call count and the edition's dates — on a single scrolling line. The
-   card grid it replaced cost 395px and pushed the deadline board below the
-   fold; this is one line high and says the same thing. Each item is a single
-   link to the hub. */
 /* Half the gap above the subscribe block. It was three stacked pieces —
    .nextline's 0.82rem bottom margin, the hero's 1.6rem bottom padding and the
    block's own top margin — about 48px of empty page between the countdown line
@@ -383,39 +377,21 @@ details.dd .dd-panel {
 .hero:has(~ .alerts-signup) { padding-bottom: 0.5rem; }
 .hero:has(~ .alerts-signup) .nextline { margin-bottom: 0.5rem; }
 
-.conf-ticker { position: relative; margin: 0.9rem 0 0; overflow: hidden; padding: 0.15rem 0; text-align: left;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 34px, #000 calc(100% - 34px), transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 34px, #000 calc(100% - 34px), transparent); }
-.conf-ticker-track { display: flex; align-items: baseline; gap: 1.6rem; width: max-content;
-  animation: conf-ticker-slide 54s linear infinite; }
-@keyframes conf-ticker-slide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-/* A pointer pauses it by hovering; a keyboard pauses it by tabbing in.
-   `:has(:focus-visible)` rather than `:focus-within` on purpose. Focus-within
-   also matches focus left behind by a CLICK or a TAP, and a link keeps that focus
-   after navigation — so pressing Back restored focus to the link and the strip
-   stayed frozen until you clicked elsewhere, and on a phone, where there is no
-   hover to clear it, one tap stopped it for good. focus-visible is the keyboard
-   case only, which is the one that needs the pause. */
-.conf-ticker:hover .conf-ticker-track,
-.conf-ticker:has(:focus-visible) .conf-ticker-track { animation-play-state: paused; }
-/* Older engines without :has() keep the previous behaviour rather than none. */
-@supports not selector(:has(*)) {
-  .conf-ticker:focus-within .conf-ticker-track { animation-play-state: paused; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .conf-ticker-track { animation: none; }
-  .conf-ticker { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
-}
-.conf-tick { display: inline-flex; align-items: baseline; gap: 0.45rem; white-space: nowrap;
-  text-decoration: none; color: var(--ink); font-size: 0.88rem; }
+/* ---------- conferences with open calls (homepage) ---------- */
+/* One static line under the counts: each conference that has an open call, as
+   a colour dot, the name and the count, linking to its hub. Conferences with
+   nothing open are left out so the line stays one line; it wraps only if a
+   season ever opens more calls than fit. It replaced a scrolling ticker
+   (distracting) and, before that, a grid of cards (395px tall, pushed the
+   first deadline row below the fold). */
+.conf-line { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0.35rem 1.5rem; margin: 0.8rem 0 0; }
+.conf-tick { display: inline-flex; align-items: baseline; gap: 0.45rem; white-space: nowrap; text-decoration: none; color: var(--ink); }
 .conf-tick:hover .conf-tick-name, .conf-tick:focus-visible .conf-tick-name { text-decoration: underline; text-underline-offset: 3px; }
 /* align-self keeps the dot centred on the name: it has no baseline of its own, so
    in a baseline row it would otherwise sit on the text baseline and read low. */
 .conf-tick-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; align-self: center; }
 .conf-tick-name { font-family: var(--font-mono); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.04em; line-height: 1; }
-.conf-tick-dash { color: var(--line-strong, #b9c0bd); }
-.conf-tick-when { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
-.conf-tick-open.muted { color: var(--muted); }
+.conf-tick-open { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); }
 
 /* ---------- proposal calls & TBA sections ---------- */
 /* One row per call. The card stack put six saturated badges in a column, which

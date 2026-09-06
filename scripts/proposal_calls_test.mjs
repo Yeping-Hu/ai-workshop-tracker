@@ -18,6 +18,7 @@ import {
   serializeProposalCalls,
 } from './sync_proposal_calls.mjs';
 import { parseGroupDeadline, msToDeadline, syncNote, syncedValue } from './discover_openreview.mjs';
+import { latestProposalCall } from '../lib/workshops.mjs';
 
 let failed = 0;
 function check(label, got, expect) {
@@ -131,6 +132,20 @@ check('…but a call closed a few days ago can still be extended', decideProposa
   check('a date-only deadline round-trips as a string, not a Date', typeof back[1].proposal_deadline, 'string');
   check('values round-trip', [back[1].proposal_deadline, back[2].proposal_deadline, back[0].deadline_notes], ['2026-02-13', '2026-09-02 07:59', stampedOpen.deadline_notes]);
   check('key order is fixed', Object.keys(back[0]), ['conference', 'year', 'proposal_deadline', 'timezone', 'url', 'openreview_venue_id', 'deadline_notes']);
+}
+
+// --- what the hub shows: the newest recorded call of a conference -------------------
+{
+  const calls = [
+    { conference: 'iclr', year: 2026, deadlineUtcMs: 1 },
+    { conference: 'iclr', year: 2027, deadlineUtcMs: 5 },
+    { conference: 'iclr', year: 2027, deadlineUtcMs: 9 },
+    { conference: 'icml', year: 2026, deadlineUtcMs: 3 },
+  ];
+  check('newest call: latest year, then latest deadline', latestProposalCall(calls, 'iclr'), { conference: 'iclr', year: 2027, deadlineUtcMs: 9 });
+  check('a conference with one call', latestProposalCall(calls, 'icml').year, 2026);
+  check('a conference with none', latestProposalCall(calls, 'eccv'), null);
+  check('no calls at all', latestProposalCall(undefined, 'iclr'), null);
 }
 
 console.log(failed ? `\n${failed} check(s) failed` : '\nProposal-call sync rules hold');

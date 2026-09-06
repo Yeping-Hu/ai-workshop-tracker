@@ -82,7 +82,7 @@ const cities = list.some((w: any) => w.locationDistinguishes)
   : [];
 
 // "Dec 6–13, 2026" from the edition's start/end; either date alone if that
-// is all data/editions.yml has. Shared with the homepage's conference cards.
+// is all data/editions.yml has.
 const dateSpan = formatDateSpan(edition?.start, edition?.end);
 const whenWhere = [dateSpan, sharedLocation ?? (cities.length ? cities.join(', ') : null)].filter(Boolean).join(' · ');
 
