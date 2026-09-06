@@ -142,9 +142,10 @@ h3 { font-size: 1.12rem; margin: 1.6rem 0 0.4rem; }
   /* Asymmetric on purpose. The rule is the bar's bottom border, and with equal
      padding it sat 31.5px below the tab ink but only 10.5px above the statline —
      visibly stuck to the line beneath it. Dropping the bottom padding raises the
-     rule to the midpoint; the statline's own margin below grows by the same
-     amount so nothing else moves. */
-  padding: 0.65rem 0 0;
+     rule to the midpoint between the BOTTOM EDGE of the tab boxes and the TOP of
+     the counts text — not the ink-to-ink midpoint, which sits ~3px higher. The
+     statline's margin below absorbs the same amount so nothing else moves. */
+  padding: 0.65rem 0 0.16rem;
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.55rem 1rem;
 }
 .kw-box {
@@ -472,7 +473,7 @@ details.tba-section > summary { cursor: pointer; color: var(--muted); font-size:
 /* The filter bar's own padding already separates it from the counts; the
    statline's general 1.1rem top margin on top of that left a hole under the
    tabs. */
-.hero .statline { margin-top: 1rem; }
+.hero .statline { margin-top: 0.84rem; }
 .facetbar { margin-top: 0.4rem; }
 /* A search result is the board's row (ws-row.js) with, in keyword mode, the
    excerpt and the matching papers beneath it. The <li> keeps the separator;
