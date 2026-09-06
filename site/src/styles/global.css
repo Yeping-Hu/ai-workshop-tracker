@@ -367,8 +367,8 @@ details.dd .dd-panel {
 /* A single scrolling line. The card grid it replaced cost 395px and pushed the
    deadline board below the fold; this is one line high and says the same thing. */
 .conf-ticker { position: relative; margin: 0.5rem 0 1.1rem; overflow: hidden; padding: 0.15rem 0;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 34px, #000 calc(100% - 44px), transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 34px, #000 calc(100% - 44px), transparent); }
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 34px, #000 calc(100% - 34px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 34px, #000 calc(100% - 34px), transparent); }
 .conf-ticker-track { display: flex; align-items: baseline; gap: 1.6rem; width: max-content;
   animation: conf-ticker-slide 54s linear infinite; }
 @keyframes conf-ticker-slide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
@@ -391,9 +391,6 @@ details.dd .dd-panel {
 .conf-tick-dash { color: var(--line-strong, #b9c0bd); }
 .conf-tick-when { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
 .conf-tick-open.muted { color: var(--muted); }
-.conf-ticker-pause { position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 3;
-  width: 24px; height: 24px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
-  color: var(--muted); font-size: 0.6rem; line-height: 1; cursor: pointer; }
 @media (min-width: 60rem) {
 }
 

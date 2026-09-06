@@ -199,7 +199,6 @@ const datasetLd: Record<string, any> = {
         under a finger and via the button, and does not animate at all under
         prefers-reduced-motion. */}
     <nav class="conf-ticker" aria-label="Conferences at a glance">
-      <button class="conf-ticker-pause" type="button" aria-label="Pause the conference strip">&#10074;&#10074;</button>
       <div class="conf-ticker-track">
         {[...stripCards, ...stripCards].map((c, i) => (
           <a
@@ -1012,20 +1011,19 @@ const datasetLd: Record<string, any> = {
 </Base>
 
 <script>
-  // Hover pauses on a pointer; a finger has no hover, so touching pauses and a
-  // swipe keeps it paused briefly rather than fighting the gesture. The button is
-  // the explicit control — the only one a keyboard or screen-reader user has.
+  // No visible control. A pause button inside a hover-paused strip cannot work:
+  // pressing it necessarily hovers and focuses the strip, so :hover and
+  // :focus-within hold the animation even after the button clears its own flag —
+  // "play" appears to do nothing until you move the pointer away.
+  //
+  // A mechanism remains for every input: a pointer pauses by hovering, a keyboard
+  // pauses by focusing a link inside, and a finger pauses on touch and for a
+  // moment after a swipe so the motion never fights the gesture. Anyone who has
+  // asked their system for less motion gets no animation at all.
   const ticker = document.querySelector('.conf-ticker');
-  const pause = document.querySelector('.conf-ticker-pause');
-  if (ticker && pause) {
-    let held = false;
-    const set = (on) => {
-      ticker.toggleAttribute('data-paused', on);
-      pause.textContent = on ? '\u25B6' : '\u275A\u275A';
-      pause.setAttribute('aria-label', `${on ? 'Play' : 'Pause'} the conference strip`);
-    };
-    pause.addEventListener('click', () => { held = !held; set(held); });
+  if (ticker) {
+    const set = (on) => ticker.toggleAttribute('data-paused', on);
     ticker.addEventListener('touchstart', () => set(true), { passive: true });
-    ticker.addEventListener('touchend', () => { if (!held) setTimeout(() => set(false), 2500); }, { passive: true });
+    ticker.addEventListener('touchend', () => setTimeout(() => set(false), 2500), { passive: true });
   }
 </script>
