@@ -417,6 +417,13 @@ details.dd .dd-panel {
 }
 
 /* ---------- TBA sections ---------- */
+/* Restored with the section itself: the markup came back without these, so every
+   row rendered as unspaced inline text — badge, date, countdown and link running
+   together with no gaps. The flex row with a baseline and a 0.4/1rem gap is what
+   separated them. */
+.proposal-list { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; gap: 0.55rem; }
+.proposal-list li { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: baseline; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.7rem 0.9rem; }
+.proposal-list .mono { font-size: 0.84rem; }
 details.tba-section { margin-top: 1.6rem; }
 details.tba-section > summary { cursor: pointer; color: var(--muted); font-size: 0.92rem; padding: 0.4rem 0; }
 .link-tba { color: var(--warn); text-decoration-style: dashed; }
