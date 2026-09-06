@@ -137,7 +137,11 @@ h3 { font-size: 1.12rem; margin: 1.6rem 0 0.4rem; }
 .filterbar {
   position: sticky; top: 0; z-index: 5;
   background: var(--paper);
-  border-block: 1px solid var(--line);
+  /* One rule, not two. `border-block` drew a line above AND below, so with the
+     search box directly above it, the bar read as a pair of stray full-width lines
+     68px apart. The bottom edge is the one doing work: it separates the sticky bar
+     from the content scrolling under it. */
+  border-bottom: 1px solid var(--line);
   padding: 0.65rem 0;
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.55rem 1rem;
 }
@@ -357,35 +361,82 @@ details.dd .dd-panel {
   .filterbar { position: static; }
 }
 
-/* ---------- conference strip (homepage) ---------- */
-/* One card per conference above the board: the edition a reader can act on,
-   its dates, the open-call count, and the call for workshop proposals. One
-   row that scrolls sideways on a phone (snapping per card) and wraps into a
-   grid where there is room, so one markup serves both. Each card is a single
-   link — nothing inside it competes for the click, which is why the proposal
-   call's own page is linked from the hub instead. */
-.conf-strip { display: flex; gap: 0.6rem; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding: 0.2rem 0 0.6rem; margin: 0.4rem 0 1.2rem; }
-.conf-card {
-  flex: 0 0 auto; width: 13.5rem; scroll-snap-align: start;
-  display: grid; gap: 0.22rem; align-content: start;
-  border: 1px solid var(--line); border-radius: 10px; padding: 0.65rem 0.8rem;
-  background: var(--surface); color: var(--muted); font-size: 0.82rem; text-decoration: none;
-}
-.conf-card:hover, .conf-card:focus-visible { border-color: var(--accent); }
-.conf-card-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.15rem; }
-.conf-card .badge { padding: 0.22rem 0.55rem; }
-.conf-card-year, .conf-card-when { font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink); }
-.conf-card-year { font-weight: 600; }
-.conf-card-open { color: var(--ink); }
-.conf-card-when.muted, .conf-card-open.muted, .conf-card-call.muted { color: var(--muted); }
-.conf-card-call { white-space: nowrap; }
-.conf-card-call .countdown { font-size: 0.8rem; }
-@media (min-width: 60rem) {
-  .conf-strip { flex-wrap: wrap; overflow: visible; scroll-snap-type: none; }
-  .conf-card { flex: 1 1 13.5rem; width: auto; max-width: 17rem; }
-}
+/* ---------- conference ticker (homepage) ---------- */
+/* One item per conference above the board — a colour dot, the name, the
+   open-call count and the edition's dates — on a single scrolling line. The
+   card grid it replaced cost 395px and pushed the deadline board below the
+   fold; this is one line high and says the same thing. Each item is a single
+   link to the hub. */
+/* Half the gap above the subscribe block. It was three stacked pieces —
+   .nextline's 0.82rem bottom margin, the hero's 1.6rem bottom padding and the
+   block's own top margin — about 48px of empty page between the countdown line
+   and the green bar. `~` not `+`: the signup is not the hero's immediate sibling,
+   the hidden "signed in as" paragraph sits between them. The block's own margin
+   is set in AlertsSignup.astro, whose scoped style outranks anything here. */
+.hero:has(~ .alerts-signup) { padding-bottom: 0.5rem; }
+.hero:has(~ .alerts-signup) .nextline { margin-bottom: 0.5rem; }
 
-/* ---------- TBA sections ---------- */
+.conf-ticker { position: relative; margin: 0.5rem 0 1.1rem; overflow: hidden; padding: 0.15rem 0;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 34px, #000 calc(100% - 34px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 34px, #000 calc(100% - 34px), transparent); }
+.conf-ticker-track { display: flex; align-items: baseline; gap: 1.6rem; width: max-content;
+  animation: conf-ticker-slide 54s linear infinite; }
+@keyframes conf-ticker-slide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+/* A pointer pauses it by hovering; a keyboard pauses it by tabbing in.
+   `:has(:focus-visible)` rather than `:focus-within` on purpose. Focus-within
+   also matches focus left behind by a CLICK or a TAP, and a link keeps that focus
+   after navigation — so pressing Back restored focus to the link and the strip
+   stayed frozen until you clicked elsewhere, and on a phone, where there is no
+   hover to clear it, one tap stopped it for good. focus-visible is the keyboard
+   case only, which is the one that needs the pause. */
+.conf-ticker:hover .conf-ticker-track,
+.conf-ticker:has(:focus-visible) .conf-ticker-track { animation-play-state: paused; }
+/* Older engines without :has() keep the previous behaviour rather than none. */
+@supports not selector(:has(*)) {
+  .conf-ticker:focus-within .conf-ticker-track { animation-play-state: paused; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .conf-ticker-track { animation: none; }
+  .conf-ticker { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
+}
+.conf-tick { display: inline-flex; align-items: baseline; gap: 0.45rem; white-space: nowrap;
+  text-decoration: none; color: var(--ink); font-size: 0.88rem; }
+.conf-tick:hover .conf-tick-name, .conf-tick:focus-visible .conf-tick-name { text-decoration: underline; text-underline-offset: 3px; }
+/* align-self keeps the dot centred on the name: it has no baseline of its own, so
+   in a baseline row it would otherwise sit on the text baseline and read low. */
+.conf-tick-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; align-self: center; }
+.conf-tick-name { font-family: var(--font-mono); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.04em; line-height: 1; }
+.conf-tick-dash { color: var(--line-strong, #b9c0bd); }
+.conf-tick-when { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+.conf-tick-open.muted { color: var(--muted); }
+
+/* ---------- proposal calls & TBA sections ---------- */
+/* One row per call. The card stack put six saturated badges in a column, which
+   read as noise, and buried the single open call among five closed ones. Colour
+   is a dot here; the open row is tinted instead of shouting. */
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.proposal-table { width: 100%; border-collapse: collapse; margin: 1rem 0 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.proposal-table td { padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--line); font-size: 0.9rem; vertical-align: middle; }
+.proposal-table tr:last-child td { border-bottom: 0; }
+.proposal-table tr.is-past td { color: var(--muted); }
+.proposal-table tr.is-open td { background: color-mix(in srgb, var(--warn, #b45309) 5%, transparent); }
+.proposal-table .pt-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 0.45rem; vertical-align: baseline; }
+.proposal-table .pt-conf b { color: var(--ink); }
+.proposal-table .pt-when { font-size: 0.84rem; white-space: nowrap; }
+.proposal-table .pt-state { white-space: nowrap; }
+.proposal-table .pt-link { text-align: right; white-space: nowrap; }
+/* A note belongs to the row above it, so it loses that row's bottom rule. */
+.proposal-table tr.pt-noterow td { padding-top: 0; border-bottom: 1px solid var(--line); }
+.proposal-table tr:has(+ tr.pt-noterow) td { border-bottom: 0; }
+/* Four columns do not fit a phone: each row becomes a block, the note follows it. */
+@media (max-width: 40rem) {
+  .proposal-table, .proposal-table tbody, .proposal-table tr, .proposal-table td { display: block; width: auto; }
+  .proposal-table tr { padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--line); }
+  .proposal-table tr:last-child { border-bottom: 0; }
+  .proposal-table td { border-bottom: 0; padding: 0.1rem 0; }
+  .proposal-table .pt-link { text-align: left; }
+  .proposal-table tr.pt-noterow { padding-top: 0; border-top: 0; }
+}
 details.tba-section { margin-top: 1.6rem; }
 details.tba-section > summary { cursor: pointer; color: var(--muted); font-size: 0.92rem; padding: 0.4rem 0; }
 .link-tba { color: var(--warn); text-decoration-style: dashed; }

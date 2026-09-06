@@ -384,7 +384,11 @@ const topicList = [...topics].sort((a: any, b: any) => a.label.localeCompare(b.l
   }
   .alerts-signup[data-compact] { background: transparent; }
   /* Directly under a masthead, whose padding already supplies the gap. */
-  .alerts-signup[data-tight] { margin-top: 0.6rem; }
+  .alerts-signup[data-tight] { margin-top: 0.4rem; }
+  /* [hidden] must win over display:flex. Without this the element is a zero-height
+     box that still contributes 0.6rem of margin, which was part of the 77px gap
+     above the subscribe block when signed out. */
+  .alerts-signedin[hidden] { display: none; }
   .alerts-signedin {
     margin: 0.6rem 0 0;
     font-size: 0.92rem;
