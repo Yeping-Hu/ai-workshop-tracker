@@ -139,7 +139,12 @@ h3 { font-size: 1.12rem; margin: 1.6rem 0 0.4rem; }
      once the bar sticks, from the content scrolling under it. (`border-block`
      drew a second line above, which read as a stray rule under the search box.) */
   border-bottom: 1px solid var(--line);
-  padding: 0.65rem 0;
+  /* Asymmetric on purpose. The rule is the bar's bottom border, and with equal
+     padding it sat 31.5px below the tab ink but only 10.5px above the statline —
+     visibly stuck to the line beneath it. Dropping the bottom padding raises the
+     rule to the midpoint; the statline's own margin below grows by the same
+     amount so nothing else moves. */
+  padding: 0.65rem 0 0;
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.55rem 1rem;
 }
 .kw-box {
@@ -378,7 +383,12 @@ details.dd .dd-panel {
    season ever opens more calls than fit. It replaced a scrolling ticker
    (distracting) and, before that, a grid of cards (395px tall, pushed the
    first deadline row below the fold). */
-.conf-line { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0.35rem 1.5rem; margin: 0.8rem 0 0; }
+/* 1rem above, and 0.4rem under the alerts line below, so this sits midway between
+   the counts above it and the alerts line under it. Measured on the rendered ink
+   rather than the boxes: at 0.8rem/0.6rem the visual gaps were 21px above and
+   27px below, because the two neighbours have different line heights and the box
+   edges sit nowhere near the glyphs. */
+.conf-line { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0.35rem 1.5rem; margin: 1rem 0 0; }
 .conf-tick { display: inline-flex; align-items: baseline; gap: 0.45rem; white-space: nowrap; text-decoration: none; color: var(--ink); }
 .conf-tick:hover .conf-tick-name, .conf-tick:focus-visible .conf-tick-name { text-decoration: underline; text-underline-offset: 3px; }
 /* align-self keeps the dot centred on the name: it has no baseline of its own, so
@@ -462,7 +472,7 @@ details.tba-section > summary { cursor: pointer; color: var(--muted); font-size:
 /* The filter bar's own padding already separates it from the counts; the
    statline's general 1.1rem top margin on top of that left a hole under the
    tabs. */
-.hero .statline { margin-top: 0.35rem; }
+.hero .statline { margin-top: 1rem; }
 .facetbar { margin-top: 0.4rem; }
 /* A search result is the board's row (ws-row.js) with, in keyword mode, the
    excerpt and the matching papers beneath it. The <li> keeps the separator;
