@@ -247,24 +247,44 @@ const datasetLd: Record<string, any> = {
       {proposalCalls.length > 0 && (
         <section>
           <h2>Organizing a workshop? Proposal deadlines</h2>
-          <ul class="proposal-list">
-            {proposalCalls.map((c) => {
-              const conf = conferenceById.get(c.conference);
-              return (
-                <li>
-                  <span class="badge" style={`--conf:${conf?.color ?? '#888'}; padding: 0.28rem 0.7rem;`}>{conf?.name} {c.year}</span>
-                  <span class="mono">{c.deadlineWallClock}</span>
-                  {c.open ? (
-                    <span class="countdown" data-deadline-ms={c.deadlineUtcMs} data-name={`${conf?.name} ${c.year} workshop proposals`}>—</span>
-                  ) : (
-                    <span class="pill deadline_passed">Closed</span>
-                  )}
-                  <a href={c.url} rel="noopener">Call for proposals ↗</a>
-                  {c.notes && <span class="muted small" style="flex-basis: 100%;">{c.notes}</span>}
-                </li>
-              );
-            })}
-          </ul>
+          {/* A table rather than a stack of cards: six saturated badges in a
+              column competed with each other, and the one call a reader can act
+              on was lost among five that closed months ago. Colour survives as a
+              9px dot — enough to identify the conference, not enough to shout —
+              and the open row is tinted instead. Notes keep their own spanning
+              row so nothing is dropped; they are what made the cards tall. */}
+          <table class="proposal-table">
+            <caption class="visually-hidden">Calls for workshop proposals, soonest deadline first</caption>
+            <tbody>
+              {proposalCalls.map((c) => {
+                const conf = conferenceById.get(c.conference);
+                return (
+                  <>
+                    <tr class={c.open ? 'is-open' : 'is-past'}>
+                      <td class="pt-conf">
+                        <i class="pt-dot" style={`background:${conf?.color ?? '#888'}`} aria-hidden="true"></i>
+                        <b>{conf?.name}</b> {c.year}
+                      </td>
+                      <td class="pt-when mono">{c.deadlineWallClock}</td>
+                      <td class="pt-state">
+                        {c.open ? (
+                          <span class="countdown" data-deadline-ms={c.deadlineUtcMs} data-name={`${conf?.name} ${c.year} workshop proposals`}>—</span>
+                        ) : (
+                          <span class="pill deadline_passed">Closed</span>
+                        )}
+                      </td>
+                      <td class="pt-link"><a href={c.url} rel="noopener">Call for proposals ↗</a></td>
+                    </tr>
+                    {c.notes && (
+                      <tr class={`pt-noterow${c.open ? ' is-open' : ' is-past'}`}>
+                        <td colspan="4"><span class="muted small">{c.notes}</span></td>
+                      </tr>
+                    )}
+                  </>
+                );
+              })}
+            </tbody>
+          </table>
         </section>
       )}
 
