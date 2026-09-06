@@ -370,6 +370,15 @@ details.dd .dd-panel {
    call's own page is linked from the hub instead. */
 /* A single scrolling line. The card grid it replaced cost 395px and pushed the
    deadline board below the fold; this is one line high and says the same thing. */
+/* Half the gap above the subscribe block. It was three stacked pieces —
+   .nextline's 0.82rem bottom margin, the hero's 1.6rem bottom padding and the
+   block's own top margin — about 48px of empty page between the countdown line
+   and the green bar. `~` not `+`: the signup is not the hero's immediate sibling,
+   the hidden "signed in as" paragraph sits between them. The block's own margin
+   is set in AlertsSignup.astro, whose scoped style outranks anything here. */
+.hero:has(~ .alerts-signup) { padding-bottom: 0.5rem; }
+.hero:has(~ .alerts-signup) .nextline { margin-bottom: 0.5rem; }
+
 .conf-ticker { position: relative; margin: 0.5rem 0 1.1rem; overflow: hidden; padding: 0.15rem 0;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 34px, #000 calc(100% - 34px), transparent);
   mask-image: linear-gradient(90deg, transparent, #000 34px, #000 calc(100% - 34px), transparent); }

@@ -239,6 +239,35 @@ const datasetLd: Record<string, any> = {
       </p>
     )}
 
+      {/* Proposal deadlines, back below the board where they were before the
+          conference strip absorbed them. The strip still carries a per-conference
+          summary, and the daily OpenReview sync that keeps these dates current is
+          untouched — this only restores where the detail is shown: one row per
+          call, with a live countdown while it is open and a Closed pill after. */}
+      {proposalCalls.length > 0 && (
+        <section>
+          <h2>Organizing a workshop? Proposal deadlines</h2>
+          <ul class="proposal-list">
+            {proposalCalls.map((c) => {
+              const conf = conferenceById.get(c.conference);
+              return (
+                <li>
+                  <span class="badge" style={`--conf:${conf?.color ?? '#888'}; padding: 0.28rem 0.7rem;`}>{conf?.name} {c.year}</span>
+                  <span class="mono">{c.deadlineWallClock}</span>
+                  {c.open ? (
+                    <span class="countdown" data-deadline-ms={c.deadlineUtcMs} data-name={`${conf?.name} ${c.year} workshop proposals`}>—</span>
+                  ) : (
+                    <span class="pill deadline_passed">Closed</span>
+                  )}
+                  <a href={c.url} rel="noopener">Call for proposals ↗</a>
+                  {c.notes && <span class="muted small" style="flex-basis: 100%;">{c.notes}</span>}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
     <aside class="cta">
       <p>
         <strong>Missing a workshop?</strong> Add it in about two minutes — fill in the form
