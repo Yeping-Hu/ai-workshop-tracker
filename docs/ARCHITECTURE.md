@@ -18,23 +18,41 @@ lists are committed JSON caches under `cache/openreview/`. Builds read these at
 build time and never touch a live API or a database.
 
 The core UI is a small, fixed set of pages: a search-first homepage (a large
-search box, a strip of one card per conference, then the deadline board;
-searching swaps the strip and board for faceted results), a device-local
+search box, a one-line conference ticker, then the deadline board and the
+workshop-proposal deadlines; searching swaps the strip and board for faceted
+results), a device-local
 **Saved** list, and **About**, plus a static per-conference hub at
 `/conference/<id>/` (see *Discoverability* below). Legacy `/archive`,
 `/search`, `/contribute`, and `/calendar` URLs redirect into these.
 
-**The conference strip.** Each card names the edition a reader can act on —
-the year of the conference's open calls when it has any, else the soonest
-edition still to end, else the latest tracked (`conferenceCard` in
-`lib/workshops.mjs`) — with that year's dates from `data/editions.yml`
-(`formatDateSpan`, shared with the conference-year page), its open-call count,
-and the newest call for workshop proposals: a countdown while it is open, which
-the masthead ticker sees like any other, a muted "closed" note afterwards. A
-year with open calls but no editions row says "dates TBA" rather than borrowing
-the previous year's dates. Cards are single links to the hub, so the call's own
-page is linked from there. Order, count and content are data-driven; the
-eyebrow, the facet and the strip share one ordering, pinned by `ui_test.mjs`.
+**The conference strip.** One scrolling line, one item per conference: a colour
+dot, the name, the open-call count, and that edition's dates in parentheses. It
+replaced a grid of cards that stood 395px tall and pushed the first deadline row
+below the fold on both desktop and phone — on a site whose point is countdowns.
+
+Which edition an item names is unchanged (`conferenceCard` in
+`lib/workshops.mjs`): the year of the conference's open calls when it has any,
+else the soonest edition still to end, else the latest tracked, with that year's
+dates from `data/editions.yml` (`formatDateSpan`, shared with the conference-year
+page). A year with open calls but no editions row says "dates TBA" rather than
+borrowing the previous year's dates. Each item is a single link to the hub.
+Order, count and content are data-driven; the eyebrow, the facet and the strip
+share one ordering, pinned by `ui_test.mjs`, and the edition rules by
+`conference_strip_test.mjs`.
+
+The track is duplicated so the loop is seamless — the second copy is `aria-hidden`
+and unfocusable so the list is not announced twice. It pauses on hover and on
+`:has(:focus-visible)`; NOT on `:focus-within`, which also matches focus left by a
+click or a tap and so froze the strip after a Back navigation and permanently
+after the first tap on a phone. There is no touch handling and no pause button,
+matching how established marquees behave; `prefers-reduced-motion` disables the
+animation entirely and leaves a scrollable row.
+
+**Workshop-proposal deadlines** are their own section below the board: one row
+per call with the wall-clock date, a countdown while open or a "Closed" pill
+after, and a link to the call. The per-conference summary in the ticker and this
+list read the same `proposalCalls` data, kept current by the daily OpenReview
+proposal sync.
 
 ## Search (Pagefind, static, dual-index)
 

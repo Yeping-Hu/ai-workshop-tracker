@@ -168,7 +168,8 @@ each conference cycle — when organizers can apply to host a workshop, not when
 authors submit papers. One row per conference-year (`conference`, `year`,
 `proposal_deadline`, `timezone`, `url`, and optionally `openreview_venue_id`,
 `deadline_notes`, `notes`); each conference's newest cycle is shown on its
-homepage card and on its hub page, with a countdown while the call is open.
+homepage conference ticker, in the proposal-deadlines section below the board,
+and on its hub page, with a countdown while the call is open.
 
 Most rows write themselves. The conferences that run proposals through
 OpenReview (NeurIPS, ICML, ICLR, CVPR and ICRA today) register a venue for it

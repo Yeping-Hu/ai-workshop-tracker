@@ -416,7 +416,7 @@ details.dd .dd-panel {
 @media (min-width: 60rem) {
 }
 
-/* ---------- TBA sections ---------- */
+/* ---------- proposal calls & TBA sections ---------- */
 /* Restored with the section itself: the markup came back without these, so every
    row rendered as unspaced inline text — badge, date, countdown and link running
    together with no gaps. The flex row with a baseline and a 0.4/1rem gap is what
