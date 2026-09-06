@@ -19,6 +19,7 @@ import {
   resolveDeadlineUtcMs,
   formatDeadlineWallClock,
   formatDateYmd,
+  formatDateSpan,
   assembleDeadline,
 } from '../lib/dates.mjs';
 import { parseGroupDeadline } from './discover_openreview.mjs';
@@ -29,6 +30,16 @@ function check(label, got, expect) {
   if (!ok) failed++;
   console.log(`${ok ? '✓' : '✗'} ${label}: ${JSON.stringify(got)}${ok ? '' : `  (expected ${JSON.stringify(expect)})`}`);
 }
+
+/* ------------------------------------------------ an edition's date span */
+check('formatDateSpan: same month', formatDateSpan('2026-12-06', '2026-12-13'), 'Dec 6–13, 2026');
+check('formatDateSpan: across months', formatDateSpan('2026-09-27', '2026-10-01'), 'Sep 27 – Oct 1, 2026');
+check('formatDateSpan: across years', formatDateSpan('2026-12-30', '2027-01-02'), 'Dec 30, 2026 – Jan 2, 2027');
+check('formatDateSpan: a one-day edition', formatDateSpan('2026-07-11', '2026-07-11'), 'Jul 11, 2026');
+check('formatDateSpan: end only', formatDateSpan(undefined, '2026-07-11'), 'Jul 11, 2026');
+check('formatDateSpan: start only', formatDateSpan('2026-07-05', null), 'Jul 5, 2026');
+check('formatDateSpan: nothing known', formatDateSpan(null, null), null);
+check('formatDateSpan: an unparsable date is ignored', formatDateSpan('soon', '2026-07-11'), 'Jul 11, 2026');
 
 /* ------------------------------------------------ impossible dates are null */
 check('isRealDate: Feb 29 in a leap year', isRealDate(2028, 2, 29), true);

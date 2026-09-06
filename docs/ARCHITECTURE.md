@@ -18,10 +18,23 @@ lists are committed JSON caches under `cache/openreview/`. Builds read these at
 build time and never touch a live API or a database.
 
 The core UI is a small, fixed set of pages: a search-first homepage (a large
-search box over the deadline board; searching swaps the board for faceted
-results), a device-local **Saved** list, and **About**, plus a static
-per-conference hub at `/conference/<id>/` (see *Discoverability* below). Legacy
-`/archive`, `/search`, `/contribute`, and `/calendar` URLs redirect into these.
+search box, a strip of one card per conference, then the deadline board;
+searching swaps the strip and board for faceted results), a device-local
+**Saved** list, and **About**, plus a static per-conference hub at
+`/conference/<id>/` (see *Discoverability* below). Legacy `/archive`,
+`/search`, `/contribute`, and `/calendar` URLs redirect into these.
+
+**The conference strip.** Each card names the edition a reader can act on —
+the year of the conference's open calls when it has any, else the soonest
+edition still to end, else the latest tracked (`conferenceCard` in
+`lib/workshops.mjs`) — with that year's dates from `data/editions.yml`
+(`formatDateSpan`, shared with the conference-year page), its open-call count,
+and the newest call for workshop proposals: a countdown while it is open, which
+the masthead ticker sees like any other, a muted "closed" note afterwards. A
+year with open calls but no editions row says "dates TBA" rather than borrowing
+the previous year's dates. Cards are single links to the hub, so the call's own
+page is linked from there. Order, count and content are data-driven; the
+eyebrow, the facet and the strip share one ordering, pinned by `ui_test.mjs`.
 
 ## Search (Pagefind, static, dual-index)
 
@@ -701,7 +714,8 @@ Pinned by `scripts/abstract_deadline_test.mjs`.
 
 `data/proposal_calls.yml` records when organizers can apply to host a workshop at
 each conference — a different deadline from any workshop's, one row per
-conference-year, shown on the homepage. It is written by the daily
+conference-year. The newest cycle of each conference is shown on the homepage's
+conference card and on the conference hub. The file is written by the daily
 `sync-proposal-calls` job for the conferences whose proposal venue is on
 OpenReview and by hand for the rest, and the sync reuses the workshop-deadline
 readers and gates (AUTOMATION.md, "Proposal calls come from the same prefix"),

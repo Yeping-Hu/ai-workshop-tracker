@@ -5,7 +5,7 @@ import MarkdownExport from '../../../components/MarkdownExport.astro';
 import ConferenceWorkshopList from '../../../components/ConferenceWorkshopList.astro';
 import { workshops, conferences, editionByKey } from '../../../lib/data';
 import { href, REPO_URL } from '../../../lib/site';
-import { formatDateYmd } from '../../../../../lib/dates.mjs';
+import { formatDateSpan } from '../../../../../lib/dates.mjs';
 
 // One page per conference EDITION — /conference/neurips/2026/ — beside the
 // per-conference hub. The queries this site is shown for are overwhelmingly
@@ -82,17 +82,8 @@ const cities = list.some((w: any) => w.locationDistinguishes)
   : [];
 
 // "Dec 6–13, 2026" from the edition's start/end; either date alone if that
-// is all data/editions.yml has.
-const dateSpan = (() => {
-  const s = edition?.start ? formatDateYmd(String(edition.start)) : null;
-  const e = edition?.end ? formatDateYmd(String(edition.end)) : null;
-  if (s && e) {
-    const [sm, sd] = s.split(/[ ,]+/);
-    const [em, ed, ey] = e.split(/[ ,]+/);
-    return sm === em ? `${sm} ${sd}–${ed}, ${ey}` : `${sm} ${sd} – ${em} ${ed}, ${ey}`;
-  }
-  return s ?? e ?? null;
-})();
+// is all data/editions.yml has. Shared with the homepage's conference cards.
+const dateSpan = formatDateSpan(edition?.start, edition?.end);
 const whenWhere = [dateSpan, sharedLocation ?? (cities.length ? cities.join(', ') : null)].filter(Boolean).join(' · ');
 
 const SITE = Astro.site;

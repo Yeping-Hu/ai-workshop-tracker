@@ -357,10 +357,35 @@ details.dd .dd-panel {
   .filterbar { position: static; }
 }
 
-/* ---------- proposal calls & TBA sections ---------- */
-.proposal-list { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; gap: 0.55rem; }
-.proposal-list li { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: baseline; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.7rem 0.9rem; }
-.proposal-list .mono { font-size: 0.84rem; }
+/* ---------- conference strip (homepage) ---------- */
+/* One card per conference above the board: the edition a reader can act on,
+   its dates, the open-call count, and the call for workshop proposals. One
+   row that scrolls sideways on a phone (snapping per card) and wraps into a
+   grid where there is room, so one markup serves both. Each card is a single
+   link — nothing inside it competes for the click, which is why the proposal
+   call's own page is linked from the hub instead. */
+.conf-strip { display: flex; gap: 0.6rem; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding: 0.2rem 0 0.6rem; margin: 0.4rem 0 1.2rem; }
+.conf-card {
+  flex: 0 0 auto; width: 13.5rem; scroll-snap-align: start;
+  display: grid; gap: 0.22rem; align-content: start;
+  border: 1px solid var(--line); border-radius: 10px; padding: 0.65rem 0.8rem;
+  background: var(--surface); color: var(--muted); font-size: 0.82rem; text-decoration: none;
+}
+.conf-card:hover, .conf-card:focus-visible { border-color: var(--accent); }
+.conf-card-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.15rem; }
+.conf-card .badge { padding: 0.22rem 0.55rem; }
+.conf-card-year, .conf-card-when { font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink); }
+.conf-card-year { font-weight: 600; }
+.conf-card-open { color: var(--ink); }
+.conf-card-when.muted, .conf-card-open.muted, .conf-card-call.muted { color: var(--muted); }
+.conf-card-call { white-space: nowrap; }
+.conf-card-call .countdown { font-size: 0.8rem; }
+@media (min-width: 60rem) {
+  .conf-strip { flex-wrap: wrap; overflow: visible; scroll-snap-type: none; }
+  .conf-card { flex: 1 1 13.5rem; width: auto; max-width: 17rem; }
+}
+
+/* ---------- TBA sections ---------- */
 details.tba-section { margin-top: 1.6rem; }
 details.tba-section > summary { cursor: pointer; color: var(--muted); font-size: 0.92rem; padding: 0.4rem 0; }
 .link-tba { color: var(--warn); text-decoration-style: dashed; }

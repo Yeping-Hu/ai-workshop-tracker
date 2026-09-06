@@ -12,8 +12,12 @@ import {
   proposalCalls,
   conferenceById,
   loadPaperCache,
+  editions,
+  conferenceCard,
+  latestProposalCall,
 } from '../lib/data';
 import { href, REPO_URL } from '../lib/site';
+import { formatDateSpan, formatDateYmd } from '../../../lib/dates.mjs';
 
 const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
 // conference display-name -> color, for badges on search results
@@ -72,6 +76,37 @@ const _confNames = [...conferences].map((c) => c.name).sort((a, b) => a.localeCo
 const confListText = _confNames.length > 1
   ? `${_confNames.slice(0, -1).join(', ')}, and ${_confNames[_confNames.length - 1]}`
   : _confNames.join('');
+// One card per conference above the board: the edition a reader can act on
+// (conferenceCard in lib/workshops.mjs decides which), its dates, how many
+// calls are open, and the newest call for workshop proposals. Order, count and
+// content all come from the data, so a tenth conference gets a card with no
+// edit here; the eyebrow, the facet and this strip share one ordering.
+const stripCards = [...conferences]
+  .sort((a, b) => a.name.localeCompare(b.name))
+  .map((c) => {
+    const card = conferenceCard(c.id, { workshops, editions });
+    const call = latestProposalCall(proposalCalls, c.id);
+    return {
+      id: c.id,
+      name: c.name,
+      full: c.full_name ?? c.name,
+      color: c.color,
+      year: card.year,
+      when: card.edition ? formatDateSpan(card.edition.start, card.edition.end) : null,
+      upcoming: card.upcoming,
+      open: card.openCalls,
+      call: call
+        ? {
+            year: call.year,
+            open: call.open,
+            due: formatDateYmd(String(call.proposal_deadline).slice(0, 10)),
+            deadlineUtcMs: call.deadlineUtcMs,
+            wallClock: call.deadlineWallClock,
+          }
+        : null,
+    };
+  });
+
 const datasetLd: Record<string, any> = {
   '@context': 'https://schema.org',
   '@type': 'Dataset',
@@ -147,6 +182,42 @@ const datasetLd: Record<string, any> = {
 
   <!-- default mode -->
   <div id="homeDefault">
+    {/* The conferences at a glance, before the board, so the page answers
+        "what is coming up where" without a scroll. Hidden with the board while
+        searching — a facet selection IS the board, filtered. Not a heading:
+        the first <h2> on the page stays "Upcoming deadlines". A proposal call
+        that is open counts down here, and the masthead ticker sees that
+        countdown like any other; a closed one is a muted note, never a list of
+        closed calls. */}
+    <nav class="conf-strip" aria-label="Conferences at a glance">
+      {stripCards.map((c) => (
+        <a class="conf-card" href={href(`/conference/${c.id}/`)} title={`${c.full} workshops`}>
+          <span class="conf-card-head">
+            <span class="badge" style={`--conf:${c.color}`}>{c.name}</span>
+            {c.year != null && <span class="conf-card-year">{c.year}</span>}
+          </span>
+          <span class={`conf-card-when${c.when && c.upcoming ? '' : ' muted'}`}>
+            {c.when ? (c.upcoming ? c.when : `held ${c.when}`) : 'dates TBA'}
+          </span>
+          <span class={`conf-card-open${c.open ? '' : ' muted'}`}>
+            {c.open ? `${c.open} open call${c.open === 1 ? '' : 's'}` : 'no open calls'}
+          </span>
+          {c.call && (c.call.open ? (
+            <span class="conf-card-call">
+              Proposals due {c.call.due}{' '}
+              <span
+                class="countdown"
+                data-deadline-ms={c.call.deadlineUtcMs}
+                data-name={`${c.name} ${c.call.year} workshop proposals`}
+                title={`Call for workshop proposals closes ${c.call.wallClock}`}
+              >—</span>
+            </span>
+          ) : (
+            <span class="conf-card-call muted">{c.call.year} proposals closed {c.call.due}</span>
+          ))}
+        </a>
+      ))}
+    </nav>
     <h2>Upcoming deadlines</h2>
     {upcomingWithDeadline.length > 0 ? (
       <section class="board" aria-label="Workshop deadlines">
@@ -163,30 +234,6 @@ const datasetLd: Record<string, any> = {
         {upcomingTba.length} more announced workshops haven't published a deadline yet — find
         them with the search box above, and help <a href={`${REPO_URL}/blob/main/CONTRIBUTING.md`}>add what's missing</a>.
       </p>
-    )}
-
-    {proposalCalls.length > 0 && (
-      <section>
-        <h2>Organizing a workshop? Proposal deadlines</h2>
-        <ul class="proposal-list">
-          {proposalCalls.map((c) => {
-            const conf = conferenceById.get(c.conference);
-            return (
-              <li>
-                <span class="badge" style={`--conf:${conf?.color ?? '#888'}; padding: 0.28rem 0.7rem;`}>{conf?.name} {c.year}</span>
-                <span class="mono">{c.deadlineWallClock}</span>
-                {c.open ? (
-                  <span class="countdown" data-deadline-ms={c.deadlineUtcMs} data-name={`${conf?.name} ${c.year} workshop proposals`}>—</span>
-                ) : (
-                  <span class="pill deadline_passed">Closed</span>
-                )}
-                <a href={c.url} rel="noopener">Call for proposals ↗</a>
-                {c.notes && <span class="muted small" style="flex-basis: 100%;">{c.notes}</span>}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
     )}
 
     <aside class="cta">

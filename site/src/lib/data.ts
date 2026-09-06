@@ -13,6 +13,8 @@ import {
   sortByDeadline,
   workshopShortName,
   nameTokens,
+  conferenceCard,
+  latestProposalCall,
 } from '../../../lib/workshops.mjs';
 
 export type Workshop = Record<string, any>;
@@ -23,9 +25,10 @@ export const workshops: Workshop[] = loadWorkshops();
 export const conferences: Conference[] = loadConferences();
 export const topics: Topic[] = loadTopics();
 export const conferenceById = new Map(conferences.map((c: Conference) => [c.id, c]));
-/** Conference edition dates (data/editions.yml), keyed `conf-year`. */
+/** Conference edition dates (data/editions.yml), as rows and keyed `conf-year`. */
+export const editions: Record<string, any>[] = loadEditions();
 export const editionByKey = new Map<string, Record<string, any>>(
-  loadEditions().map((e: Record<string, any>) => [`${e.conference}-${e.year}`, e]),
+  editions.map((e: Record<string, any>) => [`${e.conference}-${e.year}`, e]),
 );
 export const topicById = new Map(topics.map((t: Topic) => [t.id, t]));
 export { loadPaperCache };
@@ -50,3 +53,5 @@ export const paperCount = workshops.reduce((n: number, w: Workshop) => n + (w.pa
 
 /** Re-exported for pages that need a workshop's one-line identity. */
 export { workshopShortName, nameTokens };
+/** Re-exported for the homepage's conference cards and the hub's proposal-call line. */
+export { conferenceCard, latestProposalCall };

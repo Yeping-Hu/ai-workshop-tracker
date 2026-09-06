@@ -3,8 +3,9 @@ import Base from '../../components/Base.astro';
 import AlertsSignup from '../../components/AlertsSignup.astro';
 import MarkdownExport from '../../components/MarkdownExport.astro';
 import ConferenceWorkshopList from '../../components/ConferenceWorkshopList.astro';
-import { workshops, conferences } from '../../lib/data';
+import { workshops, conferences, proposalCalls, latestProposalCall } from '../../lib/data';
 import { href, REPO_URL } from '../../lib/site';
+import { formatDateYmd } from '../../../../lib/dates.mjs';
 
 // One hub page per conference, generated from the same data the rest of the
 // site uses. Intentionally carries NO data-pf-ws / data-pf-papers attributes,
@@ -49,6 +50,9 @@ export function getStaticPaths() {
 const { conf, list } = Astro.props as { conf: any; list: any[] };
 const confName: string = conf.name;
 const confFull: string = conf.full_name || conf.name;
+// The newest call for workshop proposals (data/proposal_calls.yml). The
+// homepage card can carry only one link, so the call's own page is linked here.
+const call = latestProposalCall(proposalCalls, conf.id);
 
 const years = list.map((w) => w.year).filter((y) => typeof y === 'number');
 const yearMin = years.length ? Math.min(...years) : null;
@@ -178,6 +182,17 @@ const breadcrumbLd = {
       <span><strong>{paperTotal.toLocaleString('en-US')}</strong> papers</span>
       <span><strong>{openCalls.length}</strong> open calls</span>
     </div>
+    {call && (
+      <p class="conf-call muted small">
+        <a href={call.url} rel="noopener">Call for {confName} {call.year} workshop proposals ↗</a>
+        {' — '}
+        {call.open ? (
+          <Fragment>due {call.deadlineWallClock}</Fragment>
+        ) : (
+          <Fragment>closed {formatDateYmd(String(call.proposal_deadline).slice(0, 10))}</Fragment>
+        )}
+      </p>
+    )}
     {yearGroups.length > 1 && (
       <p class="conf-years-nav muted small">
         By year:{' '}
@@ -240,6 +255,7 @@ const breadcrumbLd = {
   <style>
     .conf-intro { font-size: 1.04rem; line-height: 1.55; color: var(--muted); max-width: 48rem; margin: 0.4rem 0 1rem; }
     .conf-years-nav { margin: 0.8rem 0 0; }
+    .conf-call { margin: 0.6rem 0 0; }
     .conf-year { margin: 1.6rem 0; }
     .conf-year h2 a { color: inherit; text-decoration: none; }
     .conf-year h2 a:hover { text-decoration: underline; }
