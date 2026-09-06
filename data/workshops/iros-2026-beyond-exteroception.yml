@@ -1,0 +1,20 @@
+name: 'Beyond Exteroception: Interoceptive Perception for Resilient Robotics'
+acronym: Beyond Exteroception
+conference: iros
+year: 2026
+website: https://superodometry.com/interoception
+location: Pittsburgh, Pennsylvania, USA
+topics:
+  - vision
+  - robotics
+submission_deadline: 2026-09-20 07:00
+timezone: UTC
+deadline_notes: OpenReview-synced 2026-09-20 07:00 UTC (as of 2026-09-06) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_history:
+  - value: 2026-09-20 07:00
+    recorded: '2026-09-06'
+    timezone: UTC
+openreview_venue_id: IEEE.org/IROS/2026/Workshop/Beyond_Exteroception
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-09-06'
