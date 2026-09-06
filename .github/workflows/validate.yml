@@ -68,6 +68,8 @@ jobs:
         run: node scripts/markdown_test.mjs
       - name: Test imminent-deadline re-check selection (band, freeze-on-touch)
         run: node scripts/recheck_imminent_test.mjs
+      - name: Test the daily proposal-call sync rules (probe, adopt, later-only, freeze)
+        run: node scripts/proposal_calls_test.mjs
       - name: Test deadline cross-check classifier
         run: node scripts/deadline_crosscheck_test.mjs
       - name: Test status logic (open deadline beats inferred event date)

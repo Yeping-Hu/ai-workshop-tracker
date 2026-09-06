@@ -6,6 +6,9 @@
  *      conference+year, deadline parses & is sane, no duplicates.
  *   3. data/editions.yml: valid conference ids, parsable start/end dates,
  *      no duplicate rows; warns when a tracked current/future year has none.
+ *   4. data/proposal_calls.yml: valid conference ids, a parsable deadline with
+ *      a timezone, an http(s) url, known fields, no duplicate rows; warns when
+ *      a conference's newest call closed over a year ago with no successor.
  *
  * Exit code 1 if any ERROR. Warnings never fail the build.
  *
@@ -22,8 +25,8 @@ import { REPO_ROOT,
   readWorkshopFile,
   loadConferences,
   loadTopics,
-  loadEditions, slugOfFile } from '../lib/workshops.mjs';
-import { resolveDeadlineUtcMs, parseDateUtcMs, isValidTimezone, DAY_MS, TWO_YEARS_MS } from '../lib/dates.mjs';
+  loadEditions, loadProposalCallRows, slugOfFile } from '../lib/workshops.mjs';
+import { resolveDeadlineUtcMs, parseDateUtcMs, parseDeadlineString, isValidTimezone, DAY_MS, TWO_YEARS_MS } from '../lib/dates.mjs';
 import { validateChangesFeed } from './validate_changes_feed.mjs';
 
 const reportFlag = process.argv.indexOf('--report');
@@ -332,6 +335,55 @@ for (const filePath of listWorkshopFiles()) {
       warnings.push({
         file: 'data/editions.yml',
         msg: `No edition dates for tracked ${k.replace('-', ' ')} — "Past" detection falls back to typical_month.`,
+      });
+    }
+  }
+}
+
+// ---- data/proposal_calls.yml: call-for-workshop-proposals rows ----
+// Written daily by scripts/sync_proposal_calls.mjs for the conferences whose
+// proposal venue is on OpenReview and by hand for the rest; either way a bad
+// row reaches the homepage, so it is checked here like editions.yml.
+{
+  const rel = 'data/proposal_calls.yml';
+  const ALLOWED = new Set(['conference', 'year', 'proposal_deadline', 'timezone', 'url', 'openreview_venue_id', 'deadline_notes', 'notes']);
+  const seenCall = new Set();
+  const newest = new Map(); // conference -> { year, ms } of its latest recorded cycle
+  for (const r of loadProposalCallRows()) {
+    if (!r || typeof r !== 'object') {
+      errors.push({ file: rel, msg: 'Every row must be a mapping (conference, year, proposal_deadline, timezone, url).' });
+      continue;
+    }
+    const ref = `${rel} (${r.conference ?? '?'} ${r.year ?? '?'})`;
+    if (!conferences.has(r.conference)) errors.push({ file: ref, msg: 'Unknown conference id.' });
+    if (!Number.isInteger(r.year)) errors.push({ file: ref, msg: '`year` must be an integer.' });
+    if (!parseDeadlineString(r.proposal_deadline)) {
+      errors.push({ file: ref, msg: '`proposal_deadline` must be a real date, YYYY-MM-DD or YYYY-MM-DD HH:MM (quoted).' });
+    }
+    if (!r.timezone) errors.push({ file: ref, msg: '`timezone` is required — UTC, AoE or an IANA name.' });
+    else if (!isValidTimezone(r.timezone)) errors.push({ file: ref, msg: `Unknown timezone "${r.timezone}".` });
+    if (typeof r.url !== 'string' || !/^https?:\/\/\S+$/.test(r.url)) errors.push({ file: ref, msg: '`url` must be an http(s) link to the call.' });
+    for (const k of ['openreview_venue_id', 'deadline_notes', 'notes']) {
+      if (r[k] != null && typeof r[k] !== 'string') errors.push({ file: ref, msg: `\`${k}\` must be a string.` });
+    }
+    for (const k of Object.keys(r)) if (!ALLOWED.has(k)) errors.push({ file: ref, msg: `Unknown field \`${k}\`.` });
+    const key = `${r.conference}-${r.year}`;
+    if (seenCall.has(key)) errors.push({ file: ref, msg: 'Duplicate conference-year row.' });
+    seenCall.add(key);
+    const ms = r.timezone ? resolveDeadlineUtcMs(r.proposal_deadline, r.timezone) : null;
+    const cur = newest.get(r.conference);
+    if (ms != null && (!cur || r.year > cur.year || (r.year === cur.year && ms > cur.ms))) newest.set(r.conference, { year: r.year, ms });
+  }
+  // A lapsed cycle: the conference's newest call closed long enough ago that
+  // the next one has normally been announced, and nothing recorded it. The
+  // daily sync only finds venues on OpenReview, so this is the nudge to add
+  // the row by hand for a conference that publishes its call elsewhere.
+  const LAPSED_MS = 365 * DAY_MS;
+  for (const [conf, cur] of newest) {
+    if (NOW - cur.ms > LAPSED_MS) {
+      warnings.push({
+        file: rel,
+        msg: `The newest ${conferences.get(conf)?.name ?? conf} proposal call (${cur.year}) closed ${Math.round((NOW - cur.ms) / DAY_MS)} days ago and no later cycle is recorded.`,
       });
     }
   }

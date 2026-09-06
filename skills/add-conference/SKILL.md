@@ -123,6 +123,15 @@ every tracked current/future year that lacks one.
 Lines like `(skipped N archival/non-archival track twin(s))` are normal —
 workshops often register duplicate track venues and discovery merges them.
 
+The conference's *call for workshop proposals* needs nothing from you if it
+runs on OpenReview: the daily `sync-proposal-calls` workflow probes
+`<prefix>/<year>/Workshop_Proposals` (and ICRA's `WT-Pre-Proposals`) for this
+year and next and writes `data/proposal_calls.yml` itself. If the step-1 probe
+showed the conference registers its proposal venue under another suffix, add
+that suffix to `PROPOSAL_SUFFIXES` in `scripts/sync_proposal_calls.mjs`; if the
+call lives elsewhere, add a hand-written row (CONTRIBUTING.md, "Workshop
+proposal calls").
+
 **Run discovery for each year a second time before shipping.** Discovery
 backfills missing deadlines from submission-invitation `duedate`s, but those
 per-venue lookups get rate-limited (HTTP 429) during a large first import and

@@ -165,10 +165,26 @@ Validation failures are posted as a PR comment listing every problem at once.
 
 `data/proposal_calls.yml` holds the *call for workshop proposals* deadline of
 each conference cycle — when organizers can apply to host a workshop, not when
-authors submit papers. The homepage shows the open ones. One row per
-conference-year (`conference`, `year`, `proposal_deadline`, `timezone`, `url`,
-`notes`); add a cycle when a conference announces it, and leave past ones in
-place — they drop off the page on their own.
+authors submit papers. One row per conference-year (`conference`, `year`,
+`proposal_deadline`, `timezone`, `url`, and optionally `openreview_venue_id`,
+`deadline_notes`, `notes`), shown on the homepage with a countdown while the
+call is open.
+
+Most rows write themselves. The conferences that run proposals through
+OpenReview (NeurIPS, ICML, ICLR, CVPR and ICRA today) register a venue for it
+under the same prefix as their workshops (`…/Workshop_Proposals`, ICRA's
+`…/WT-Pre-Proposals`), and the daily `sync-proposal-calls` workflow probes for
+this year's and next year's, records a cycle once its deadline is published, and
+follows later moves — under the same rules as workshop deadlines: the bot stamps
+the value it wrote into `deadline_notes`; edit the date or that note and the row
+is frozen (yours wins); an earlier move is never applied automatically; a lookup
+that fails changes nothing. `url` and `notes` are yours and are never touched.
+
+A conference that publishes its call elsewhere (ECCV, CoRL, COLM, IROS) gets a
+hand-written row — `conference`, `year`, `proposal_deadline` (quoted), `timezone`,
+`url`, any `notes`, and no `deadline_notes`. Leave past cycles in place;
+`validate.mjs` checks every row and warns when a conference's newest cycle closed
+over a year ago with no successor recorded.
 
 ## Paper lists
 

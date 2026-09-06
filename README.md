@@ -32,7 +32,7 @@ GitHub repo (single source of truth)
  ├── data/conferences.yml      conference metadata
  ├── data/editions.yml         per-edition conference dates, and each edition's official accepted-workshop list
  ├── data/topics.yml           controlled topic vocabulary
- ├── data/proposal_calls.yml   call-for-workshop-proposals deadlines, shown on the homepage
+ ├── data/proposal_calls.yml   call-for-workshop-proposals deadlines, synced daily from OpenReview, shown on the homepage
  ├── data/changes.json         this week's dataset changes, written by the alerts job for /changes/
  ├── schema/                   JSON Schema for a workshop file (validate.mjs enforces it)
  ├── cache/openreview/*.json   committed paper-list caches (fetched monthly)

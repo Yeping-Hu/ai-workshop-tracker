@@ -23,6 +23,7 @@ for human review, as do dependency updates.
 | `recheck-imminent.yml` | daily | Re-checks only deadlines within `[−7d, +14d]` for extensions (one lookup each, later-only) → commits to `main` |
 | `backfill-deadlines.yml` | daily | `scripts/backfill_deadlines.mjs` — fills a **blank** `submission_deadline` for OpenReview-linked, single-deadline entries (fill-only, never overwrites) → commits to `main` |
 | `sync-tracks.yml` | daily | `scripts/sync_tracks.mjs` — refreshes the per-track deadlines of **multi-track** venues from their sub-track child groups (fill blanks, later-only per track), re-deriving the headline → commits to `main` |
+| `sync-proposal-calls.yml` | daily | `scripts/sync_proposal_calls.mjs` — keeps `data/proposal_calls.yml` (each conference's call-for-workshop-proposals deadline) in step with the proposal venue OpenReview registers under the conference's prefix: records a cycle once its deadline is published, later-only afterwards, freeze on hand edit → commits to `main` |
 | `openreview-refresh.yml` | monthly | Re-fetch paper caches for recent years (`scripts/fetch_openreview.mjs --recent`) → commits to `main` |
 | `issue-to-pr.yml` | "Add a workshop" issue form | Converts the form to a YAML file + PR, validates, reports back |
 | `edit-to-pr.yml` | "Edit a workshop" issue form | Applies the edit to the existing YAML + PR (timezone-safe), validates, reports back |
@@ -157,6 +158,40 @@ as empty or wrong would report the entire corpus as rejected — by far the wors
 thing this check could produce. That is also why no `{year}` URL template is used
 as a fallback: the templated schedule pages are JS-rendered and yield zero
 anchors, which is indistinguishable from "everything was rejected".
+
+## Proposal calls come from the same prefix
+
+`data/proposal_calls.yml` — when organizers can apply to host a workshop — was
+hand-typed, and the homepage showed three closed calls and no open one while
+`ICLR.cc/2027/Workshop_Proposals` already existed on OpenReview. The conferences
+that run proposals through OpenReview register that venue under the same prefix
+discovery already knows (`CONF_TEMPLATE`), with the trailing `Workshop` swapped
+for `Workshop_Proposals` (ICRA: `WT-Pre-Proposals`), and its deadline is
+published exactly where a workshop's is: the group's `date` line first, the
+`/-/Submission` invitation's `duedate` as the fallback. So the daily
+`sync-proposal-calls.yml` reuses the readers and the gates and adds only what is
+specific to a cycle:
+
+- **Probe this year and next** for every conference, by suffix vocabulary
+  (`PROPOSAL_SUFFIXES`), until a row exists; a row with `openreview_venue_id` is
+  looked up directly. A conference without a proposal venue on OpenReview simply
+  gets two 404s a day and keeps its hand-written row.
+- **No row until a deadline parses.** The group precedes the public call — ICLR
+  2027's existed with an empty date line and no invitation while iclr.cc's page
+  was still a 404 — so an empty group is `no-deadline-yet`, not a cycle.
+- **Hand-typed rows are adopted, never overwritten.** A row with no
+  `deadline_notes` is compared by instant: a later value on OpenReview is
+  applied and stamped (ICRA 2027's row said 07:59 UTC; the invitation says
+  11:59), an equal one is re-expressed in UTC and stamped, an earlier one only
+  gains the venue id. A row whose call closed more than `DEADLINE_LOOKBACK_MS`
+  ago is not looked up at all. A human `deadline_notes`, or a stamp that no
+  longer matches the value, freezes the row.
+- Failures are recorded and retried once, then named (`writeUnverified`); a
+  failed lookup never blanks or removes a row, and the job exits 0.
+
+Rules are pinned by `scripts/proposal_calls_test.mjs`; the file is checked by
+`validate.mjs` like `editions.yml`, which also warns when a conference's newest
+cycle closed over a year ago with no successor.
 
 ## The alerts job is outside the data-write group
 
@@ -375,7 +410,7 @@ takes `--dry-run` (or prints a preview by default) and writes only what changed.
 
 - `scripts/resync_deadline.mjs --slug <slug> [--dry-run] [--force] [--unmark]` — `--force` is required to touch an entry marked `not_running`; `--unmark` clears that marking as part of the re-sync.
 - `scripts/discover_openreview.mjs --conf <id> --year <y> [--dry-run]`.
-- `scripts/sync_tracks.mjs [--slug <slug>] [--dry-run]` and `scripts/backfill_deadlines.mjs [--dry-run]`, `scripts/recheck_imminent.mjs [--dry-run]`.
+- `scripts/sync_tracks.mjs [--slug <slug>] [--dry-run]` and `scripts/backfill_deadlines.mjs [--dry-run]`, `scripts/recheck_imminent.mjs [--dry-run]`, `scripts/sync_proposal_calls.mjs [--dry-run]`.
 - `scripts/fetch_openreview.mjs [--slug <slug> | --recent | --all] [--abstracts]` — the workflow passes `--recent`.
 - `scripts/official_list_check.mjs [--conf <id>] [--year <y>] [--slug <slug>] [--report <path>|-]`, plus `--field name|website --adopt|--decline` on one slug, which `official-list-decision.yml` wraps.
 - `scripts/alerts_stats.mjs [--days N] [--json]`.

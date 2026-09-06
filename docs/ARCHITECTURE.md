@@ -697,6 +697,17 @@ Deliberately *not* modelled as a `track`: tracks are parallel and their headline
 "soonest open track", which would reintroduce exactly the roll-forward this avoids.
 Pinned by `scripts/abstract_deadline_test.mjs`.
 
+## Proposal calls (the call for workshops)
+
+`data/proposal_calls.yml` records when organizers can apply to host a workshop at
+each conference — a different deadline from any workshop's, one row per
+conference-year, shown on the homepage. It is written by the daily
+`sync-proposal-calls` job for the conferences whose proposal venue is on
+OpenReview and by hand for the rest, and the sync reuses the workshop-deadline
+readers and gates (AUTOMATION.md, "Proposal calls come from the same prefix"),
+so a hand edit freezes a row exactly as it freezes a workshop's deadline.
+`validate.mjs` checks the file like `editions.yml`.
+
 ## Deadline provenance (append-only observation log)
 
 Every entry whose deadline the automation touches accumulates a

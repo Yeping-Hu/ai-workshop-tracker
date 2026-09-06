@@ -1,0 +1,55 @@
+# Daily: keep data/proposal_calls.yml — the call-for-workshop-proposals
+# deadline of each conference cycle — in step with OpenReview. The conferences
+# that run proposals through OpenReview register a venue for it under the same
+# prefix as their workshops; this job probes for this year's and next year's,
+# records a cycle once its deadline is published, and applies later moves with
+# the same freeze-on-hand-edit, later-only and plausibility gates as the
+# workshop-deadline syncs (scripts/sync_proposal_calls.mjs). Conferences that
+# publish their call elsewhere keep hand-written rows, which it never touches.
+# Whatever changed is validated and, on success, committed straight to main
+# (and a deploy is dispatched), with each change recorded in the commit message.
+name: Sync proposal calls
+
+on:
+  schedule:
+    - cron: '41 2 * * *' # daily 02:41 UTC — at least 30 minutes from every other data cron
+  workflow_dispatch:
+
+concurrency:
+  # Serialise every workflow that commits to `main` (see AUTOMATION.md, "The
+  # data jobs are serialised"): queue behind a sibling rather than race its push.
+  group: data-write
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Sync proposal-call deadlines from OpenReview
+        env:
+          DEADLINE_CHANGELOG: ${{ github.workspace }}/.deadline-changes.md
+        run: node scripts/sync_proposal_calls.mjs
+      - name: Validate
+        run: node scripts/validate.mjs
+      # Validation passed above — publish directly. A failed validation fails
+      # the job before anything is committed (GitHub emails the owner).
+      - name: Publish updated proposal calls (if any)
+        uses: ./.github/actions/publish-data
+        with:
+          paths: data/proposal_calls.yml
+          subject: 'data: daily proposal-call sync from OpenReview (auto-published after validation)'
+          changelog: ${{ github.workspace }}/.deadline-changes.md
+          changelog-heading: 'Proposal-call changes synced from OpenReview (later-only):'
+          nothing-message: 'No proposal-call changes today.'
+          token: ${{ github.token }}
