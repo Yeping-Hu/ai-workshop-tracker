@@ -36,9 +36,7 @@ only if a season opens more calls than fit). Order is the eyebrow's and the
 facet's, pinned by `ui_test.mjs`. Static by design: a scrolling ticker here was
 distracting, and before it a grid of cards stood 395px tall and pushed the first
 deadline row below the fold on both desktop and phone — on a site whose point is
-countdowns. The sticky filter bar above it draws its bottom rule only while
-stuck, via a one-line `IntersectionObserver` in `index.astro`; at rest the rule
-read as a stray line under the search box.
+countdowns.
 
 **Workshop-proposal deadlines** are their own section below the board: one row
 per call with the wall-clock date, a countdown while open or a "Closed" pill

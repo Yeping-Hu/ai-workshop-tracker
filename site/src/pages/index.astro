@@ -251,20 +251,6 @@ const datasetLd: Record<string, any> = {
   </div>
 
   <script src="../scripts/board.js"></script>
-  <script>
-    // The sticky filter bar's bottom rule separates it from content scrolling
-    // under it. At rest, directly under the search box, it read as a stray
-    // line across the page — so it is drawn only while the bar is stuck. The
-    // observer fires the moment the bar's top edge crosses 1px above the
-    // viewport, which with `top: 0` is exactly when it starts sticking.
-    const bar = document.querySelector('.filterbar');
-    if (bar && 'IntersectionObserver' in window) {
-      new IntersectionObserver(([e]) => bar.classList.toggle('is-stuck', e.intersectionRatio < 1), {
-        threshold: [1],
-        rootMargin: '-1px 0px 0px 0px',
-      }).observe(bar);
-    }
-  </script>
   {/* The results render the board's row through the shared client renderer.
       The search script below is inline (define:vars) and cannot import, so
       the renderer is bridged onto window — the pattern favorites.js uses for

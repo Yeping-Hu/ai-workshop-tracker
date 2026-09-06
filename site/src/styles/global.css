@@ -135,15 +135,13 @@ h3 { font-size: 1.12rem; margin: 1.6rem 0 0.4rem; }
 .filterbar {
   position: sticky; top: 0; z-index: 5;
   background: var(--paper);
-  /* The bottom rule separates the sticky bar from content scrolling under it,
-     and only then: at rest it read as a stray line under the search box, so it
-     is transparent until index.astro's observer marks the bar stuck. Always
-     1px so the bar's height never changes. */
-  border-bottom: 1px solid transparent;
+  /* One rule, below only: it separates the bar from the counts under it and,
+     once the bar sticks, from the content scrolling under it. (`border-block`
+     drew a second line above, which read as a stray rule under the search box.) */
+  border-bottom: 1px solid var(--line);
   padding: 0.65rem 0;
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.55rem 1rem;
 }
-.filterbar.is-stuck { border-bottom-color: var(--line); }
 .kw-box {
   flex: 1 1 16rem; min-width: 12rem;
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem;
