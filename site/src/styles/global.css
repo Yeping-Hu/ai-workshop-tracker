@@ -278,6 +278,12 @@ details.dd .dd-panel {
 .ws-deadline .abs-stage .local { font-size: 0.72rem; margin-top: 0.05rem; }
 .ws-links { grid-column: 1 / -1; display: flex; gap: 1rem; font-size: 0.82rem; padding-left: 6.5rem; }
 .row-passed { opacity: 0.62; }
+/* Not in search results. Dimming a concluded row makes sense on the saved
+   list, where it says "you missed this" at a glance; in results it greyed out
+   most of what a search returns — past editions are the bulk of the corpus —
+   and made the content people searched for harder to read. The pill still says
+   Past. */
+.pf-result > .board-row.row-passed { opacity: 1; }
 .empty-state {
   border: 1px dashed var(--line); border-radius: 12px;
   padding: 2.2rem 1rem; text-align: center; color: var(--muted); margin-top: 1.2rem;
@@ -483,6 +489,10 @@ details.tba-section > summary { cursor: pointer; color: var(--muted); font-size:
 .kw-box.hero-box input { font-size: 1.05rem; padding: 0.35rem 0.3rem; }
 .kw-box.hero-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .hero .statline, .hero .nextline { justify-content: center; text-align: center; }
+/* The filter bar's own padding already separates it from the counts; the
+   statline's general 1.1rem top margin on top of that left a hole under the
+   tabs. */
+.hero .statline { margin-top: 0.35rem; }
 .facetbar { margin-top: 0.4rem; }
 /* A search result is the board's row (ws-row.js) with, in keyword mode, the
    excerpt and the matching papers beneath it. The <li> keeps the separator;

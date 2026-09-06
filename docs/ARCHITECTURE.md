@@ -181,7 +181,9 @@ Behavior worth knowing before you touch the search code:
   the document's metadata by the same client renderer the saved list uses (see
   *One client renderer for three surfaces* below). Browsing by facet is
   therefore the board, filtered; with keywords, the excerpt and the matching
-  papers follow beneath the row.
+  papers follow beneath the row. Concluded rows are not dimmed here as they are
+  on the saved list: past editions are most of what a search returns, and
+  greying them made the content people searched for harder to read.
 - **The headline counts what is actually listed.** With keywords: "N workshops ·
   M matching papers · by relevance · page x/y", where N is distinct workshops
   shown and M is individual matching papers inside them. Browsing: "N workshops ·
