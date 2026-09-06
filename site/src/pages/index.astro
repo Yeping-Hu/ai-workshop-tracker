@@ -192,34 +192,35 @@ const datasetLd: Record<string, any> = {
         that is open counts down here, and the masthead ticker sees that
         countdown like any other; a closed one is a muted note, never a list of
         closed calls. */}
-    <nav class="conf-strip" aria-label="Conferences at a glance">
-      {stripCards.map((c) => (
-        <a class="conf-card" href={href(`/conference/${c.id}/`)} title={`${c.full} workshops`}>
-          <span class="conf-card-head">
-            <span class="badge" style={`--conf:${c.color}`}>{c.name}</span>
-            {c.year != null && <span class="conf-card-year">{c.year}</span>}
-          </span>
-          <span class={`conf-card-when${c.when && c.upcoming ? '' : ' muted'}`}>
-            {c.when ? (c.upcoming ? c.when : `held ${c.when}`) : 'dates TBA'}
-          </span>
-          <span class={`conf-card-open${c.open ? '' : ' muted'}`}>
-            {c.open ? `${c.open} open call${c.open === 1 ? '' : 's'}` : 'no open calls'}
-          </span>
-          {c.call && (c.call.open ? (
-            <span class="conf-card-call">
-              Proposals due {c.call.due}{' '}
-              <span
-                class="countdown"
-                data-deadline-ms={c.call.deadlineUtcMs}
-                data-name={`${c.name} ${c.call.year} workshop proposals`}
-                title={`Call for workshop proposals closes ${c.call.wallClock}`}
-              >—</span>
+    {/* One scrolling line rather than a grid of cards. The grid was 395px tall and
+        put the first deadline row at y=1005 — below the fold on a 900px window and
+        on a phone, so nobody saw a countdown without scrolling. The track is
+        duplicated so the loop is seamless; it pauses on hover, on keyboard focus,
+        under a finger and via the button, and does not animate at all under
+        prefers-reduced-motion. */}
+    <nav class="conf-ticker" aria-label="Conferences at a glance">
+      <button class="conf-ticker-pause" type="button" aria-label="Pause the conference strip">&#10074;&#10074;</button>
+      <div class="conf-ticker-track">
+        {[...stripCards, ...stripCards].map((c, i) => (
+          <a
+            class="conf-tick"
+            href={href(`/conference/${c.id}/`)}
+            title={`${c.full} workshops`}
+            aria-hidden={i >= stripCards.length ? 'true' : undefined}
+            tabindex={i >= stripCards.length ? -1 : undefined}
+          >
+            <i class="conf-tick-dot" style={`background:${c.color}`} aria-hidden="true"></i>
+            <span class="conf-tick-name">{c.name}</span>
+            <span class="conf-tick-dash" aria-hidden="true">—</span>
+            <span class={`conf-tick-open${c.open ? '' : ' muted'}`}>
+              {c.open ? `${c.open} open call${c.open === 1 ? '' : 's'}` : 'no open calls'}
             </span>
-          ) : (
-            <span class="conf-card-call muted">{c.call.year} proposals closed {c.call.due}</span>
-          ))}
-        </a>
-      ))}
+            <span class="conf-tick-when">
+              ({c.when ? (c.upcoming ? c.when : `held ${c.when}`) : 'dates TBA'})
+            </span>
+          </a>
+        ))}
+      </div>
     </nav>
     <h2>Upcoming deadlines</h2>
     {upcomingWithDeadline.length > 0 ? (
@@ -1009,3 +1010,22 @@ const datasetLd: Record<string, any> = {
     });
   </script>
 </Base>
+
+<script>
+  // Hover pauses on a pointer; a finger has no hover, so touching pauses and a
+  // swipe keeps it paused briefly rather than fighting the gesture. The button is
+  // the explicit control — the only one a keyboard or screen-reader user has.
+  const ticker = document.querySelector('.conf-ticker');
+  const pause = document.querySelector('.conf-ticker-pause');
+  if (ticker && pause) {
+    let held = false;
+    const set = (on) => {
+      ticker.toggleAttribute('data-paused', on);
+      pause.textContent = on ? '\u25B6' : '\u275A\u275A';
+      pause.setAttribute('aria-label', `${on ? 'Play' : 'Pause'} the conference strip`);
+    };
+    pause.addEventListener('click', () => { held = !held; set(held); });
+    ticker.addEventListener('touchstart', () => set(true), { passive: true });
+    ticker.addEventListener('touchend', () => { if (!held) setTimeout(() => set(false), 2500); }, { passive: true });
+  }
+</script>

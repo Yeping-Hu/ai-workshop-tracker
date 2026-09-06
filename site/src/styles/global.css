@@ -364,25 +364,37 @@ details.dd .dd-panel {
    grid where there is room, so one markup serves both. Each card is a single
    link — nothing inside it competes for the click, which is why the proposal
    call's own page is linked from the hub instead. */
-.conf-strip { display: flex; gap: 0.6rem; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding: 0.2rem 0 0.6rem; margin: 0.4rem 0 1.2rem; }
-.conf-card {
-  flex: 0 0 auto; width: 13.5rem; scroll-snap-align: start;
-  display: grid; gap: 0.22rem; align-content: start;
-  border: 1px solid var(--line); border-radius: 10px; padding: 0.65rem 0.8rem;
-  background: var(--surface); color: var(--muted); font-size: 0.82rem; text-decoration: none;
+/* A single scrolling line. The card grid it replaced cost 395px and pushed the
+   deadline board below the fold; this is one line high and says the same thing. */
+.conf-ticker { position: relative; margin: 0.5rem 0 1.1rem; overflow: hidden; padding: 0.15rem 0;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 34px, #000 calc(100% - 44px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 34px, #000 calc(100% - 44px), transparent); }
+.conf-ticker-track { display: flex; align-items: baseline; gap: 1.6rem; width: max-content;
+  animation: conf-ticker-slide 54s linear infinite; }
+@keyframes conf-ticker-slide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+/* Hover and focus pause it; the button is the control a keyboard or screen-reader
+   user actually has, and WCAG 2.2.2 asks for one on anything that moves by itself. */
+.conf-ticker:hover .conf-ticker-track,
+.conf-ticker:focus-within .conf-ticker-track,
+.conf-ticker[data-paused] .conf-ticker-track { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .conf-ticker-track { animation: none; }
+  .conf-ticker { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
 }
-.conf-card:hover, .conf-card:focus-visible { border-color: var(--accent); }
-.conf-card-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.15rem; }
-.conf-card .badge { padding: 0.22rem 0.55rem; }
-.conf-card-year, .conf-card-when { font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink); }
-.conf-card-year { font-weight: 600; }
-.conf-card-open { color: var(--ink); }
-.conf-card-when.muted, .conf-card-open.muted, .conf-card-call.muted { color: var(--muted); }
-.conf-card-call { white-space: nowrap; }
-.conf-card-call .countdown { font-size: 0.8rem; }
+.conf-tick { display: inline-flex; align-items: baseline; gap: 0.45rem; white-space: nowrap;
+  text-decoration: none; color: var(--ink); font-size: 0.88rem; }
+.conf-tick:hover .conf-tick-name, .conf-tick:focus-visible .conf-tick-name { text-decoration: underline; text-underline-offset: 3px; }
+/* align-self keeps the dot centred on the name: it has no baseline of its own, so
+   in a baseline row it would otherwise sit on the text baseline and read low. */
+.conf-tick-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; align-self: center; }
+.conf-tick-name { font-family: var(--font-mono); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.04em; line-height: 1; }
+.conf-tick-dash { color: var(--line-strong, #b9c0bd); }
+.conf-tick-when { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+.conf-tick-open.muted { color: var(--muted); }
+.conf-ticker-pause { position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 3;
+  width: 24px; height: 24px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+  color: var(--muted); font-size: 0.6rem; line-height: 1; cursor: pointer; }
 @media (min-width: 60rem) {
-  .conf-strip { flex-wrap: wrap; overflow: visible; scroll-snap-type: none; }
-  .conf-card { flex: 1 1 13.5rem; width: auto; max-width: 17rem; }
 }
 
 /* ---------- TBA sections ---------- */

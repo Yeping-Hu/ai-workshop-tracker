@@ -28,12 +28,21 @@ let opts = await confOptions();
 check(`conference panel lists all ${expectedConfs} conferences`, opts.length === expectedConfs, `got ${opts}`);
 const eyebrow = await page.$eval('.hero .eyebrow', (el) => el.textContent.trim().replace(/ workshops\s*$/, '').split(' · '));
 check('eyebrow order matches conference dropdown', JSON.stringify(eyebrow) === JSON.stringify(opts), `${eyebrow} vs ${opts}`);
-// The conference strip: one card per conference, in the eyebrow's order, each
-// a single link to its hub. Count and order come from the data, never a literal.
-const stripCards = await page.$$eval('.conf-strip .conf-card', (els) =>
-  els.map((e) => ({ name: e.querySelector('.badge')?.textContent.trim(), href: e.getAttribute('href') })),
+// The conference ticker: one item per conference, in the eyebrow's order, each a
+// single link to its hub. The track is duplicated so the marquee loops without a
+// visible seam, so the DOM holds 2N items — the second copy is aria-hidden and not
+// focusable, and only the first N carry meaning.
+const tickAll = await page.$$eval('.conf-ticker .conf-tick', (els) =>
+  els.map((e) => ({
+    name: e.querySelector('.conf-tick-name')?.textContent.trim(),
+    href: e.getAttribute('href'),
+    hidden: e.getAttribute('aria-hidden') === 'true',
+  })),
 );
-check(`conference strip has one card per conference (${expectedConfs})`, stripCards.length === expectedConfs, `got ${stripCards.length}`);
+const stripCards = tickAll.filter((t) => !t.hidden);
+check(`conference ticker has one item per conference (${expectedConfs})`, stripCards.length === expectedConfs, `got ${stripCards.length}`);
+check('the duplicate half is hidden from assistive tech',
+  tickAll.length === expectedConfs * 2 && tickAll.filter((t) => t.hidden).length === expectedConfs, `${tickAll.length} items`);
 check('strip order matches the eyebrow', JSON.stringify(stripCards.map((c) => c.name)) === JSON.stringify(eyebrow), `${stripCards.map((c) => c.name)} vs ${eyebrow}`);
 check('every strip card links to its conference hub', stripCards.every((c) => /\/conference\/[a-z0-9-]+\/$/.test(c.href)), stripCards.map((c) => c.href).join(' '));
 const initialIclrCount = await page.$eval('[data-count="conference:ICLR"]', (el) => el.textContent);
