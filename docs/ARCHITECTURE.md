@@ -50,9 +50,9 @@ animation entirely and leaves a scrollable row.
 
 **Workshop-proposal deadlines** are their own section below the board: one row
 per call with the wall-clock date, a countdown while open or a "Closed" pill
-after, and a link to the call. The per-conference summary in the ticker and this
-list read the same `proposalCalls` data, kept current by the daily OpenReview
-proposal sync.
+after, and a link to the call, newest cycle first. The ticker above the board
+does not repeat them; the conference hub links the same call. Kept current by
+the daily OpenReview proposal sync.
 
 ## Search (Pagefind, static, dual-index)
 
@@ -738,8 +738,9 @@ Pinned by `scripts/abstract_deadline_test.mjs`.
 
 `data/proposal_calls.yml` records when organizers can apply to host a workshop at
 each conference — a different deadline from any workshop's, one row per
-conference-year. The newest cycle of each conference is shown on the homepage's
-conference card and on the conference hub. The file is written by the daily
+conference-year. Every recorded cycle is listed in the homepage's
+proposal-deadlines section, and each conference's newest one on its hub. The
+file is written by the daily
 `sync-proposal-calls` job for the conferences whose proposal venue is on
 OpenReview and by hand for the rest, and the sync reuses the workshop-deadline
 readers and gates (AUTOMATION.md, "Proposal calls come from the same prefix"),

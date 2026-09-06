@@ -361,15 +361,12 @@ details.dd .dd-panel {
   .filterbar { position: static; }
 }
 
-/* ---------- conference strip (homepage) ---------- */
-/* One card per conference above the board: the edition a reader can act on,
-   its dates, the open-call count, and the call for workshop proposals. One
-   row that scrolls sideways on a phone (snapping per card) and wraps into a
-   grid where there is room, so one markup serves both. Each card is a single
-   link — nothing inside it competes for the click, which is why the proposal
-   call's own page is linked from the hub instead. */
-/* A single scrolling line. The card grid it replaced cost 395px and pushed the
-   deadline board below the fold; this is one line high and says the same thing. */
+/* ---------- conference ticker (homepage) ---------- */
+/* One item per conference above the board — a colour dot, the name, the
+   open-call count and the edition's dates — on a single scrolling line. The
+   card grid it replaced cost 395px and pushed the deadline board below the
+   fold; this is one line high and says the same thing. Each item is a single
+   link to the hub. */
 /* Half the gap above the subscribe block. It was three stacked pieces —
    .nextline's 0.82rem bottom margin, the hero's 1.6rem bottom padding and the
    block's own top margin — about 48px of empty page between the countdown line
@@ -393,8 +390,7 @@ details.dd .dd-panel {
    hover to clear it, one tap stopped it for good. focus-visible is the keyboard
    case only, which is the one that needs the pause. */
 .conf-ticker:hover .conf-ticker-track,
-.conf-ticker:has(:focus-visible) .conf-ticker-track,
-.conf-ticker[data-paused] .conf-ticker-track { animation-play-state: paused; }
+.conf-ticker:has(:focus-visible) .conf-ticker-track { animation-play-state: paused; }
 /* Older engines without :has() keep the previous behaviour rather than none. */
 @supports not selector(:has(*)) {
   .conf-ticker:focus-within .conf-ticker-track { animation-play-state: paused; }
@@ -413,8 +409,6 @@ details.dd .dd-panel {
 .conf-tick-dash { color: var(--line-strong, #b9c0bd); }
 .conf-tick-when { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
 .conf-tick-open.muted { color: var(--muted); }
-@media (min-width: 60rem) {
-}
 
 /* ---------- proposal calls & TBA sections ---------- */
 /* One row per call. The card stack put six saturated badges in a column, which

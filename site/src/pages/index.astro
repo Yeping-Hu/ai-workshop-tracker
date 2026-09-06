@@ -14,10 +14,9 @@ import {
   loadPaperCache,
   editions,
   conferenceCard,
-  latestProposalCall,
 } from '../lib/data';
 import { href, REPO_URL } from '../lib/site';
-import { formatDateSpan, formatDateYmd } from '../../../lib/dates.mjs';
+import { formatDateSpan } from '../../../lib/dates.mjs';
 
 const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
 // conference display-name -> color, for badges on search results
@@ -79,16 +78,16 @@ const _confNames = [...conferences].map((c) => c.name).sort((a, b) => a.localeCo
 const confListText = _confNames.length > 1
   ? `${_confNames.slice(0, -1).join(', ')}, and ${_confNames[_confNames.length - 1]}`
   : _confNames.join('');
-// One card per conference above the board: the edition a reader can act on
-// (conferenceCard in lib/workshops.mjs decides which), its dates, how many
-// calls are open, and the newest call for workshop proposals. Order, count and
-// content all come from the data, so a tenth conference gets a card with no
-// edit here; the eyebrow, the facet and this strip share one ordering.
+// One item per conference in the ticker above the board: the edition a reader
+// can act on (conferenceCard in lib/workshops.mjs decides which), how many
+// calls are open, and that edition's dates. Order, count and content all come
+// from the data, so a tenth conference gets an item with no edit here; the
+// eyebrow, the facet and the ticker share one ordering. The proposal calls
+// have their own section below the board.
 const stripCards = [...conferences]
   .sort((a, b) => a.name.localeCompare(b.name))
   .map((c) => {
     const card = conferenceCard(c.id, { workshops, editions });
-    const call = latestProposalCall(proposalCalls, c.id);
     return {
       id: c.id,
       name: c.name,
@@ -98,15 +97,6 @@ const stripCards = [...conferences]
       when: card.edition ? formatDateSpan(card.edition.start, card.edition.end) : null,
       upcoming: card.upcoming,
       open: card.openCalls,
-      call: call
-        ? {
-            year: call.year,
-            open: call.open,
-            due: formatDateYmd(String(call.proposal_deadline).slice(0, 10)),
-            deadlineUtcMs: call.deadlineUtcMs,
-            wallClock: call.deadlineWallClock,
-          }
-        : null,
     };
   });
 
@@ -188,16 +178,17 @@ const datasetLd: Record<string, any> = {
     {/* The conferences at a glance, before the board, so the page answers
         "what is coming up where" without a scroll. Hidden with the board while
         searching — a facet selection IS the board, filtered. Not a heading:
-        the first <h2> on the page stays "Upcoming deadlines". A proposal call
-        that is open counts down here, and the masthead ticker sees that
-        countdown like any other; a closed one is a muted note, never a list of
-        closed calls. */}
-    {/* One scrolling line rather than a grid of cards. The grid was 395px tall and
-        put the first deadline row at y=1005 — below the fold on a 900px window and
-        on a phone, so nobody saw a countdown without scrolling. The track is
-        duplicated so the loop is seamless; it pauses on hover, on keyboard focus,
-        under a finger and via the button, and does not animate at all under
-        prefers-reduced-motion. */}
+        the first <h2> on the page stays "Upcoming deadlines".
+
+        One scrolling line rather than a grid of cards. The grid was 395px tall
+        and put the first deadline row at y=1005 — below the fold on a 900px
+        window and on a phone, so nobody saw a countdown without scrolling. The
+        track is duplicated so the loop is seamless (the second copy is
+        aria-hidden and unfocusable); it pauses on hover and on keyboard focus,
+        and does not animate at all under prefers-reduced-motion. No touch
+        handling and no pause button, deliberately: the established marquees
+        (zag.js, shadcn, Preline, Framer) do neither, and a touch pause here
+        combined with :focus-within to freeze the strip for good after one tap. */}
     <nav class="conf-ticker" aria-label="Conferences at a glance">
       <div class="conf-ticker-track">
         {[...stripCards, ...stripCards].map((c, i) => (
@@ -254,7 +245,7 @@ const datasetLd: Record<string, any> = {
               and the open row is tinted instead. Notes keep their own spanning
               row so nothing is dropped; they are what made the cards tall. */}
           <table class="proposal-table">
-            <caption class="visually-hidden">Calls for workshop proposals, soonest deadline first</caption>
+            <caption class="visually-hidden">Calls for workshop proposals, newest first</caption>
             <tbody>
               {proposalCalls.map((c) => {
                 const conf = conferenceById.get(c.conference);
@@ -1049,19 +1040,3 @@ const datasetLd: Record<string, any> = {
   </script>
 </Base>
 
-<script>
-  // No touch handling, deliberately. Pausing under a finger was my own invention;
-  // the established marquee implementations (zag.js, shadcn, Preline, Framer)
-  // pause on hover and on keyboard focus and do nothing special for touch — on a
-  // phone they simply keep running. Mine additionally interacted with the
-  // focus-within bug so that one tap stopped the strip for good.
-  //
-  // What remains: hover pauses for a pointer, :has(:focus-visible) pauses for a
-  // keyboard, prefers-reduced-motion disables the animation entirely.
-  //
-  // pageshow clears a stuck pause when the page is restored from the back/forward
-  // cache, where a lingering data-paused would otherwise survive the navigation.
-  addEventListener('pageshow', () => {
-    document.querySelector('.conf-ticker')?.removeAttribute('data-paused');
-  });
-</script>
