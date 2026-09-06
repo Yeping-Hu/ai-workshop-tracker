@@ -137,7 +137,11 @@ h3 { font-size: 1.12rem; margin: 1.6rem 0 0.4rem; }
 .filterbar {
   position: sticky; top: 0; z-index: 5;
   background: var(--paper);
-  border-block: 1px solid var(--line);
+  /* One rule, not two. `border-block` drew a line above AND below, so with the
+     search box directly above it, the bar read as a pair of stray full-width lines
+     68px apart. The bottom edge is the one doing work: it separates the sticky bar
+     from the content scrolling under it. */
+  border-bottom: 1px solid var(--line);
   padding: 0.65rem 0;
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.55rem 1rem;
 }
@@ -372,11 +376,20 @@ details.dd .dd-panel {
 .conf-ticker-track { display: flex; align-items: baseline; gap: 1.6rem; width: max-content;
   animation: conf-ticker-slide 54s linear infinite; }
 @keyframes conf-ticker-slide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-/* Hover and focus pause it; the button is the control a keyboard or screen-reader
-   user actually has, and WCAG 2.2.2 asks for one on anything that moves by itself. */
+/* A pointer pauses it by hovering; a keyboard pauses it by tabbing in.
+   `:has(:focus-visible)` rather than `:focus-within` on purpose. Focus-within
+   also matches focus left behind by a CLICK or a TAP, and a link keeps that focus
+   after navigation — so pressing Back restored focus to the link and the strip
+   stayed frozen until you clicked elsewhere, and on a phone, where there is no
+   hover to clear it, one tap stopped it for good. focus-visible is the keyboard
+   case only, which is the one that needs the pause. */
 .conf-ticker:hover .conf-ticker-track,
-.conf-ticker:focus-within .conf-ticker-track,
+.conf-ticker:has(:focus-visible) .conf-ticker-track,
 .conf-ticker[data-paused] .conf-ticker-track { animation-play-state: paused; }
+/* Older engines without :has() keep the previous behaviour rather than none. */
+@supports not selector(:has(*)) {
+  .conf-ticker:focus-within .conf-ticker-track { animation-play-state: paused; }
+}
 @media (prefers-reduced-motion: reduce) {
   .conf-ticker-track { animation: none; }
   .conf-ticker { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }

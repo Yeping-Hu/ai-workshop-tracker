@@ -1011,19 +1011,18 @@ const datasetLd: Record<string, any> = {
 </Base>
 
 <script>
-  // No visible control. A pause button inside a hover-paused strip cannot work:
-  // pressing it necessarily hovers and focuses the strip, so :hover and
-  // :focus-within hold the animation even after the button clears its own flag —
-  // "play" appears to do nothing until you move the pointer away.
+  // No touch handling, deliberately. Pausing under a finger was my own invention;
+  // the established marquee implementations (zag.js, shadcn, Preline, Framer)
+  // pause on hover and on keyboard focus and do nothing special for touch — on a
+  // phone they simply keep running. Mine additionally interacted with the
+  // focus-within bug so that one tap stopped the strip for good.
   //
-  // A mechanism remains for every input: a pointer pauses by hovering, a keyboard
-  // pauses by focusing a link inside, and a finger pauses on touch and for a
-  // moment after a swipe so the motion never fights the gesture. Anyone who has
-  // asked their system for less motion gets no animation at all.
-  const ticker = document.querySelector('.conf-ticker');
-  if (ticker) {
-    const set = (on) => ticker.toggleAttribute('data-paused', on);
-    ticker.addEventListener('touchstart', () => set(true), { passive: true });
-    ticker.addEventListener('touchend', () => setTimeout(() => set(false), 2500), { passive: true });
-  }
+  // What remains: hover pauses for a pointer, :has(:focus-visible) pauses for a
+  // keyboard, prefers-reduced-motion disables the animation entirely.
+  //
+  // pageshow clears a stuck pause when the page is restored from the back/forward
+  // cache, where a lingering data-paused would otherwise survive the navigation.
+  addEventListener('pageshow', () => {
+    document.querySelector('.conf-ticker')?.removeAttribute('data-paused');
+  });
 </script>
