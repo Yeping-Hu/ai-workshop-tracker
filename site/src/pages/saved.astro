@@ -64,11 +64,16 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
     on the <a href={href('/')}>deadline board</a> or on a workshop page to add it here.
   </p>
 
+  {/* board.js hydrates the rows rendered below: local times, countdowns and
+      the clock — one implementation for the board, this list and the search
+      results, instead of the compact twins this page used to carry. */}
+  <script src="../scripts/board.js"></script>
   <script type="application/json" id="awt-conf" set:html={JSON.stringify(confMap)} />
   <script type="application/json" id="awt-topics" set:html={JSON.stringify(topicMap)} />
 
   <script>
     import { favWorkshops, favPapers } from '../scripts/favorites.js';
+    import { wsRowHtml } from '../scripts/ws-row.js';
 
     const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
     const CONF = JSON.parse(document.getElementById('awt-conf')!.textContent || '{}');
@@ -109,81 +114,21 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
       return [3, -(w.year ?? 0)];
     }
 
-    // Mirrors the board's note exactly (WorkshopRow.astro): same classes, same
-    // wording, same tooltip. The saved list renders rows in the browser, so any
-    // difference here shows up as the two pages disagreeing about one workshop.
-    function dlChangeHtml(w: any) {
-      const c = w.deadline_change;
-      if (!c) return '';
-      const d = c.days === 1 ? 'day' : 'days';
-      const body =
-        c.kind === 'extended' ? `→ Extended ${c.days} ${d}`
-        : c.kind === 'earlier' ? `△ Moved ${c.days} ${d} earlier`
-        : c.kind === 'announced' ? 'First deadline posted'
-        : '';
-      if (!body) return '';
-      const title = `Recorded ${esc(c.recorded)} — the date we observed this value, not necessarily when the organizers changed it.`;
-      return `<div class="dl-change dl-${esc(c.kind)}" title="${title}">${body}</div>`;
-    }
-
-    function wsRow(w: any) {
-      const conf = CONF[w.conference] ?? { name: w.conference, color: '#888' };
-      const ms = w.deadline_utc ? Date.parse(w.deadline_utc) : null;
-      // Two-stage venues: the date shown stays the paper deadline, but the
-      // countdown follows the next actionable stage and says which it is.
-      const absOpen = !!w.next_stage_is_abstract;
-      const cdMs = w.next_stage_utc ? Date.parse(w.next_stage_utc) : ms;
-      const upcoming = w.status === 'upcoming';
-      // This is where someone who starred a workshop that turned out not to be
-      // running will come looking. Without an explicit annotation the row reads
-      // "passed", which is wrong in the way that matters: it suggests they
-      // missed a deadline rather than that there was never a workshop.
-      const notRunning = w.status === 'not_running';
-      const name = esc(w.name);
-      return `
-      <div class="board-row ${upcoming ? '' : 'row-passed'}" data-saved-ws="${esc(w.slug)}">
-        <span class="badge" style="--conf:${esc(conf.color)}">${esc(conf.name)}</span>
-        <div class="ws-main">
-          <div class="ws-name">
-            <a href="${base}/workshop/${esc(w.slug)}/">${name}</a>
-            <button class="star-btn" type="button" data-star-ws="${esc(w.slug)}" aria-pressed="true" aria-label="Remove ${name} from saved">★</button>
-          </div>
-          <div class="ws-meta">
-            ${/* No status pill here, unlike the board: this list already says it
-                  twice over — the countdown column reads "passed" or "TBA", and a
-                  concluded row is greyed via .row-passed. */ ''}
-            ${notRunning ? `<span class="pill not_running">Not running</span>` : ''}
-            ${w.acronym ? `<span class="mono">${esc(w.acronym)}</span>` : ''}
-            <span>${esc(conf.name)} ${esc(w.year)}</span>
-            ${w.location_distinguishes && w.location_label ? `<span class="ws-where">${esc(w.location_label)}</span>` : ''}
-            ${(w.topics ?? []).map((id) => `<span class="chip">${esc(TOPIC[id] ?? id)}</span>`).join('')}
-          </div>
-        </div>
-        <div class="ws-deadline">
-          ${
-            ms != null
-              ? `<div class="wall">${esc(w.deadline_wall_clock ?? (w.submission_deadline + (w.timezone ? ' ' + w.timezone : '')))}</div>
-                 <div class="local js-local" data-iso="${esc(w.deadline_utc)}"></div>${
-                   w.abstract_deadline
-                     ? `<div class="abs-stage small">${absOpen
-                         ? `<span class="abs-open">Abstract due ${esc(w.abstract_deadline_wall_clock ?? (w.abstract_deadline + ' UTC'))}</span>`
-                         : `<span class="muted">Abstract closed ${esc(w.abstract_deadline_wall_clock ?? (w.abstract_deadline + ' UTC'))}</span>`}<div class="local js-local" data-iso="${esc(w.abstract_deadline_utc ?? '')}"></div></div>`
-                     : ''
-                 }${dlChangeHtml(w)}`
-              : `<div class="muted">${upcoming ? 'Deadline TBA' : '—'}</div>`
-          }
-        </div>
-        ${
-          upcoming && ms != null
-            ? `<span class="countdown" data-deadline-ms="${cdMs}"${absOpen ? ' data-stage="abstract"' : ''} data-name="${esc(w.acronym || w.name)}${absOpen ? ' (abstract)' : ''}">—</span>`
-            : upcoming
-              ? `<span class="countdown is-tba">TBA</span>`
-              : notRunning
-                ? `<span class="countdown is-over">not running</span>`
-                : `<span class="countdown is-over">passed</span>`
-        }
-      </div>`;
-    }
+    // The board's row, rendered by the shared client renderer (ws-row.js) —
+    // the same one the homepage's search results use — so this list cannot
+    // drift from the board again. Every row here is saved, so the star is
+    // pressed; no status pill, because the row already says it twice: the
+    // countdown column reads "passed" or "TBA", and a concluded row is greyed
+    // by .row-passed. The board keeps the pill, where a row is scanned against
+    // hundreds of others.
+    const wsRow = (w: any) =>
+      wsRowHtml(w, {
+        base,
+        conf: CONF[w.conference] ?? { name: w.conference, color: '#888' },
+        topicLabel: (id: string) => TOPIC[id] ?? id,
+        star: 'on',
+        rowAttrs: `data-saved-ws="${esc(w.slug)}"`,
+      });
 
     async function renderWorkshops() {
       const slugs = favWorkshops();
@@ -212,8 +157,9 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
         (missing > 0
           ? `<p class="muted small">${missing} saved workshop${missing === 1 ? ' is' : 's are'} no longer in the dataset (renamed or removed).</p>`
           : '');
-      startClock();
-      localTimes();
+      // Local times, countdowns and the clock come from board.js, loaded on
+      // this page for exactly that (its pager and ticker are no-ops here).
+      (window as any).awtBoardHydrate?.($('#savedWsList'));
     }
 
     /* ---------------- papers ---------------- */
@@ -341,39 +287,6 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
         </div>`,
         )
         .join('');
-    }
-
-    /* ---------------- countdowns & local times (compact board.js twins) ---------------- */
-    const HOUR = 3_600_000, DAY = 24 * HOUR;
-    function fmtRemaining(ms: number) {
-      const d = Math.floor(ms / DAY), h = Math.floor((ms % DAY) / HOUR), m = Math.floor((ms % HOUR) / 60_000), s = Math.floor((ms % 60_000) / 1000);
-      if (d >= 1) return `${d}d ${String(h).padStart(2, '0')}h`;
-      if (h >= 1) return `${h}h ${String(m).padStart(2, '0')}m`;
-      return `${m}m ${String(s).padStart(2, '0')}s`;
-    }
-    let clock: ReturnType<typeof setInterval> | null = null;
-    function tick() {
-      const now = Date.now();
-      for (const el of document.querySelectorAll<HTMLElement>('#savedWsList [data-deadline-ms]')) {
-        const rem = Number(el.dataset.deadlineMs) - now;
-        el.classList.remove('is-soon', 'is-critical', 'is-over');
-        if (rem <= 0) { el.textContent = 'passed'; el.classList.add('is-over'); continue; }
-        el.textContent = fmtRemaining(rem);
-        if (rem < 48 * HOUR) el.classList.add('is-critical');
-        else if (rem < 7 * DAY) el.classList.add('is-soon');
-      }
-    }
-    function startClock() {
-      tick();
-      if (!clock && document.querySelector('#savedWsList [data-deadline-ms]')) clock = setInterval(tick, 1000);
-    }
-    function localTimes() {
-      for (const el of document.querySelectorAll<HTMLElement>('#savedWsList .js-local[data-iso]')) {
-        const d = new Date(el.dataset.iso!);
-        el.textContent = Number.isNaN(d.getTime())
-          ? ''
-          : 'Your time: ' + d.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
-      }
     }
 
     /* ---------------- removals (star toggled here or in another tab) ---------------- */

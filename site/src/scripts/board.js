@@ -2,6 +2,11 @@
  * Board behaviour: countdown timers, local-time conversion, the masthead
  * "next deadline" ticker, and board pagination. (All filtering and search
  * lives in the homepage's unified Pagefind search.)
+ *
+ * The saved list and the search results render board rows in the browser
+ * after this script has run, so it also exposes `window.awtBoardHydrate(root)`
+ * for them: local times converted once, countdowns given their first value at
+ * once, and the clock started if nothing was counting down at load.
  */
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
@@ -10,15 +15,20 @@ function escapeHtml(s) {
 }
 
 /* ---------- local-time conversion ---------- */
-for (const el of $$('.js-local[data-iso]')) {
-  const d = new Date(el.dataset.iso);
-  el.textContent = Number.isNaN(d.getTime())
-    ? ''
-    : 'Your time: ' +
-      d.toLocaleString(undefined, {
-        month: 'short', day: 'numeric', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
-      });
+// Each element is converted once and marked, so hydrating a container a
+// second time (the saved list re-renders on every change) is a no-op.
+function localTimes(root = document) {
+  for (const el of $$('.js-local[data-iso]:not([data-local-done])', root)) {
+    const d = new Date(el.dataset.iso);
+    el.textContent = Number.isNaN(d.getTime())
+      ? ''
+      : 'Your time: ' +
+        d.toLocaleString(undefined, {
+          month: 'short', day: 'numeric', year: 'numeric',
+          hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+        });
+    el.dataset.localDone = '1';
+  }
 }
 
 /* ---------- countdowns + ticker ---------- */
@@ -73,8 +83,25 @@ function tick() {
   }
 }
 
-tick();
-if ($$('[data-deadline-ms]').length) setInterval(tick, 1000);
+/* ---------- rows rendered after load ---------- */
+// The saved list and the search results render board rows in the browser,
+// after this script ran. They call this on the container they filled: local
+// times are converted, the countdowns get their first value at once rather
+// than on the next second, and the clock starts if the page had nothing to
+// count down at load (the saved page and a deep-linked search both start
+// empty). tick() re-queries the whole document by design, so rows added later
+// are ticked without anything re-registering them.
+let clock = null;
+function ensureClock() {
+  if (!clock && $$('[data-deadline-ms]').length) clock = setInterval(tick, 1000);
+}
+function hydrateRows(root = document) {
+  localTimes(root);
+  tick();
+  ensureClock();
+}
+hydrateRows();
+window.awtBoardHydrate = hydrateRows;
 
 /* ---------- board pagination ---------- */
 // The deadline board lists every open call; after a big import wave (e.g.

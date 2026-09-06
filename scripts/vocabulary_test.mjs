@@ -54,7 +54,7 @@ const RETIRED = [
  */
 const SURFACES = [
   ['site/src/components/WorkshopRow.astro', 'First deadline posted'],
-  ['site/src/pages/saved.astro', 'First deadline posted'],
+  ['site/src/scripts/ws-row.js', 'First deadline posted'],
   ['site/src/lib/markdown.ts', 'First deadline posted'],
   ['site/src/pages/workshop/[slug].astro', 'First deadline posted'],
   ['site/src/pages/changes.astro', 'First deadline posted'],

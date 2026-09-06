@@ -151,6 +151,12 @@ Behavior worth knowing before you touch the search code:
   deadline on top, then upcoming-TBA, then this year's closed calls, then past
   editions newest-first). Typing keywords switches to relevance ranking. The
   result-count line always states which ordering is active.
+- **A result row is the board's row.** Badge, name, star, topic chips,
+  location, the deadline with local time and a live countdown, rendered from
+  the document's metadata by the same client renderer the saved list uses (see
+  *One client renderer for three surfaces* below). Browsing by facet is
+  therefore the board, filtered; with keywords, the excerpt and the matching
+  papers follow beneath the row.
 - **The headline counts what is actually listed.** With keywords: "N workshops ·
   M matching papers · by relevance · page x/y", where N is distinct workshops
   shown and M is individual matching papers inside them. Browsing: "N workshops ·
@@ -796,25 +802,40 @@ conference listings, and each workshop page. They are always rendered rather tha
 revealed on hover, because most of the traffic is phones and hover does not exist
 there.
 
-### Two renderers for one row
+### One client renderer for three surfaces
 
-The board renders a row server-side from `WorkshopRow.astro`; `/saved/` renders
-the same row in the browser, because only the browser knows what a visitor saved.
-Two implementations of one row drift, and this one did: the saved list quietly
-lacked the location, the topic chips and the deadline-change note, and printed the
-raw stored deadline where the board printed a formatted one. Three of those could
-not be fixed client-side at all — they are whole-corpus or history derivations —
-which is why the API publishes them.
+The board renders a row server-side from `WorkshopRow.astro`. Two surfaces
+render the same row in the browser, because only the browser knows what they
+show: `/saved/`, from `/api/workshops.json`, and the homepage's search results,
+from each document's Pagefind metadata. They used to be three independent
+implementations, and they drifted: the saved list quietly lacked the location,
+the topic chips and the deadline-change note, and the results carried no
+countdown or local time at all — so selecting a facet, which *is* the board
+filtered, looked nothing like the board. `site/src/scripts/ws-row.js` is now
+the one client renderer both use, taking an API-shaped object. The results map
+their metadata onto the API's names first (`viewFromMeta` in `index.astro`),
+and the workshop page publishes that metadata on both of its documents
+(`pfFields` in `[slug].astro`) so a keyword that matches only a paper still
+renders a full row. The homepage's search script is inline (`define:vars`) and
+cannot import, so the renderer is bridged onto `window.awtWsRowHtml`, the
+pattern `favorites.js` already uses for `awtFavsHydrate`.
 
-`scripts/row_parity_test.mjs` (in `validate.yml`) now guards it: every field the
-board displays must have an equivalent in the saved renderer, with a short
-exempt list. One entry on that list is deliberate rather than accidental: the
-saved list drops the **status pill**, because the row already says it twice —
-the countdown column reads `passed` or `TBA`, and a concluded row is greyed by
-`.row-passed`. The board keeps the pill, where a row is scanned against hundreds
-of others. It is a structural check, not a pixel one — it cannot prove the
-output matches, but it catches the common case of a field added to one renderer
-and forgotten in the other.
+Rows rendered after load need what the board got at load — local times,
+countdowns, the clock — so `board.js` exposes `window.awtBoardHydrate(root)`:
+it converts each `.js-local` once (marked, so re-rendering is a no-op), ticks,
+and starts the clock if the page had nothing to count down before. The saved
+page loads `board.js` for exactly this; its pager and ticker are no-ops there.
+
+`scripts/row_parity_test.mjs` (in `validate.yml`) guards the three: every field
+the board displays must be referenced by the shared renderer, published in the
+metadata contract, and read by the results' mapping, with a short exempt list.
+One exemption is deliberate rather than accidental: the saved list drops the
+**status pill**, because the row already says it twice — the countdown column
+reads `passed` or `TBA`, and a concluded row is greyed by `.row-passed`. The
+board and the results keep the pill, where a row is scanned against hundreds of
+others. It is a structural check, not a pixel one — it cannot prove the output
+matches, but it catches the common case of a field added to one renderer and
+forgotten in another.
 
 Paper snapshots store a stable id (OpenReview forum id where available), the
 title, the workshop slug, and the exact PDF url when known. A pre-2026 snapshot
@@ -968,7 +989,7 @@ board prints, derived from the entry's history), and `deadline_wall_clock` /
 `abstract_deadline_wall_clock` (the formatted strings the board displays, so a
 client renders "Sep 26, 2026, 12:59 UTC" rather than re-printing the raw stored
 value). These exist for the saved list, which renders rows in the browser; see
-"Two renderers for one row" below.
+"One client renderer for three surfaces" below.
 
 It also carries `short_name` and `track_label` — the site's own one-line identity
 for the entry (see "A workshop's one-line identity"). These exist because

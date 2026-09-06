@@ -62,6 +62,35 @@ const searchOrder = (() => {
   return '3-' + pad(MAX - (w.workshopDateUtcMs ?? 0));
 })();
 
+// What a search result knows about this workshop. The homepage renders result
+// rows in the browser from this metadata, through the same client renderer
+// the saved list uses (site/src/scripts/ws-row.js), so the names are the
+// API's (/api/workshops.json). The same set rides on the papers document too:
+// a keyword that matches only a paper still has to render a full row. Kept in
+// step with WorkshopRow.astro by scripts/row_parity_test.mjs.
+const pfFields: [string, string][] = [
+  ['conference', conf.name],
+  ['year', String(w.year)],
+  ['status', statusLabel],
+  ['deadline', w.deadlineWallClock ?? ''],
+  ['state', w.status],
+  ['acronym', w.acronym ?? ''],
+  ['short_name', shortName.full],
+  ['topics', JSON.stringify(w.topics ?? [])],
+  ['deadline_utc', w.deadlineIso ?? ''],
+  ['next_stage_utc', w.nextStageIso ?? ''],
+  ['next_stage_is_abstract', w.nextStageIsAbstract ? '1' : ''],
+  ['abstract_deadline_wall_clock', w.abstractDeadlineWallClock ?? ''],
+  ['abstract_deadline_utc', w.abstractDeadlineIso ?? ''],
+  // Only when the conference is split across places — the board's own rule.
+  ['location_label', w.locationDistinguishes ? (w.locationLabel ?? '') : ''],
+  ['deadline_change', w.deadlineChange
+    ? JSON.stringify({ kind: w.deadlineChange.kind, days: w.deadlineChange.days, recorded: w.deadlineChange.recorded })
+    : ''],
+];
+const pfAttrs = Object.fromEntries(pfFields.map(([k, v]) => [`data-pf-${k}`, v]));
+const PF_META = pfFields.map(([k]) => `${k}[data-pf-${k}]`).join(', ');
+
 // --- Structured data (JSON-LD), derived from the same resolved workshop
 // fields this page already renders, so no new data and no validation/schema
 // changes are needed. ---
@@ -346,12 +375,12 @@ const related = picked.map((o: any) => ({
           contributor's note — stays. */}
    <div
     data-pf-ws
+    {...pfAttrs}
     data-conf={conf.name}
     data-year={String(w.year)}
     data-wstatus={statusLabel}
     data-type="Workshops"
-    data-dl={w.deadlineWallClock ?? ''}
-    data-pagefind-meta="conference[data-conf], year[data-year], status[data-wstatus], deadline[data-dl]"
+    data-pagefind-meta={PF_META}
     data-pagefind-filter="conference[data-conf], year[data-year], status[data-wstatus], type[data-type]"
    >
     {/* Browse-order sort key: must live on a child — pagefind ignores
@@ -659,12 +688,13 @@ const related = picked.map((o: any) => ({
     {cache && cache.papers?.length > 0 && (
       <section
         data-pf-papers
+        {...pfAttrs}
         data-conf={conf.name}
         data-year={String(w.year)}
         data-wstatus={statusLabel}
         data-type="Papers"
         data-ptitle={`${w.name} — accepted papers`}
-        data-pagefind-meta="title[data-ptitle], conference[data-conf], year[data-year], status[data-wstatus]"
+        data-pagefind-meta={`title[data-ptitle], ${PF_META}`}
         data-pagefind-filter="conference[data-conf], year[data-year], status[data-wstatus], type[data-type]"
       >
         {/* The Topic facet must see this document too, or selecting a topic

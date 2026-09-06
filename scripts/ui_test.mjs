@@ -269,11 +269,26 @@ const ordPills = await page.$$eval('#results .pf-result .pill', (els) => els.map
 check('first browse result is an Open call', ordPills[0] === 'Open call', ordPills.slice(0, 3).join(','));
 const ordLastOpen = ordPills.lastIndexOf('Open call');
 check('open calls form a contiguous leading band', ordPills.slice(0, ordLastOpen + 1).every((p) => p === 'Open call'), ordPills.join(','));
-const ordDues = await page.$$eval('#results .pf-result .result-meta', (els) =>
-  els.map((e) => (e.textContent.match(/due (.+)$/) || [])[1]).filter(Boolean));
-const ordDueMs = ordDues.map((d) => Date.parse(d.replace(' AoE (UTC−12)', ' UTC-12')));
+// Result rows are the board's rows: the paper deadline is the browse sort key
+// and sits in the row's local-time element as an ISO instant (the countdown
+// may target an abstract stage instead, so it is not the thing to sort by).
+const ordDues = await page.$$eval('#results .pf-result', (els) =>
+  els
+    .filter((e) => e.querySelector('.pill')?.textContent.trim() === 'Open call')
+    .map((e) => e.querySelector('.ws-deadline .local[data-iso]')?.getAttribute('data-iso'))
+    .filter(Boolean));
+const ordDueMs = ordDues.map((d) => Date.parse(d));
 check('open-call deadlines ascend', ordDueMs.every((v, i) => i === 0 || !(v < ordDueMs[i - 1])), ordDues.slice(0, 4).join(' | '));
 check('due dates shown on open-call rows', ordDues.length >= 2, `got ${ordDues.length}`);
+// Rows rendered after load are hydrated like the board: a live countdown that
+// has already been given a value, not the "—" placeholder.
+let ordTicks = false;
+try {
+  await page.waitForFunction(() => /\d+[dhm]/.test(document.querySelector('#results .pf-result .countdown[data-deadline-ms]')?.textContent || ''), null, { timeout: 3000 });
+  ordTicks = true;
+} catch {}
+check('browse rows carry a live countdown', ordTicks);
+check('browse rows show the local time', (await page.$$eval('#results .pf-result .ws-deadline .local', (els) => els.filter((e) => /Your time:/.test(e.textContent)).length)) >= 2);
 await page.uncheck('[data-facet="conference"] input[value="IROS"]');
 
 // Keywords = relevance: count line says so; ordering is Pagefind's, not the bands.
@@ -385,7 +400,7 @@ console.log('— favorites in search & filter results (issues: save any workshop
 await page.goto(BASE, { waitUntil: 'networkidle' });
 await page.fill('#q', 'language');
 await page.waitForSelector('#results .pf-papers li > [data-star-paper]', { timeout: 10000 });
-check('keyword results: workshop rows have star buttons', (await page.$('#results .pf-result > [data-star-ws]')) !== null);
+check('keyword results: workshop rows have star buttons', (await page.$('#results .pf-result [data-star-ws]')) !== null);
 const pap = await page.$eval('#results .pf-papers li:has(.pf-ptitle)', (li) => ({
   hasStar: !!li.querySelector(':scope > [data-star-paper]'),
   title: li.querySelector('.pf-ptitle')?.textContent.trim() ?? '',
@@ -434,14 +449,14 @@ check('page-saved paper shows its PDF link', mergedLinks.some((h) => h.pdf), JSO
 await page.goto(BASE, { waitUntil: 'networkidle' });
 await page.click('summary[data-facet-summary="year"]');
 await page.check('[data-facet="year"] input[data-f]'); // whatever the first year is
-await page.waitForSelector('#results .pf-result > [data-star-ws]', { timeout: 10000 });
-const yearStars = await page.$$eval('#results .pf-result', (els) => els.filter((e) => e.querySelector(':scope > [data-star-ws]')).length);
+await page.waitForSelector('#results .pf-result [data-star-ws]', { timeout: 10000 });
+const yearStars = await page.$$eval('#results .pf-result', (els) => els.filter((e) => e.querySelector('[data-star-ws]')).length);
 const yearRows = (await page.$$('#results .pf-result')).length;
 check(`year-filtered results all starrable (${yearStars}/${yearRows})`, yearRows > 0 && yearStars === yearRows);
-const yBtn = await page.$('#results .pf-result > [data-star-ws]');
+const yBtn = await page.$('#results .pf-result [data-star-ws]');
 await yBtn.click();
 check('starring from filtered results works', (await yBtn.textContent()) === '★');
-check('state survives a re-render (pagination/hydrate)', await page.$eval('#results .pf-result > [data-star-ws]', (el) => el.classList.contains('is-on')));
+check('state survives a re-render (pagination/hydrate)', await page.$eval('#results .pf-result [data-star-ws]', (el) => el.classList.contains('is-on')));
 await page.evaluate(() => localStorage.clear());
 
 console.log('— saved-paper link consistency (legacy + no-PDF snapshots) —');

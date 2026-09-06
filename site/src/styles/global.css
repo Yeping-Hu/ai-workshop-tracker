@@ -432,8 +432,14 @@ details.tba-section > summary { cursor: pointer; color: var(--muted); font-size:
 .kw-box.hero-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .hero .statline, .hero .nextline { justify-content: center; text-align: center; }
 .facetbar { margin-top: 0.4rem; }
-.result-meta { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.25rem; }
-.result-meta .badge { font-size: 0.7rem; }
+/* A search result is the board's row (ws-row.js) with, in keyword mode, the
+   excerpt and the matching papers beneath it. The <li> keeps the separator;
+   the row inside drops its own padding and rule so the two do not double up,
+   and what follows the row lines up with the row's name column. */
+.pf-result > .board-row { padding: 0; border-bottom: none; }
+.pf-result > .board-row:hover { background: transparent; }
+.pf-result > .pf-excerpt, .pf-result > .pf-papers { margin-left: 6.5rem; }
+@media (max-width: 760px) { .pf-result > .pf-excerpt, .pf-result > .pf-papers { margin-left: 0; } }
 .pill.unknown { background: transparent; border: 1px dashed var(--line); color: var(--muted); }
 
 /* per-paper search results & anchored paper headings */
@@ -541,7 +547,6 @@ h2 .count { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 400;
 .saved-papers li { padding: 0.32rem 0; border-bottom: 1px solid var(--line); }
 .saved-papers li:last-child { border-bottom: none; }
 .storage-note { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: 1rem; }
-.pf-result > .star-btn { font-size: 0.95rem; margin-left: 0.1rem; vertical-align: 0.05em; }
 .pf-papers li > .star-btn { font-size: 0.92rem; margin-right: 0.2rem; margin-left: -0.25rem; }
 .saved-papers .pdf-link { font-size: 0.85rem; white-space: nowrap; }
 

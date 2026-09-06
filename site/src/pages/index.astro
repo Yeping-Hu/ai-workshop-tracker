@@ -25,6 +25,9 @@ const confColors = Object.fromEntries(conferences.map((c) => [c.name, c.color]))
 // Facet options + counts computed from the data at build time: exact,
 // workshop-only, and rendered instantly without waiting for the search index.
 const topicLabel = new Map(topics.map((t: any) => [t.id, t.label]));
+// Topic id -> label for the client, so a result row shows the same chips the
+// board does (the document's metadata carries ids).
+const TOPIC = Object.fromEntries(topicLabel);
 const facetCounts: Record<string, Record<string, number>> = { conference: {}, status: {}, year: {}, topic: {} };
 const bump = (f: string, v: string) => { facetCounts[f][v] = (facetCounts[f][v] ?? 0) + 1; };
 for (const w of workshops) {
@@ -250,8 +253,16 @@ const datasetLd: Record<string, any> = {
   </div>
 
   <script src="../scripts/board.js"></script>
+  {/* The results render the board's row through the shared client renderer.
+      The search script below is inline (define:vars) and cannot import, so
+      the renderer is bridged onto window — the pattern favorites.js uses for
+      awtFavsHydrate. */}
+  <script>
+    import { wsRowHtml } from '../scripts/ws-row.js';
+    (window as any).awtWsRowHtml = wsRowHtml;
+  </script>
 
-  <script is:inline define:vars={{ base, confColors, facetCounts, FW, pfExpect }}>
+  <script is:inline define:vars={{ base, confColors, facetCounts, FW, pfExpect, TOPIC }}>
     // ---- Unified search over every workshop & paper (Pagefind, faceted) ----
     const $ = (s) => document.querySelector(s);
     const input = $('#q');
@@ -786,24 +797,50 @@ const datasetLd: Record<string, any> = {
       $('#searchCount').textContent = '';
     }
 
+    // A result's document metadata as the API-shaped object the shared row
+    // renderer takes — the names /api/workshops.json uses; the contract is
+    // `pfFields` in workshop/[slug].astro. A keyword can match only the papers
+    // document, which carries the same fields, so a full row renders either way.
+    function viewFromMeta(g) {
+      const meta = (g.ws ?? g.papers).meta ?? {};
+      const json = (s) => { try { return s ? JSON.parse(s) : null; } catch { return null; } };
+      return {
+        slug: g.slug,
+        name: g.ws?.meta?.title ?? String(g.papers?.meta?.title ?? '').replace(/ — accepted papers$/, ''),
+        acronym: meta.acronym || null,
+        short_name: meta.short_name || null,
+        conference: meta.conference ?? '',
+        year: meta.year ?? '',
+        topics: json(meta.topics) ?? [],
+        status: meta.state,
+        status_label: meta.status ?? '',
+        deadline_wall_clock: meta.deadline || null,
+        deadline_utc: meta.deadline_utc || null,
+        next_stage_utc: meta.next_stage_utc || null,
+        next_stage_is_abstract: meta.next_stage_is_abstract === '1',
+        abstract_deadline_wall_clock: meta.abstract_deadline_wall_clock || null,
+        abstract_deadline_utc: meta.abstract_deadline_utc || null,
+        location_label: meta.location_label || null,
+        location_distinguishes: !!meta.location_label,
+        deadline_change: json(meta.deadline_change),
+      };
+    }
+
     function renderResultsPage() {
+      // The row renderer arrives with the bundled module scripts; on a deep
+      // link this inline script can get here first. Wait a beat rather than
+      // paint a row without it.
+      if (!window.awtWsRowHtml) { setTimeout(renderResultsPage, 50); return; }
       const { groups, page, nPapers, hasQuery } = rState;
       const SUBS_PER_WS = 5;
       const nPages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE));
       const rows = [];
       for (const [key, g] of groups.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)) {
-        const src = g.ws ?? g.papers;
-        const conf = src.meta?.conference ?? '';
-        const color = confColors[conf] ?? '#888';
-        // Explicit entry for "Not running": without it the ?? fallback would
-        // paint a tombstoned edition exactly like an ordinary past workshop.
-        const pillClass =
-          { 'Open call': 'upcoming', 'Deadline unknown': 'unknown', 'Not running': 'not_running' }[
-            src.meta?.status
-          ] ?? 'past';
-        const wsName = g.ws?.meta?.title ?? String(g.papers?.meta?.title ?? '').replace(/ — accepted papers$/, '');
+        const view = viewFromMeta(g);
+        const conf = view.conference;
+        const wsName = view.name;
         const slug = g.slug || '';
-        const wsLabel = `${wsName} — ${conf} ${src.meta?.year ?? ''}`.trim();
+        const wsLabel = `${wsName} — ${conf} ${view.year}`.trim();
         let papersHtml = '';
         if (hasQuery && g.subs.length) {
           const subs = g.subs;
@@ -823,13 +860,20 @@ const datasetLd: Record<string, any> = {
               : '') +
             '</ul>';
         }
+        // The board's row, from the document's metadata: badge, name, star,
+        // topics, the deadline with local time and a live countdown. Browsing
+        // by facet is then the board, filtered; with keywords the excerpt and
+        // the matching papers follow beneath.
+        const rowHtml = window.awtWsRowHtml(view, {
+          base,
+          conf: { name: conf, color: confColors[conf] ?? '#888' },
+          topicLabel: (id) => TOPIC[id] ?? id,
+          pill: true,
+          star: 'off',
+          titleClass: 'pf-title',
+        });
         rows.push(`
-        <li class="pf-result">
-          <div class="result-meta"><span class="badge" style="--conf:${color}; padding:0.2rem 0.6rem;">${esc(conf)} ${esc(src.meta?.year ?? '')}</span><span class="pill ${pillClass}">${esc(src.meta?.status ?? '')}</span>${src.meta?.status === 'Open call' && src.meta?.deadline ? `<span class="muted" style="font-size:0.82rem;">due ${esc(src.meta.deadline)}</span>` : ''}</div>
-          <a class="pf-title" href="${esc(g.url)}">${esc(wsName)}</a>${slug ? `<button type="button" class="star-btn" data-star-ws="${esc(slug)}" aria-pressed="false" aria-label="Save ${esc(wsName)} to your list" title="Save for later (stays in this browser)">☆</button>` : ''}
-          ${g.ws ? `<p class="pf-excerpt">${g.ws.excerpt}</p>` : ''}
-          ${papersHtml}
-        </li>`);
+        <li class="pf-result">${rowHtml}${hasQuery && g.ws ? `<p class="pf-excerpt">${g.ws.excerpt}</p>` : ''}${papersHtml}</li>`);
       }
       if (nPages > 1 && !rState.partial) {
         rows.push(
@@ -850,6 +894,9 @@ const datasetLd: Record<string, any> = {
         rows.join('') ||
         '<li class="muted">No matches — remove a keyword or filter, or <a href="' + esc(`${base}/about/`) + '">add the workshop</a>.</li>';
       window.awtFavsHydrate?.();
+      // Rows rendered after load: local times, countdowns and the clock, from
+      // board.js — the same hydration the saved list gets.
+      window.awtBoardHydrate?.($('#results'));
       syncUrl();
     }
 
