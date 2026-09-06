@@ -18,16 +18,16 @@ lists are committed JSON caches under `cache/openreview/`. Builds read these at
 build time and never touch a live API or a database.
 
 The core UI is a small, fixed set of pages: a search-first homepage (a large
-search box, the counts and next deadline with a one-line list of the
-conferences that have open calls under them, then the deadline board and the
+search box, the counts with a one-line list of the conferences that have open
+calls under them, then the deadline board and the
 workshop-proposal deadlines; searching swaps the board for faceted results
 while the hero stays put), a device-local
 **Saved** list, and **About**, plus a static per-conference hub at
 `/conference/<id>/` (see *Discoverability* below). Legacy `/archive`,
 `/search`, `/contribute`, and `/calendar` URLs redirect into these.
 
-**The open-calls line.** The last line of the hero — after the counts and the
-next deadline, before the alerts line — names each conference that has an open
+**The open-calls line.** The last line of the hero — after the counts, before
+the alerts line — names each conference that has an open
 call, as a colour dot, the name and the count, linking to its hub. It uses the
 statline's own definition of "open" (`upcomingWithDeadline`), so the two never
 disagree; conferences with nothing open are omitted, since the eyebrow above
@@ -836,7 +836,7 @@ Rows rendered after load need what the board got at load — local times,
 countdowns, the clock — so `board.js` exposes `window.awtBoardHydrate(root)`:
 it converts each `.js-local` once (marked, so re-rendering is a no-op), ticks,
 and starts the clock if the page had nothing to count down before. The saved
-page loads `board.js` for exactly this; its pager and ticker are no-ops there.
+page loads `board.js` for exactly this; its pager is a no-op there.
 
 `scripts/row_parity_test.mjs` (in `validate.yml`) guards the three: every field
 the board displays must be referenced by the shared renderer, published in the

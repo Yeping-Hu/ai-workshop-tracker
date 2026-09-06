@@ -130,8 +130,6 @@ h3 { font-size: 1.12rem; margin: 1.6rem 0 0.4rem; }
 .masthead p.lede { font-size: 1.06rem; color: var(--muted); max-width: 46rem; margin: 0.4rem 0 0; }
 .statline { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; margin-top: 1.1rem; font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); }
 .statline strong { color: var(--ink); font-weight: 600; }
-.nextline { margin-top: 0.5rem; font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); }
-.nextline b { color: var(--urgent); font-weight: 600; }
 
 /* ---------- filter bar ---------- */
 .filterbar {
@@ -368,14 +366,12 @@ details.dd .dd-panel {
   .filterbar { position: static; }
 }
 
-/* Half the gap above the subscribe block. It was three stacked pieces —
-   .nextline's 0.82rem bottom margin, the hero's 1.6rem bottom padding and the
-   block's own top margin — about 48px of empty page between the countdown line
-   and the green bar. `~` not `+`: the signup is not the hero's immediate sibling,
-   the hidden "signed in as" paragraph sits between them. The block's own margin
-   is set in AlertsSignup.astro, whose scoped style outranks anything here. */
+/* Half the gap above the subscribe block: the hero's 1.6rem bottom padding
+   plus the block's own top margin was ~48px of empty page above the green bar.
+   `~` not `+`: the signup is not the hero's immediate sibling, the hidden
+   "signed in as" paragraph sits between them. The block's own margin is set in
+   AlertsSignup.astro, whose scoped style outranks anything here. */
 .hero:has(~ .alerts-signup) { padding-bottom: 0.5rem; }
-.hero:has(~ .alerts-signup) .nextline { margin-bottom: 0.5rem; }
 
 /* ---------- conferences with open calls (homepage) ---------- */
 /* One static line under the counts: each conference that has an open call, as
@@ -464,7 +460,7 @@ details.tba-section > summary { cursor: pointer; color: var(--muted); font-size:
 }
 .kw-box.hero-box input { font-size: 1.05rem; padding: 0.35rem 0.3rem; }
 .kw-box.hero-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.hero .statline, .hero .nextline { justify-content: center; text-align: center; }
+.hero .statline { justify-content: center; text-align: center; }
 /* The filter bar's own padding already separates it from the counts; the
    statline's general 1.1rem top margin on top of that left a hole under the
    tabs. */

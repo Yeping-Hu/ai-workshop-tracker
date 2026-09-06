@@ -86,9 +86,6 @@ export function wsRowHtml(w, opts = {}) {
       ? `<button class="star-btn" type="button" data-star-ws="${slug}" aria-pressed="true" aria-label="Remove ${name} from saved">★</button>`
       : `<button class="star-btn" type="button" data-star-ws="${slug}" aria-pressed="false" aria-label="Save ${name} to your list" title="Save for later (stays in this browser)">☆</button>`;
   const abstractWall = w.abstract_deadline_wall_clock ?? (w.abstract_deadline ? `${w.abstract_deadline} UTC` : null);
-  // The masthead ticker announces this name; the same one-line identity the
-  // board uses when the API supplies it.
-  const cdName = `${w.short_name || w.acronym || w.name}${absOpen ? ' (abstract)' : ''}`;
   return `
   <div class="board-row ${upcoming ? '' : 'row-passed'}" ${rowAttrs}>
     <span class="badge" style="--conf:${esc(conf.color)}">${esc(conf.name)}</span>
@@ -123,7 +120,7 @@ export function wsRowHtml(w, opts = {}) {
     </div>
     ${
       upcoming && ms != null
-        ? `<span class="countdown" data-deadline-ms="${cdMs}"${absOpen ? ' data-stage="abstract"' : ''} data-name="${esc(cdName)}">—</span>`
+        ? `<span class="countdown" data-deadline-ms="${cdMs}"${absOpen ? ' data-stage="abstract"' : ''}>—</span>`
         : upcoming
           ? '<span class="countdown is-tba">TBA</span>'
           : notRunning

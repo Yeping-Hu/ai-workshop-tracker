@@ -1,5 +1,5 @@
 ---
-import { conferenceById, topicById, workshopShortName } from '../lib/data';
+import { conferenceById, topicById } from '../lib/data';
 import { href, CALENDAR_ENABLED } from '../lib/site';
 
 interface Props {
@@ -14,14 +14,8 @@ const hasDeadline = w.deadlineUtcMs != null;
 // while it is still open, the paper deadline afterwards. It is labelled
 // "abstract" (via .countdown[data-stage] in global.css) and both dates are
 // shown, so the later switch to the paper deadline cannot read as an extension.
-// The ticker name is suffixed too, so the masthead never announces an abstract
-// deadline as if it were the submission deadline.
 const countdownMs = w.nextStageUtcMs ?? w.deadlineUtcMs;
 const isAbstractStage = !!w.nextStageIsAbstract;
-// Same one-line identity the workshop page and saved list use, so a countdown
-// announced on the board names the same thing the reader clicks through to.
-const rowName = workshopShortName(w, conf.name).full;
-const countdownName = isAbstractStage ? `${rowName} (abstract)` : rowName;
 ---
 
 <div
@@ -99,7 +93,6 @@ const countdownName = isAbstractStage ? `${rowName} (abstract)` : rowName;
       class="countdown"
       data-deadline-ms={countdownMs}
       data-stage={isAbstractStage ? 'abstract' : null}
-      data-name={countdownName}
     >—</span>
   ) : (
     <span class="countdown is-tba">TBA</span>

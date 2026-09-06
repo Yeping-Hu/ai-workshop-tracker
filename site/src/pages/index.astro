@@ -145,9 +145,8 @@ const datasetLd: Record<string, any> = {
       <span><strong>{paperCount.toLocaleString('en-US')}</strong> papers</span>
       <span><strong>{upcomingWithDeadline.length}</strong> open calls</span>
     </div>
-    <p class="nextline" id="next-deadline" aria-live="off">Next deadline: …</p>
     {/* Which conferences have an open call, as the last line of the hero —
-        after the counts and the next deadline, before the alerts line — so the
+        after the counts, before the alerts line — so the
         ambient status sits together and the alerts bar stays next to the board
         it serves. Static and one line: a scrolling ticker was distracting, and
         before it a grid of cards stood 395px tall and pushed the first deadline
@@ -228,7 +227,7 @@ const datasetLd: Record<string, any> = {
                       <td class="pt-when mono">{c.deadlineWallClock}</td>
                       <td class="pt-state">
                         {c.open ? (
-                          <span class="countdown" data-deadline-ms={c.deadlineUtcMs} data-name={`${conf?.name} ${c.year} workshop proposals`}>—</span>
+                          <span class="countdown" data-deadline-ms={c.deadlineUtcMs}>—</span>
                         ) : (
                           <span class="pill deadline_passed">Closed</span>
                         )}

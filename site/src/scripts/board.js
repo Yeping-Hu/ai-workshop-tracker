@@ -1,7 +1,7 @@
 /**
- * Board behaviour: countdown timers, local-time conversion, the masthead
- * "next deadline" ticker, and board pagination. (All filtering and search
- * lives in the homepage's unified Pagefind search.)
+ * Board behaviour: countdown timers, local-time conversion, and board
+ * pagination. (All filtering and search lives in the homepage's unified
+ * Pagefind search.)
  *
  * The saved list and the search results render board rows in the browser
  * after this script has run, so it also exposes `window.awtBoardHydrate(root)`
@@ -9,10 +9,6 @@
  * once, and the clock started if nothing was counting down at load.
  */
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
 
 /* ---------- local-time conversion ---------- */
 // Each element is converted once and marked, so hydrating a container a
@@ -31,7 +27,7 @@ function localTimes(root = document) {
   }
 }
 
-/* ---------- countdowns + ticker ---------- */
+/* ---------- countdowns ---------- */
 const HOUR = 3_600_000, DAY = 24 * HOUR;
 
 function fmtRemaining(ms) {
@@ -46,16 +42,12 @@ function fmtRemaining(ms) {
 
 // Each tick writes to the DOM only where the text actually changed: at most
 // one countdown a second shows a new value, so a page of a hundred rows used to
-// rewrite a hundred nodes and the ticker's innerHTML every second for nothing.
-// The node list is re-read every tick on purpose — a countdown added after
-// load (the saved page's twin does this, and the UI suite injects one) must
-// start ticking without anything re-registering it.
-const ticker = document.getElementById('next-deadline');
-let tickerHtml = null;
-
+// rewrite a hundred nodes every second for nothing. The node list is re-read
+// every tick on purpose — a countdown added after load (the saved list and the
+// search results do this, and the UI suite injects one) must start ticking
+// without anything re-registering it.
 function tick() {
   const now = Date.now();
-  let best = null;
   for (const el of $$('[data-deadline-ms]')) {
     const rem = Number(el.dataset.deadlineMs) - now;
     if (rem <= 0) {
@@ -70,16 +62,6 @@ function tick() {
     if (el.textContent !== text) el.textContent = text;
     el.classList.toggle('is-critical', rem < 48 * HOUR);
     el.classList.toggle('is-soon', rem >= 48 * HOUR && rem < 7 * DAY);
-    if (!best || rem < best.rem) best = { rem, name: el.dataset.name || 'next deadline' };
-  }
-  if (ticker) {
-    const html = best
-      ? `Next deadline: <b>${escapeHtml(best.name)}</b> in <b>${fmtRemaining(best.rem)}</b>`
-      : 'No upcoming deadlines right now — new cycles are imported automatically.';
-    if (html !== tickerHtml) {
-      ticker.innerHTML = html;
-      tickerHtml = html;
-    }
   }
 }
 
@@ -108,8 +90,8 @@ window.awtBoardHydrate = hydrateRows;
 // the NeurIPS cycle) that's 60+ tall rows — far too much scroll. Chunk it
 // into pages using the same numbered pager as the search results (global
 // `.pager` styles). Rows stay in the DOM (`.pg-off` class — the rows are
-// display:grid, so the `hidden` attribute wouldn't take) so countdowns and
-// the "next deadline" ticker keep seeing every row.
+// display:grid, so the `hidden` attribute wouldn't take) so the countdowns
+// keep seeing every row.
 const BOARD_PAGE_SIZE = 25;
 const board = document.querySelector('.board');
 const boardRows = board ? $$('[data-ws-row]', board) : [];

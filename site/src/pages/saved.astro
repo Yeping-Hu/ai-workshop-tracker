@@ -158,7 +158,7 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
           ? `<p class="muted small">${missing} saved workshop${missing === 1 ? ' is' : 's are'} no longer in the dataset (renamed or removed).</p>`
           : '');
       // Local times, countdowns and the clock come from board.js, loaded on
-      // this page for exactly that (its pager and ticker are no-ops here).
+      // this page for exactly that (its pager is a no-op here).
       (window as any).awtBoardHydrate?.($('#savedWsList'));
     }
 
