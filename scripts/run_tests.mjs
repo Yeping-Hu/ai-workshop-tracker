@@ -9,8 +9,10 @@
  * of a shell loop. It prints one line per file, the failing file's own output
  * verbatim, and exits non-zero if any suite did.
  *
- * The four suites that need a built site, a server or the live site are
- * skipped here by name; pr-build-check.yml and smoke.yml own those.
+ * The suites that need a built site, a server or the live site are skipped
+ * here by name; pr-build-check.yml and smoke.yml own those. (The fragment
+ * test needs only `site/dist`, but a silent pass when there is no build would
+ * read as coverage, so it is skipped the same way.)
  *
  * Usage:
  *   npm test                       every standalone suite
@@ -22,7 +24,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const NEEDS_A_SERVER = new Set(['ui_test.mjs', 'alerts_ui_test.mjs', 'shipped_ui_test.mjs', 'smoke_test.mjs']);
+const NEEDS_A_SERVER = new Set(['ui_test.mjs', 'alerts_ui_test.mjs', 'shipped_ui_test.mjs', 'smoke_test.mjs', 'pagefind_index_test.mjs']);
 const only = process.argv.slice(2);
 
 const files = fs

@@ -3,7 +3,7 @@ import Base from '../../components/Base.astro';
 import { workshops, conferenceById, editionByKey, topicById, loadPaperCache, workshopShortName, nameTokens } from '../../lib/data';
 import { href, REPO_URL, CALENDAR_ENABLED } from '../../lib/site';
 import MarkdownExport from '../../components/MarkdownExport.astro';
-import { formatSingleWorkshopInfo } from '../../lib/markdown';
+import { formatSingleWorkshopInfo, isAutoTopicsNote, isBotDeadlineNote } from '../../lib/markdown';
 
 export function getStaticPaths() {
   return workshops.map((w) => ({ params: { slug: w.slug }, props: { w } }));
@@ -327,6 +327,23 @@ const related = picked.map((o: any) => ({
     <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbLd)} />
   </Fragment>
   <article>
+   {/* Two rules keep the search index honest, both pinned corpus-wide by
+       scripts/pagefind_index_test.mjs against the built fragments:
+       1. Every inline sibling inside this root is separated by an explicit
+          {' '}. Astro drops whitespace-only text between elements and
+          Pagefind adds a word boundary only at block elements, so the badge,
+          pill and chips ran together in the indexed text ("CVPR 2025PastAI
+          for scienceMultimodal") and every <dt> label onto its <dd>
+          ("LocationVienna, AustriaSubmission portal"). Pagefind's segmenter
+          still found the words, but the excerpt under every result is cut
+          from that text, so that is what readers saw — and nonsense prefixes
+          such as "2026past" matched hundreds of pages.
+       2. Chrome and machine-written text carry data-pagefind-ignore: the
+          link row, the countdown placeholder, the importer's topics note and
+          its deadline stamp. Repeated on every page, "markdown" or
+          "imprecise" matched the whole corpus, most excerpts were chrome, and
+          the words crowded ~60-word documents. Text a person wrote — a
+          contributor's note — stays. */}
    <div
     data-pf-ws
     data-conf={conf.name}
@@ -343,12 +360,18 @@ const related = picked.map((o: any) => ({
     <header class="detail-head">
       <div class="topline">
         <span class="badge" style={`--conf:${conf.color}; padding: 0.28rem 0.7rem;`}>{conf.name} {w.year}</span>
+        {' '}
         <span class={`pill ${w.status}`}>{statusLabel}</span>
-        {(w.topics ?? []).map((t: string) => <span class="chip" data-pagefind-filter="topic">{topicById.get(t)?.label ?? t}</span>)}
+        {(w.topics ?? []).map((t: string) => (
+          <>
+            {' '}
+            <span class="chip" data-pagefind-filter="topic">{topicById.get(t)?.label ?? t}</span>
+          </>
+        ))}
       </div>
       <h1>{w.name}</h1>
       {w.acronym && <p class="muted mono">{w.acronym}</p>}
-      <div class="linkrow">
+      <div class="linkrow" data-pagefind-ignore>
         <button
           class="star-btn star-btn-labeled"
           type="button"
@@ -379,7 +402,7 @@ const related = picked.map((o: any) => ({
         <MarkdownExport content={formatSingleWorkshopInfo(w, conf)} variant="link" />
       </div>
       {isSeed && (
-        <p class="seednote">
+        <p class="seednote" data-pagefind-ignore>
           <strong>Unverified seed entry.</strong> Some fields are estimates — confirm everything on the
           official website before planning a submission.
         </p>
@@ -401,7 +424,7 @@ const related = picked.map((o: any) => ({
     </header>
 
     <dl class="kv">
-      <dt>Submission deadline</dt>
+      <dt>{' '}Submission deadline{' '}</dt>
       <dd>
         {w.deadlineWallClock ? (
           <>
@@ -411,6 +434,7 @@ const related = picked.map((o: any) => ({
               <div>
                 <span
                   class="countdown"
+                  data-pagefind-ignore
                   data-deadline-ms={w.nextStageUtcMs ?? w.deadlineUtcMs}
                   data-stage={w.nextStageIsAbstract ? 'abstract' : null}
                   data-name={w.nextStageIsAbstract ? `${w.acronym || w.name} (abstract)` : (w.acronym || w.name)}
@@ -443,7 +467,9 @@ const related = picked.map((o: any) => ({
                   {w.deadlineHistoryView.map((h: any, i: number) => (
                     <li>
                       <span class="mono dl-h-when">{h.recordedLabel}</span>
+                      {' '}
                       <span class="dl-h-val">{h.wallClock ?? 'no date published'}</span>
+                      {' '}
                       <span class="muted dl-h-tag">
                         {i === w.deadlineHistoryView.length - 1 ? 'first recorded' : 'changed'}
                       </span>
@@ -469,24 +495,27 @@ const related = picked.map((o: any) => ({
                 <div class="muted small js-local" data-iso={w.abstractDeadlineIso}></div>
               </div>
             )}
-            {w.deadline_notes && <div class="small" style="color: var(--warn)">{w.deadline_notes}</div>}
+            {w.deadline_notes && (
+              <div class="small" style="color: var(--warn)" data-pagefind-ignore={isBotDeadlineNote(w.deadline_notes) || undefined}>{w.deadline_notes}</div>
+            )}
           </>
         ) : (
           <>
-            TBA — <a class="link-tba" href={editUrl} rel="noopener">know
+            TBA — <a class="link-tba" href={editUrl} rel="noopener" data-pagefind-ignore>know
             the deadline? Help add it</a>
-            <div class="muted small">Opens a short form — enter the date and pick its timezone, and we'll handle the conversion.</div>
+            <div class="muted small" data-pagefind-ignore>Opens a short form — enter the date and pick its timezone, and we'll handle the conversion.</div>
           </>
         )}
       </dd>
       {Array.isArray(w.tracks) && w.tracks.length > 0 && (
         <>
-          <dt>Tracks</dt>
+          <dt>{' '}Tracks{' '}</dt>
           <dd>
             <ul class="tracks-list">
               {w.tracks.map((t) => (
                 <li>
                   <span class="track-name">{t.name}</span>
+                  {' '}
                   {t.deadlineWallClock ? (
                     <span class={t.passed ? 'muted' : ''}>
                       <span class="mono">{t.deadlineWallClock}</span>{t.passed ? ' · closed' : ''}
@@ -503,13 +532,13 @@ const related = picked.map((o: any) => ({
       )}
       {w.notification_date && (
         <>
-          <dt>Notification</dt>
+          <dt>{' '}Notification{' '}</dt>
           <dd>{w.notificationDateLabel}</dd>
         </>
       )}
       {w.workshop_date && (
         <>
-          <dt>Workshop day</dt>
+          <dt>{' '}Workshop day{' '}</dt>
           <dd>{w.workshopDateLabel}</dd>
         </>
       )}
@@ -519,13 +548,13 @@ const related = picked.map((o: any) => ({
           is known — someone who opened this page wants the detail. */}
       {w.locationLabel && (
         <>
-          <dt>Location</dt>
+          <dt>{' '}Location{' '}</dt>
           <dd>{w.locationLabel}</dd>
         </>
       )}
       {w.submission_portal && (
         <>
-          <dt>Submission portal</dt>
+          <dt>{' '}Submission portal{' '}</dt>
           <dd>
             {/* Name the portal, and link it when we know where. An OpenReview
                 venue already produces its own link in the header above, so this
@@ -543,14 +572,16 @@ const related = picked.map((o: any) => ({
       )}
       {w.organizers?.length > 0 && (
         <>
-          <dt>Organizers</dt>
+          <dt>{' '}Organizers{' '}</dt>
           <dd>{w.organizers.join(', ')}</dd>
         </>
       )}
       {w.notes && (
         <>
-          <dt>Notes</dt>
-          <dd class="muted">{w.notes}</dd>
+          <dt>{' '}Notes{' '}</dt>
+          {/* The importer's "topics were auto-suggested" note sits on nearly
+              every entry; a person's note is the exception and stays indexed. */}
+          <dd class="muted" data-pagefind-ignore={isAutoTopicsNote(w.notes) || undefined}>{w.notes}</dd>
         </>
       )}
     </dl>
@@ -562,6 +593,7 @@ const related = picked.map((o: any) => ({
           {w.relatedTracks.map((t: any) => (
             <li>
               <span class="track-name"><a href={href(`/workshop/${t.slug}/`)} title={t.name}>{t.trackLabel}</a></span>
+              {' '}
               {t.deadlineWallClock ? (
                 <span class={t.passed ? 'muted' : ''}>
                   <span class="mono">{t.deadlineWallClock}</span>{t.passed ? ' · closed' : ''}
@@ -635,8 +667,20 @@ const related = picked.map((o: any) => ({
         data-pagefind-meta="title[data-ptitle], conference[data-conf], year[data-year], status[data-wstatus]"
         data-pagefind-filter="conference[data-conf], year[data-year], status[data-wstatus], type[data-type]"
       >
-        <h2 id="papers">Accepted papers ({cache.paper_count})</h2>
-        <p class="muted small">
+        {/* The Topic facet must see this document too, or selecting a topic
+            silently drops every paper hit from the results. Attribute-sourced
+            on empty elements so the label is a filter value and never indexed
+            text: as content, the keyword "robotics" would match every papers
+            document of a Robotics-tagged workshop and each would render a
+            spurious "Matching papers →" link with no paper behind it. */}
+        {(w.topics ?? []).map((t: string) => (
+          <span data-pagefind-filter="topic[data-topic]" data-topic={topicById.get(t)?.label ?? t} hidden></span>
+        ))}
+        {/* Only paper titles and authors are content here; the heading, the
+            provenance line and the per-paper "· PDF" are ignored so "accepted",
+            "fetched" and "pdf" do not match every papers document. */}
+        <h2 id="papers" data-pagefind-ignore>Accepted papers ({cache.paper_count})</h2>
+        <p class="muted small" data-pagefind-ignore>
           Fetched from OpenReview ({cache.source_api}) on {cache.fetched_at?.slice(0, 10)}.
           {cache.caveat && ` Note: ${cache.caveat}.`}
         </p>
@@ -667,15 +711,15 @@ const related = picked.map((o: any) => ({
               <div class="p-authors">
                 {(p.authors ?? []).join(', ')}
                 {p.pdf_url && (
-                  <>
+                  <span data-pagefind-ignore>
                     {' · '}
                     <a href={p.pdf_url} rel="noopener">PDF</a>
-                  </>
+                  </span>
                 )}
               </div>
               {p.abstract && (
                 <details>
-                  <summary>Abstract</summary>
+                  <summary data-pagefind-ignore>Abstract</summary>
                   <p>{p.abstract}</p>
                 </details>
               )}

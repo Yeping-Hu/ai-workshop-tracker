@@ -59,6 +59,14 @@ jobs:
           BUILD_ID: ${{ github.sha }}
         run: npm run build --prefix site
 
+      # What the two Pagefind indexes contain, decoded from the fragments this
+      # build just wrote and compared with the same build's /api/workshops.json:
+      # separate words for the badge, pill, chips and every <dt>/<dd>, no page
+      # chrome or importer stamps, and topic filters on the papers index. Needs
+      # site/dist, hence here rather than in validate.yml.
+      - name: Check what the search index contains
+        run: node scripts/pagefind_index_test.mjs
+
       # --- UI behavior suite -------------------------------------------------
       # The only guard on the homepage's runtime behaviour: the dual-index
       # search and its merge-immune counts, deterministic result order, the

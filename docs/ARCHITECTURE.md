@@ -147,6 +147,45 @@ Behavior worth knowing before you touch the search code:
   prove a call closed, so status resolves to "Open call", "Deadline unknown"
   (venue never published one), or "Past" from dates *and* paper caches together.
 
+### What is indexed
+
+Everything inside `[data-pf-ws]` on a workshop page is the workshop document;
+everything inside `[data-pf-papers]` is its papers document. Three things about
+that markup are easy to break without noticing, so the built fragments are
+checked corpus-wide by `scripts/pagefind_index_test.mjs` (in
+`pr-build-check.yml`, right after the build, since it needs `site/dist`):
+
+- **Inline siblings are separated by an explicit `{' '}`.** Astro drops
+  whitespace-only text between elements and Pagefind adds a word boundary only
+  at block elements, so the badge, status pill and topic chips ran together in
+  the indexed text (`CVPR 2025PastAI for scienceMultimodal`) and every `<dt>`
+  onto its `<dd>` (`LocationVienna, AustriaSubmission portalOpenReviewNotes`) —
+  on all 938 pages. Pagefind's segmenter still split those runs at case and
+  digit boundaries, so whole-word searches mostly worked; what readers saw was
+  the **excerpt** under every result, which is cut from that text, and nonsense
+  prefixes such as `2026past` matched hundreds of pages.
+  `compressHTML: false` was rejected: it does nothing for `.map()`-generated
+  siblings, inflates every page, and turns inter-element whitespace into visible
+  gaps outside flex/grid containers.
+- **Chrome and machine-written text are `data-pagefind-ignore`d.** The link row
+  ("Official website ↗ … ✎ Edit this entry 📋 Copy as Markdown") sat in every
+  ~60-word document, so `markdown` matched all 938 workshops and most excerpts
+  were chrome; the importer's "topics were auto-suggested … imprecise" note
+  matched 927 and its `OpenReview-synced …` deadline stamp about 500 (as did
+  "verify", "extensions" and "automatically" through it). A note a person wrote stays
+  indexed — `isAutoTopicsNote` / `isBotDeadlineNote` in `site/src/lib/markdown.ts`
+  decide which is which, and the test checks both directions. On the papers
+  document the heading, the provenance line and the per-paper "· PDF" are
+  ignored for the same reason.
+- **The papers document carries the workshop's topic filter values**, as
+  attribute-sourced filters on empty elements. Without them the Topic facet
+  matched only workshop documents, so a topic plus a keyword returned zero
+  papers with no indication (`llm`: 254 papers documents; with the
+  "Large language models" topic: 0). Attribute-sourced rather than chip text
+  because indexed labels would make the keyword "robotics" match every papers
+  document of a Robotics-tagged workshop, each rendering a spurious "Matching
+  papers →" link with no matching paper behind it.
+
 ### Surviving deploys
 
 Pagefind loads its hashed index/filter data files lazily on first search, and

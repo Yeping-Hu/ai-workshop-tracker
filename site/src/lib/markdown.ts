@@ -16,6 +16,22 @@ export function isAutoTopicsNote(notes?: string | null): boolean {
   return false;
 }
 
+/**
+ * True if `deadline_notes` is a machine stamp rather than something a person
+ * wrote: the importer's `OpenReview-synced <value> UTC (as of …) — …` provenance
+ * line, or the legacy `imported from OpenReview — check the website for
+ * extensions` marker. Both repeat on hundreds of pages, so the workshop page
+ * keeps them out of the search index; a contributor's own note ("submitted as
+ * 2026-09-14 23:59 AoE") stays searchable. The wording is owned by `syncNote`
+ * and `LEGACY_IMPORT_NOTE` in scripts/discover_openreview.mjs — the site never
+ * imports from scripts/, so this mirrors the two prefixes.
+ */
+export function isBotDeadlineNote(notes?: string | null): boolean {
+  if (!notes || typeof notes !== 'string') return false;
+  const trimmed = notes.trim();
+  return /^OpenReview-synced\b/.test(trimmed) || /^imported from OpenReview\b/.test(trimmed);
+}
+
 export function formatWorkshop(w: any, confName?: string): string {
   const parts: string[] = [];
 
