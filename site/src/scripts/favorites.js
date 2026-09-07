@@ -287,16 +287,40 @@ function announce(type, id, on) {
 }
 
 function toggleWorkshop(btn) {
-  const slug = btn.dataset.starWs;
+  setWorkshopSaved(btn.dataset.starWs, btn);
+}
+
+// Split out of toggleWorkshop so a surface that renders its own control instead
+// of a [data-star-ws] button can still go through this one path — see
+// unstarWorkshop below. `btn` is only ever the thing that reports a storage
+// failure back to the reader, so it is optional.
+function setWorkshopSaved(slug, btn = null) {
   let list = favWorkshops();
   const on = !list.includes(slug);
   list = on ? [...list, slug] : list.filter((s) => s !== slug);
-  if (!write(WS_KEY, list)) return storageFailed(btn);
+  if (!write(WS_KEY, list)) {
+    if (btn) storageFailed(btn);
+    return;
+  }
   // A workshop can have several stars on one page (row + detail header).
   for (const b of document.querySelectorAll(`[data-star-ws="${CSS.escape(slug)}"]`)) setBtn(b, on);
   if (on) track('fav/star-workshop', slug);
   recordAndSync({ op: on ? 'add' : 'remove', kind: 'ws', slug });
   announce('workshop', slug, on);
+}
+
+/**
+ * Unstar by slug, for the archive shelf on /saved/.
+ *
+ * The shelf draws its own star inside a book cover and marks it [data-unstar],
+ * so the delegated [data-star-ws] listener below never sees it — deliberately,
+ * because both firing would toggle twice and leave the workshop saved. Routed
+ * through setWorkshopSaved rather than writing localStorage directly so the nav
+ * badge, the alerts outbox and the awt:favs-changed announcement all still
+ * happen; a second copy of that sequence is exactly what would drift.
+ */
+export function unstarWorkshop(slug) {
+  if (favWorkshops().includes(slug)) setWorkshopSaved(slug, null);
 }
 
 function togglePaper(btn) {

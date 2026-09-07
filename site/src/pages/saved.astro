@@ -3,6 +3,8 @@ import Base from '../components/Base.astro';
 import AlertsSignup from '../components/AlertsSignup.astro';
 import { conferences, topics as allTopics } from '../lib/data';
 import { ALERTS_API, href } from '../lib/site';
+// The archive shelf's own stylesheet, loaded the way Base.astro loads global.css.
+import '../styles/archive-shelf.css';
 
 // Conference id -> {name, color} so saved rows get the same badges as the
 // board. Tiny (~10 entries), embedded at build time.
@@ -48,9 +50,43 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
     </div>
   )}
 
+  {/* Two halves, one section: the board rows above are what can still be acted
+      on, and everything the site already calls Past goes to the shelf below.
+      The archived half is a subsection rather than a section of its own because
+      it is still the answer to "which workshops have I saved?" — it is only the
+      part of that answer that no longer needs a countdown. Ids follow the page's
+      savedX convention; the .awt-* classes are what archive-shelf.css styles and
+      must stay exactly as they are. */}
   <section aria-labelledby="savedWsHead">
     <h2 id="savedWsHead">Workshops <span class="muted count" id="savedWsCount"></span></h2>
     <div class="board" id="savedWsList"><p class="muted" id="savedWsStatus">Loading your saved workshops…</p></div>
+
+    <div class="awt-arc" id="savedArc">
+      <div class="awt-arc__head">
+        <h3 class="awt-arc__title" id="savedArcHead">Archived</h3>
+        <span class="awt-arc__count" id="savedArcCount"></span>
+        <div class="awt-arc__tools">
+          {/* Percent rather than a fraction so the step lands on whole numbers;
+              the script divides by 100 before writing --awt-scale. */}
+          <label class="saved-arc-size" for="savedArcSize">
+            <span class="muted small">Size</span>
+            <input id="savedArcSize" type="range" min="70" max="130" step="5" value="100" aria-label="Book size">
+          </label>
+          <input class="awt-find" id="savedArcFind" type="search" placeholder="Find a volume" autocomplete="off" aria-label="Find an archived workshop">
+          <div class="awt-seg" role="group" aria-label="View">
+            <button type="button" id="savedArcShelfBtn" aria-pressed="true">Shelf</button>
+            <button type="button" id="savedArcListBtn" aria-pressed="false">List</button>
+          </div>
+        </div>
+      </div>
+      {/* Outside the mount: the component owns that element's innerHTML and
+          rewrites it on every paint. */}
+      <div id="savedArcMount"></div>
+      <p class="saved-arc-try" id="savedArcTry" hidden>
+        <button type="button" class="btn-quiet" id="savedArcTryBtn">See it with a full shelf</button>
+        <span class="muted small" id="savedArcTryNote"></span>
+      </p>
+    </div>
   </section>
 
   <section aria-labelledby="savedPaperHead">
@@ -68,12 +104,16 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
       the clock — one implementation for the board, this list and the search
       results, instead of the compact twins this page used to carry. */}
   <script src="../scripts/board.js"></script>
+  {/* Assigns window.awtArchiveShelf — the same global bridge board.js uses
+      for awtBoardHydrate, and the reason it loads before the module below. */}
+  <script src="../scripts/archive-shelf.js"></script>
   <script type="application/json" id="awt-conf" set:html={JSON.stringify(confMap)} />
   <script type="application/json" id="awt-topics" set:html={JSON.stringify(topicMap)} />
 
   <script>
-    import { favWorkshops, favPapers } from '../scripts/favorites.js';
+    import { favWorkshops, favPapers, unstarWorkshop } from '../scripts/favorites.js';
     import { wsRowHtml } from '../scripts/ws-row.js';
+    import { isArchived, demoShelf } from '../scripts/archive-split.js';
 
     const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
     const CONF = JSON.parse(document.getElementById('awt-conf')!.textContent || '{}');
@@ -130,6 +170,196 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
         rowAttrs: `data-saved-ws="${esc(w.slug)}"`,
       });
 
+    /* ---------------- the archive shelf ---------------- */
+    // Everything the site already calls Past (isArchived — the same branch
+    // deriveStatusLabel takes server-side) leaves the board list and becomes a
+    // book spine. archive-shelf.js does NOT filter by status itself, whatever
+    // its integration brief says; the cut line is the page's.
+    let shelf: any = null;
+    let demoMode = false; // the shelf is showing the demo, not the reader's own
+    let activeCount = 0; // rows currently in #savedWsList
+    let arcList: any[] = []; // what the shelf is currently showing, to repaint on resize
+
+    /* ---- book size ----
+       Kept, unlike the Shelf/List choice, because it is a legibility setting
+       rather than a mode: someone who wants smaller books wants them smaller
+       every visit. Written to :root because archive-shelf.css computes its
+       geometry there; set on the shelf element it would resolve to nothing.
+       Applied before the first paint, so there is no jump from one size to
+       another and the component measures against the size it will keep. */
+    const SIZE_KEY = 'awt-shelf-size';
+    const SIZE_MIN = 70, SIZE_MAX = 130;
+    const readSize = () => {
+      try {
+        const n = Number(localStorage.getItem(SIZE_KEY));
+        return Number.isFinite(n) && n >= SIZE_MIN && n <= SIZE_MAX ? n : 100;
+      } catch {
+        return 100; // storage blocked (private mode): the default is fine
+      }
+    };
+    // --awt-cover-w is written back as real pixels rather than left to a calc()
+    // in the stylesheet: archive-shelf.js reads that one with parseFloat, and an
+    // unregistered custom property computes to a token stream, so `calc(126px *
+    // 1)` would parse as NaN and fall through to 0 — zero-width covers, books
+    // overlapping, and a row that no longer opens under the cursor. The base is
+    // read back from the sheet (with the inline value cleared first) so the
+    // phone breakpoint keeps deciding it, rather than a second copy here.
+    const applySize = (pct: number) => {
+      const root = document.documentElement;
+      root.style.setProperty('--awt-scale', String(pct / 100));
+      root.style.removeProperty('--awt-cover-w');
+      const base = parseFloat(getComputedStyle(root).getPropertyValue('--awt-cover-w')) || 126;
+      root.style.setProperty('--awt-cover-w', `${Math.round(base * (pct / 100))}px`);
+    };
+    applySize(readSize());
+    // Crossing the phone breakpoint changes that base, so the pixels have to be
+    // worked out again from whichever value the sheet now supplies.
+    let sizeTimer = 0;
+    addEventListener('resize', () => {
+      clearTimeout(sizeTimer);
+      sizeTimer = window.setTimeout(() => applySize(readSize()), 150);
+    });
+
+    function ensureShelf() {
+      if (shelf) return shelf;
+      shelf = (window as any).awtArchiveShelf({
+        mount: $('#savedArcMount'),
+        countEl: $('#savedArcCount'),
+        workshops: [],
+        conf: CONF,
+        base,
+        topicLabel: (id: string) => TOPIC[id] ?? id,
+        // The component drops the volume from its own data and repaints before
+        // this runs. In demo mode the volumes are nobody's, so the press must
+        // stop there and never reach storage.
+        onUnstar: (slug: string) => { if (!demoMode) unstarWorkshop(slug); },
+      });
+
+      const shelfBtn = $('#savedArcShelfBtn');
+      const listBtn = $('#savedArcListBtn');
+      const find = $('#savedArcFind') as HTMLInputElement;
+      const setView = (v: 'shelf' | 'list') => {
+        shelf.setView(v);
+        shelfBtn.setAttribute('aria-pressed', String(v === 'shelf'));
+        listBtn.setAttribute('aria-pressed', String(v === 'list'));
+        // The size slider only moves books; in a list of rows it would be a
+        // control that visibly does nothing.
+        $('#savedArc').setAttribute('data-view', v);
+        // setView repaints from scratch and takes the filter and the count
+        // label with it — the filter box would be left holding a query nothing
+        // on screen was narrowed by, and the demo would relabel itself as
+        // "16 volumes" of work the reader never saved.
+        if (find.value) shelf.filter(find.value);
+        markCount();
+      };
+      shelfBtn.addEventListener('click', () => setView('shelf'));
+      listBtn.addEventListener('click', () => setView('list'));
+      find.addEventListener('input', () => shelf.filter(find.value));
+
+      // Changing the size changes every book's width, and the component works
+      // out how far each row steps aside from measured widths — so a repaint
+      // is what makes the new size correct, not just smaller. Coalesced to one
+      // per frame because a dragged slider fires far faster than a re-measure
+      // of a long shelf can keep up with.
+      const size = $('#savedArcSize') as HTMLInputElement;
+      size.value = String(readSize());
+      let queued = false;
+      size.addEventListener('input', () => {
+        applySize(Number(size.value));
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(() => {
+          queued = false;
+          shelf.replace(arcList); // repaints, re-measures, and re-applies the filter
+          markCount();
+        });
+      });
+      // Only once the reader has settled on a size, not on every frame of the drag.
+      size.addEventListener('change', () => {
+        try {
+          localStorage.setItem(SIZE_KEY, size.value);
+        } catch {
+          /* storage blocked: the size still applies for this visit */
+        }
+      });
+      return shelf;
+    }
+
+    // replace() rewrites the count element every time it paints, so anything
+    // that repaints has to say again that a demo is a demo — otherwise
+    // nudging the size slider relabels the demo as "16 volumes" of saved work.
+    const markCount = () => {
+      if (demoMode) $('#savedArcCount').textContent = 'demo';
+    };
+
+    /* ---- whether the demo shows itself ----
+       An empty shelf opens the demo on its own: an optional button is a thing
+       almost nobody presses, and a shelf nobody has seen working is a shelf
+       nobody knows they want. Dismissing it is remembered for good, so it is
+       an offer made once rather than every visit. It can only ever appear over
+       an EMPTY archive — a reader with volumes of their own always sees those. */
+    const DEMO_KEY = 'awt-shelf-demo';
+    const demoHidden = () => {
+      try {
+        return localStorage.getItem(DEMO_KEY) === 'hidden';
+      } catch {
+        return false; // storage blocked: showing it is the friendlier default
+      }
+    };
+    const setDemoHidden = (hidden: boolean) => {
+      try {
+        if (hidden) localStorage.setItem(DEMO_KEY, 'hidden');
+        else localStorage.removeItem(DEMO_KEY);
+      } catch {
+        /* storage blocked: the choice holds for this visit only */
+      }
+    };
+
+    function paintArc(list: any[], { demo = false } = {}) {
+      demoMode = demo;
+      arcList = list;
+      ensureShelf().replace(list);
+      // Gates the search box and the view toggle: both are noise over an empty
+      // shelf, and both are the point of the demo.
+      $('#savedArc').toggleAttribute('data-filled', list.length > 0);
+      markCount();
+      $('#savedArcTry').hidden = list.length > 0 && !demo;
+      $('#savedArcTryBtn').textContent = demo ? 'Hide the demo' : 'Curious? Try a demo shelf';
+      // The hint is what tells someone the shelf is worth touching; which verb
+      // is right depends on the pointer, so both ship and CSS picks one.
+      $('#savedArcTryNote').innerHTML = demo
+        ? `<span class="hint-hover">Hover a book to open it.</span><span class="hint-tap">Drag a finger along the shelf to open the books.</span>
+           Real workshops, none of them yours — star <span class="star-demo">☆</span> anything on the
+           <a href="${base}/">deadline board</a> and your own shelf fills up as its deadlines pass.`
+        : '';
+      if (!demo && list.length === 0) openDemoIfWanted();
+    }
+
+    async function openDemoIfWanted() {
+      if (demoHidden()) return;
+      const all = await ensureWorkshops();
+      // The shelf can fill up while that request is in flight — an alerts sync
+      // landing a saved past workshop, say. Only ever take over an empty one.
+      if (!all || demoMode || arcList.length) return;
+      paintArc(demoShelf(all), { demo: true });
+    }
+
+    $('#savedArcTryBtn').addEventListener('click', async () => {
+      if (demoMode) {
+        setDemoHidden(true); // recorded first, or the repaint below reopens it
+        renderWorkshops();
+        return;
+      }
+      setDemoHidden(false);
+      const all = await ensureWorkshops();
+      if (!all) {
+        $('#savedArcTryNote').textContent = `Couldn't load the demo (${wsLoadErr}).`;
+        return;
+      }
+      paintArc(demoShelf(all), { demo: true });
+    });
+
+    /* ---------------- the saved list ---------------- */
     async function renderWorkshops() {
       const slugs = favWorkshops();
       $('#savedWsCount').textContent = slugs.length ? `(${slugs.length})` : '';
@@ -137,6 +367,8 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
         $('#savedWsList').innerHTML =
           `<div class="empty-state">No saved workshops yet — star <span class="star-demo">☆</span> any
            workshop on the <a href="${base}/">deadline board</a> and it'll wait here, sorted by deadline.</div>`;
+        activeCount = 0;
+        paintArc([]);
         return;
       }
       if (!(await ensureWorkshops())) {
@@ -147,19 +379,26 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
       }
       const wanted = new Set(slugs);
       const mine = allWorkshops!.filter((w) => wanted.has(w.slug));
-      mine.sort((a, b) => {
+      const active = mine.filter((w) => !isArchived(w));
+      const archived = mine.filter(isArchived);
+      active.sort((a, b) => {
         const [ga, ka] = sortKey(a), [gb, kb] = sortKey(b);
         return ga - gb || ka - kb || String(a.name).localeCompare(String(b.name));
       });
       const missing = slugs.length - mine.length; // slug removed/renamed upstream
+      activeCount = active.length;
       $('#savedWsList').innerHTML =
-        mine.map(wsRow).join('') +
+        (active.length
+          ? active.map(wsRow).join('')
+          : `<div class="empty-state">Nothing open right now — everything you've saved has closed and
+             is on the shelf below.</div>`) +
         (missing > 0
           ? `<p class="muted small">${missing} saved workshop${missing === 1 ? ' is' : 's are'} no longer in the dataset (renamed or removed).</p>`
           : '');
       // Local times, countdowns and the clock come from board.js, loaded on
       // this page for exactly that (its pager is a no-op here).
       (window as any).awtBoardHydrate?.($('#savedWsList'));
+      paintArc(archived);
     }
 
     /* ---------------- papers ---------------- */
@@ -295,10 +534,16 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
       if (type === 'sync') { renderWorkshops(); renderPapers(); return; }
       if (on) return; // additions can't happen on this page
       if (type === 'workshop') {
-        document.querySelector(`[data-saved-ws="${CSS.escape(id)}"]`)?.remove();
+        const row = document.querySelector(`[data-saved-ws="${CSS.escape(id)}"]`);
+        if (row) { row.remove(); activeCount--; }
         const n = favWorkshops().length;
         $('#savedWsCount').textContent = n ? `(${n})` : '';
-        if (n === 0) renderWorkshops();
+        // A shelf volume is already gone by the time this fires — the component
+        // removes it before calling back — so re-render only when the copy has
+        // to change: the active half just emptied, or nothing is saved at all.
+        // Anything more would reset the view and the search box under a reader
+        // who is mid-browse on the shelf.
+        if (n === 0 || (row && activeCount === 0)) renderWorkshops();
       } else if (type === 'paper') {
         const li = document.querySelector(`li[data-saved-paper="${CSS.escape(id)}"]`);
         const group = li?.closest('.saved-paper-group');
@@ -347,5 +592,32 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
        padding — ~3.6rem of nothing where the block used to be. Close it up. */
     #savedAlerts.is-linked { display: none; }
     #savedAlerts.is-linked + section h2 { margin-top: 0.9rem; }
+
+    /* The archive is a subsection of Workshops, so it needs air above it but
+       not the full section gap — that would read as a third top-level heading. */
+    #savedArc { margin-top: 1.9rem; }
+    /* Nothing to search and nothing to switch between until the shelf has
+       volumes on it (the reader's own, or the demo). */
+    #savedArc:not([data-filled]) .awt-arc__tools { display: none; }
+    .saved-arc-try { margin: 0.7rem 0 0; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: baseline; }
+    .saved-arc-try .small { flex: 1 1 18rem; }
+    /* Which half of the hint applies is a property of the pointer, not the
+       screen: a laptop in tablet mode and a desktop both answer hover. */
+    .saved-arc-try .hint-tap { display: none; }
+    @media (hover: none) {
+      .saved-arc-try .hint-hover { display: none; }
+      .saved-arc-try .hint-tap { display: inline; }
+    }
+
+    /* Book size. The slider writes --awt-scale to :root, which is where
+       archive-shelf.css computes every geometry token — set on the shelf
+       instead it would resolve to nothing there and kill the declarations. */
+    .saved-arc-size { display: flex; align-items: center; gap: 0.4rem; }
+    #savedArc[data-view='list'] .saved-arc-size { display: none; }
+    .saved-arc-size input { width: 5.5rem; accent-color: var(--accent); cursor: pointer; }
+    /* Below this width archive-shelf.css uses its own compact phone geometry,
+       which --awt-scale deliberately does not touch — so the control would be
+       a slider that does nothing. */
+    @media (max-width: 640px) { .saved-arc-size { display: none; } }
   </style>
 </Base>

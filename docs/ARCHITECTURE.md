@@ -715,7 +715,7 @@ automatically".
 
 ## Two-stage venues (abstract registration, then paper)
 
-About 3% of OpenReview venues (6 of 229 sampled) gate paper submission behind an
+About 3% of OpenReview venues (6 of 229 demo) gate paper submission behind an
 earlier **mandatory abstract registration**. Their group `date` line carries both
 components, e.g. `Abstract Registration: Aug 20 …, Submission Deadline: Aug 29 …`,
 and `parseGroupDeadline()` deliberately anchors on *Submission Deadline* so the
@@ -831,6 +831,80 @@ to its workshop page; an exact PDF link sits beside it, derived from the
 OpenReview forum id and suppressed for the ~8% of papers with no PDF via
 `/api/papers-without-pdf.json`. GoatCounter star events are the only signal
 collected, to gauge whether the feature ever justifies real accounts.
+
+### The saved list is cut in two
+
+A saved list only ever grew, so a workshop starred in January was still sitting
+there in December — greyed out, between the reader and the three open calls they
+came for. The **Workshops** section now splits: what can still be acted on stays
+a board row, and everything concluded moves to an **archive shelf** below it,
+where each workshop is a book spine on a plank and hovering one opens it as a
+flat cover. Same section, because it is all still the answer to "what have I
+saved?" — only the half that no longer needs a countdown.
+
+The cut line is `isArchived` in `site/src/scripts/archive-split.js`:
+`past || deadline_passed`, which is exactly the branch `deriveStatusLabel`
+(`lib/workshops.mjs`) takes to return **Past**. Stated once and asserted against
+the whole corpus by `scripts/saved_archive_test.mjs`, because the failure worth
+preventing is a workshop shelved while its row still reads *Open call*.
+`deadline_passed` is included deliberately: a closed deadline is what produced
+the pile-up, and the board already calls that edition Past everywhere else.
+
+Book size is a slider in the archive's header, and unlike the Shelf/List choice
+it is remembered (`awt-shelf-size`) — a legibility setting, not a mode. It writes
+`--awt-scale` to `:root`, which is where `archive-shelf.css` computes its
+geometry; set on the shelf element instead it would resolve to nothing there and
+silently invalidate the declarations that read it. Book height, spine thickness,
+the group gaps and `--awt-u` (the cover's typographic unit) all move with it, so
+a cover holds the same text at every size. `--awt-cover-w` is the exception: the
+renderer reads that one back with `parseFloat`, and an unregistered custom
+property computes to a token stream rather than a length, so a `calc()` there
+parses as `NaN`, falls through the `|| 0` behind it, and collapses every cover to
+zero width. The page multiplies that one in JS and writes back real pixels. The
+slider is desktop-only; the phone breakpoint has its own compact geometry that
+`--awt-scale` deliberately leaves alone.
+
+The shelf itself (`site/src/scripts/archive-shelf.js`, `site/src/styles/archive-shelf.css`)
+is a self-contained component that renders into a mount element and exposes
+`render/setView/filter/replace`. It does **not** filter by status — the page
+hands it a list, which is why the cut line above is the page's to own. Its star
+is `[data-unstar]` rather than `[data-star-ws]`, so the delegated listener in
+`favorites.js` never sees it; it calls back instead, and the page routes that to
+the exported `unstarWorkshop(slug)` so the nav badge, the alerts outbox and the
+`awt:favs-changed` announcement all still happen. Two of its rules are load-bearing
+and documented at the component: no `z-index` or `opacity` anywhere inside a
+spine (either one makes iOS drop the spine label), and `clip-path` rather than
+`overflow` on the rack.
+
+Neither view shows a closing date. A deadline that has already gone is the one
+fact about an archived workshop nobody can act on, and on a cover it cost two of
+about six available lines — which is what forced the location line into the
+squeeze that used to slice it. With the date gone the location line moves below
+the rule, the title gets its fourth line back, and the phone breakpoint shows the
+location line again instead of trading it away.
+
+An empty shelf **opens a demo by itself** — an optional button is a thing almost
+nobody presses, and a shelf nobody has seen working is a shelf nobody knows they
+want. Dismissing it is remembered for good (`awt-shelf-demo`), so it is an offer
+made once rather than on every visit, and the invitation stays for anyone who
+wants it back. It can only ever appear over an empty archive: one real volume and
+the reader's own shelf takes over permanently, whatever they chose before. The
+price is that a reader who has saved nothing now fetches `/api/workshops.json`
+(89 KB gzipped) on a page that used to fetch nothing; it loads after first paint,
+and the demo takes over an empty shelf only if the shelf is still empty when the
+request lands.
+
+The demo is `demoShelf()`, a deterministic spread of
+real archived workshops taken from `/api/workshops.json`, drawn from several
+conference-years so the break captions still show and in deliberately uneven
+shares, because equal-sized groups read as a generated grid rather than a shelf.
+It is capped at 16 volumes: enough to fill about 60% of one desktop plank and
+never wrap to a second row, so it reads as an invitation rather than a backlog.
+A reader's own shelf is never capped. It exists so someone who has
+starred nothing can see what the shelf is for before they have earned one; a
+star pressed on it is inert and never reaches storage. The demo is computed
+from the live API rather than written down, because a hand-authored demo list
+would be a data artifact no pipeline maintains.
 
 Stars appear on every workshop list — the board, search and filter results,
 conference listings, and each workshop page. They are always rendered rather than

@@ -64,6 +64,8 @@ jobs:
         run: node scripts/events_merge_test.mjs
       - name: Check the saved list renders the same row as the board
         run: node scripts/row_parity_test.mjs
+      - name: Check the saved list's archive split agrees with the status ladder
+        run: node scripts/saved_archive_test.mjs
       - name: Test Markdown export formatting
         run: node scripts/markdown_test.mjs
       - name: Test imminent-deadline re-check selection (band, freeze-on-touch)

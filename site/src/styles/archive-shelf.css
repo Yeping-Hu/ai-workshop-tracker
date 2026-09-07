@@ -1,0 +1,639 @@
+/* ===========================================================================
+   Archive shelf — component styles.  Companion to archive-shelf.js.
+
+   VENDORED, AND CHANGED SINCE — see that file's header for the provenance and
+   for why --awt-cover-w must stay a plain length. Changed here:
+     - --awt-scale (the reader's size preference, written to :root by /saved/)
+       and --awt-u (the cover's typographic unit). Desktop geometry is smaller
+       than the original and scales with both, so a cover holds the same text
+       at every size.
+     - .awt-cover__where never shrinks and now sits below the rule. It was the
+       only flex item able to give, so it absorbed every shortfall and rendered
+       as a band of letters cut through the middle.
+     - .awt-cover__when and .awt-list__year are gone with the closing date; the
+       phone breakpoint shows the location line again instead of trading it for
+       the date's two lines.
+     - Break gaps and captions scale too, or a two-volume group ends up
+       narrower than its own caption.
+
+   Defines ONLY --awt-* tokens and .awt-* rules. It CONSUMES these from the
+   site's own stylesheet and does not declare them:
+
+     --paper --surface --ink --muted --line
+     --accent --accent-ink --accent-soft --shadow
+     --font-display --font-body --font-mono
+
+   Every value that differs between light and dark is a token in the blocks at
+   the top, so no rule below needs a [data-theme] selector. Dark values are
+   declared under BOTH :root[data-theme=dark] and prefers-color-scheme, because
+   a reader whose OS is dark and who has never touched the site's theme toggle
+   has no attribute set at all.
+   =========================================================================== */
+
+/* ============================================================ 1. TOKENS  */
+
+/* Theming mirrors the three-part pattern the rest of the site already uses:
+   light values on :root, dark values under BOTH an explicit [data-theme=dark]
+   and prefers-color-scheme (unless the reader has forced light). Every value
+   that differs between themes is a token in these blocks, so no rule further
+   down needs a [data-theme] selector. That matters: the shelf used to key its
+   dark colours off [data-theme=dark] alone, so on a phone whose OS is dark and
+   which had never touched the site's theme toggle -- no attribute set, page
+   themed by the media query -- the shelf kept its light colours while the page
+   around it went dark, which is what made the list unreadable. */
+
+/* A bound spine is a cylinder, not a plane: it turns away into the joint at
+   both edges and carries a highlight where it faces the light. Generic black
+   and white alphas so one gradient works on any dyed cloth. */
+:root{
+  /* generic alphas, not var(--spine-lip): this is declared on :root, so a
+     per-book variable would resolve HERE, come back undefined and invalidate
+     the whole background */
+  --awt-curve:linear-gradient(to right,
+    #00000059 0, #00000038 4%, #00000012 12%,
+    #ffffff2e 25%, #ffffff3d 34%, #ffffff14 49%,
+    #00000012 63%, #00000029 80%, #00000047 93%, #00000066 100%);
+}
+/* How fast a volume swings open. The easing matters as much as the duration:
+   a curve that does most of its travel in the first third leaves the cover
+   open before you register it starting. */
+:root{ --awt-open-t:.62s; --awt-open-e:cubic-bezier(.33,.7,.24,1); --awt-open-d:0s }
+
+html{ color-scheme:light dark; }
+:root[data-theme=light]{ color-scheme:light; }
+:root[data-theme=dark]{ color-scheme:dark; }
+
+:root{
+  /* --- new: shelf geometry, the same in both themes ---------------------- */
+  /* The reader's book-size preference, written to :root by /saved/'s slider
+     and remembered there. It lives at :root, not on the shelf, because every
+     token below is computed at :root — a custom property read there but set on
+     a descendant resolves to nothing and silently invalidates the whole
+     declaration (see "Things not to change" #3 in the component's brief). */
+  --awt-scale:1;
+  /* The cover's typographic unit. Text and spacing inside a cover are written
+     as multiples of this rather than in rem, so they shrink with the book:
+     hold the type still while the box shrinks and the location line is simply
+     squeezed out of existence, which is what used to happen. Overridden per
+     breakpoint below rather than derived from --awt-book-h, because a phone
+     needs relatively larger text than pure proportion would give it. */
+  --awt-u:1rem;
+  --awt-book-h:210px;       /* the row pitch. every shelf item is exactly this tall */
+  --awt-cover-w:144px;
+  --awt-plank-h:12px;
+  --awt-tab:24px;           /* how far a break's tab rises above the books */
+  --awt-air:34px;           /* clearance above the next row; must exceed --awt-tab */
+  --awt-case-pad:22px;      /* alcove edge  ->  end of the plank */
+  --awt-board-pad:8px;      /* end of the plank  ->  first and last volume */
+  --awt-case-inset:0;       /* the case itself spans the full page width */
+  --awt-open-deg:-90deg;    /* all the way flat, so the cover faces you square on */
+  --awt-open-pad:7px;       /* air either side of a flat cover */
+  --awt-spine-max:38px;     /* the thickest volume; JS scales each book off this */
+  --awt-spine-min:calc(var(--awt-spine-max) * .63);
+  /* How far the rest of the row steps aside. A flat cover lands on the book's
+     own left edge, so the row only needs the difference in width, plus the pad
+     twice over to keep the air symmetric. JS overwrites this per book with the
+     exact figure; the calc is the no-JS fallback. */
+  /* How the extra width a flat cover needs is split between the volumes after
+     it (--awt-push, to the right) and the ones before it (--awt-pull, to the
+     left), and how far the cover itself travels left of its own slot
+     (--awt-l). JS writes all three per book; these are the no-JS fallback. */
+  --awt-push:calc(var(--awt-cover-w) - 28px + var(--awt-open-pad) * 2);
+  --awt-pull:0px;
+  --awt-l:0px;
+  /* No longer a whole cover's worth of reserved swing room: the shelf clips at
+     its side panels, so displaced volumes slide behind them instead of needing
+     an empty strip kept free on every row. This is just clearance so books
+     don't butt against the panel. */
+
+  /* --- new: shelf materials, light --------------------------------------- */
+  --awt-ply:#ded9c8;        /* plank face   */
+  --awt-ply-top:#eae6d8;    /* lit top edge */
+  --awt-ply-lip:#c2bba4;    /* front lip    */
+  --awt-alcove:#e9ebe3;     /* recess behind the books */
+  --awt-gilt:#9c7d3c;       /* proceedings marker */
+  --awt-shelf-shade:inset 0 9px 15px -11px #161a1633;
+  --awt-spine-shade:1px 0 3px -1px #161a1620;
+  --awt-cover-shade:0 16px 32px -14px #161a1666;
+
+  /* --- cloth binding, dye at the 50% rung ------------------------------ */
+  --awt-k:.63;                                   /* the dye dial, 0..1 */
+  --awt-linen:#eae6da; --awt-linen-dark:#3c4036; /* undyed cloth */
+  --awt-ink-paper:#1b1f17; --awt-ink-cloth:#f4f2e6;   /* stamping A */
+  --awt-d-paper:#1b1f17;   --awt-d-cloth:#c9a054;     /* stamping D */
+  --awt-board:#e6e0d0;     --awt-board-ink:#22261d;   /* pressboard card */
+  /* The hinge groove: a hardback's cover is scored a few mm from the spine so
+     it can flex. Two lines do it — the recess, then the raised edge beside it
+     catching the light. */
+  --awt-groove-in:#161a1626; --awt-groove-lip:#ffffff87;
+  --awt-brk-slate:#3a3f34; --awt-brk-foil:#c9a054;    /* dark divider + foil */
+  --awt-plate:#f6f3e8; --awt-plate-ink:#22261d;       /* shelf-edge label */
+
+  /* the book break's card stock */
+  --awt-brk-base:#f2efe4;   --awt-brk-k:27%;
+  --awt-brk-ink:#23271e;    --awt-brk-ink-k:64%;
+
+  /* an everyday paper-bound volume: a pale tint of the conference colour... */
+  --awt-paper-base:#faf8f0; --awt-paper-sat:1;
+  --awt-paper-ink:#1b1f17;  --awt-paper-ink-k:50%;
+  --awt-paper-rule:#7d8175; --awt-paper-rule-k:34%;
+  --awt-paper-lip:#161a1618;
+
+  /* ...and roughly one in five bound in dark cloth, for the rhythm */
+  --awt-cloth-base:#24281f; --awt-cloth-sat:.8;
+  --awt-cloth-ink:#f4f2e6;  --awt-cloth-ink-k:20%;
+  --awt-cloth-rule:#b9bcae; --awt-cloth-rule-k:24%;
+  --awt-cloth-lip:#0000002e;
+
+  /* the conference name, on covers and in list rows */
+  --awt-conf-k:66%;
+}
+
+:root[data-theme=dark]{
+  --paper:#121511; --surface:#1a1e19; --ink:#eceee8; --muted:#9aa294; --line:#2a2f28;
+  --accent:#6fbf9b; --accent-ink:#0d1410; --accent-soft:#1e3329; --shadow:none;
+
+  --awt-ply:#3a4034; --awt-ply-top:#484e3f; --awt-ply-lip:#262b21;
+  --awt-alcove:#191d15; --awt-gilt:#c3a054;
+  --awt-shelf-shade:inset 0 9px 18px -11px #0008;
+  --awt-spine-shade:1px 0 3px -1px #0007;
+  --awt-cover-shade:0 16px 32px -12px #000a;
+
+  --awt-linen:#2b2f27; --awt-linen-dark:#e2e0d3;
+  --awt-ink-paper:#e6e8dc; --awt-ink-cloth:#1c2016;
+  --awt-d-paper:#d0a95e;   --awt-d-cloth:#1c2016;
+  --awt-board:#3f443a;     --awt-board-ink:#e9e6d9;
+  --awt-groove-in:#0000004f; --awt-groove-lip:#ffffff2b;
+  --awt-brk-slate:#e0ddd0; --awt-brk-foil:#6f5320;
+  --awt-plate:#33382f; --awt-plate-ink:#eae6da;
+  --awt-brk-base:#383d33;   --awt-brk-k:34%;
+  --awt-brk-ink:#eef0e4;    --awt-brk-ink-k:26%;
+
+  /* in the dark the roles swap: the everyday volume is the dark one */
+  --awt-paper-base:#262b21; --awt-paper-sat:.95;
+  --awt-paper-ink:#e6e8dc;  --awt-paper-ink-k:32%;
+  --awt-paper-rule:#888d80; --awt-paper-rule-k:26%;
+  --awt-paper-lip:#00000038;
+
+  --awt-cloth-base:#e4e2d5; --awt-cloth-sat:1.1;
+  --awt-cloth-ink:#1c2016;  --awt-cloth-ink-k:52%;
+  --awt-cloth-rule:#6e7266; --awt-cloth-rule-k:34%;
+  --awt-cloth-lip:#161a1626;
+
+  --awt-conf-k:48%;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme=light]){
+    --paper:#121511; --surface:#1a1e19; --ink:#eceee8; --muted:#9aa294; --line:#2a2f28;
+    --accent:#6fbf9b; --accent-ink:#0d1410; --accent-soft:#1e3329; --shadow:none;
+
+    --awt-ply:#3a4034; --awt-ply-top:#484e3f; --awt-ply-lip:#262b21;
+    --awt-alcove:#191d15; --awt-gilt:#c3a054;
+    --awt-shelf-shade:inset 0 9px 18px -11px #0008;
+    --awt-spine-shade:1px 0 3px -1px #0007;
+    --awt-cover-shade:0 16px 32px -12px #000a;
+
+    --awt-linen:#2b2f27; --awt-linen-dark:#e2e0d3;
+  --awt-ink-paper:#e6e8dc; --awt-ink-cloth:#1c2016;
+  --awt-d-paper:#d0a95e;   --awt-d-cloth:#1c2016;
+  --awt-board:#3f443a;     --awt-board-ink:#e9e6d9;
+  --awt-groove-in:#00000040; --awt-groove-lip:#ffffff1f;
+  --awt-brk-slate:#e0ddd0; --awt-brk-foil:#6f5320;
+  --awt-plate:#33382f; --awt-plate-ink:#eae6da;
+  --awt-brk-base:#383d33;   --awt-brk-k:34%;
+    --awt-brk-ink:#eef0e4;    --awt-brk-ink-k:26%;
+
+    /* in the dark the roles swap: the everyday volume is the dark one */
+    --awt-paper-base:#262b21; --awt-paper-sat:.95;
+    --awt-paper-ink:#e6e8dc;  --awt-paper-ink-k:32%;
+    --awt-paper-rule:#888d80; --awt-paper-rule-k:26%;
+    --awt-paper-lip:#00000038;
+
+    --awt-cloth-base:#e4e2d5; --awt-cloth-sat:1.1;
+    --awt-cloth-ink:#1c2016;  --awt-cloth-ink-k:52%;
+    --awt-cloth-rule:#6e7266; --awt-cloth-rule-k:34%;
+    --awt-cloth-lip:#161a1626;
+
+    --awt-conf-k:48%;
+  }
+}
+
+
+/* ======================================================== 2. SHELF CSS  */
+
+/* Desktop sizing, and the only place the reader's size slider has any effect.
+   A shelf is only ever cramped on a big screen — the phone breakpoint at the
+   bottom of this file already picks a compact geometry of its own, and further
+   shrinking that would help nobody, so /saved/ hides the slider below 641px.
+   Book height, cover width, spine thickness and --awt-u move together, so a
+   cover holds the same amount of text at every size the slider can reach. */
+@media (min-width:641px){
+  :root{
+    --awt-book-h:calc(184px * var(--awt-scale));
+    --awt-spine-max:calc(33px * var(--awt-scale));
+    --awt-u:calc(.876rem * var(--awt-scale));
+    /* NOT scaled here, and it must stay a plain length. The renderer reads this
+       one back with parseFloat(getPropertyValue('--awt-cover-w')) to work out
+       how far a row steps aside for an open cover, and an unregistered custom
+       property computes to a token stream, not a resolved length: parseFloat
+       sees "calc(126px * 1)", returns NaN, and the `|| 0` behind it turns every
+       cover into zero width — books overlap and a hovered row stops opening.
+       /saved/ therefore multiplies this one in JS and writes back real pixels. */
+    --awt-cover-w:126px;
+  }
+}
+
+/* ---- header row -------------------------------------------------------- */
+.awt-arc__head{
+  display:flex; align-items:baseline; flex-wrap:wrap; gap:.5rem 1rem;
+  margin:0 0 .9rem;
+}
+.awt-arc__title{
+  font:600 1.32rem/1.2 var(--font-display); margin:0; color:var(--ink);
+  letter-spacing:.005em;
+}
+.awt-arc__count{ font:400 .95rem/1 var(--font-mono); color:var(--muted); }
+.awt-arc__tools{ display:flex; gap:.5rem; margin-left:auto; align-items:center; }
+
+.awt-seg{ display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+.awt-seg button{
+  font:500 .82rem/1 var(--font-body); color:var(--muted);
+  background:var(--surface); border:0; padding:.44rem .74rem; cursor:pointer;
+}
+.awt-seg button+button{ border-left:1px solid var(--line); }
+.awt-seg button[aria-pressed=true]{ background:var(--accent-soft); color:var(--accent); }
+.awt-seg button:hover{ color:var(--ink); }
+
+.awt-find{
+  font:400 .84rem/1 var(--font-body); color:var(--ink);
+  background:var(--surface); border:1px solid var(--line); border-radius:8px;
+  padding:.44rem .6rem; width:11rem; min-width:0;
+}
+.awt-find::placeholder{ color:var(--muted); }
+.awt-find:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+
+/* ---- the alcove -------------------------------------------------------- */
+.awt-shelf{
+  position:relative;
+  /* No long-press link previews or "open this page?" prompts anywhere on the
+     shelf. Browsing is not choosing; the cover's Open link is the only way
+     through to a workshop page. */
+  -webkit-touch-callout:none;
+  margin-inline:var(--awt-case-inset);
+  background:var(--awt-alcove);
+  border:var(--awt-case-edge, 1px solid var(--line));
+  border-radius:10px;
+  padding:calc(var(--awt-air) + 5px) var(--awt-case-pad) 15px;
+  box-shadow:var(--awt-shelf-shade);
+  /* A volume shoved along a real shelf disappears behind the side panel rather
+     than off into space. Clipping here is what buys back the empty strip. */
+  overflow:clip;
+}
+/* No side panels. Volumes displaced along a row still slide out of sight —
+   overflow:clip does that — but now they disappear behind the frame's own
+   edge rather than behind a drawn panel. */
+
+/* One wrapping row of items; the planks are painted underneath by a gradient
+   whose period is exactly the row height, so this survives any viewport. */
+.awt-shelf__rack{
+  --awt-row:calc(var(--awt-book-h) + var(--awt-plank-h) + var(--awt-air));
+  display:flex; flex-wrap:wrap; align-items:flex-end; align-content:flex-start;
+  gap:calc(var(--awt-plank-h) + var(--awt-air)) 1px;
+  list-style:none; margin:0;
+  /* The plank stops short of the alcove on both sides: it is the rack's own
+     background, so it now spans only the rack rather than being stretched out
+     under the frame padding with negative margins. */
+  padding:0 var(--awt-board-pad) var(--awt-plank-h);
+  border-radius:2px;
+  /* Clip at the ends of the plank so a displaced volume vanishes where the
+     board stops, while leaving the vertical axis open for the break captions
+     that sit in the air above the FIRST shelf — the only ones outside this
+     box. overflow-x:clip with overflow-y:visible expresses that, but WebKit
+     handles mixed-axis overflow poorly and was cutting those captions off (and
+     turning the rack into a scroll container, which fought the drag handling).
+     A clip-path says the same thing and is solid everywhere. */
+  clip-path:polygon(0 -9999px, 100% -9999px, 100% 9999px, 0 9999px);
+  /* hand horizontal drags to us for browsing; vertical still scrolls the page */
+  touch-action:pan-y;
+  background:repeating-linear-gradient(to bottom,
+    transparent 0 var(--awt-book-h),
+    var(--awt-ply-top)  var(--awt-book-h)                        calc(var(--awt-book-h) + 2px),
+    var(--awt-ply)      calc(var(--awt-book-h) + 2px)            calc(var(--awt-book-h) + var(--awt-plank-h) - 2px),
+    var(--awt-ply-lip)  calc(var(--awt-book-h) + var(--awt-plank-h) - 2px) calc(var(--awt-book-h) + var(--awt-plank-h)),
+    transparent         calc(var(--awt-book-h) + var(--awt-plank-h)) var(--awt-row));
+}
+
+.awt-item{
+  position:relative; flex:0 0 auto; height:var(--awt-book-h); z-index:1;
+  transition:transform var(--awt-open-t) var(--awt-open-e);
+}
+
+/* ---- book breaks (one per conference-year) ----------------------------- */
+/* ---- book break: a gap, a colour dot and a caption in the air ---------
+   No card in the row at all. The gap does the separating, the dot marks the
+   boundary and the name is set horizontally, so it can be read without
+   tilting your head — which every card version required. */
+.awt-brk{
+  /* The gap scales with the books, or a two-volume group at a small size ends
+     up narrower than its own caption and the next caption lands on top of it. */
+  width:0; margin:0 calc(.8125*var(--awt-u));
+  -webkit-user-select:none; user-select:none;
+}
+.awt-brk::before{                       /* the dot */
+  content:""; position:absolute; left:-3px; width:7px; height:7px;
+  top:calc(var(--awt-tab) * -1 + 5px); border-radius:2px; z-index:5;
+  background:var(--conf);
+}
+.awt-brk::after{                        /* a hairline down the gap */
+  content:""; position:absolute; left:0; top:0; bottom:0; width:1px; z-index:1;
+  background:color-mix(in srgb, var(--conf) 26%, #0000);
+}
+.awt-brk__label{
+  position:absolute; left:9px; top:calc(var(--awt-tab) * -1 + 2px); z-index:5;
+  white-space:nowrap;
+  font:600 calc(.6*var(--awt-u))/1 var(--font-body); letter-spacing:.05em;
+  color:color-mix(in oklab, var(--conf) 34%, var(--ink));
+}
+
+
+/* ---- a book ------------------------------------------------------------ */
+.awt-book{
+  /* --wf is the per-book fraction; the maximum is a token, so phones get a
+     whole shelf of thinner volumes without JS knowing the breakpoint. */
+  --w:calc(var(--awt-spine-max) * var(--wf));
+  width:var(--w);
+  perspective:820px;
+  perspective-origin:24% 44%;
+  /* Cloth binding. --awt-k dials the dye from undyed cloth (0) to full
+     colour (1); the cloth underneath is interpolated at the same rate so the
+     whole binding moves together rather than colour sitting on grey. */
+  --spine-bg:color-mix(in oklab, var(--conf) calc(var(--sat) * var(--awt-k) * 1%),
+    color-mix(in oklab, var(--awt-paper-base) calc(var(--awt-k) * 100%), var(--awt-linen)));
+  --spine-rule:color-mix(in oklab, var(--conf) var(--awt-paper-rule-k), var(--awt-paper-rule));
+  --spine-lip:var(--awt-paper-lip);
+}
+/* roughly one in five is bound the other way round — the rhythm real shelves have */
+.awt-book[data-cloth]{
+  --spine-bg:color-mix(in oklab, var(--conf) calc(var(--sat) * var(--awt-k) * .8%),
+    color-mix(in oklab, var(--awt-cloth-base) calc(var(--awt-k) * 100%), var(--awt-linen-dark)));
+  --spine-rule:color-mix(in oklab, var(--conf) var(--awt-cloth-rule-k), var(--awt-cloth-rule));
+  --spine-lip:var(--awt-cloth-lip);
+}
+
+/* Stamping. The ink follows the BINDING, never the theme: a pale binding
+   always takes dark type and a dark binding light type, and the two swap
+   roles between themes. */
+.awt-book         { --spine-fg:var(--awt-ink-paper) }
+.awt-book[data-cloth]{ --spine-fg:var(--awt-ink-cloth) }
+
+/* --hf shortens the volume; it still rests on the plank, so the row pitch holds.
+   A fraction rather than a px height, so it rescales with --awt-book-h. */
+.awt-book__body{
+  position:absolute; left:0; right:0; bottom:0;
+  height:calc(var(--awt-book-h) * var(--hf));
+  transform-style:preserve-3d; transform-origin:left center;
+  transition:transform var(--awt-open-t) var(--awt-open-e);
+}
+
+.awt-face{ position:absolute; top:0; height:100%; }
+
+/* Spine — the only face you see at rest. A button, not a link: it reveals the
+   cover and nothing else, so there is no href for a browser to offer to open. */
+.awt-face--spine{
+  left:0; right:0;
+  display:block; overflow:hidden; cursor:pointer;
+  margin:0; padding:0; border:0; -webkit-appearance:none; appearance:none;
+  font:inherit; color:inherit; text-align:inherit;
+  -webkit-user-select:none; user-select:none;
+  border-radius:1px 2px 2px 1px;
+  background:var(--awt-curve), var(--spine-bg);
+  box-shadow:var(--awt-spine-shade);
+}
+/* Woven bookcloth: the irregularity carries it, the warp and weft only whisper.
+   Drawn as ::before, not ::after, because ::before paints ahead of the
+   element's own content — so it lies under the stamping without anything
+   needing a z-index. That matters more than it sounds: every z-index or
+   opacity here becomes a stacking context inside a preserve-3d subtree, and
+   iOS then fails to rasterise the text on those layers. The spine labels were
+   painting once, on the repaint an open/close forces, and vanishing again. */
+.awt-face--spine::before{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.15' numOctaves='4'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='72' height='72' filter='url(%23n)' opacity='.3'/%3E%3C/svg%3E"),
+    repeating-linear-gradient(0deg,  #0000 0 2px, #00000008 2px 3px),
+    repeating-linear-gradient(90deg, #0000 0 2px, #ffffff08 2px 3px);
+  background-size:72px 72px, auto, auto;
+}
+
+.awt-spine__title{
+  position:absolute; inset:15px 0 17px; overflow:hidden;
+  writing-mode:vertical-rl; transform:rotate(180deg);
+  /* Centred with flexbox rather than by setting line-height to the spine's
+     width: that made the label's placement depend on a calc() resolving inside
+     a custom property, and the ellipsis depend on WebKit measuring a vertical
+     writing mode correctly. Both are places it can silently render nothing. */
+  display:flex; align-items:center; justify-content:center;
+  font:500 .675rem/1 var(--font-display);
+  letter-spacing:.015em; color:var(--spine-fg);
+}
+.awt-spine__title > span{
+  display:block; max-height:100%;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+/* debossed bands, head and tail */
+/* The alpha lives in the colour rather than in an opacity property: opacity
+   would make each of these a composited layer inside the 3D subtree, 82 of
+   them across a shelf, for a 1px rule. */
+.awt-spine__band{
+  position:absolute; left:2px; right:2px; height:1px;
+  background:color-mix(in srgb, var(--spine-rule) 42%, transparent);
+}
+.awt-spine__band--head{ top:8px; }
+.awt-spine__band--tail{ bottom:11px; }
+/* gilt tick = proceedings published */
+.awt-spine__gilt{
+  position:absolute; left:3px; right:3px; bottom:4px; height:3px; border-radius:1px;
+  background:linear-gradient(to right,#0000,var(--awt-gilt) 30%,var(--awt-gilt) 70%,#0000);
+}
+
+/* cover — hinged at the spine's right edge, folded back into the shelf */
+.awt-face--cover{
+  left:100%; width:var(--awt-cover-w);
+  transform-origin:left center; transform:rotateY(90deg);
+  background:var(--surface);
+  border-radius:0 4px 4px 0;
+  box-shadow:0 0 0 1px var(--line), var(--awt-cover-shade);
+  display:flex; flex-direction:column;
+  padding:calc(.8125*var(--awt-u)) calc(.875*var(--awt-u)) calc(.75*var(--awt-u)) calc(1.4375*var(--awt-u));
+  /* hidden until open: keeps the cover's links out of the tab order */
+  visibility:hidden;
+}
+.awt-face--cover::before{           /* colour wrapping round from the spine */
+  content:""; position:absolute; left:0; top:0; bottom:0; width:5px;
+  background:var(--spine-bg); border-right:1px solid #161a1612;
+}
+
+.awt-face--cover{
+  background-repeat:no-repeat; background-size:100% 100%;
+  background-image:linear-gradient(90deg,
+    #0000 0 8px,
+    var(--awt-groove-in) 10px, var(--awt-groove-in) 11px,
+    var(--awt-groove-lip) 12px, #0000 14px);
+}
+
+.awt-cover__conf{
+  font:600 calc(.655*var(--awt-u))/1 var(--font-body); letter-spacing:.03em;
+  color:color-mix(in oklab, var(--conf) var(--awt-conf-k), var(--ink)); margin:0 0 calc(.42*var(--awt-u));
+}
+.awt-cover__title{
+  font:600 calc(.845*var(--awt-u))/1.3 var(--font-display); color:var(--ink); margin:0;
+  /* Four lines. It was cut to three while a two-line closing date shared the
+     cover: the content filled the height to within a pixel, and the only flex
+     item able to give was the location line, which was squeezed to a sliver
+     and rendered as a band of cut-off letters. With no date on the cover the
+     fourth line fits again, and a long workshop name needs it. */
+  display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical;
+  /* Fixed, not shrinkable: given room to shrink it would stop at a fraction
+     of a line and slice the last one in half. */
+  overflow:hidden; max-height:calc(1.3em * 4); flex:0 0 auto;
+}
+.awt-cover__where{
+  font:400 calc(.68*var(--awt-u))/1.35 var(--font-body); color:var(--muted);
+  /* Sits under the rule now, so the rule's bottom margin is the gap above it. */
+  margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  /* Never shrink. It is one line or it is nothing; a flex squeeze that takes
+     even a few pixels off it slices the letters through the middle, and being
+     the only shrinkable item on the cover it absorbed every shortfall. */
+  flex:0 0 auto;
+}
+.awt-cover__rule{ border:0; border-top:1px solid var(--line); margin:calc(.44*var(--awt-u)) 0 calc(.36*var(--awt-u)); }
+.awt-cover__acts{ margin-top:auto; padding-top:calc(.5*var(--awt-u)); display:flex; align-items:center; gap:calc(.5*var(--awt-u)); }
+.awt-cover__open{
+  font:600 calc(.705*var(--awt-u))/1 var(--font-body); color:var(--accent); text-decoration:none;
+  border-bottom:1px solid color-mix(in oklab, var(--accent) 35%, #0000); padding-bottom:1px;
+}
+.awt-cover__open:hover{ border-bottom-color:var(--accent); }
+.awt-cover__unstar{
+  margin-left:auto; background:none; border:0; cursor:pointer; padding:2px 3px;
+  font:400 calc(.95*var(--awt-u))/1 var(--font-body); color:var(--muted); border-radius:5px;
+}
+.awt-cover__unstar:hover{ color:var(--accent); background:var(--accent-soft); }
+
+/* ---- open state -------------------------------------------------------- */
+/* .is-open is the only thing that opens a volume. A bare CSS :hover can't do
+   it, because :hover follows a volume to wherever it has been shoved aside to,
+   while the cursor should be reading the shelf's own layout: with a cover 158px
+   wide pushing its neighbours 140px right, a cursor moving steadily rightward
+   would leave one cover and land four or five volumes further along, skipping
+   everything between. JS maps the cursor to the slot it is over instead —
+   exactly what a finger already did — so mouse, finger and keyboard all drive
+   one state. */
+.awt-book.is-open{ z-index:30; }
+
+/* Rotating -90deg about the left edge swings the cover out of the shelf and
+   into the screen plane, landing its left edge exactly where the spine's was:
+   the previous book stays flush and only the books after it step aside.
+   The swing also carries the cover forward by one spine width, so translateZ
+   pulls it back to z:0 and the flat cover renders at true 1:1 size. */
+.awt-book.is-open > .awt-book__body{
+  transition-delay:var(--awt-open-d);
+  transform:translateX(calc(var(--awt-open-pad) - var(--awt-l)))
+            translateZ(calc(var(--w) * -1))
+            rotateY(var(--awt-open-deg));
+}
+.awt-book.is-open .awt-face--cover{ visibility:visible; }
+
+/* Everything to the right of the open book steps aside. Scoped to the same
+   shelf row by JS (a `~` selector would drag the rows below along too). */
+.awt-item.is-pushed{
+  transform:translateX(var(--awt-push)); transition-delay:var(--awt-open-d);
+}
+.awt-item.is-pulled{
+  transform:translateX(calc(var(--awt-pull) * -1)); transition-delay:var(--awt-open-d);
+}
+
+
+
+/* At 90deg the spine is edge-on, so its own ring would collapse to a sliver;
+   the cover in front of it takes the focus ring instead. */
+.awt-face--spine:focus-visible ~ .awt-face--cover{
+  outline:2px solid var(--accent); outline-offset:2px;
+}
+
+/* ---- filter dimming ---------------------------------------------------- */
+.awt-shelf__rack[data-filtering] .awt-item{ opacity:.2; filter:saturate(0); }
+.awt-shelf__rack[data-filtering] .awt-item.is-hit{ opacity:1; filter:none; }
+/* While a search is running, only the matches are live. Dimmed volumes take no
+   pointer at all, their spine buttons are disabled so Tab skips them, and the
+   slot hit-test used for taps and drags refuses them too — otherwise a tap
+   would fall through to the shelf behind and the slot fallback would open
+   whichever volume happened to lie under the open cover. */
+.awt-shelf__rack[data-filtering] .awt-book:not(.is-hit){ pointer-events:none; }
+
+.awt-shelf__none{
+  margin:0; padding:0 0 var(--awt-air); font:400 .88rem/1.5 var(--font-body); color:var(--muted);
+}
+
+/* ---- list view --------------------------------------------------------- */
+.awt-list{ list-style:none; margin:0; padding:0; border-top:1px solid var(--line); }
+.awt-list li{
+  display:flex; align-items:baseline; gap:.6rem; flex-wrap:wrap;
+  padding:.52rem .2rem; border-bottom:1px solid var(--line);
+}
+.awt-list[data-filtering] li:not(.is-hit){ display:none; }
+.awt-list__conf{
+  font:600 .68rem/1.5 var(--font-body); letter-spacing:.02em; flex:0 0 auto;
+  color:color-mix(in oklab, var(--conf) var(--awt-conf-k), var(--ink));
+}
+.awt-list__name{ font:400 .9rem/1.4 var(--font-body); color:var(--ink); text-decoration:none; flex:1 1 16rem; }
+.awt-list__name:hover{ color:var(--accent); }
+.awt-list__name b{ font:600 .9rem/1.4 var(--font-display); }
+.awt-list__unstar{ background:none; border:0; cursor:pointer; color:var(--muted); font-size:.95rem; }
+.awt-list__unstar:hover{ color:var(--accent); }
+
+/* ---- responsive & motion ---------------------------------------------- */
+@media (max-width:640px){
+  :root{
+    --awt-book-h:158px; --awt-cover-w:120px;
+    --awt-tab:18px; --awt-air:28px;
+    --awt-open-pad:5px;
+    --awt-spine-max:28px;   /* thinner volumes, so a narrow shelf holds more */
+    --awt-case-pad:12px; --awt-board-pad:6px;
+  }
+  /* The location line used to be traded away for the date's two lines at this
+     width. The date is gone from every cover, so it can be shown again — the
+     rule below still cannot be afforded, so it carries its own gap instead. */
+  .awt-cover__where{ margin-top:.3rem; }
+  /* The turbulence is 41 filtered SVG images to composite; at an 18-27px spine
+     the weave alone reads the same and costs nothing. */
+  .awt-face--spine::before{
+    background-image:
+      repeating-linear-gradient(0deg,  #0000 0 2px, #00000008 2px 3px),
+      repeating-linear-gradient(90deg, #0000 0 2px, #ffffff08 2px 3px);
+    background-size:auto;
+  }
+  .awt-cover__title{
+    font-size:calc(.795*var(--awt-u)); -webkit-line-clamp:3; max-height:calc(1.3em * 3);
+  }
+  .awt-face--cover{ padding:10px 11px 10px 19px; }
+  .awt-cover__conf{ margin-bottom:.26rem; }
+  /* the rule costs more height than it earns on a cover this short; the gap
+     above the location line separates the two blocks well enough on its own */
+  .awt-cover__rule{ display:none; }
+  .awt-cover__acts{ padding-top:.26rem; }
+  .awt-find{ flex:1 1 auto; width:auto; }
+  .awt-arc__tools{ width:100%; margin-left:0; }
+}
+
+/* iOS zooms the whole page in when you focus a field whose text is under 16px,
+   and then leaves you zoomed. Meeting that threshold on touch devices is the
+   fix. Clamping the viewport with maximum-scale=1 or user-scalable=no would
+   also stop it, but at the cost of pinch-zoom, so the <meta> tag stays as it
+   is. Padding is trimmed to keep the control the same height it was. */
+@media (pointer:coarse){
+  .awt-find{ font-size:16px; padding:.34rem .6rem; }
+  .awt-seg button{ font-size:16px; padding:.44rem .7rem; }
+}
+
+@media (prefers-reduced-motion:reduce){
+  .awt-item,.awt-book__body{ transition:none; }
+}

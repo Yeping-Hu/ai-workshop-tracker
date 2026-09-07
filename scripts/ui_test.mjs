@@ -962,6 +962,202 @@ if (allRows.length === 0) {
   await page.evaluate(() => localStorage.removeItem('awt-fav-workshops'));
 }
 
+/* ---------------------------------------------------------------------------
+ * /saved/ splits its Workshops section in two: what can still be acted on stays
+ * a board row, and everything the site calls Past becomes a book spine on the
+ * archive shelf. The split rule itself is pinned corpus-wide by
+ * scripts/saved_archive_test.mjs; what only a browser can show is that the two
+ * halves receive the right workshops, that the shelf's own controls work, and
+ * that its star reaches storage while the demo's star never does.
+ * ------------------------------------------------------------------------- */
+console.log('— /saved/ archive shelf (past → spines, open calls → rows) —');
+await page.evaluate(() => localStorage.clear());
+{
+  // `api` is the workshops.json already read at the top of this file.
+  const pastSlugs = api.filter((w) => w.status === 'past').slice(0, 4).map((w) => w.slug);
+  const openSlugs = api.filter((w) => w.status === 'upcoming').slice(0, 2).map((w) => w.slug);
+
+  // An empty shelf opens the demo by itself, so someone who has saved nothing
+  // sees the shelf working without having to ask for it.
+  await page.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('.awt-book', { timeout: 8000 });
+  check('an empty archive opens the demo on its own', true);
+  check('the demo says how to work it',
+    /Hover a book|Drag a finger/.test(await page.$eval('#savedArcTryNote', (el) => el.textContent)));
+  check('demo paints volumes', (await page.$$('.awt-book')).length > 1);
+  // The break captions between conference-years are half of what a shelf looks
+  // like, so a demo drawn from one group would demo the wrong thing.
+  check('demo spans several conference-years', (await page.$$('.awt-brk')).length > 1);
+  check('demo does not claim the volumes are saved',
+    (await page.$eval('#savedArcCount', (el) => el.textContent)) === 'demo');
+  // The demo is an invitation, not a backlog: one row on a desktop plank,
+  // filled well short of the end so it reads as "room for yours".
+  const shelfFit = await page.evaluate(() => {
+    const rack = document.querySelector('.awt-shelf__rack');
+    const kids = [...rack.children];
+    const top = kids[0].offsetTop;
+    const row = kids.filter((k) => k.offsetTop === top);
+    const r = rack.getBoundingClientRect();
+    return { rows: new Set(kids.map((k) => k.offsetTop)).size,
+             pct: Math.round(((row[row.length - 1].getBoundingClientRect().right - r.left) / r.width) * 100) };
+  });
+  check('the demo fits one shelf row', shelfFit.rows === 1, `${shelfFit.rows} rows`);
+  check('the demo leaves the row visibly unfilled', shelfFit.pct > 35 && shelfFit.pct < 80, `${shelfFit.pct}% full`);
+
+  // A cover is exactly as tall as its own book and its content fills that to
+  // within a pixel or two. The location line was the only flex item able to
+  // give, so every shortfall was taken out of it and it rendered as a band of
+  // letters cut through the middle. Measured with transitions off: a cover
+  // caught mid-swing reports its 3D projection, not its layout.
+  await page.addStyleTag({ content: '*{transition:none !important;animation:none !important}' });
+  const coverFit = await page.evaluate(() => {
+    let sliced = 0, spilling = 0;
+    for (const bk of document.querySelectorAll('.awt-book')) {
+      bk.classList.add('is-open');
+      const cov = bk.querySelector('.awt-face--cover');
+      const w = cov.querySelector('.awt-cover__where');
+      if (w && getComputedStyle(w).display !== 'none' &&
+          w.offsetHeight + 0.5 < parseFloat(getComputedStyle(w).lineHeight)) sliced++;
+      if (cov.scrollHeight > cov.clientHeight + 1) spilling++;
+      bk.classList.remove('is-open');
+    }
+    return { sliced, spilling, n: document.querySelectorAll('.awt-book').length };
+  });
+  check('no cover slices its location line', coverFit.sliced === 0, `${coverFit.sliced}/${coverFit.n}`);
+  check('no cover overflows its book', coverFit.spilling === 0, `${coverFit.spilling}/${coverFit.n}`);
+  // A closing date that has already passed is the one fact about an archived
+  // workshop nobody can act on, so neither view carries it.
+  check('no cover carries a closing date', (await page.$('.awt-cover__when')) === null);
+
+  check('demo reveals the find box and view toggle',
+    (await page.$eval('.awt-arc__tools', (el) => getComputedStyle(el).display)) !== 'none');
+  // Every repaint rewrites the count, so switching view must not relabel the
+  // demo as volumes the reader saved.
+  await page.click('#savedArcListBtn');
+  check('the demo is still labelled a demo after a view change',
+    (await page.$eval('#savedArcCount', (el) => el.textContent)) === 'demo');
+  await page.click('#savedArcShelfBtn');
+  check('demo leaves the board list empty', (await page.$('#savedWsList .empty-state')) !== null);
+
+  // The point of the guard: playing with the demo must not save anything.
+  await page.click('#savedArcListBtn');
+  await page.click('.awt-list li:first-child .awt-list__unstar');
+  check('a star pressed on the demo never reaches storage',
+    (await page.evaluate(() => localStorage.getItem('awt-fav-workshops'))) === null);
+  // Dismissing it is an answer, not a toggle: it has to survive a reload, or
+  // the offer is made again on every visit.
+  await page.click('#savedArcTryBtn');
+  check('hiding the demo restores the built-in note', /Nothing shelved yet/.test(await page.$eval('#savedArcMount', (el) => el.textContent)));
+  check('a hidden demo hides the find box and view toggle',
+    (await page.$eval('.awt-arc__tools', (el) => getComputedStyle(el).display)) === 'none');
+  check('the invitation names the demo', /demo/i.test(await page.$eval('#savedArcTryBtn', (el) => el.textContent)));
+  await page.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(600); // long enough for the demo to have opened
+  check('a hidden demo stays hidden on the next visit', (await page.$$('.awt-book')).length === 0);
+  check('and can still be asked back', await (async () => {
+    await page.click('#savedArcTryBtn');
+    await page.waitForSelector('.awt-book', { timeout: 8000 });
+    return true;
+  })());
+  await page.click('#savedArcTryBtn'); // leave it hidden for the next block
+  await page.evaluate(() => localStorage.removeItem('awt-shelf-demo'));
+
+  // A real list, half of it archived.
+  await page.evaluate((sl) => localStorage.setItem('awt-fav-workshops', JSON.stringify(sl)), [...pastSlugs, ...openSlugs]);
+  await page.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('.awt-book', { timeout: 8000 });
+  check('past saves become shelf volumes', (await page.$$('.awt-book')).length === pastSlugs.length);
+  check('open calls stay board rows', (await page.$$('[data-saved-ws]')).length === openSlugs.length);
+  check('no past save is left in the board list',
+    await page.$$eval('[data-saved-ws]', (els, p) => els.every((e) => !p.includes(e.dataset.savedWs)), pastSlugs));
+  check('the Workshops count still covers both halves',
+    (await page.$eval('#savedWsCount', (el) => el.textContent)) === `(${pastSlugs.length + openSlugs.length})`);
+  check('the archive carries its own volume count',
+    (await page.$eval('#savedArcCount', (el) => el.textContent)) === `${pastSlugs.length} volumes`);
+  check('a filled archive drops the demo offer', await page.$eval('#savedArcTry', (el) => el.hidden));
+
+  await page.click('#savedArcListBtn');
+  check('List view swaps the rack for rows', (await page.$('.awt-list')) !== null && (await page.$('.awt-shelf__rack')) === null);
+  check('List view flips both aria-pressed',
+    (await page.$eval('#savedArcListBtn', (el) => el.getAttribute('aria-pressed'))) === 'true' &&
+    (await page.$eval('#savedArcShelfBtn', (el) => el.getAttribute('aria-pressed'))) === 'false');
+  check('no list row carries a closing date', (await page.$('.awt-list__year')) === null);
+  // The slider only moves books; over a list of rows it would visibly do nothing.
+  check('List view puts the size slider away',
+    (await page.$eval('.saved-arc-size', (el) => getComputedStyle(el).display)) === 'none');
+  await page.click('#savedArcShelfBtn');
+  check('Shelf view brings the size slider back',
+    (await page.$eval('.saved-arc-size', (el) => getComputedStyle(el).display)) !== 'none');
+  await page.click('#savedArcListBtn');
+
+  const findFor = await page.$eval('.awt-list li .awt-list__name b', (el) => el.textContent.trim());
+  await page.fill('#savedArcFind', findFor);
+  check('the find box narrows the archive',
+    (await page.$$eval('.awt-list li', (els) => els.filter((e) => getComputedStyle(e).display !== 'none').length)) < pastSlugs.length,
+    findFor);
+  await page.fill('#savedArcFind', '');
+
+  // The shelf's star is [data-unstar], not [data-star-ws] — favorites.js's
+  // delegated listener never sees it, so this is the one path that proves
+  // unstarWorkshop() is wired through.
+  await page.click('.awt-list li:first-child .awt-list__unstar');
+  await page.waitForTimeout(200);
+  check('unstarring a volume removes it from storage',
+    (await page.evaluate(() => JSON.parse(localStorage.getItem('awt-fav-workshops') || '[]'))).length === pastSlugs.length + openSlugs.length - 1);
+  check('unstarring a volume takes it off the shelf', (await page.$$('.awt-list li')).length === pastSlugs.length - 1);
+  check('unstarring a volume updates the Workshops count',
+    (await page.$eval('#savedWsCount', (el) => el.textContent)) === `(${pastSlugs.length + openSlugs.length - 1})`);
+
+  // Opening a cover by hover is the real path to the shelf-view star.
+  await page.click('#savedArcShelfBtn');
+  await page.hover('.awt-book .awt-face--spine');
+  await page.waitForSelector('.awt-book.is-open', { timeout: 4000 });
+  check('hovering a spine opens its cover', true);
+  await page.click('.awt-book.is-open .awt-cover__unstar');
+  await page.waitForTimeout(200);
+  check('the star on an open cover unstars too',
+    (await page.evaluate(() => JSON.parse(localStorage.getItem('awt-fav-workshops') || '[]'))).length === pastSlugs.length + openSlugs.length - 2);
+
+  // Saved, but nothing open: the board half needs different copy from "you have
+  // saved nothing at all".
+  await page.evaluate((sl) => localStorage.setItem('awt-fav-workshops', JSON.stringify(sl)), pastSlugs);
+  await page.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('.awt-book', { timeout: 8000 });
+  check('an all-archived list says so instead of claiming nothing is saved',
+    /Nothing open right now/.test(await page.$eval('#savedWsList .empty-state', (el) => el.textContent)));
+
+  // Book size: a legibility setting, so unlike the Shelf/List choice it is kept.
+  await page.evaluate(() => localStorage.clear());
+  await page.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('.awt-book', { timeout: 8000 }); // opens itself
+  const bookW = () => page.$eval('.awt-book', (el) => el.offsetWidth);
+  const wideBooks = await bookW();
+  await page.$eval('#savedArcSize', (el) => {
+    el.value = '70';
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.waitForTimeout(250);
+  check('the size slider makes the books smaller', (await bookW()) < wideBooks, `${wideBooks} -> ${await bookW()}`);
+  // The renderer reads --awt-cover-w back with parseFloat, so it has to stay a
+  // real length; a calc() there resolves to NaN and collapses every cover to 0.
+  check('the cover width stays a resolved pixel length',
+    /^\d+px$/.test((await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--awt-cover-w'))).trim()));
+  const smallBooks = await bookW();
+  await page.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('.awt-book', { timeout: 8000 });
+  check('the size survives a reload', (await page.$eval('#savedArcSize', (el) => el.value)) === '70');
+  check('and is applied before the shelf is measured', Math.abs((await bookW()) - smallBooks) <= 1);
+  // Storage is a text field anyone can edit; an unusable value must not size
+  // the shelf to nothing.
+  await page.evaluate(() => localStorage.setItem('awt-shelf-size', '99999'));
+  await page.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
+  check('an out-of-range stored size falls back', (await page.$eval('#savedArcSize', (el) => el.value)) === '100');
+  await page.evaluate(() => localStorage.removeItem('awt-shelf-size'));
+
+  await page.evaluate(() => localStorage.clear());
+}
+
 check('no page/console errors during the whole run', errors.length === 0, errors.slice(0, 3).join(' | '));
 
 await browser.close();
