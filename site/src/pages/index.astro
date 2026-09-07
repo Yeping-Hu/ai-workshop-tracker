@@ -308,19 +308,32 @@ const datasetLd: Record<string, any> = {
     const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
     // A paper's excerpt starts with the paper's own title (the heading
-    // anchors the sub-result region) — strip it so the line under each
-    // title shows just the authors. Walks text nodes so <mark> highlights
-    // in author names survive; returns the excerpt untouched if it doesn't
-    // actually begin with the title. Stray ☆/★ (from indexes built before
-    // star buttons were pagefind-ignored) are skipped like whitespace.
-    function stripLeadingTitle(excerptHtml, title) {
+    // anchors the sub-result region), then the authors — and it is the only
+    // copy of the title that carries Pagefind's <mark> highlights; the
+    // sub-result's `title` field is plain text. So the excerpt is split in
+    // two: the title portion, marks and all, becomes the title line, and what
+    // follows becomes the authors line. Text nodes are walked so highlights
+    // survive on both sides of the cut. If the excerpt does not actually
+    // begin with the title (a long title past the excerpt window), the title
+    // half is null — the caller shows the plain title — and the excerpt comes
+    // back untouched. Stray ☆/★ (from indexes built before star buttons were
+    // pagefind-ignored) are skipped like whitespace.
+    function splitLeadingTitle(excerptHtml, title) {
+      const untouched = { title: null, rest: excerptHtml };
       const want = String(title).replace(/[\s☆★]+/g, ' ').trim().toLowerCase();
-      if (!want) return excerptHtml;
+      if (!want) return untouched;
       const tpl = document.createElement('template');
       tpl.innerHTML = excerptHtml;
-      const walker = document.createTreeWalker(tpl.content, NodeFilter.SHOW_TEXT);
-      const nodes = [];
-      while (walker.nextNode()) nodes.push(walker.currentNode);
+      const textNodes = (root) => {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        const out = [];
+        while (walker.nextNode()) out.push(walker.currentNode);
+        return out;
+      };
+      const nodes = textNodes(tpl.content);
+      // Where the title ends in each text node: the whole node, part of it
+      // (the node the title ends in), or — for the nodes after — no entry.
+      const taken = new Map();
       let i = 0; // pointer into `want`
       for (const node of nodes) {
         const t = node.nodeValue;
@@ -330,19 +343,38 @@ const datasetLd: Record<string, any> = {
           if (/[\s☆★]/.test(c)) {
             while (j < t.length && /[\s☆★]/.test(t[j])) j++;
             if (want[i] === ' ') i++;
-            else if (i > 0) return excerptHtml; // gap where the title has none
+            else if (i > 0) return untouched; // gap where the title has none
             continue;
           }
-          if (c.toLowerCase() !== want[i]) return excerptHtml; // not a title prefix
+          if (c.toLowerCase() !== want[i]) return untouched; // not a title prefix
           i++; j++;
         }
-        if (i >= want.length) {
-          node.nodeValue = t.slice(j);
-          break;
-        }
-        node.nodeValue = ''; // node fully consumed by the title
+        taken.set(node, j);
+        if (i >= want.length) break;
       }
-      if (i < want.length) return excerptHtml; // excerpt shorter than the title
+      if (i < want.length) return untouched; // excerpt shorter than the title
+
+      // The title half: the same markup with everything past the cut removed,
+      // so a <mark> the title ended inside keeps just its title part. The
+      // clone's text nodes come in the same order as `nodes`.
+      const head = document.createElement('template');
+      head.content.append(tpl.content.cloneNode(true));
+      textNodes(head.content).forEach((n, k) => {
+        const j = taken.get(nodes[k]);
+        n.nodeValue = j == null ? '' : n.nodeValue.slice(0, j).replace(/[☆★]/g, '');
+      });
+      const first = textNodes(head.content).find((n) => n.nodeValue);
+      if (first) first.nodeValue = first.nodeValue.replace(/^\s+/, '');
+      for (const m of head.content.querySelectorAll('mark')) {
+        if (!m.textContent) m.remove();
+      }
+      const headHtml = head.innerHTML;
+
+      // The rest: the same nodes with the title cut away.
+      for (const node of nodes) {
+        const j = taken.get(node);
+        if (j != null) node.nodeValue = node.nodeValue.slice(j);
+      }
 
       // Whatever follows the title opens with the separator pagefind writes
       // between the heading block and the author line — a "." here, sometimes
@@ -373,7 +405,7 @@ const datasetLd: Record<string, any> = {
       for (const m of tpl.content.querySelectorAll('mark')) {
         if (!m.textContent) m.remove();
       }
-      return tpl.innerHTML;
+      return { title: headHtml || null, rest: tpl.innerHTML };
     }
 
     function isSearching() {
@@ -916,8 +948,10 @@ const datasetLd: Record<string, any> = {
               : (() => {
                 const pt = String(sr.title).replace(/^[\s☆★]+/, '');
                 const ppid = (String(sr.url).match(/#p-([^#?]+)/) || [])[1] || '';
+                // Title line with the engine's highlights, authors line under it.
+                const line = splitLeadingTitle(sr.excerpt, pt);
                 return `
-              <li class="pf-paper">${ppid ? `<button type="button" class="star-btn" data-star-paper="${esc(ppid)}" data-title="${esc(pt)}" data-ws="${esc(slug)}" data-wsname="${esc(wsLabel)}" aria-pressed="false" aria-label="Save paper: ${esc(pt)}">☆</button>` : ''}<a class="pf-ptitle" href="${esc(ppid ? `${g.url}#p-${ppid}` : sr.url)}">${esc(pt)}</a><p class="pf-excerpt">${stripLeadingTitle(sr.excerpt, pt)}</p></li>`;
+              <li class="pf-paper">${ppid ? `<button type="button" class="star-btn" data-star-paper="${esc(ppid)}" data-title="${esc(pt)}" data-ws="${esc(slug)}" data-wsname="${esc(wsLabel)}" aria-pressed="false" aria-label="Save paper: ${esc(pt)}">☆</button>` : ''}<a class="pf-ptitle" href="${esc(ppid ? `${g.url}#p-${ppid}` : sr.url)}">${line.title ?? esc(pt)}</a><p class="pf-excerpt">${line.rest}</p></li>`;
               })()).join('') +
             (subs.length > SUBS_PER_WS
               ? `<li class="pf-more"><a href="${esc(g.url)}#papers">…${subs.length - SUBS_PER_WS} more matching papers →</a></li>`

@@ -181,9 +181,14 @@ Behavior worth knowing before you touch the search code:
   the document's metadata by the same client renderer the saved list uses (see
   *One client renderer for three surfaces* below). Browsing by facet is
   therefore the board, filtered; with keywords, the excerpt and the matching
-  papers follow beneath the row. Concluded rows are not dimmed here as they are
-  on the saved list: past editions are most of what a search returns, and
-  greying them made the content people searched for harder to read.
+  papers follow beneath the row. Each matching paper is a title line and an
+  authors line, both cut from Pagefind's excerpt for that paper: the excerpt
+  is the only copy of the title that carries the engine's `<mark>` highlights
+  (the sub-result's `title` field is plain text), so the title line is its
+  leading portion with the marks kept, and the authors line is what follows
+  (`splitLeadingTitle` in index.astro). Concluded rows are not dimmed here as
+  they are on the saved list: past editions are most of what a search returns,
+  and greying them made the content people searched for harder to read.
 - **The headline counts what is actually listed.** With keywords: "N workshops ·
   M matching papers · by relevance · page x/y", where N is distinct workshops
   shown and M is individual matching papers inside them. Browsing: "N workshops ·

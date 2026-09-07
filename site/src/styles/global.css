@@ -464,7 +464,7 @@ details.tba-section > summary { cursor: pointer; color: var(--muted); font-size:
 @keyframes sk-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 @media (prefers-reduced-motion: reduce) { .pf-skeleton .sk-bar { animation: none; } }
 .pf-excerpt { margin: 0.3rem 0 0; font-size: 0.88rem; color: var(--muted); max-width: 46rem; }
-.pf-excerpt mark { background: var(--accent-soft); color: var(--accent); border-radius: 3px; padding: 0 0.15em; }
+.pf-excerpt mark, .pf-ptitle mark { background: var(--accent-soft); color: var(--accent); border-radius: 3px; padding: 0 0.15em; }
 
 /* ---------- theme toggle & archive polish ---------- */
 .theme-toggle {

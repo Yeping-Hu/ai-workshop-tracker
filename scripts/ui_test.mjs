@@ -554,6 +554,21 @@ check('paper line 2 drops the trailing PDF link text', !/·?\s*PDF\.?$/.test(pap
 check('paper line 2 leaves no empty <mark> behind', pap.emptyMarks === 0, `${pap.emptyMarks} empty mark(s)`);
 check('a paper result links to its anchor on the workshop page', /\/workshop\/[^/]+\/#p-/.test(pap.href), pap.href);
 check('paper line 2 starts where line 1 does', pap.titleLeft === pap.excerptLeft, `title ${pap.titleLeft} vs excerpt ${pap.excerptLeft}`);
+// The title line carries the engine's highlights. Pagefind's sub-result title
+// is plain text; the marks live only in the excerpt's own copy of the title,
+// which the page cuts off and shows as the title line rather than discarding.
+// The star's data-title is the plain title, so the two must read the same.
+const titled = await page.$$eval('#results .pf-papers li:has(.pf-ptitle)', (lis) => lis.map((li) => ({
+  text: li.querySelector('.pf-ptitle').textContent.replace(/\s+/g, ' ').trim(),
+  plain: (li.querySelector(':scope > [data-star-paper]')?.dataset.title ?? '').replace(/\s+/g, ' ').trim(),
+  marks: [...li.querySelectorAll('.pf-ptitle mark')].map((m) => m.textContent),
+})));
+check('a matched word in a paper title is highlighted', titled.some((t) => t.marks.length > 0), `${titled.filter((t) => t.marks.length).length} of ${titled.length} titles`);
+// Pagefind marks whole tokens, hyphens included ("Vision-Language" is one
+// mark), so the keyword is inside the marked word, not necessarily its start.
+check('every highlighted title word contains the keyword', titled.every((t) => t.marks.every((m) => /langu/i.test(m))), JSON.stringify(titled.flatMap((t) => t.marks).filter((m) => !/langu/i.test(m)).slice(0, 8)));
+check('no empty <mark> in a title', titled.every((t) => t.marks.every((m) => m.trim())));
+check('the highlighted title reads exactly as the plain title', titled.every((t) => !t.plain || t.text === t.plain), JSON.stringify(titled.find((t) => t.plain && t.text !== t.plain) ?? null));
 
 // Star one paper from the results, then a second paper of the SAME workshop
 // from its page — both must land in one group on /saved/.
