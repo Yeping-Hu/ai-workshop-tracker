@@ -330,17 +330,30 @@ Each run: fetch the feed → diff against the stored snapshot → record events 
 urgent pass → weekly pass (Mondays only) → maintenance. A failure fails the job
 loudly; GitHub's failure email is the alert channel, as with every other job here.
 
-The weekly window is the seven days ending on the run's own day, inclusive:
-`since` is six days back, not seven. Events are dated by the run that observed
-them, Monday's run records Monday's events *before* it builds Monday's edition,
-and the store is queried with `observed >= since` — so a seven-day look-back
-started on the previous edition's day and reported it twice. It did, on
-2026-09-07: 15 of that digest's 72 events were repeats of the 31 August one,
+The weekly window is anchored to the week's Monday (`WEEKLY_DOW`): `until` is
+the most recent Monday on or before the run and `since` the six days before it,
+both inclusive. Every run in a week therefore names the same edition — the
+scheduled Monday run, a Tuesday dispatch that sends the digest a failed Monday
+run did not, and a Sunday dry run republishing the page after a rendering fix
+all produce the same seven days — and consecutive editions tile with no overlap
+and no gap. A window measured back from the run clock could promise neither:
+it shifted a day for every day a run was late, and the next Monday repeated
+whatever the late one had reported.
+
+Six days back from that Monday, not seven. Events are dated by the run that
+observed them, Monday's run records Monday's events *before* it builds Monday's
+edition, and the store is queried with `observed >= since` — so a seven-day
+look-back started on the previous edition's day and reported it twice. It did,
+on 2026-09-07: 15 of that digest's 72 events were repeats of the 31 August one,
 and the run went red at *Validate before publishing* because four of them were
 `announced` rows for workshops older than the window, so `/changes/` kept the
 previous edition. `weeklyWindow()` in `alerts/diff.mjs` is the one definition,
-used by the pipeline's query and its `since`, by the digest's label and
-passed-deadline cut-off, and — through the committed feed — by `/changes/`.
+used by the pipeline's query and the `since`/`until` it writes, by the digest's
+label and passed-deadline cut-off, and — through the committed feed — by
+`/changes/`. `windowLabel()` in `lib/events.mjs` then names the week in the
+same words on both surfaces ("1 Sep 2026 – 7 Sep 2026"); before it, the mail
+formatted both ends from the run clock while the page formatted one end through
+the browser's locale tables, and the two disagreed by a day and a spelling.
 
 The mail goes out before the feed is validated, on purpose: the digest is the
 week's mail and the page its published copy, and a feed the validator refuses

@@ -165,11 +165,13 @@ const sub = (over = {}) =>
   const out = renderDigest({ sub: s, events, workshops, nowMs: NOW, ids });
 
   check('a populated digest renders', !!out);
-  // The label's first day is the feed's `since` — the day /changes/ prints after
-  // "since" — from the one definition in weeklyWindow(): six days back, not
-  // seven, so consecutive editions tile (NOW is 14 Aug, so 8 Aug, not 7 Aug).
-  check('the window label opens on weeklyWindow().since',
-    out.html.includes('8 Aug 2026 – 14 Aug 2026'), out.html.match(/Your selection, [^.]*\./)?.[0]);
+  // The label is the edition's window from weeklyWindow(), anchored to the
+  // week's Monday and six days back from it — NOW is Friday 14 Aug, so the
+  // edition is Mon 10 Aug's: 4–10 Aug, not the seven days ending on the 14th.
+  // The same phrase /changes/ prints, from lib/events.mjs.
+  check('the window label is the anchored edition, in the shared words',
+    out.html.includes('Your selection, 4 Aug 2026 – 10 Aug 2026.'), out.html.match(/Your selection, [^.]*\./)?.[0]);
+  check('the plaintext carries the same label', out.text.includes('Your selection, 4 Aug 2026 – 10 Aug 2026.'));
   // Two change events (an extension and a first-published deadline), and zero
   // *new* workshops that aren't already Past — so the "new workshops" clause is
   // dropped entirely rather than rendered as "0 new workshops".
@@ -465,17 +467,18 @@ const sub = (over = {}) =>
 }
 
 /* ------------------------------ the change cut-off is the window's midnight */
-// A deadline that passed twelve hours before `since` opened (7 Aug 12:00, with
-// since = 8 Aug) is inside a literal 7×24 h look-back but outside the reported
-// window. /changes/ cuts at that midnight; the digest must cut at the same one.
+// A deadline that passed twelve hours before `since` opened (3 Aug 12:00, with
+// the edition's since = 4 Aug) is inside a literal look-back from the run clock
+// but outside the reported window. /changes/ cuts at that midnight; the digest
+// must cut at the same one.
 {
   const workshops = {
-    'neurips-2026-eve': ws('neurips-2026-eve', { deadline_utc: iso(-7), next_stage_utc: iso(-7) }),
-    'neurips-2026-in': ws('neurips-2026-in', { deadline_utc: iso(-6), next_stage_utc: iso(-6) }),
+    'neurips-2026-eve': ws('neurips-2026-eve', { deadline_utc: iso(-11), next_stage_utc: iso(-11) }),
+    'neurips-2026-in': ws('neurips-2026-in', { deadline_utc: iso(-10), next_stage_utc: iso(-10) }),
   };
   const events = [
-    { slug: 'neurips-2026-eve', kind: 'extended', days: 3, old_utc: iso(-10), new_utc: iso(-7) },
-    { slug: 'neurips-2026-in', kind: 'extended', days: 3, old_utc: iso(-9), new_utc: iso(-6) },
+    { slug: 'neurips-2026-eve', kind: 'extended', days: 3, old_utc: iso(-14), new_utc: iso(-11) },
+    { slug: 'neurips-2026-in', kind: 'extended', days: 3, old_utc: iso(-13), new_utc: iso(-10) },
   ];
   const out = renderDigest({ sub: sub(), events, workshops, nowMs: NOW, ids });
   check('a deadline that passed before the window opened is not a change this week',

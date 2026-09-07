@@ -27,7 +27,7 @@ import { href } from '../lib/site';
 // @ts-ignore — shared plain-JS module at the repo root
 import { displayLabel } from '../../../lib/identity.mjs';
 // @ts-ignore — shared plain-JS module at the repo root
-import { mergeEventsBySlug } from '../../../lib/events.mjs';
+import { mergeEventsBySlug, windowLabel } from '../../../lib/events.mjs';
 
 const ROOT = path.resolve(process.cwd(), '..');
 const FEED = path.join(ROOT, 'data', 'changes.json');
@@ -191,11 +191,14 @@ const changeGroups = groupByConference(changes);
 const addedGroups = groupByConference(added);
 const total = changes.length + added.length;
 
-const weekOf = feed.since
-  ? new Date(`${feed.since}T00:00:00Z`).toLocaleDateString('en-GB', {
-      day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
-    })
-  : null;
+// The week, named the way the digest names it — one phrase from lib/events.mjs
+// for both surfaces, so the page never says "since 1 Sept" under an email that
+// said "31 Aug – 7 Sep". A feed written before `until` existed carries only
+// `since` and the day it was generated, which for a Monday run is the same day.
+const week = windowLabel(
+  feed.since,
+  feed.until ?? (feed.generated_at ? String(feed.generated_at).slice(0, 10) : null),
+);
 ---
 
 <Base
@@ -207,7 +210,7 @@ const weekOf = feed.since
     <h1>What changed</h1>
     <p class="muted">
       {total > 0
-        ? `${changes.length} deadline change${changes.length === 1 ? '' : 's'} and ${added.length} new workshop${added.length === 1 ? '' : 's'} since ${weekOf}.`
+        ? `${changes.length} deadline change${changes.length === 1 ? '' : 's'} and ${added.length} new workshop${added.length === 1 ? '' : 's'}, ${week}.`
         : 'Nothing has changed in the last seven days.'}
       {' '}All times UTC.
     </p>

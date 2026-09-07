@@ -231,10 +231,11 @@ async function fetchFeed() {
  * is the honest state for a quiet week, and skipping the write would leave the
  * previous edition on the page claiming to be the current one.
  */
-function writeChangesArtifact({ since, events }) {
+function writeChangesArtifact({ since, until, events }) {
   const out = {
     generated_at: new Date(NOW_MS).toISOString(),
     since,
+    until,
     events: events.map((e) => ({
       slug: e.slug,
       kind: e.kind,
@@ -251,7 +252,9 @@ function writeChangesArtifact({ since, events }) {
   //
   // That is what makes the page republishable without mailing anyone. Since the
   // write now lives in the weekly pass, an off-Monday republish needs
-  // force_weekly as well: dispatch with dry_run AND force_weekly.
+  // force_weekly as well: dispatch with dry_run AND force_weekly. The window is
+  // anchored to the week's Monday (weeklyWindow), so that republish rewrites the
+  // SAME edition the Monday mail described, not the seven days ending today.
   const file = path.join(ROOT, 'data', 'changes.json');
   fs.writeFileSync(file, `${JSON.stringify(out, null, 2)}\n`);
   log(`   ${DRY_RUN ? '[dry-run] ' : ''}wrote ${path.relative(ROOT, file)} (${out.events.length} event(s))`);
@@ -432,13 +435,17 @@ async function main() {
   const isWeeklyDay = NOW.getUTCDay() === WEEKLY_DOW;
   let digestsSent = 0;
   if (isWeeklyDay || FORCE_WEEKLY) {
-    // The seven days ending today, inclusive — six back, not seven, or the
-    // previous Monday's events ride into two consecutive editions. weeklyWindow()
-    // carries the reasoning and the 2026-09-07 incident.
-    const { since } = weeklyWindow(NOW_MS);
-    const { events } = await admin(`/admin/events?since=${since}`);
-    log(`5. weekly: ${events.length} event(s) since ${since}`);
-    writeChangesArtifact({ since, events });
+    // This week's edition — anchored to its Monday, the same seven days whether
+    // this is the scheduled run, a late dispatch or a republish; six days back
+    // from that Monday, not seven, or the previous edition's day rides into this
+    // one. weeklyWindow() carries the reasoning and the 2026-09-07 incident.
+    const { since, until } = weeklyWindow(NOW_MS);
+    const { events: fromStore } = await admin(`/admin/events?since=${since}`);
+    // The store answers "on or after"; the edition also ends. A dispatch later
+    // in the week must not pull that week's later days into Monday's edition.
+    const events = fromStore.filter((e) => !e.observed || e.observed <= until);
+    log(`5. weekly: ${events.length} event(s), ${since} – ${until}`);
+    writeChangesArtifact({ since, until, events });
 
     const messages = [];
     // `starred_changes` subscribers opted out of a scheduled summary entirely.

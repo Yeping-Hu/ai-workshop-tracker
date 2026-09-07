@@ -97,6 +97,12 @@ check('an announcement added more than a window before `since` fails',
   one({ slug: 'a-2026-over', kind: 'announced', days: null, old_utc: null, new_utc: null }), 1);
 check('a non-array events field fails',
   validateChangesFeed({ generated_at: null, since: null, events: {} }, CORPUS).length, 1);
+// `until` closes the window; optional (older feeds carry only `since`), but
+// when present it is a day and not one before the opening.
+check('a window with both ends passes', ok([], { until: '2026-08-25' }), []);
+check('a feed without `until` still passes', ok([], { until: undefined }), []);
+check('a malformed `until` fails', ok([], { until: '25 Aug' }).length, 1);
+check('an `until` before `since` fails', ok([], { until: '2026-08-18' }).length, 1);
 
 // --- THE ONE THAT MATTERS: the file that actually shipped ----------------
 // Byte-exact, recovered from c3c793a. Five rows, every one rejected.

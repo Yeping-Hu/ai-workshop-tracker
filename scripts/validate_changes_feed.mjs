@@ -73,8 +73,17 @@ export function validateChangesFeed(feed, corpus = {}) {
   if (feed.events.length > 0 && !isIso(feed.generated_at)) {
     errs.push('`generated_at` must be an ISO timestamp when `events` is non-empty.');
   }
-  if (feed.since != null && !/^\d{4}-\d{2}-\d{2}$/.test(String(feed.since))) {
+  if (feed.since != null && !isDay(feed.since)) {
     errs.push('`since` must be a YYYY-MM-DD date, or null.');
+  }
+  // `until` closes the window the way `since` opens it (both inclusive). It is
+  // optional because feeds written before the window was anchored carry only
+  // `since`; when present it must be a day, and not one before the opening.
+  if (feed.until != null && !isDay(feed.until)) {
+    errs.push('`until` must be a YYYY-MM-DD date, or null.');
+  }
+  if (isDay(feed.since) && isDay(feed.until) && String(feed.until) < String(feed.since)) {
+    errs.push(`\`until: ${feed.until}\` is before \`since: ${feed.since}\`.`);
   }
 
   feed.events.forEach((e, i) => {

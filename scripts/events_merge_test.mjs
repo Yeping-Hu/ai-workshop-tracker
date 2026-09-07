@@ -13,7 +13,7 @@
  * a different number of rows in the email than on the page. That is the drift
  * this pins.
  */
-import { mergeEventsBySlug } from '../lib/events.mjs';
+import { mergeEventsBySlug, windowLabel, fmtDay } from '../lib/events.mjs';
 
 let failed = 0;
 function check(label, got, expect) {
@@ -82,6 +82,16 @@ check('unparseable dates fall back to the most recent hop rather than guessing',
 // --- degenerate input -----------------------------------------------------
 check('empty in, empty out', mergeEventsBySlug([]), []);
 check('non-array in, empty out', mergeEventsBySlug(null), []);
+
+// --- the week, named once for both surfaces ------------------------------
+// The digest said "31 Aug 2026 – 7 Sep 2026" while /changes/ said "since
+// 1 Sept 2026" (the browser's locale tables spell September that way): one
+// phrase, built here, for both.
+check('the window label names both ends, day first', windowLabel('2026-09-01', '2026-09-07'), '1 Sep 2026 – 7 Sep 2026');
+check('a one-day window is one day', windowLabel('2026-09-07', '2026-09-07'), '7 Sep 2026');
+check('a feed with only `since` still labels', windowLabel('2026-09-01', null), '1 Sep 2026');
+check('nothing parseable labels as nothing', windowLabel('soon', undefined), '');
+check('fmtDay spells the month the way every email row does', fmtDay('2026-09-01T12:00:00.000Z'), '1 Sep 2026');
 check('events with no slug are ignored', mergeEventsBySlug([{ kind: 'extended' }]), []);
 
 console.log(failed ? `\n${failed} check(s) failed` : '\nEvent merging is sound');

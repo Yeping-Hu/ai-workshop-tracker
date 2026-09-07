@@ -1064,12 +1064,15 @@ workshop in `data/`, so the page joins on slug and takes names from the same
 corpus (and the same `displayLabel`) as everything else. Current week only —
 there is no archive, and the `events` table is pruned anyway.
 
-The week is `weeklyWindow()` in `alerts/diff.mjs`: the seven days ending on the
-run's own day, inclusive, so consecutive Monday editions tile rather than
-overlap. The pipeline's query and its `since`, the digest's label and its
-passed-deadline cut-off, and this page all take the window from that one
-definition — [ALERTS.md](ALERTS.md) records the 2026-09-07 double report that a
-seven-day look-back produced before it existed.
+The week is `weeklyWindow()` in `alerts/diff.mjs`: anchored to the week's
+Monday and six days back from it, both ends inclusive, so every run in a week
+— scheduled, late, or a republish — names the same edition, and consecutive
+editions tile rather than overlap. The pipeline's query and the `since`/`until`
+it writes, the digest's label and its passed-deadline cut-off, and this page
+all take the window from that one definition, and both surfaces name it through
+`windowLabel()` in `lib/events.mjs` so the email and the page print the same
+words for the same week. [ALERTS.md](ALERTS.md) records the 2026-09-07 double
+report that a look-back from the run clock produced before either existed.
 
 The file is rewritten **on the weekly pass only** — the page is the published
 edition of the digest, not a live feed. The CTA on it says as much ("this page,

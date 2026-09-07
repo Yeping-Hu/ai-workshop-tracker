@@ -28,7 +28,7 @@ import { displayAcronym, displayLabel } from '../lib/identity.mjs';
 // One row per workshop, carrying the net change across the week — the same rule
 // /changes/ applies, so the email and the page cannot disagree about how many
 // times a workshop moved.
-import { mergeEventsBySlug } from '../lib/events.mjs';
+import { mergeEventsBySlug, windowLabel as labelWindow } from '../lib/events.mjs';
 // The one definition of "imminent", shared with the urgent pass — it carries
 // the not_running gate, so a rejected proposal's still-ticking OpenReview
 // deadline can reach neither a digest section nor a 72h alert.
@@ -601,13 +601,13 @@ export function renderDigest({
   // opened is not news: it was recorded late, and reporting it puts an
   // unactionable row at the top of a conference. /changes/ drops these; so does
   // this, and from the same midnight, so the two never disagree about a row.
-  const { startMs: windowStartMs } = weeklyWindow(nowMs);
-  // Both ends, not one. /changes/ says "since 24 Aug 2026" while this said "for
-  // the week ending 31 Aug 2026" — one window described from opposite ends, which
-  // reads as two different windows when someone follows the link.
-  const windowLabel =
-    `${fmtUtc(new Date(windowStartMs).toISOString()).split(',')[0]} – ` +
-    `${fmtUtc(new Date(nowMs).toISOString()).split(',')[0]}`;
+  const { startMs: windowStartMs, since, until } = weeklyWindow(nowMs);
+  // Both ends, not one, and the same words /changes/ prints: lib/events.mjs
+  // builds the phrase for both surfaces, so a reader following the link finds
+  // the week named exactly as their email named it. (This once said "for the
+  // week ending 31 Aug 2026" while the page said "since 24 Aug 2026" — one
+  // window described from opposite ends, which reads as two.)
+  const windowLabel = labelWindow(since, until);
   const changeRows = merged
     .filter((e) => changeKinds.has(e.kind) && workshops[e.slug])
     .map((e) => {

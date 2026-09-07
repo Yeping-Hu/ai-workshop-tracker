@@ -21,7 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { projectFeed, diffSnapshot, deltaDays, closingWithin, feedUnchanged, weeklyWindow, WEEKLY_WINDOW_DAYS } from '../alerts/diff.mjs';
-import { MIN_CHANGE_MS, SNAPSHOT_SHRINK_GUARD } from '../alerts/config.mjs';
+import { MIN_CHANGE_MS, SNAPSHOT_SHRINK_GUARD, WEEKLY_DOW } from '../alerts/config.mjs';
 import { deriveDeadlineChange } from '../lib/workshops.mjs';
 
 let failed = 0;
@@ -263,27 +263,36 @@ const snap = (list) => projectFeed(feed(list));
 }
 
 /* ------------------------------------------------------------ weeklyWindow */
-// Consecutive Monday editions must tile. Events are dated by the run that saw
-// them, Monday's run records Monday's events before it builds Monday's edition,
-// and the store is queried with `observed >= since` — so a seven-day look-back
+// Consecutive editions must tile. Events are dated by the run that saw them,
+// Monday's run records Monday's events before it builds Monday's edition, and
+// the store is queried with `observed >= since` — so a seven-day look-back
 // started ON the previous edition's day and reported it twice (2026-09-07: 15
 // of that digest's 72 events were repeats of the 31 August one).
 {
   const thisMon = Date.parse('2026-09-07T12:55:46Z');
   const lastMon = thisMon - 7 * 86_400_000;
-  const day = (ms) => new Date(ms).toISOString().slice(0, 10);
-  eq('the window is the seven days ending on the run day, inclusive', weeklyWindow(thisMon).since, '2026-09-01');
-  check('it opens at midnight UTC of `since`',
-    weeklyWindow(thisMon).startMs === Date.parse('2026-09-01T00:00:00Z'));
-  check('the previous edition\'s own day is outside this window', day(lastMon) < weeklyWindow(thisMon).since, day(lastMon));
-  check('and the day after it is the first day inside — no gap either',
-    day(lastMon + 86_400_000) === weeklyWindow(thisMon).since);
+  const nextMon = thisMon + 7 * 86_400_000;
+  const w = weeklyWindow(thisMon);
+  eq('a Monday run reports the seven days ending that Monday', [w.since, w.until], ['2026-09-01', '2026-09-07']);
+  check('the window opens at midnight UTC of `since`', w.startMs === Date.parse('2026-09-01T00:00:00Z'));
+  eq('the previous edition ended the day before this one opens', weeklyWindow(lastMon).until, '2026-08-31');
+  eq('and the next one opens the day after this one ends', weeklyWindow(nextMon).since, '2026-09-08');
   eq('the window spans WEEKLY_WINDOW_DAYS days',
-    (Date.parse(`${day(thisMon)}T00:00:00Z`) - weeklyWindow(thisMon).startMs) / 86_400_000 + 1, WEEKLY_WINDOW_DAYS);
+    (Date.parse(`${w.until}T00:00:00Z`) - w.startMs) / 86_400_000 + 1, WEEKLY_WINDOW_DAYS);
   // The time of day never moves the boundary: a run GitHub starts at 23:59
   // reports the same seven days as one started at 06:30.
-  eq('the run\'s time of day does not move `since`',
-    weeklyWindow(Date.parse('2026-09-07T23:59:59Z')).since, weeklyWindow(Date.parse('2026-09-07T00:00:01Z')).since);
+  eq('the run\'s time of day does not move the window',
+    weeklyWindow(Date.parse('2026-09-07T23:59:59Z')), weeklyWindow(Date.parse('2026-09-07T00:00:01Z')));
+
+  // Anchored to the week's Monday, so every run in the week names the same
+  // edition: a Tuesday dispatch sending the digest a failed Monday run did
+  // not, or a Sunday dry run republishing the page, rewrite exactly what the
+  // Monday run would have — not the seven days ending on the day of the
+  // dispatch, which would have shifted the window and repeated days next week.
+  eq('a Tuesday dispatch names Monday\'s edition', weeklyWindow(Date.parse('2026-09-08T09:00:00Z')), w);
+  eq('a Sunday dispatch still names that Monday\'s edition', weeklyWindow(Date.parse('2026-09-13T23:59:59Z')), w);
+  eq('the following Monday moves on', weeklyWindow(nextMon).until, '2026-09-14');
+  check('the anchor is WEEKLY_DOW', new Date(`${w.until}T00:00:00Z`).getUTCDay() === WEEKLY_DOW);
 }
 
 /* ---------------------------------------------- one definition of imminent */
@@ -312,9 +321,20 @@ const snap = (list) => projectFeed(feed(list));
   // digest labels and cuts by it, so both must take it from weeklyWindow(). The
   // tell of a re-inlined look-back is subtracting a week from the run time.
   check('alerts_run.mjs imports weeklyWindow', /import \{[^}]*\bweeklyWindow\b[^}]*\} from '\.\.\/alerts\/diff\.mjs'/.test(run));
-  check('the weekly pass asks the store for weeklyWindow().since', /const \{ since \} = weeklyWindow\(NOW_MS\)/.test(run));
+  check('the weekly pass asks the store for weeklyWindow().since', /const \{ since, until \} = weeklyWindow\(NOW_MS\)/.test(run));
+  check('and closes the edition at weeklyWindow().until', /e\.observed <= until/.test(run));
+  check('the feed carries both ends of the window', /writeChangesArtifact\(\{ since, until, events \}\)/.test(run));
   check('render.mjs imports weeklyWindow', /import \{[^}]*\bweeklyWindow\b[^}]*\} from '\.\/diff\.mjs'/.test(render));
-  check('the digest\'s window comes from weeklyWindow', /windowStartMs \} = weeklyWindow\(nowMs\)/.test(render));
+  check('the digest\'s window comes from weeklyWindow', /windowStartMs, since, until \} = weeklyWindow\(nowMs\)/.test(render));
+  // The label too: the digest and /changes/ must name the week in the same
+  // words, so both take the phrase from lib/events.mjs rather than formatting
+  // their own ends of it.
+  const page = fs.readFileSync(path.join(ROOT, 'site', 'src', 'pages', 'changes.astro'), 'utf8');
+  check('render.mjs names the week through lib/events.mjs windowLabel',
+    /import \{[^}]*\bwindowLabel as labelWindow\b[^}]*\} from '\.\.\/lib\/events\.mjs'/.test(render) && /const windowLabel = labelWindow\(since, until\)/.test(render));
+  check('changes.astro names the week through lib/events.mjs windowLabel',
+    /import \{[^}]*\bwindowLabel\b[^}]*\} from '\.\.\/\.\.\/\.\.\/lib\/events\.mjs'/.test(page) && /windowLabel\(\s*feed\.since,/.test(page));
+  check('changes.astro no longer formats the week through the locale tables', !/toLocaleDateString\([^)]*\)[^;]*feed\.since|feed\.since[^;]*toLocaleDateString/.test(page));
   const lookBack = /\b(nowMs|NOW_MS)\s*-\s*(weekMs|7 \* 86_400_000)\b/;
   check('render.mjs keeps no private seven-day look-back', !lookBack.test(render));
   check('alerts_run.mjs keeps no private seven-day look-back', !lookBack.test(run));

@@ -22,7 +22,7 @@
  * in lib/workshops.mjs, so an email can never report a move the site suppresses.
  */
 
-import { MIN_CHANGE_MS, SNAPSHOT_SHRINK_GUARD } from './config.mjs';
+import { MIN_CHANGE_MS, SNAPSHOT_SHRINK_GUARD, WEEKLY_DOW } from './config.mjs';
 
 /** Fields a digest can actually render. Everything else is dropped. */
 export function projectWorkshop(w) {
@@ -160,28 +160,41 @@ export function feedUnchanged(snapshot, live) {
 export const WEEKLY_WINDOW_DAYS = 7;
 
 /**
- * The window a weekly edition reports: the seven UTC days ending on the run's
- * own day, inclusive — as the `since` date the event store is asked for and
- * the instant the window opened.
+ * The window a weekly edition reports — `since` and `until` as the YYYY-MM-DD
+ * dates the event store's `observed` column is compared against, inclusive at
+ * both ends, and `startMs` as the instant the window opened.
  *
- * Six days back, not seven. Events are dated by the run that observed them and
- * queried with `observed >= since`, and Monday's run records Monday's events
- * before it builds Monday's edition — so a seven-day look-back on the next
- * Monday started *on* the previous edition's day and reported it twice. It did,
- * on 2026-09-07: 15 of that digest's 72 events had been in the 31 August one,
- * and the changes feed was refused by scripts/validate_changes_feed.mjs because
- * four of them were `announced` rows for workshops older than the window.
- * Consecutive Mondays now tile — [D−6, D], then [D+1, D+7] — with no overlap
- * and no gap.
+ * Anchored, not relative. `until` is the most recent weekly day (WEEKLY_DOW,
+ * Monday) on or before the run, and `since` the six days before it, so every
+ * run in a given week names the same edition: the scheduled Monday run, a
+ * Tuesday dispatch sending the digest a failed Monday run did not, and a Sunday
+ * dry run republishing the page after a rendering fix all produce the same
+ * seven days. A window measured back from the run clock cannot promise that —
+ * it shifts a day for every day the run is late, and the next Monday's window
+ * then repeats whatever days the late one already reported.
  *
- * One definition, three readers: the pipeline (its query and the `since` it
- * writes to data/changes.json), the digest (its window label and its
- * passed-deadline cut-off) and, through the committed feed, /changes/. The mail
- * and the page therefore describe the same days, from the same midnight.
+ * Six days back from `until`, not seven. Events are dated by the run that
+ * observed them, and Monday's run records Monday's events before it builds
+ * Monday's edition — so with `observed >= since` a seven-day look-back started
+ * *on* the previous edition's day and reported it twice. It did, on 2026-09-07:
+ * 15 of that digest's 72 events had been in the 31 August one, and the changes
+ * feed was refused by scripts/validate_changes_feed.mjs because four of them
+ * were `announced` rows for workshops older than the window. Consecutive
+ * editions now tile — [D−6, D], then [D+1, D+7] — with no overlap and no gap.
+ *
+ * One definition, three readers: the pipeline (its query, its `observed <=
+ * until` filter, and the `since`/`until` it writes to data/changes.json), the
+ * digest (its window label and its passed-deadline cut-off) and, through the
+ * committed feed, /changes/. The mail and the page therefore describe the same
+ * days, from the same midnight, in the same words (lib/events.mjs windowLabel).
  */
 export function weeklyWindow(nowMs) {
-  const since = new Date(nowMs - (WEEKLY_WINDOW_DAYS - 1) * 86_400_000).toISOString().slice(0, 10);
-  return { since, startMs: Date.parse(`${since}T00:00:00Z`) };
+  const d = new Date(nowMs);
+  const daysSinceWeeklyDay = (d.getUTCDay() - WEEKLY_DOW + 7) % 7;
+  const untilMs = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - daysSinceWeeklyDay);
+  const startMs = untilMs - (WEEKLY_WINDOW_DAYS - 1) * 86_400_000;
+  const day = (ms) => new Date(ms).toISOString().slice(0, 10);
+  return { since: day(startMs), until: day(untilMs), startMs };
 }
 
 /**
