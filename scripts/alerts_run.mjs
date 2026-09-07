@@ -227,6 +227,12 @@ async function fetchFeed() {
  * corpus the rest of the site uses. That keeps the file small and means a
  * workshop cannot be named one way here and another way three pages later.
  *
+ * Each row keeps the day it was observed. The page does not show it, but the
+ * validator needs it: with it, "this row belongs to this window" and "this
+ * workshop existed before it was seen" are exact checks rather than a guess
+ * from the workshop's `added` date — which is what refused four real rows on
+ * 2026-09-07 for the one-day lag between a file landing and the next run.
+ *
  * Written on every WEEKLY pass, including quiet ones — an empty `events` array
  * is the honest state for a quiet week, and skipping the write would leave the
  * previous edition on the page claiming to be the current one.
@@ -242,6 +248,7 @@ function writeChangesArtifact({ since, until, events }) {
       days: e.days ?? null,
       old_utc: e.old_utc ?? null,
       new_utc: e.new_utc ?? null,
+      observed: e.observed ?? null,
     })),
   };
   // Written on a dry run too. DRY_RUN means "mail nobody and mutate nothing

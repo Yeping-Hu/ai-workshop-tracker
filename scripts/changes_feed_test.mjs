@@ -39,10 +39,18 @@ const CORPUS = {
     ['a-2026-over', daysBefore(SINCE, ANNOUNCED_LAG_DAYS + 1)],
   ]),
 };
+const UNTIL = '2026-08-25';
 const feed = (events, over = {}) => ({
-  generated_at: '2026-08-26T06:30:00.000Z', since: SINCE, events, ...over,
+  generated_at: '2026-08-26T06:30:00.000Z', since: SINCE, until: UNTIL, events, ...over,
 });
 const ok = (events, over) => validateChangesFeed(feed(events, over), CORPUS);
+/** Errors and warnings together, for the rules that downgrade rather than refuse. */
+const both = (events, over) => {
+  const warnings = [];
+  const errors = validateChangesFeed(feed(events, over), CORPUS, warnings);
+  return { errors, warnings };
+};
+const announced = (slug, over = {}) => ({ slug, kind: 'announced', days: null, old_utc: null, new_utc: null, ...over });
 
 // --- the states that must PASS ------------------------------------------
 check('an explicitly empty feed passes', ok([]), []);
@@ -67,6 +75,30 @@ check('an announcement for a workshop added the day before the window passes',
   ok([{ slug: 'a-2026-eve', kind: 'announced', days: null, old_utc: null, new_utc: null }]), []);
 check('an announcement added a full window before `since` still passes',
   ok([{ slug: 'a-2026-edge', kind: 'announced', days: null, old_utc: null, new_utc: null }]), []);
+
+// --- rows that say when they were observed --------------------------------
+// The pipeline stamps every row with the day of the run that saw it. That one
+// fact makes two checks exact where `added` alone could only guess, and it is
+// what keeps a real row from ever being refused for the pipeline running late.
+check('a row observed inside the window passes',
+  ok([{ slug: 'a-2026-one', kind: 'extended', days: 10, observed: '2026-08-20',
+        old_utc: '2026-08-21T23:59:00.000Z', new_utc: '2026-08-31T23:59:00.000Z' }]), []);
+check('a row observed on the window\'s last day passes', ok([announced('a-2026-one', { observed: UNTIL })]), []);
+const moved = (observed) => ({ slug: 'a-2026-one', kind: 'extended', days: 10, observed,
+  old_utc: '2026-08-21T23:59:00.000Z', new_utc: '2026-08-31T23:59:00.000Z' });
+check('a row observed before the window opened fails', ok([moved('2026-08-18')]).length, 1);
+check('a row observed after the window closed fails', ok([moved('2026-08-26')]).length, 1);
+check('a malformed `observed` fails', ok([announced('a-2026-one', { observed: 'Monday' })]).length, 1);
+check('an announcement observed the day its file landed passes', ok([announced('a-2026-one', { observed: '2026-08-20' })]), []);
+check('an announcement observed before its file existed fails',
+  ok([announced('a-2026-one', { observed: '2026-08-19' })]).length, 1);
+// The guess (`added` long before `since`) is downgraded once the row says
+// when it was seen: late news is a note in the log, not a red run that leaves
+// /changes/ on the previous edition.
+check('a stale-looking announcement WITH an observation is a warning, not an error',
+  (({ errors, warnings }) => [errors.length, warnings.length])(both([announced('a-2026-old', { observed: '2026-08-20' })])), [0, 1]);
+check('the same row WITHOUT an observation is still an error',
+  (({ errors, warnings }) => [errors.length, warnings.length])(both([announced('a-2026-old')])), [1, 0]);
 
 // --- the states that must FAIL ------------------------------------------
 const one = (ev, over) => ok([ev], over).length;
@@ -123,9 +155,14 @@ for (const f of fs.readdirSync(path.join(ROOT, 'data/workshops'))) {
 const found = validateChangesFeed(fabricated, { slugs, addedBySlug });
 
 check('the fabricated feed has the five rows it shipped with', fabricated.events.length, 5);
+check('the fabricated feed says on no row when it was observed', fabricated.events.every((e) => e.observed == null), true);
 const rowsFlagged = new Set(found.map((m) => /^event (\d+)/.exec(m)?.[1]).filter(Boolean));
 check('EVERY row of the fabricated feed is rejected', [...rowsFlagged].sort(), ['1', '2', '3', '4', '5']);
 check('it is rejected for more than one reason', found.length >= 8, true);
+
+// The pipeline must actually write the field the checks above rely on.
+const runSrc = fs.readFileSync(path.join(ROOT, 'scripts/alerts_run.mjs'), 'utf8');
+check('alerts_run.mjs writes `observed` on every feed row', /observed: e\.observed \?\? null,/.test(runSrc), true);
 
 console.log('\n  — what the validator says about the file that shipped —');
 for (const m of found) console.log(`    ${m}`);

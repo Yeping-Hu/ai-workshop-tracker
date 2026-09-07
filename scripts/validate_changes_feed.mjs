@@ -16,8 +16,18 @@
  * at least one of these — see scripts/changes_feed_test.mjs, which runs the
  * byte-exact file it shipped.
  *
- * Pure: takes the parsed feed and the set of known slugs, returns messages.
- * scripts/validate.mjs owns reading the file and reporting.
+ * A row also says when it was observed (the day of the run that saw it, from
+ * alerts/diff.mjs). That single fact turns two guesses into checks: the row
+ * belongs to the window it is published in, and a workshop cannot have been
+ * seen before its file existed. A real row can never fail those, however late
+ * the pipeline runs — which matters because on 2026-09-07 the guess (`added`
+ * equals the observation day) refused four real rows and left /changes/ stale.
+ * The guess survives as a warning, and as an error only for rows that carry
+ * no observation at all, which is what a hand-written file looks like.
+ *
+ * Pure: takes the parsed feed and the set of known slugs, returns error
+ * messages and appends non-blocking notes to `warnings`. scripts/validate.mjs
+ * owns reading the file and reporting.
  */
 
 /** Event kinds the pipeline emits (alerts/diff.mjs). */
@@ -52,9 +62,11 @@ export const ANNOUNCED_LAG_DAYS = 7;
  * @param {{slugs?: Set<string>, addedBySlug?: Map<string,string>}} corpus
  *        every slug in data/workshops, and each one's `added` date where it has
  *        one — enough to refute an `announced` claim without a truth pass.
+ * @param {string[]} warnings  sink for non-blocking notes (a stale-looking
+ *        "new" row that the pipeline nevertheless observed this window)
  * @returns {string[]} error messages, empty when the feed is well-formed
  */
-export function validateChangesFeed(feed, corpus = {}) {
+export function validateChangesFeed(feed, corpus = {}, warnings = []) {
   const knownSlugs = corpus.slugs ?? (corpus instanceof Set ? corpus : new Set());
   const addedBySlug = corpus.addedBySlug ?? new Map();
   const errs = [];
@@ -103,6 +115,20 @@ export function validateChangesFeed(feed, corpus = {}) {
       return; // the per-kind rules below are meaningless without a valid kind
     }
 
+    // The day the row was observed. Optional only because feeds written before
+    // 2026-09-07 carry none; when present it must be a day inside the window.
+    const observed = e.observed ?? null;
+    const seen = observed != null && isDay(observed);
+    if (observed != null && !seen) {
+      errs.push(`${where}: \`observed\` must be a YYYY-MM-DD date (got ${JSON.stringify(observed)}).`);
+    }
+    if (seen && isDay(feed.since) && String(observed) < String(feed.since)) {
+      errs.push(`${where}: observed ${observed}, before the window opened (\`since: ${feed.since}\`).`);
+    }
+    if (seen && isDay(feed.until) && String(observed) > String(feed.until)) {
+      errs.push(`${where}: observed ${observed}, after the window closed (\`until: ${feed.until}\`).`);
+    }
+
     if (MOVED.has(e.kind)) {
       // The load-bearing rule. "Extended by 5 days" from nothing to nothing is
       // the exact shape of the retracted file.
@@ -146,24 +172,38 @@ export function validateChangesFeed(feed, corpus = {}) {
     // it has a deadline — so the shape alone cannot refute a fabricated one.
     // The corpus can: the claim is that this workshop appeared during the
     // window, and a real `announced` event is observed on or after the day its
-    // file was `added` — never before, and normally within a day of it (see
-    // ANNOUNCED_LAG_DAYS). A workshop added three weeks before `since` did not
-    // appear this week.
+    // file was `added` — never before, and normally within a day of it.
     if (e.kind === 'announced') {
       if (e.days != null) {
         errs.push(`${where}: \`announced\` must have a null \`days\` — nothing moved.`);
       }
       const added = addedBySlug.get(slug);
-      if (added && isDay(added) && isDay(feed.since)) {
-        const earliest = new Date(Date.parse(`${feed.since}T00:00:00Z`) - ANNOUNCED_LAG_DAYS * 86_400_000)
-          .toISOString()
-          .slice(0, 10);
-        if (added < earliest) {
+      if (added && isDay(added)) {
+        // Exact, given an observation: the file must predate the sighting.
+        if (seen && String(added) > String(observed)) {
           errs.push(
-            `${where}: \`announced\` claims the workshop appeared this window, ` +
-            `but data/workshops/${slug}.yml records \`added: ${added}\`, ` +
-            `more than ${ANNOUNCED_LAG_DAYS} days before \`since: ${feed.since}\`.`,
+            `${where}: \`announced\` on ${observed}, but data/workshops/${slug}.yml records ` +
+            `\`added: ${added}\` — a workshop cannot be seen before its file exists.`,
           );
+        }
+        // The guess: a workshop added long before the window did not appear
+        // this week. With an observation the exact checks carry the load and
+        // this is a smell — the pipeline catching up after days down — worth a
+        // note in the log, not a red run that leaves /changes/ on the previous
+        // edition. Without one it is all there is, and the retracted file's
+        // "new" workshop, fourteen days old, is exactly what it refuses.
+        if (isDay(feed.since)) {
+          const earliest = new Date(Date.parse(`${feed.since}T00:00:00Z`) - ANNOUNCED_LAG_DAYS * 86_400_000)
+            .toISOString()
+            .slice(0, 10);
+          if (added < earliest) {
+            const msg =
+              `${where}: \`announced\` claims the workshop appeared this window, ` +
+              `but data/workshops/${slug}.yml records \`added: ${added}\`, ` +
+              `more than ${ANNOUNCED_LAG_DAYS} days before \`since: ${feed.since}\`.`;
+            if (seen) warnings.push(`${msg} It was observed on ${observed}, so this is late news rather than a malformed row.`);
+            else errs.push(msg);
+          }
         }
       }
     }

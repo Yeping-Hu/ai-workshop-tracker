@@ -416,7 +416,9 @@ for (const filePath of listWorkshopFiles()) {
           if (raw?.added) addedBySlug.set(slug, String(raw.added));
         } catch { /* unparseable files are reported above */ }
       }
-      for (const msg of validateChangesFeed(feed, { slugs, addedBySlug })) errors.push({ file: rel, msg });
+      const feedWarnings = [];
+      for (const msg of validateChangesFeed(feed, { slugs, addedBySlug }, feedWarnings)) errors.push({ file: rel, msg });
+      for (const msg of feedWarnings) warnings.push({ file: rel, msg });
     }
   }
   // Absent is fine: a fork, a fresh clone, or the period before the alerts

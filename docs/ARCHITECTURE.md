@@ -1061,7 +1061,10 @@ two consumers.
 
 Only events are written, never workshop projections: the site already has every
 workshop in `data/`, so the page joins on slug and takes names from the same
-corpus (and the same `displayLabel`) as everything else. Current week only —
+corpus (and the same `displayLabel`) as everything else. Each row keeps the day
+it was observed — not for the page, which does not show it, but for
+`scripts/validate_changes_feed.mjs`, whose checks on a real row are exact only
+because of it. Current week only —
 there is no archive, and the `events` table is pruned anyway.
 
 The week is `weeklyWindow()` in `alerts/diff.mjs`: anchored to the week's

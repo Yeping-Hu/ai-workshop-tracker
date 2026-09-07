@@ -560,6 +560,14 @@ dispatch the workflow with `dry_run` **and** `force_weekly` to republish the
 page without mailing anyone. Do **not** re-run the scheduled job on a Monday:
 the digest has no send-log and would go out twice.
 
+This should now be rare. Every row the pipeline writes carries the day it was
+`observed`, so the validator's checks on a real row are exact — it belongs to
+the window, and a workshop was not seen before its file existed — however late
+the pipeline ran. The heuristic that refused the 2026-09-07 rows (a "new"
+workshop whose file is older than the window) is a **warning** for rows that
+say when they were seen, and an error only for rows that do not, which is what
+a hand-written file looks like.
+
 ### The first run announced nothing
 
 Correct. With no snapshot, everything looks new, so the first run seeds silently
