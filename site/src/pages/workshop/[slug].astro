@@ -43,7 +43,7 @@ const shortName = workshopShortName(w, conf.name);
 const wsLabel = `${shortName.full} — ${conf.name} ${w.year}`;
 // Browse-order sort key. The engine sorts on it when the search box is empty
 // (keyword queries keep Pagefind's relevance order), and it is published in
-// the results' metadata (pfFields below) so the "Soonest deadline" sort in
+// the results' metadata (pfFields below) so the "Newest first" sort in
 // site/src/scripts/result-sort.js applies the same order to a keyword search.
 // Lexicographic ascending over '<band>-<14-digit ms>':
 //   0  open calls, by soonest deadline (most urgent first)
@@ -91,7 +91,7 @@ const pfFields: [string, string][] = [
   ['deadline_change', w.deadlineChange
     ? JSON.stringify({ kind: w.deadlineChange.kind, days: w.deadlineChange.days, recorded: w.deadlineChange.recorded })
     : ''],
-  // The browse-order key, so the results' "Soonest deadline" sort applies to
+  // The browse-order key, so the results' "Newest first" sort applies to
   // a keyword search exactly the order the engine applies to a browse.
   ['order', searchOrder],
 ];

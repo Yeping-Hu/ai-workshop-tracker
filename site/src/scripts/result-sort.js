@@ -17,7 +17,7 @@
  * match alike and keeps the engine's deterministic base order (score, then id)
  * underneath every tie.
  *
- * Why "soonest deadline" reuses the browse key instead of rebuilding it here:
+ * Why "Newest first" reuses the browse key instead of rebuilding it here:
  * that key is the order the board and the filter-only browse already show —
  * open calls by soonest deadline, then announced editions with no deadline yet,
  * then everything else most recent first. One definition, made at build time,
@@ -38,7 +38,7 @@
  */
 export const SORTS = [
   { key: 'relevance', label: 'Best match', says: 'by relevance', needsQuery: true },
-  { key: 'soonest', label: 'Soonest deadline', says: 'open calls first' },
+  { key: 'newest', label: 'Newest first', says: 'newest first' },
   { key: 'oldest', label: 'Oldest first', says: 'oldest first' },
   { key: 'name', label: 'Name A–Z', says: 'by name' },
   { key: 'papers', label: 'Most matching papers', says: 'most matching papers first', needsQuery: true },
@@ -46,7 +46,7 @@ export const SORTS = [
 
 /** With keywords, Pagefind's relevance; without, the browse order. */
 export function defaultSort(hasQuery) {
-  return hasQuery ? 'relevance' : 'soonest';
+  return hasQuery ? 'relevance' : 'newest';
 }
 
 /**
@@ -84,7 +84,7 @@ const COMPARE = {
   // code unit by code unit. A result without one (an index built before the
   // key was published, in the seconds around a deploy) goes last rather than
   // first: '~' is above every digit.
-  soonest: (a, b) => byKey(a.view.order || '~', b.view.order || '~') || bySlug(a.view, b.view),
+  newest: (a, b) => byKey(a.view.order || '~', b.view.order || '~') || bySlug(a.view, b.view),
   // By edition year, then by the paper deadline within the year. An edition
   // with no deadline closes its year — a "TBA" is not older than a dated
   // sibling — and an unknown year goes last. Names, then slugs, settle the rest.

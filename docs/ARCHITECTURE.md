@@ -160,7 +160,7 @@ Behavior worth knowing before you touch the search code:
   takes its place by the date it was held). That is the build-time `order`
   key in `workshop/[slug].astro`, which the engine sorts on. Typing keywords
   switches to relevance ranking. A "Sort" picker in the filter bar, shown only
-  while a search or filter is active, offers Best match, Soonest deadline,
+  while a search or filter is active, offers Best match, Newest first,
   Oldest first, Name A–Z and Most matching papers; the rules live in
   `site/src/scripts/result-sort.js`, pinned by `scripts/result_sort_test.mjs`.
   Sorting is a re-order of the grouped results in the browser, never a new
@@ -192,8 +192,8 @@ Behavior worth knowing before you touch the search code:
 - **The headline counts what is actually listed.** With keywords: "N workshops ·
   M matching papers · by relevance · page x/y", where N is distinct workshops
   shown and M is individual matching papers inside them. Browsing: "N workshops ·
-  open calls first". The phrase after the counts names the active sort (`says`
-  in `result-sort.js`: by relevance, open calls first, oldest first, by name,
+  newest first". The phrase after the counts names the active sort (`says`
+  in `result-sort.js`: by relevance, newest first, oldest first, by name,
   most matching papers first). Results paginate 50 per page; the board
   paginates 25, both with the same numbered pager.
 - **Statuses are inferred, not just from dates.** Accepted papers in the cache

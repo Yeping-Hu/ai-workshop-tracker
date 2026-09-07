@@ -164,7 +164,7 @@ await page.check('[data-facet="status"] input[value="Open call"]');
 await page.waitForFunction(() => document.querySelectorAll('#results .pf-result').length > 0);
 await page.waitForFunction(() => /workshop/.test(document.querySelector('#searchCount')?.textContent || ''), null, { timeout: 15000 });
 const browseCount = await page.$eval('#searchCount', (el) => el.textContent);
-check('browse headline omits papers segment', /^\d+ workshops? · open calls first( · page \d+\/\d+)?$/.test(browseCount), browseCount);
+check('browse headline omits papers segment', /^\d+ workshops? · newest first( · page \d+\/\d+)?$/.test(browseCount), browseCount);
 check('browse entries have no paper sublists', (await page.$$('.pf-papers')).length === 0);
 await page.uncheck('[data-facet="status"] input[value="Open call"]');
 await page.waitForSelector('#homeDefault:not([hidden])');
@@ -273,7 +273,7 @@ await page.check('[data-facet="conference"] input[value="IROS"]');
 await page.waitForFunction(() => document.querySelectorAll('#results .pf-result').length > 0, null, { timeout: 8000 });
 await page.waitForFunction(() => /workshop/.test(document.querySelector('#searchCount')?.textContent || ''), null, { timeout: 15000 });
 const ordBrowseCount = await page.$eval('#searchCount', (el) => el.textContent);
-check('browse count line says "open calls first"', /open calls first/.test(ordBrowseCount), ordBrowseCount);
+check('browse count line says "newest first"', /newest first/.test(ordBrowseCount), ordBrowseCount);
 const ordPills = await page.$$eval('#results .pf-result .pill', (els) => els.map((e) => e.textContent.trim()));
 check('first browse result is an Open call', ordPills[0] === 'Open call', ordPills.slice(0, 3).join(','));
 const ordLastOpen = ordPills.lastIndexOf('Open call');
@@ -334,15 +334,15 @@ await page.keyboard.press('Enter');
 await countSettled();
 check('sort picker shown with results', !(await page.$eval('#sortPick', (el) => el.hidden)));
 const sortLabels = await page.$$eval('#sortBy option', (os) => os.map((o) => o.textContent));
-check('picker lists the five orders', JSON.stringify(sortLabels) === JSON.stringify(['Best match', 'Soonest deadline', 'Oldest first', 'Name A–Z', 'Most matching papers']), sortLabels.join(' | '));
+check('picker lists the five orders', JSON.stringify(sortLabels) === JSON.stringify(['Best match', 'Newest first', 'Oldest first', 'Name A–Z', 'Most matching papers']), sortLabels.join(' | '));
 check('keywords default to Best match', (await sortValue()) === 'relevance');
 check('the default writes no sort to the URL', !new URL(await page.url()).searchParams.has('sort'));
 const relOrder = await titlesOnPage();
 
-// Soonest deadline: open calls first, ascending; then closed, most recent first.
-await page.selectOption('#sortBy', 'soonest');
-await sortInUrl('soonest');
-check('count line states the order', /open calls first/.test(await countLine()), await countLine());
+// Newest first: open calls first, ascending; then closed, most recent first.
+await page.selectOption('#sortBy', 'newest');
+await sortInUrl('newest');
+check('count line states the order', /newest first/.test(await countLine()), await countLine());
 const soonRows = await page.$$eval('#results .pf-result', (els) => els.map((e) => ({
   pill: e.querySelector('.pill')?.textContent.trim(),
   iso: e.querySelector('.ws-deadline .local[data-iso]')?.getAttribute('data-iso') || null,
@@ -396,7 +396,7 @@ await countSettled();
 check('an explicit sort survives removing the keyword', (await sortValue()) === 'oldest' && /oldest first/.test(await countLine()), await countLine());
 check('Best match is greyed without keywords', await page.$eval('#sortBy option[value="relevance"]', (o) => o.disabled));
 check('Most matching papers is greyed without keywords', await page.$eval('#sortBy option[value="papers"]', (o) => o.disabled));
-check('Soonest deadline is not', !(await page.$eval('#sortBy option[value="soonest"]', (o) => o.disabled)));
+check('Newest first is not', !(await page.$eval('#sortBy option[value="newest"]', (o) => o.disabled)));
 check('the browse obeys the sort', nonDecreasing(await yearsOnPage()), (await yearsOnPage()).slice(0, 10).join(','));
 await page.fill('#q', SORT_Q);
 await page.keyboard.press('Enter');

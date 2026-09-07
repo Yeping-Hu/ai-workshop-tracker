@@ -833,7 +833,7 @@ const datasetLd: Record<string, any> = {
         // the bundled scripts; if it is somehow not here yet, the single full
         // pass is the safe answer too.)
         const FAST = PAGE_SIZE * 2;
-        const engineOrder = query === null ? 'soonest' : 'relevance';
+        const engineOrder = query === null ? 'newest' : 'relevance';
         const shownOrder = window.awtResultSort ? window.awtResultSort.effectiveSort(sortKey, query !== null) : null;
         const twoPhase = res.results.length > FAST && pendingPage <= 1 && shownOrder === engineOrder;
         let n = await buildState(res, query, filters, terms, twoPhase ? FAST : undefined);
@@ -903,7 +903,7 @@ const datasetLd: Record<string, any> = {
         location_label: meta.location_label || null,
         location_distinguishes: !!meta.location_label,
         deadline_change: json(meta.deadline_change),
-        // The build-time browse key, for the "Soonest deadline" sort.
+        // The build-time browse key, for the "Newest first" sort.
         order: meta.order || null,
       };
     }
