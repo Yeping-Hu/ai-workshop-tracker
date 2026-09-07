@@ -110,6 +110,8 @@ jobs:
         run: node scripts/planner_test.mjs
       - name: Test the topic-trends derivation
         run: node scripts/trends_test.mjs
+      - name: Test "Surprise me"
+        run: node scripts/surprise_test.mjs
       - name: Validate workshop data
         id: validate
         run: node scripts/validate.mjs --report validation-report.md

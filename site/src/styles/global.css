@@ -698,6 +698,10 @@ h2 .count { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 400;
 .tz-help > summary:hover { color: var(--ink); }
 .tz-help p { margin: 0.4rem 0 0; max-width: 60ch; }
 .tz-help .tz-now { font-size: 0.78rem; }
+/* "Surprise me": a quiet button and one line of output beneath it. */
+.surprise { margin-top: 0.5rem; }
+.surprise p { margin: 0.25rem 0 0; }
+.surprise-out { max-width: 62ch; }
 .conf-ext { margin: 0.6rem 0 0; max-width: 60ch; }
 @media (max-width: 40rem) {
   .dl-history li { grid-template-columns: 1fr auto; }

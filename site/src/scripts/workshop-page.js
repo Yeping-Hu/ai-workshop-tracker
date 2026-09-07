@@ -11,6 +11,7 @@
  * bundler; the module guards its own one-time init.
  */
 import { track } from './favorites.js';
+import { pickIndex } from '../../../lib/surprise.mjs';
 
 // Extension insight (lib/extensions.mjs): the line is server-rendered; all
 // this records is that a page carrying one was opened, and which rule spoke.
@@ -27,6 +28,44 @@ if (tzHelp) {
     if (tzHelp.open && !opened) {
       opened = true;
       track('delight/aoe-open', tzHelp.dataset.slug || '');
+    }
+  });
+}
+
+// "Surprise me" (lib/surprise.mjs): the pool is the titles already on this
+// page, or the previous edition's list embedded at build. Never the same
+// paper twice in a row; one event per page, on the first click.
+const surpriseBtn = document.querySelector('[data-surprise]');
+if (surpriseBtn) {
+  const out = surpriseBtn.closest('.surprise')?.querySelector('.surprise-out');
+  let pool = [];
+  let label = '';
+  if (surpriseBtn.dataset.surprise === 'this') {
+    pool = [...document.querySelectorAll('.paper-list .p-title')].map((h) => [h.textContent.trim(), `#${h.id}`]);
+  } else {
+    try {
+      const j = JSON.parse(document.getElementById('awt-surprise')?.textContent || '{}');
+      pool = Array.isArray(j.papers) ? j.papers : [];
+      label = j.label || '';
+    } catch { pool = []; }
+  }
+  let last = -1;
+  let tracked = false;
+  surpriseBtn.addEventListener('click', () => {
+    if (!pool.length || !out) return;
+    const i = pickIndex(pool.length, last);
+    last = i;
+    const [title, href] = pool[i];
+    out.replaceChildren();
+    const a = document.createElement('a');
+    a.href = href;
+    a.textContent = title;
+    out.append(a);
+    if (label) out.append(` — from ${label}`);
+    out.hidden = false;
+    if (!tracked) {
+      tracked = true;
+      track('delight/surprise', document.querySelector('.tz-help')?.dataset.slug || location.pathname);
     }
   });
 }

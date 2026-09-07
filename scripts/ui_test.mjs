@@ -940,6 +940,49 @@ console.log('— the time-zone explainer under an upcoming countdown —');
   }
 }
 
+console.log('— "Surprise me" (own papers, then the previous edition) —');
+{
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const pages = readdirSync('site/dist/workshop');
+  const has = (d, needle) => { try { return readFileSync(`site/dist/workshop/${d}/index.html`, 'utf8').includes(needle); } catch { return false; } };
+  const own = pages.find((d) => has(d, 'data-surprise="this"'));
+  const prev = pages.find((d) => has(d, 'id="awt-surprise"'));
+  if (own) {
+    const p2 = await browser.newPage();
+    await p2.addInitScript(() => { window.__awtEvents = []; window.goatcounter = { count: (e) => window.__awtEvents.push(e) }; });
+    await p2.goto(`${BASE}/workshop/${own}/`, { waitUntil: 'networkidle' });
+    const titles = new Set(await p2.$$eval('.paper-list .p-title', (els) => els.map((e) => e.textContent.trim())));
+    check('output is hidden until the first click', await p2.$eval('.surprise-out', (el) => el.hidden));
+    const seen = [];
+    for (let k = 0; k < 5; k++) {
+      await p2.click('[data-surprise="this"]');
+      seen.push(await p2.$eval('.surprise-out a', (a) => [a.textContent.trim(), a.getAttribute('href')]));
+    }
+    check('every pick is a paper from this page', seen.every(([t]) => titles.has(t)), JSON.stringify(seen.map(([t]) => t.slice(0, 30))));
+    check('picks link to the paper anchor on this page', seen.every(([, h]) => /^#p-/.test(h)), JSON.stringify(seen.map(([, h]) => h)));
+    check('never the same paper twice in a row', titles.size < 2 || seen.every(([t], i) => i === 0 || t !== seen[i - 1][0]), JSON.stringify(seen.map(([t]) => t.slice(0, 20))));
+    const ev = await p2.evaluate(() => window.__awtEvents.filter((e) => e.path === 'delight/surprise'));
+    check('five clicks send one delight/surprise event', ev.length === 1, JSON.stringify(ev));
+    check('the surprise block is kept out of the search index', await p2.$eval('[data-surprise]', (el) => !!el.closest('[data-pagefind-ignore]')));
+    await p2.close();
+  } else {
+    check('no page with its own papers — skipped', true);
+  }
+  if (prev) {
+    await page.goto(`${BASE}/workshop/${prev}/`, { waitUntil: 'networkidle' });
+    await page.click('[data-surprise="previous"]');
+    const link = await page.$eval('.surprise-out a', (a) => a.getAttribute('href'));
+    const line = await page.$eval('.surprise-out', (el) => el.textContent.trim());
+    check('a previous-edition pick links to that edition\'s paper anchor', /\/workshop\/[^/]+\/#p-/.test(link) && !link.includes(`/workshop/${prev}/`), link);
+    check('…and says which edition it came from', /— from .+ \d{4}$/.test(line), line);
+    const target = link.replace(/#.*/, '').replace(/^.*\/workshop\//, '').replace(/\/$/, '');
+    const anchor = link.replace(/^.*#/, '');
+    check('the anchor exists on the target page', has(target, `id="${anchor}"`), `${target} ${anchor}`);
+  } else {
+    check('no upcoming page with a cached previous edition — skipped', true);
+  }
+}
+
 console.log('— extension insights (lib/extensions.mjs; skipped when no conference-year clears the gate) —');
 {
   const { readFileSync, readdirSync } = await import('node:fs');

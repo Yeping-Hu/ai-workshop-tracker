@@ -5,6 +5,7 @@ import { href, REPO_URL, CALENDAR_ENABLED } from '../../lib/site';
 import MarkdownExport from '../../components/MarkdownExport.astro';
 import { formatSingleWorkshopInfo, isAutoTopicsNote, isBotDeadlineNote } from '../../lib/markdown';
 import { timezoneLabel } from '../../../../lib/dates.mjs';
+import { surprisePool, paperId as stablePaperId } from '../../../../lib/surprise.mjs';
 
 export function getStaticPaths() {
   return workshops.map((w) => ({ params: { slug: w.slug }, props: { w } }));
@@ -45,9 +46,15 @@ const portalLabel: Record<string, string> = {
   unknown: 'Unknown',
 };
 // Stable per-paper id for device-local favorites: the OpenReview forum id
-// when present (survives cache refreshes/reordering), else slug+index.
-const paperId = (p: any, i: number) =>
-  String(p.forum_url || p.pdf_url || '').match(/[?&]id=([^&#]+)/)?.[1] ?? `${w.slug}~${i}`;
+// when present (survives cache refreshes/reordering), else slug+index. One
+// definition, in lib/surprise.mjs, shared with the "Surprise me" anchors so
+// a link built for the previous edition lands on the id that page rendered.
+const paperId = (p: any, i: number) => stablePaperId(p, i, w.slug);
+// "Surprise me": this page's own papers, else the previous edition's.
+const surprise = surprisePool(w, loadPaperCache, { confName: (id: string) => conferenceById.get(id)?.name ?? id });
+const surprisePayload = surprise?.from === 'previous'
+  ? { label: surprise.label, papers: surprise.papers.map(([t, path]: [string, string]) => [t, href(path)]) }
+  : null;
 // How a saved paper is labeled/grouped on the /saved/ page.
 // Deduped and track-disambiguated: two tracks of one workshop would otherwise
 // share a label and merge into a single group on /saved/.
@@ -695,6 +702,16 @@ const related = picked.map((o: any) => ({
             </li>
           ))}
         </ul>
+        {surprisePayload && (
+          <div class="surprise small" data-pagefind-ignore>
+            <p class="muted">
+              Curious what got in last time?{' '}
+              <button type="button" class="btn-quiet" data-surprise="previous">Surprise me</button>
+            </p>
+            <p class="surprise-out" aria-live="polite" hidden></p>
+            <script type="application/json" id="awt-surprise" set:html={JSON.stringify(surprisePayload)} />
+          </div>
+        )}
       </section>
     )}
 
@@ -753,6 +770,15 @@ const related = picked.map((o: any) => ({
           Fetched from OpenReview ({cache.source_api}) on {cache.fetched_at?.slice(0, 10)}.
           {cache.caveat && ` Note: ${cache.caveat}.`}
         </p>
+        {surprise?.from === 'this' && (
+          <div class="surprise small" data-pagefind-ignore>
+            <p class="muted">
+              <button type="button" class="btn-quiet" data-surprise="this">Surprise me</button>
+              {' '}— one paper from this list, at random.
+            </p>
+            <p class="surprise-out" aria-live="polite" hidden></p>
+          </div>
+        )}
         {/* The star is a sibling of the title, not a child of it: .paper is a
             two-column grid, and keeping the button in its own column is what lets
             the authors and the abstract start at the title's edge instead of

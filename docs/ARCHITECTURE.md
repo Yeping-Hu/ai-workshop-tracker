@@ -1047,6 +1047,17 @@ out — no scraping of other portals. (CVPR workshops use OpenReview for reviewi
 only; their accepted papers live on CVF Open Access, so those entries track
 deadlines and links rather than inline paper lists.)
 
+The caches also feed one small pleasure: a **"Surprise me"** button on a
+workshop page shows one accepted paper at random (`lib/surprise.mjs`). The
+pool is the titles already on the page; on an upcoming edition with none yet,
+it is the newest earlier edition (the `relatedEditions` identity) that has a
+cache, embedded at build and linked back to that edition's page at the paper's
+anchor — so the reader stays where the star is. Never the same paper twice in
+a row. `paperId()` there is the one definition of a paper's stable id, shared
+with the star buttons, so an anchor built for another page lands on the id
+that page rendered. Pinned by `scripts/surprise_test.mjs`; one
+`delight/surprise` event per page on first use.
+
 ## Calendar feeds instead of email
 
 Static `.ics` feeds (all / per-conference / per-topic / per-workshop) with

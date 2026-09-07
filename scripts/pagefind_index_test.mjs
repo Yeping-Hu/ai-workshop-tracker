@@ -79,12 +79,14 @@ const isMachineDeadlineNote = (s) => !s || /^(OpenReview-synced|imported from Op
 const WS_CHROME = ['Official website ↗', 'OpenReview venue ↗', '✎ Edit this entry', 'Copy as Markdown', 'help us add it',
   'Help add it', 'Opens a short form', 'Add deadline to calendar',
   // The time-zone explainer (a details block under the countdown).
-  'Anywhere on Earth', 'Right now:'];
+  'Anywhere on Earth', 'Right now:',
+  // "Surprise me" on a page whose pool is the previous edition.
+  'Curious what got in last time', 'Surprise me'];
 const WS_STAMPS = ['OpenReview-synced', 'imported from OpenReview — check the website',
   'auto-suggested and may be imprecise', 'SEED DATA', 'Unverified seed entry',
   // The extension-rate line (lib/extensions.mjs) is derived, not written.
   'of workshop deadlines were extended', 'edition we tracked', 'editions we tracked'];
-const PAPERS_CHROME = ['Fetched from OpenReview', 'Accepted papers (', '· PDF'];
+const PAPERS_CHROME = ['Fetched from OpenReview', 'Accepted papers (', '· PDF', 'Surprise me', 'at random'];
 
 const api = JSON.parse(fs.readFileSync(path.join(DIST, 'api', 'workshops.json'), 'utf8')).workshops;
 const bySlug = new Map(api.map((w) => [w.slug, w]));
