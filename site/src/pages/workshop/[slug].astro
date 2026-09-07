@@ -41,25 +41,29 @@ const paperId = (p: any, i: number) =>
 // share a label and merge into a single group on /saved/.
 const shortName = workshopShortName(w, conf.name);
 const wsLabel = `${shortName.full} — ${conf.name} ${w.year}`;
-// Browse-mode sort key (used only when the search box is empty — keyword
-// queries keep Pagefind's relevance order). Lexicographic ascending over
-// '<band>-<14-digit ms>':
+// Browse-order sort key. The engine sorts on it when the search box is empty
+// (keyword queries keep Pagefind's relevance order), and it is published in
+// the results' metadata (pfFields below) so the "Soonest deadline" sort in
+// site/src/scripts/result-sort.js applies the same order to a keyword search.
+// Lexicographic ascending over '<band>-<14-digit ms>':
 //   0  open calls, by soonest deadline (most urgent first)
 //   1  upcoming with no deadline yet, by soonest event
-//   2  "Past": deadline has passed (both "closed, event still upcoming" and
-//      fully over) — by most recently passed deadline first, so the workshop
-//      whose deadline just passed sits at the top
-//   3  "Past" with no deadline at all — by most recent event, truly undated last
-// Bands 2 and 3 together are everything the UI labels "Past"; ordering by
-// deadline descending is what the deadline-passed list is sorted on.
+//   2  everything else — deadline passed, or an edition that never published
+//      one — by most recently passed deadline first, so the workshop whose
+//      deadline just passed sits at the top. An edition without a deadline
+//      takes its place by the date it was held, so it sits among its own year
+//      rather than in a band after the oldest dated one (which is where a
+//      reader of "oldest last" would have found it).
+//   3  neither date known (none today) — last
+// Band 2 is everything the UI labels "Past"; ordering by deadline descending
+// is what the deadline-passed list is sorted on.
 const searchOrder = (() => {
   const pad = (ms: number) => String(Math.max(0, Math.min(ms, 99999999999999))).padStart(14, '0');
   const MAX = 99999999999999;
-  const ev = w.workshopDateUtcMs ?? w.deadlineUtcMs ?? MAX;
   if (w.status === 'upcoming' && w.deadlineUtcMs != null) return '0-' + pad(w.deadlineUtcMs);
-  if (w.status === 'upcoming') return '1-' + pad(ev);
-  if (w.deadlineUtcMs != null) return '2-' + pad(MAX - w.deadlineUtcMs);
-  return '3-' + pad(MAX - (w.workshopDateUtcMs ?? 0));
+  if (w.status === 'upcoming') return '1-' + pad(w.workshopDateUtcMs ?? MAX);
+  const when = w.deadlineUtcMs ?? w.workshopDateUtcMs;
+  return when != null ? '2-' + pad(MAX - when) : '3-';
 })();
 
 // What a search result knows about this workshop. The homepage renders result
