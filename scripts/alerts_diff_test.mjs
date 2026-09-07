@@ -20,7 +20,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { projectFeed, diffSnapshot, deltaDays, closingWithin, feedUnchanged } from '../alerts/diff.mjs';
+import { projectFeed, diffSnapshot, deltaDays, closingWithin, feedUnchanged, weeklyWindow, WEEKLY_WINDOW_DAYS } from '../alerts/diff.mjs';
 import { MIN_CHANGE_MS, SNAPSHOT_SHRINK_GUARD } from '../alerts/config.mjs';
 import { deriveDeadlineChange } from '../lib/workshops.mjs';
 
@@ -262,6 +262,30 @@ const snap = (list) => projectFeed(feed(list));
   check('a snapshot without a stamp -> not "unchanged"', feedUnchanged({}, b) === false);
 }
 
+/* ------------------------------------------------------------ weeklyWindow */
+// Consecutive Monday editions must tile. Events are dated by the run that saw
+// them, Monday's run records Monday's events before it builds Monday's edition,
+// and the store is queried with `observed >= since` — so a seven-day look-back
+// started ON the previous edition's day and reported it twice (2026-09-07: 15
+// of that digest's 72 events were repeats of the 31 August one).
+{
+  const thisMon = Date.parse('2026-09-07T12:55:46Z');
+  const lastMon = thisMon - 7 * 86_400_000;
+  const day = (ms) => new Date(ms).toISOString().slice(0, 10);
+  eq('the window is the seven days ending on the run day, inclusive', weeklyWindow(thisMon).since, '2026-09-01');
+  check('it opens at midnight UTC of `since`',
+    weeklyWindow(thisMon).startMs === Date.parse('2026-09-01T00:00:00Z'));
+  check('the previous edition\'s own day is outside this window', day(lastMon) < weeklyWindow(thisMon).since, day(lastMon));
+  check('and the day after it is the first day inside — no gap either',
+    day(lastMon + 86_400_000) === weeklyWindow(thisMon).since);
+  eq('the window spans WEEKLY_WINDOW_DAYS days',
+    (Date.parse(`${day(thisMon)}T00:00:00Z`) - weeklyWindow(thisMon).startMs) / 86_400_000 + 1, WEEKLY_WINDOW_DAYS);
+  // The time of day never moves the boundary: a run GitHub starts at 23:59
+  // reports the same seven days as one started at 06:30.
+  eq('the run\'s time of day does not move `since`',
+    weeklyWindow(Date.parse('2026-09-07T23:59:59Z')).since, weeklyWindow(Date.parse('2026-09-07T00:00:01Z')).since);
+}
+
 /* ---------------------------------------------- one definition of imminent */
 // closingWithin carries the not_running gate. It was once "shared" only on
 // paper: both real callers had private copies of the window arithmetic and
@@ -283,6 +307,17 @@ const snap = (list) => projectFeed(feed(list));
   const inlineWindow = /\bms\s*<\s*nowMs\s*\+\s*(weekMs|URGENT_WINDOW_MS|windowMs)\b/;
   check('render.mjs keeps no private copy of the window filter', !inlineWindow.test(render));
   check('alerts_run.mjs keeps no private copy of the window filter', !/NOW_MS\s*\+\s*URGENT_WINDOW_MS/.test(run.replace(/closingWithin\([^)]*\)/g, '')));
+
+  // The weekly window, likewise: the pipeline asks the store for it and the
+  // digest labels and cuts by it, so both must take it from weeklyWindow(). The
+  // tell of a re-inlined look-back is subtracting a week from the run time.
+  check('alerts_run.mjs imports weeklyWindow', /import \{[^}]*\bweeklyWindow\b[^}]*\} from '\.\.\/alerts\/diff\.mjs'/.test(run));
+  check('the weekly pass asks the store for weeklyWindow().since', /const \{ since \} = weeklyWindow\(NOW_MS\)/.test(run));
+  check('render.mjs imports weeklyWindow', /import \{[^}]*\bweeklyWindow\b[^}]*\} from '\.\/diff\.mjs'/.test(render));
+  check('the digest\'s window comes from weeklyWindow', /windowStartMs \} = weeklyWindow\(nowMs\)/.test(render));
+  const lookBack = /\b(nowMs|NOW_MS)\s*-\s*(weekMs|7 \* 86_400_000)\b/;
+  check('render.mjs keeps no private seven-day look-back', !lookBack.test(render));
+  check('alerts_run.mjs keeps no private seven-day look-back', !lookBack.test(run));
 }
 
 console.log(failed === 0 ? '\nDiff/classification logic OK.' : `\n${failed} test(s) failed.`);

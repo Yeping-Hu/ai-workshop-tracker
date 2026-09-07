@@ -330,6 +330,24 @@ Each run: fetch the feed → diff against the stored snapshot → record events 
 urgent pass → weekly pass (Mondays only) → maintenance. A failure fails the job
 loudly; GitHub's failure email is the alert channel, as with every other job here.
 
+The weekly window is the seven days ending on the run's own day, inclusive:
+`since` is six days back, not seven. Events are dated by the run that observed
+them, Monday's run records Monday's events *before* it builds Monday's edition,
+and the store is queried with `observed >= since` — so a seven-day look-back
+started on the previous edition's day and reported it twice. It did, on
+2026-09-07: 15 of that digest's 72 events were repeats of the 31 August one,
+and the run went red at *Validate before publishing* because four of them were
+`announced` rows for workshops older than the window, so `/changes/` kept the
+previous edition. `weeklyWindow()` in `alerts/diff.mjs` is the one definition,
+used by the pipeline's query and its `since`, by the digest's label and
+passed-deadline cut-off, and — through the committed feed — by `/changes/`.
+
+The mail goes out before the feed is validated, on purpose: the digest is the
+week's mail and the page its published copy, and a feed the validator refuses
+costs the page one edition (it keeps the previous one) rather than costing every
+subscriber their Monday. A red run at that step therefore means the mail went
+and the page did not — see [below](#red-at-validate-before-publishing-after-the-mail-went-out).
+
 **Dry run any time:** Actions → *Email alerts* → Run workflow. `dry_run` defaults
 to true on manual runs; add `force_weekly` to exercise the digest off-Monday. A
 dry run renders everything and prints subjects and counts, but sends nothing,
@@ -517,6 +535,17 @@ than the stored snapshot. Almost always a bad deploy or a truncated fetch, not
    re-run after the next successful deploy; the guard is a ratio, so it clears
    once the snapshot catches up. Do **not** lower `SNAPSHOT_SHRINK_GUARD` to get
    past one incident.
+
+### Red at "Validate before publishing", after the mail went out
+
+The pipeline step succeeded — its `5. weekly:` lines say what was sent — and
+`scripts/validate_changes_feed.mjs` then refused the feed it wrote, so nothing
+was committed and `/changes/` still shows the previous edition. The messages
+name the rows. Fix whatever produced them (on 2026-09-07 it was the window
+overlap described under [Daily operation](#daily-operation)), push, then
+dispatch the workflow with `dry_run` **and** `force_weekly` to republish the
+page without mailing anyone. Do **not** re-run the scheduled job on a Monday:
+the digest has no send-log and would go out twice.
 
 ### The first run announced nothing
 

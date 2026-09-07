@@ -16,7 +16,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateChangesFeed } from './validate_changes_feed.mjs';
+import { validateChangesFeed, ANNOUNCED_LAG_DAYS } from './validate_changes_feed.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let failed = 0;
@@ -26,12 +26,21 @@ function check(label, got, expect) {
   console.log(`${ok ? '✓' : '✗'} ${label}: ${JSON.stringify(got)}${ok ? '' : `  (expected ${JSON.stringify(expect)})`}`);
 }
 
+const SINCE = '2026-08-19';
+const daysBefore = (day, n) => new Date(Date.parse(`${day}T00:00:00Z`) - n * 86_400_000).toISOString().slice(0, 10);
 const CORPUS = {
-  slugs: new Set(['a-2026-one', 'a-2026-two', 'a-2026-old']),
-  addedBySlug: new Map([['a-2026-old', '2026-01-01'], ['a-2026-one', '2026-08-20']]),
+  slugs: new Set(['a-2026-one', 'a-2026-two', 'a-2026-old', 'a-2026-eve', 'a-2026-edge', 'a-2026-over']),
+  addedBySlug: new Map([
+    ['a-2026-old', '2026-01-01'],
+    ['a-2026-one', '2026-08-20'],
+    // Either side of the observation lag the validator allows an `announced` row.
+    ['a-2026-eve', daysBefore(SINCE, 1)],
+    ['a-2026-edge', daysBefore(SINCE, ANNOUNCED_LAG_DAYS)],
+    ['a-2026-over', daysBefore(SINCE, ANNOUNCED_LAG_DAYS + 1)],
+  ]),
 };
 const feed = (events, over = {}) => ({
-  generated_at: '2026-08-26T06:30:00.000Z', since: '2026-08-19', events, ...over,
+  generated_at: '2026-08-26T06:30:00.000Z', since: SINCE, events, ...over,
 });
 const ok = (events, over) => validateChangesFeed(feed(events, over), CORPUS);
 
@@ -51,6 +60,13 @@ check('a first deadline passes',
 // The two real null/null rows in the production store have exactly this shape.
 check('an announcement with no dates at all passes',
   ok([{ slug: 'a-2026-one', kind: 'announced', days: null, old_utc: null, new_utc: null }]), []);
+// The pipeline observes a workshop the run after its file lands, so `added` runs
+// a day or more ahead of the event. On 2026-09-07 four real rows were refused
+// for exactly that one-day gap, and /changes/ kept the previous edition.
+check('an announcement for a workshop added the day before the window passes',
+  ok([{ slug: 'a-2026-eve', kind: 'announced', days: null, old_utc: null, new_utc: null }]), []);
+check('an announcement added a full window before `since` still passes',
+  ok([{ slug: 'a-2026-edge', kind: 'announced', days: null, old_utc: null, new_utc: null }]), []);
 
 // --- the states that must FAIL ------------------------------------------
 const one = (ev, over) => ok([ev], over).length;
@@ -77,6 +93,8 @@ check('events with no generated_at fails',
      { generated_at: null }).length, 1);
 check('an announcement for a workshop added long before the window fails',
   one({ slug: 'a-2026-old', kind: 'announced', days: null, old_utc: null, new_utc: null }), 1);
+check('an announcement added more than a window before `since` fails',
+  one({ slug: 'a-2026-over', kind: 'announced', days: null, old_utc: null, new_utc: null }), 1);
 check('a non-array events field fails',
   validateChangesFeed({ generated_at: null, since: null, events: {} }, CORPUS).length, 1);
 

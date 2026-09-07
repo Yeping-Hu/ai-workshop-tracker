@@ -32,7 +32,7 @@ import { mergeEventsBySlug } from '../lib/events.mjs';
 // The one definition of "imminent", shared with the urgent pass — it carries
 // the not_running gate, so a rejected proposal's still-ticking OpenReview
 // deadline can reach neither a digest section nor a 72h alert.
-import { closingWithin } from './diff.mjs';
+import { closingWithin, weeklyWindow } from './diff.mjs';
 
 export const MANAGE_PLACEHOLDER = '{{MANAGE_URL}}';
 export const UNSUB_PLACEHOLDER = '{{UNSUB_URL}}';
@@ -594,18 +594,20 @@ export function renderDigest({
   // Merge first: a deadline that moved twice this week is one line reporting the
   // net, not two lines with different numbers.
   const merged = mergeEventsBySlug(events);
+  // The window this digest reports — the same seven days the pipeline asked the
+  // event store for, and the same `since` that lands in data/changes.json, from
+  // the one definition in weeklyWindow() (which also explains why it opens six
+  // days back and not seven). A deadline already in the past when the window
+  // opened is not news: it was recorded late, and reporting it puts an
+  // unactionable row at the top of a conference. /changes/ drops these; so does
+  // this, and from the same midnight, so the two never disagree about a row.
+  const { startMs: windowStartMs } = weeklyWindow(nowMs);
   // Both ends, not one. /changes/ says "since 24 Aug 2026" while this said "for
   // the week ending 31 Aug 2026" — one window described from opposite ends, which
   // reads as two different windows when someone follows the link.
   const windowLabel =
-    `${fmtUtc(new Date(nowMs - 7 * 86_400_000).toISOString()).split(',')[0]} – ` +
+    `${fmtUtc(new Date(windowStartMs).toISOString()).split(',')[0]} – ` +
     `${fmtUtc(new Date(nowMs).toISOString()).split(',')[0]}`;
-  // The window this digest reports — the same seven days the pipeline asked the
-  // event store for, and the same `since` that lands in data/changes.json. A
-  // deadline already in the past when the window opened is not news: it was
-  // recorded late, and reporting it puts an unactionable row at the top of a
-  // conference. /changes/ drops these; so does this.
-  const windowStartMs = nowMs - weekMs;
   const changeRows = merged
     .filter((e) => changeKinds.has(e.kind) && workshops[e.slug])
     .map((e) => {

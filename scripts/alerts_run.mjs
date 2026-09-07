@@ -48,7 +48,7 @@ import {
   SEND_CHUNK,
   SITE_ORIGIN,
 } from '../alerts/config.mjs';
-import { projectFeed, diffSnapshot, closingWithin, feedUnchanged } from '../alerts/diff.mjs';
+import { projectFeed, diffSnapshot, closingWithin, feedUnchanged, weeklyWindow } from '../alerts/diff.mjs';
 import {
   normalizeSubscriber,
   matchingEvents,
@@ -432,7 +432,10 @@ async function main() {
   const isWeeklyDay = NOW.getUTCDay() === WEEKLY_DOW;
   let digestsSent = 0;
   if (isWeeklyDay || FORCE_WEEKLY) {
-    const since = new Date(NOW_MS - 7 * 86_400_000).toISOString().slice(0, 10);
+    // The seven days ending today, inclusive — six back, not seven, or the
+    // previous Monday's events ride into two consecutive editions. weeklyWindow()
+    // carries the reasoning and the 2026-09-07 incident.
+    const { since } = weeklyWindow(NOW_MS);
     const { events } = await admin(`/admin/events?since=${since}`);
     log(`5. weekly: ${events.length} event(s) since ${since}`);
     writeChangesArtifact({ since, events });

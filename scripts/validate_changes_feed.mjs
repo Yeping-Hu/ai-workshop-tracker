@@ -27,6 +27,25 @@ export const KINDS = new Set(['extended', 'earlier', 'deadline_announced', 'anno
 const MOVED = new Set(['extended', 'earlier']);
 
 const isIso = (v) => typeof v === 'string' && Number.isFinite(Date.parse(v));
+const isDay = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v));
+
+/**
+ * How far before `since` a workshop's `added` date may fall and its `announced`
+ * row still stand.
+ *
+ * `added` is the day the file landed in data/. The pipeline observes the
+ * workshop at the first run after the first deploy that lists it, so the
+ * observation is on or after `added` and never the same instant: a file
+ * committed after that day's run is seen the next day, and a deploy that did
+ * not rebuild or a run that aborted on a transient pushes it a day further
+ * each. On 2026-09-07 four real rows — files added on a Sunday evening, seen on
+ * the Monday — were refused for a one-day gap, and /changes/ kept the previous
+ * week's edition. One window of slack (the same seven days a feed spans)
+ * absorbs a week of such days without turning a Monday red, while still
+ * refuting the claim this rule exists for: the retracted file's "new" workshop
+ * had been in the corpus for fourteen days.
+ */
+export const ANNOUNCED_LAG_DAYS = 7;
 
 /**
  * @param {any} feed  parsed data/changes.json
@@ -117,19 +136,26 @@ export function validateChangesFeed(feed, corpus = {}) {
     // nothing — no dates are required, because a workshop can be posted before
     // it has a deadline — so the shape alone cannot refute a fabricated one.
     // The corpus can: the claim is that this workshop appeared during the
-    // window, and every real `announced` event in the store has an `added` date
-    // equal to the day it was observed. A workshop added three weeks before
-    // `since` did not appear this week.
+    // window, and a real `announced` event is observed on or after the day its
+    // file was `added` — never before, and normally within a day of it (see
+    // ANNOUNCED_LAG_DAYS). A workshop added three weeks before `since` did not
+    // appear this week.
     if (e.kind === 'announced') {
       if (e.days != null) {
         errs.push(`${where}: \`announced\` must have a null \`days\` — nothing moved.`);
       }
       const added = addedBySlug.get(slug);
-      if (added && feed.since && /^\d{4}-\d{2}-\d{2}$/.test(added) && added < String(feed.since)) {
-        errs.push(
-          `${where}: \`announced\` claims the workshop appeared this window, ` +
-          `but data/workshops/${slug}.yml records \`added: ${added}\`, before \`since: ${feed.since}\`.`,
-        );
+      if (added && isDay(added) && isDay(feed.since)) {
+        const earliest = new Date(Date.parse(`${feed.since}T00:00:00Z`) - ANNOUNCED_LAG_DAYS * 86_400_000)
+          .toISOString()
+          .slice(0, 10);
+        if (added < earliest) {
+          errs.push(
+            `${where}: \`announced\` claims the workshop appeared this window, ` +
+            `but data/workshops/${slug}.yml records \`added: ${added}\`, ` +
+            `more than ${ANNOUNCED_LAG_DAYS} days before \`since: ${feed.since}\`.`,
+          );
+        }
       }
     }
   });

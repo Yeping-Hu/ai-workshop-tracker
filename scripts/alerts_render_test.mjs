@@ -165,6 +165,11 @@ const sub = (over = {}) =>
   const out = renderDigest({ sub: s, events, workshops, nowMs: NOW, ids });
 
   check('a populated digest renders', !!out);
+  // The label's first day is the feed's `since` — the day /changes/ prints after
+  // "since" — from the one definition in weeklyWindow(): six days back, not
+  // seven, so consecutive editions tile (NOW is 14 Aug, so 8 Aug, not 7 Aug).
+  check('the window label opens on weeklyWindow().since',
+    out.html.includes('8 Aug 2026 – 14 Aug 2026'), out.html.match(/Your selection, [^.]*\./)?.[0]);
   // Two change events (an extension and a first-published deadline), and zero
   // *new* workshops that aren't already Past — so the "new workshops" clause is
   // dropped entirely rather than rendered as "0 new workshops".
@@ -457,6 +462,26 @@ const sub = (over = {}) =>
     check('the plaintext carries the group overflow too', /and \d+ more changes in NeurIPS:/.test(overOut.text), '');
     check('a group overflow deep-links to that conference',
       overOut.html.includes('/changes/?conference=NeurIPS'), '');
+}
+
+/* ------------------------------ the change cut-off is the window's midnight */
+// A deadline that passed twelve hours before `since` opened (7 Aug 12:00, with
+// since = 8 Aug) is inside a literal 7×24 h look-back but outside the reported
+// window. /changes/ cuts at that midnight; the digest must cut at the same one.
+{
+  const workshops = {
+    'neurips-2026-eve': ws('neurips-2026-eve', { deadline_utc: iso(-7), next_stage_utc: iso(-7) }),
+    'neurips-2026-in': ws('neurips-2026-in', { deadline_utc: iso(-6), next_stage_utc: iso(-6) }),
+  };
+  const events = [
+    { slug: 'neurips-2026-eve', kind: 'extended', days: 3, old_utc: iso(-10), new_utc: iso(-7) },
+    { slug: 'neurips-2026-in', kind: 'extended', days: 3, old_utc: iso(-9), new_utc: iso(-6) },
+  ];
+  const out = renderDigest({ sub: sub(), events, workshops, nowMs: NOW, ids });
+  check('a deadline that passed before the window opened is not a change this week',
+    !!out && !out.html.includes('/workshop/neurips-2026-eve/'));
+  check('one that passed inside the window still is',
+    !!out && out.html.includes('/workshop/neurips-2026-in/'));
 }
 
 /* ---------------------------------------------- "and N more" uses labels, not ids */
