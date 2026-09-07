@@ -841,6 +841,41 @@ if (allRows.length === 0) {
   await page.evaluate(() => localStorage.removeItem('awt-fav-workshops'));
 }
 
+console.log('— extension insights (lib/extensions.mjs; skipped when no conference-year clears the gate) —');
+{
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const hasClass = (file, cls) => { try { return readFileSync(file, 'utf8').includes(`class="${cls}`); } catch { return false; } };
+  const hub = readdirSync('site/dist/conference').find((d) => hasClass(`site/dist/conference/${d}/index.html`, 'conf-ext'));
+  const wsWithLine = readdirSync('site/dist/workshop').find((d) => hasClass(`site/dist/workshop/${d}/index.html`, 'ext-insight'));
+  if (hub) {
+    await page.goto(`${BASE}/conference/${hub}/`, { waitUntil: 'networkidle' });
+    const txt = await page.$eval('.conf-ext', (el) => el.textContent.replace(/\s+/g, ' ').trim());
+    const pct = Number(/(\d+)% of workshop deadlines/.exec(txt)?.[1]);
+    check('hub line states a percentage within 0–100', Number.isFinite(pct) && pct >= 0 && pct <= 100, txt);
+    check('hub line matches its data-pct', String(pct) === (await page.$eval('.conf-ext', (el) => el.dataset.pct)));
+    check('hub FAQ answers "do deadlines get extended?"', (await page.content()).includes('workshop deadlines get extended?'));
+    check('the FAQ JSON-LD carries the same question', (await page.content()).includes('workshop deadlines get extended?\"'));
+  } else {
+    check('no hub clears the gate — hub line skipped', true);
+  }
+  if (wsWithLine) {
+    // A fresh page with GoatCounter stubbed, so the wiring (not the vocabulary,
+    // which analytics_events_test.mjs pins) is observed end to end.
+    const p2 = await browser.newPage();
+    await p2.addInitScript(() => { window.__awtEvents = []; window.goatcounter = { count: (e) => window.__awtEvents.push(e) }; });
+    await p2.goto(`${BASE}/workshop/${wsWithLine}/`, { waitUntil: 'networkidle' });
+    const line = await p2.$eval('.ext-insight', (el) => ({ text: el.textContent.trim(), kind: el.dataset.insight, ignored: el.hasAttribute('data-pagefind-ignore') }));
+    check('workshop page carries the insight line', /extended|tracked/.test(line.text), line.text);
+    check('the line is kept out of the search index', line.ignored);
+    const ev = await p2.evaluate(() => window.__awtEvents);
+    check('opening the page sends one insight/extension event', ev.filter((e) => e.path === 'insight/extension').length === 1, JSON.stringify(ev));
+    check('the event title names the rule that spoke', ev.some((e) => e.path === 'insight/extension' && e.title === line.kind), JSON.stringify(ev));
+    await p2.close();
+  } else {
+    check('no workshop page carries an insight line — skipped', true);
+  }
+}
+
 check('no page/console errors during the whole run', errors.length === 0, errors.slice(0, 3).join(' | '));
 
 await browser.close();

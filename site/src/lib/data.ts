@@ -15,6 +15,8 @@ import {
   nameTokens,
   latestProposalCall,
 } from '../../../lib/workshops.mjs';
+// @ts-ignore - shared plain-JS module at the repo root
+import { computeExtensionStats, extensionInsight, conferenceInsight, extensionSentence } from '../../../lib/extensions.mjs';
 
 export type Workshop = Record<string, any>;
 export type Conference = Record<string, any>;
@@ -49,6 +51,14 @@ export const notRunning = workshops.filter((w: Workshop) => w.status === 'not_ru
 /** Summed from what loadWorkshops() already attached to each entry, rather
  *  than re-reading every paper cache a second time. */
 export const paperCount = workshops.reduce((n: number, w: Workshop) => n + (w.paperCount ?? 0), 0);
+
+/**
+ * How often deadlines moved, corpus-wide (lib/extensions.mjs). Computed once
+ * at build; the workshop page and the conference hub read the same numbers.
+ */
+export const extensionStats = computeExtensionStats(workshops, Date.now());
+export const workshopBySlug = new Map(workshops.map((w: Workshop) => [w.slug, w]));
+export { extensionInsight, conferenceInsight, extensionSentence };
 
 /** Re-exported for pages that need a workshop's one-line identity. */
 export { workshopShortName, nameTokens };

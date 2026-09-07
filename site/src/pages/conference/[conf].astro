@@ -3,7 +3,7 @@ import Base from '../../components/Base.astro';
 import AlertsSignup from '../../components/AlertsSignup.astro';
 import MarkdownExport from '../../components/MarkdownExport.astro';
 import ConferenceWorkshopList from '../../components/ConferenceWorkshopList.astro';
-import { workshops, conferences, proposalCalls, latestProposalCall } from '../../lib/data';
+import { workshops, conferences, proposalCalls, latestProposalCall, extensionStats, conferenceInsight, extensionSentence } from '../../lib/data';
 import { href, REPO_URL } from '../../lib/site';
 import { formatDateYmd } from '../../../../lib/dates.mjs';
 
@@ -63,6 +63,11 @@ const nextOpen =
     .filter((w) => w.deadlineUtcMs != null)
     .sort((a, b) => a.deadlineUtcMs - b.deadlineUtcMs)[0] ?? null;
 const paperTotal = list.reduce((n, w) => n + (w.paperCount ?? 0), 0);
+// How often this conference's workshop deadlines moved, for the latest year
+// with enough closed calls to say (lib/extensions.mjs). Null for most hubs
+// until their cycle runs inside the logging window.
+const ext = conferenceInsight(conf.id, years, extensionStats);
+const extSentence = ext ? extensionSentence(ext, { confName }) : '';
 
 const byYear = new Map<number, any[]>();
 for (const w of list) {
@@ -140,6 +145,15 @@ const faqs = [
   },
 ];
 
+if (ext) {
+  faqs.push({
+    q: `Do ${confName} workshop deadlines get extended?`,
+    a:
+      `${extSentence} Each workshop announces its own extensions, and this tracker logs every deadline change it observes — ` +
+      `so the figure is what happened this cycle, not a promise about any one workshop. Plan for the published date.`,
+  });
+}
+
 const faqLd = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
@@ -182,6 +196,11 @@ const breadcrumbLd = {
       <span><strong>{paperTotal.toLocaleString('en-US')}</strong> papers</span>
       <span><strong>{openCalls.length}</strong> open calls</span>
     </div>
+    {ext && (
+      <p class="conf-ext muted small" data-pct={Math.round(ext.rate * 100)}>
+        {extSentence} Dates are when this tracker recorded each change.
+      </p>
+    )}
     {call && (
       <p class="conf-call muted small">
         <a href={call.url} rel="noopener">Call for {confName} {call.year} workshop proposals ↗</a>

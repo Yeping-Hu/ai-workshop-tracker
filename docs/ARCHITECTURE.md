@@ -764,6 +764,36 @@ The board shows one line (`→ Extended N days` / `△ Moved N days earlier` /
 history. Everything here is a read-only derivation — status, feeds and the JSON API
 are untouched. Pinned by `scripts/deadline_history_test.mjs`.
 
+### What the corpus says: extension rates
+
+The log also answers the question every submitter actually has — "will this
+get extended?" — not for one workshop, which nobody can, but for its
+neighbours. `lib/extensions.mjs` derives, at build:
+
+- **Per conference-year**: the share of closed calls whose deadline ended up
+  later than first logged, and the median extension. Shown as one line on an
+  *upcoming* workshop's page ("So far at NeurIPS 2026, 66% of workshop
+  deadlines were extended (median 6 days, across 87 closed calls)") and on the
+  conference hub, where it also becomes a FAQ entry. Needs `MIN_GROUP` (10)
+  closed calls; a past edition shows nothing, having no decision left to support.
+- **Per series**: the same for the workshop's own earlier editions (the
+  `relatedEditions` identity). Needs `MIN_SERIES_EDITIONS` (2) observed
+  earlier editions, so it is dormant until the 2027 cycle and switches itself
+  on as history accumulates — nothing per-workshop to wire.
+
+What counts is deliberately narrow. The observation window opens at the
+earliest `recorded` date of any entry that is not a log's first value (the
+first is backfilled from the "(as of …)" stamp, so it can predate the logging);
+a deadline that closed before that may have moved unobserved and is left out
+entirely. Only *closed* deadlines are counted — an open one may still move,
+so calling it "not extended" would understate the rate. "Extended" is the
+net move from a log's first value to its last, with the same one-hour floor
+as `deriveDeadlineChange()`, so a timezone re-read never counts and out-and-back
+is nothing. A median is reported from three extended entries, not fewer.
+The sentence says "so far" and "we tracked" because all of this is partial by
+construction. Pinned by `scripts/extension_stats_test.mjs`; the line is
+`data-pagefind-ignore` so it does not match hundreds of pages in search.
+
 
 ## Back/forward navigation & the bfcache guard
 

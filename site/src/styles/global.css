@@ -657,6 +657,10 @@ h2 .count { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 400;
 .dl-h-val { font-family: var(--font-mono); font-size: 0.8rem; }
 .dl-h-tag { font-size: 0.75rem; }
 .dl-history p { margin: 0.45rem 0 0; font-size: 0.75rem; }
+/* The extension-rate line under the deadline block (workshop page) and under
+   the statline (conference hub): quiet, one line, no chrome. */
+.ext-insight { margin: 0.55rem 0 0; }
+.conf-ext { margin: 0.6rem 0 0; max-width: 60ch; }
 @media (max-width: 40rem) {
   .dl-history li { grid-template-columns: 1fr auto; }
   .dl-h-when { grid-column: 1 / -1; }

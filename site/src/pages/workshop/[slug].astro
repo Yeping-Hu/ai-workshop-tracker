@@ -1,6 +1,6 @@
 ---
 import Base from '../../components/Base.astro';
-import { workshops, conferenceById, editionByKey, topicById, loadPaperCache, workshopShortName, nameTokens } from '../../lib/data';
+import { workshops, conferenceById, editionByKey, topicById, loadPaperCache, workshopShortName, nameTokens, extensionStats, workshopBySlug, extensionInsight, extensionSentence } from '../../lib/data';
 import { href, REPO_URL, CALENDAR_ENABLED } from '../../lib/site';
 import MarkdownExport from '../../components/MarkdownExport.astro';
 import { formatSingleWorkshopInfo, isAutoTopicsNote, isBotDeadlineNote } from '../../lib/markdown';
@@ -18,6 +18,11 @@ const statusLabel = w.statusLabel;
 // from the form's intro.
 const editUrl = `${REPO_URL}/issues/new?template=edit-workshop.yml&slug=${encodeURIComponent(w.slug)}&website=${encodeURIComponent(w.website ?? '')}&title=${encodeURIComponent('Edit: ' + w.slug)}`;
 const isSeed = (w.notes || '').includes('SEED DATA');
+// "Will it get extended?" — what happened to this workshop's earlier editions
+// or, until those carry history, to its neighbours this cycle. Null on most
+// pages; see lib/extensions.mjs for the gates.
+const insight = extensionInsight(w, extensionStats, (s: string) => workshopBySlug.get(s));
+const insightSentence = insight ? extensionSentence(insight, { confName: conf.name }) : '';
 // Hand-written previous_editions rows are superseded by a tracked entry for
 // the same year (an internal link beats an external one); years we don't
 // track keep their external links.
@@ -509,6 +514,11 @@ const related = picked.map((o: any) => ({
                 </p>
               </details>
             )}
+            {insight && (
+              <p class="ext-insight small muted" data-pagefind-ignore data-insight={insight.kind}>
+                {insightSentence}
+              </p>
+            )}
             {w.abstractDeadlineWallClock && (
               <div class="small" style="margin-top: 0.35rem">
                 {w.abstractDeadlinePassed ? (
@@ -768,4 +778,5 @@ const related = picked.map((o: any) => ({
   </article>
 
   <script src="../../scripts/board.js"></script>
+  <script src="../../scripts/workshop-page.js"></script>
 </Base>
