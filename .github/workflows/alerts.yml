@@ -1,15 +1,17 @@
 # Daily email-alerts pipeline.
 #
 # Diffs the freshly deployed /api/workshops.json against yesterday's snapshot,
-# records what changed, sends urgent starred-deadline alerts, and on Mondays
-# sends the weekly digests.
+# records what changed, sends urgent starred-deadline alerts, and sends the
+# week's digest — an edition closes each Monday, and every run mails it to
+# whoever has not had it yet, so a Monday that started late or failed is made
+# good on Tuesday with the same edition and nobody is ever mailed it twice.
 #
 # Timing matters: deploy.yml's daily rebuild runs at 05:17 UTC and is what makes
 # today's workshops.json exist. This job runs at 06:30 UTC — 73 minutes later —
 # so it always diffs the rebuilt feed, never yesterday's. If deploy.yml's cron
 # moves, move this one with it.
 #
-# This job commits exactly one file, data/changes.json, on the weekly pass. It
+# This job commits exactly one file, data/changes.json, when the edition changes. It
 # still stays OUT of the `data-write` concurrency group (see docs/AUTOMATION.md):
 # queueing behind a slow discovery run would only delay mail, and the publish
 # action's rebase-retry absorbs a collision. It has its own group.
@@ -25,7 +27,7 @@ on:
         type: boolean
         default: true
       force_weekly:
-        description: 'Run the weekly digest pass even if today is not Monday'
+        description: 'Dry runs only: preview every subscriber''s digest for this week''s edition, ignoring the send-log (a real run mails each edition once regardless)'
         type: boolean
         default: false
 
@@ -75,7 +77,7 @@ jobs:
 
       # The public /changes/ page reads this file at build time. Committing it
       # is what makes "one diff computation, two consumers" true: the page and
-      # the Monday digest render the same array rather than each deriving its
+      # the week's digest render the same array rather than each deriving its
       # own idea of what changed.
       #
       # Scoped to the single path on purpose — `git add data/changes.json`, not
@@ -100,7 +102,9 @@ jobs:
       # when DRY_RUN is set — but the feed it computed is still true, so
       # publishing it is how /changes/ gets refreshed on demand without
       # touching a subscriber. The guard that used to sit here made a dry run
-      # compute the right answer and then throw it away.
+      # compute the right answer and then throw it away. (The script only
+      # rewrites the file when the edition differs from the committed one, so a
+      # daily run with nothing new reaches the nothing-to-commit branch below.)
       - name: Commit this week's changes feed
         uses: ./.github/actions/publish-data
         with:

@@ -198,6 +198,23 @@ export function weeklyWindow(nowMs) {
 }
 
 /**
+ * Do two feed files describe the same edition? The window and the rows are the
+ * edition; `generated_at` is when a file was written and is not part of it.
+ * The weekly pass runs daily and would otherwise rewrite data/changes.json
+ * every day with a fresh stamp and nothing else — a commit and a deploy for
+ * no change, and a page whose "generated" date moved while its content stood
+ * still. When the edition is unchanged, the committed file is already true.
+ */
+export function sameEdition(a, b) {
+  const key = (f) => JSON.stringify({
+    since: f?.since ?? null,
+    until: f?.until ?? null,
+    events: Array.isArray(f?.events) ? f.events : null,
+  });
+  return key(a) === key(b);
+}
+
+/**
  * Workshops whose next actionable stage falls inside [now, now + windowMs).
  * Shared by the "closing soon" digest section and the urgent pass, so the two
  * can never disagree about what "imminent" means.

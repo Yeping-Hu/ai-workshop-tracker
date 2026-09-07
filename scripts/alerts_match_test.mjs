@@ -28,7 +28,10 @@ import {
   normalizeSubscriber,
   isMailable,
   wantsUrgent,
+  editionAudience,
+  editionHasLog,
 } from '../alerts/match.mjs';
+import { WEEKLY_LOG_SINCE } from '../alerts/config.mjs';
 
 let failed = 0;
 function check(label, ok, detail = '') {
@@ -249,6 +252,34 @@ const sub = (over = {}) =>
   check('a missing zone is null', normalizeSubscriber({}).tz === null);
   check('an empty zone is null', normalizeSubscriber({ tz: '' }).tz === null);
   check('a non-string zone is null', normalizeSubscriber({ tz: 42 }).tz === null);
+}
+
+/* ------------------------------------------------------- editionAudience */
+// The weekly pass runs daily and mails each edition once, so an edition's
+// audience must be fixed at its close: a late run mails exactly who Monday's
+// would have, and a mid-week signup waits for the next edition rather than
+// receiving a days-old one as their first digest.
+{
+  const subs = [
+    { email: 'a@example.com', confirmed_at: '2026-09-01T10:00:00.000Z' },
+    { email: 'b@example.com', confirmed_at: '2026-09-07T22:30:00.000Z' }, // Monday evening, after the run
+    { email: 'c@example.com', confirmed_at: '2026-09-08T00:00:00.001Z' }, // Tuesday
+    { email: 'd@example.com', confirmed_at: 'not a date' },
+  ];
+  const got = editionAudience(subs, '2026-09-07').map((s) => s.email);
+  check('confirmed before the edition closed: in', got.includes('a@example.com'));
+  check('confirmed later on the closing day, after the run: still in', got.includes('b@example.com'));
+  check('confirmed the day after: waits for the next edition', !got.includes('c@example.com'));
+  check('an unparseable confirmation date is kept, not silently dropped', got.includes('d@example.com'));
+  check('an unparseable close keeps everyone', editionAudience(subs, 'never').length === subs.length);
+
+  // The log's silence about an edition that closed before it existed means
+  // "sent by the old code", not "never sent". 2026-09-07's digest went out
+  // under that code; the first run of the log must not mail it again.
+  check('the edition mailed before the log existed is treated as handled', !editionHasLog('2026-09-07'));
+  check('the first logged edition is', editionHasLog(WEEKLY_LOG_SINCE));
+  check('and every one after it', editionHasLog('2026-09-14'));
+  check('a missing close is not mailable', !editionHasLog(undefined) && !editionHasLog(null));
 }
 
 console.log(failed === 0 ? '\nMatching logic OK.' : `\n${failed} test(s) failed.`);

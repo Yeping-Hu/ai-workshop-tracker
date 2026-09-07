@@ -64,7 +64,12 @@ CREATE INDEX IF NOT EXISTS events_observed ON events(observed);
 
 -- One row per urgent alert actually sent. Keyed on the deadline VALUE, so an
 -- extension re-arms the alert for the new date while a re-run on the same day
--- is a no-op.
+-- is a no-op. Two other once-only sends borrow the table under a slug prefix,
+-- so they can never collide with a real slug or each other: `chg:<slug>` for
+-- the same-day saved-workshop change mail (deadline_utc = the new value) and
+-- `wk:<until>` for the weekly digest (deadline_utc = the edition's closing
+-- day), which is what lets the weekly pass run daily and mail each edition
+-- once per subscriber.
 CREATE TABLE IF NOT EXISTS urgent_log (
   email        TEXT NOT NULL,
   slug         TEXT NOT NULL,

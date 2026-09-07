@@ -323,12 +323,13 @@ last run, and the job re-fetches every two minutes for up to thirty
 to `0` locally). If the rebuild still has not landed it logs a `::warning::` and
 proceeds: the diff is empty by construction, urgent alerts still go out on the
 data in hand, and the next day's run diffs both days. It never fails the job,
-and it never re-triggers itself — the weekly digest has no send-log, so a
-second Monday run would mail everyone twice.
+and it never re-triggers itself: the next day's run picks up whatever this one
+could not.
 
 Each run: fetch the feed → diff against the stored snapshot → record events →
-urgent pass → weekly pass (Mondays only) → maintenance. A failure fails the job
-loudly; GitHub's failure email is the alert channel, as with every other job here.
+urgent pass → weekly pass (this week's edition, to whoever has not had it yet)
+→ maintenance. A failure fails the job loudly; GitHub's failure email is the
+alert channel, as with every other job here.
 
 The weekly window is anchored to the week's Monday (`WEEKLY_DOW`): `until` is
 the most recent Monday on or before the run and `since` the six days before it,
@@ -355,6 +356,25 @@ same words on both surfaces ("1 Sep 2026 – 7 Sep 2026"); before it, the mail
 formatted both ends from the run clock while the page formatted one end through
 the browser's locale tables, and the two disagreed by a day and a spelling.
 
+**The weekly pass runs on every run, and is idempotent on the edition.** It
+used to run on Mondays only, which made three things fragile: a Monday run the
+scheduler started after midnight UTC skipped the week entirely, a Monday run
+that failed before the pass did the same, and a run that failed *after*
+sending (2026-09-07) left the page on the previous edition until someone
+dispatched a republish. Now every run asks "has this edition been handled?"
+and does only what is missing. Each subscriber is mailed an edition once — a
+`wk:<until>` row in `urgent_log`, the same dedupe the same-day change mail
+uses under `chg:` — with the audience fixed at the edition's close (confirmed
+by the end of that Monday), so a Tuesday catch-up mails exactly who Monday
+would have, and a Wednesday signup waits for the next edition rather than
+receiving a days-old one. An empty digest is logged as handled too. The feed
+is rewritten only when the edition differs from the committed file, so a quiet
+Tuesday commits nothing. Re-running the job is therefore safe on any day.
+Editions that closed before `WEEKLY_LOG_SINCE` (2026-09-08) were mailed by
+code that kept no log and are treated as handled — the log's silence about
+them means "sent", not "missed" — which is what kept the first run of the log
+from mailing everyone the 7 September digest a second time.
+
 The mail goes out before the feed is validated, on purpose: the digest is the
 week's mail and the page its published copy, and a feed the validator refuses
 costs the page one edition (it keeps the previous one) rather than costing every
@@ -362,9 +382,11 @@ subscriber their Monday. A red run at that step therefore means the mail went
 and the page did not — see [below](#red-at-validate-before-publishing-after-the-mail-went-out).
 
 **Dry run any time:** Actions → *Email alerts* → Run workflow. `dry_run` defaults
-to true on manual runs; add `force_weekly` to exercise the digest off-Monday. A
-dry run renders everything and prints subjects and counts, but sends nothing,
-writes no snapshot, and logs no urgents.
+to true on manual runs; add `force_weekly` to preview every subscriber's
+digest for this week's edition with the send-log ignored (the flag does nothing
+on a real run — an edition is mailed once regardless). A dry run renders
+everything and prints subjects and counts, but sends nothing, writes no
+snapshot, and logs nothing — not urgents, not the edition.
 
 ### Reading the log
 
@@ -555,10 +577,11 @@ The pipeline step succeeded — its `5. weekly:` lines say what was sent — and
 `scripts/validate_changes_feed.mjs` then refused the feed it wrote, so nothing
 was committed and `/changes/` still shows the previous edition. The messages
 name the rows. Fix whatever produced them (on 2026-09-07 it was the window
-overlap described under [Daily operation](#daily-operation)), push, then
-dispatch the workflow with `dry_run` **and** `force_weekly` to republish the
-page without mailing anyone. Do **not** re-run the scheduled job on a Monday:
-the digest has no send-log and would go out twice.
+overlap described under [Daily operation](#daily-operation)) and push; the
+next daily run commits the edition on its own. To do it sooner, dispatch with
+`dry_run` on any day — no `force_weekly` needed. Re-running the job is safe
+either way: each subscriber is mailed an edition once, logged in `urgent_log`
+under `wk:<until>`.
 
 This should now be rare. Every row the pipeline writes carries the day it was
 `observed`, so the validator's checks on a real row are exact — it belongs to
@@ -618,6 +641,14 @@ state — unsubscribing is a `DELETE`.
 ```bash
 npx wrangler d1 execute aiwt-alerts --remote \
   --command "UPDATE subscribers SET nonce=lower(hex(randomblob(16))) WHERE email='…'"
+```
+
+**Re-send this week's digest to one person** (it bounced, or they asked): drop
+their send-log row for the edition and the next run mails it again.
+
+```bash
+npx wrangler d1 execute aiwt-alerts --remote \
+  --command "DELETE FROM urgent_log WHERE email='…' AND slug='wk:2026-09-07'"
 ```
 
 **Reset the snapshot** (forces a silent re-seed on the next run):

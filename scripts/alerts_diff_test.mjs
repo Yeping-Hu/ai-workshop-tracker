@@ -20,7 +20,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { projectFeed, diffSnapshot, deltaDays, closingWithin, feedUnchanged, weeklyWindow, WEEKLY_WINDOW_DAYS } from '../alerts/diff.mjs';
+import { projectFeed, diffSnapshot, deltaDays, closingWithin, feedUnchanged, weeklyWindow, WEEKLY_WINDOW_DAYS, sameEdition } from '../alerts/diff.mjs';
 import { MIN_CHANGE_MS, SNAPSHOT_SHRINK_GUARD, WEEKLY_DOW } from '../alerts/config.mjs';
 import { deriveDeadlineChange } from '../lib/workshops.mjs';
 
@@ -295,6 +295,20 @@ const snap = (list) => projectFeed(feed(list));
   check('the anchor is WEEKLY_DOW', new Date(`${w.until}T00:00:00Z`).getUTCDay() === WEEKLY_DOW);
 }
 
+/* ------------------------------------------------------------- sameEdition */
+// The weekly pass runs daily; the artifact must only change when the edition
+// does, or every day would commit a fresh `generated_at` and deploy nothing.
+{
+  const row = { slug: 'a', kind: 'extended', days: 2, old_utc: '2026-09-01T00:00:00.000Z', new_utc: '2026-09-03T00:00:00.000Z', observed: '2026-09-02' };
+  const a = { generated_at: '2026-09-07T12:00:00.000Z', since: '2026-09-01', until: '2026-09-07', events: [row] };
+  check('a fresh stamp alone is the same edition', sameEdition(a, { ...a, generated_at: '2026-09-08T12:00:00.000Z' }));
+  check('a different window is a different edition', !sameEdition(a, { ...a, until: '2026-09-14' }));
+  check('a different row is a different edition', !sameEdition(a, { ...a, events: [{ ...row, days: 3 }] }));
+  check('an extra row is a different edition', !sameEdition(a, { ...a, events: [row, row] }));
+  check('an absent or unparseable file is never the same edition', !sameEdition(null, a) && !sameEdition({}, a));
+  check('an empty week equals an empty week', sameEdition({ since: '2026-09-01', until: '2026-09-07', events: [] }, { ...a, events: [] }));
+}
+
 /* ---------------------------------------------- one definition of imminent */
 // closingWithin carries the not_running gate. It was once "shared" only on
 // paper: both real callers had private copies of the window arithmetic and
@@ -335,6 +349,23 @@ const snap = (list) => projectFeed(feed(list));
   check('changes.astro names the week through lib/events.mjs windowLabel',
     /import \{[^}]*\bwindowLabel\b[^}]*\} from '\.\.\/\.\.\/\.\.\/lib\/events\.mjs'/.test(page) && /windowLabel\(\s*feed\.since,/.test(page));
   check('changes.astro no longer formats the week through the locale tables', !/toLocaleDateString\([^)]*\)[^;]*feed\.since|feed\.since[^;]*toLocaleDateString/.test(page));
+
+  // The weekly pass is idempotent on the edition: it runs on every run, the
+  // audience is fixed at the close, each subscriber is mailed an edition once
+  // through the shared dedupe under a `wk:` prefix, and the artifact is
+  // rewritten only when the edition changed. Structural, because a private
+  // rewrite of any one of these is how "a second run mails everyone twice"
+  // would quietly come back.
+  check('the weekly pass has no Monday gate', !/isWeeklyDay|getUTCDay\(\) === WEEKLY_DOW/.test(run));
+  check('the audience is fixed at the edition\'s close', /editionAudience\(subs\.filter\(wantsWeekly\), until\)/.test(run));
+  check('each subscriber is mailed an edition once (wk: rows through urgent-filter)',
+    /slug: `wk:\$\{until\}`/.test(run) && /admin\('\/admin\/urgent-filter', \{ method: 'POST', body: \{ items: weeklySubs\.map\(wk\) \} \}\)/.test(run));
+  check('accepted digests and empty ones are logged; rejected ones are not',
+    /const toLog = \[\.\.\.acceptedIndexes\.map\(\(i\) => handled\[i\]\), \.\.\.empty\];/.test(run));
+  check('a dry run logs nothing', /if \(toLog\.length && !DRY_RUN\) await admin\('\/admin\/urgent-log'/.test(run));
+  check('force_weekly cannot bypass the send-log on a real run', /!\(DRY_RUN && FORCE_WEEKLY\)/.test(run));
+  check('an edition from before the log is never mailed', /if \(!editionHasLog\(until\) && !\(DRY_RUN && FORCE_WEEKLY\)\)[\s\S]*?pending = \[\];/.test(run));
+  check('the artifact is rewritten only when the edition changed', /sameEdition\(committed, out\)/.test(run));
   const lookBack = /\b(nowMs|NOW_MS)\s*-\s*(weekMs|7 \* 86_400_000)\b/;
   check('render.mjs keeps no private seven-day look-back', !lookBack.test(render));
   check('alerts_run.mjs keeps no private seven-day look-back', !lookBack.test(run));

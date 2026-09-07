@@ -19,8 +19,12 @@
  *   3. classify events -> POST them -> PUT the new snapshot (in that order:
  *      a snapshot written before its events would lose them forever)
  *   4. urgent pass (every run)
- *   5. weekly pass (UTC Monday, or FORCE_WEEKLY): fetch the week's events,
- *      write data/changes.json, send the digests. The page is the published
+ *   5. weekly pass (every run): this week's edition — the seven days ending
+ *      on its Monday — fetched once; data/changes.json rewritten when the
+ *      edition changed; the digest mailed to each subscriber who has not had
+ *      this edition yet (a `wk:<until>` row in urgent_log). Idempotent, so a
+ *      late or failed Monday is made good by the next run, and a run that
+ *      failed after sending mails nobody again. The page is the published
  *      edition of the mail, so both come from that one fetch.
  *   6. maintenance
  *
@@ -36,7 +40,9 @@
  *   DRY_RUN=1           do everything except send, log urgents, write snapshot.
  *                       data/changes.json IS still written: it is a local file, not
  *                       a message, and the feed is true either way.
- *   FORCE_WEEKLY=1      run the weekly pass on a non-Monday
+ *   FORCE_WEEKLY=1      with DRY_RUN: preview every subscriber's digest for
+ *                       this week's edition, ignoring the send-log. Ignored on
+ *                       a real run — each edition is mailed once, full stop.
  *   ALERTS_VERBOSE=1    exact counts and per-recipient lines. Local use only —
  *                       never set this in a workflow, the logs are public
  *
@@ -44,11 +50,10 @@
  */
 import {
   URGENT_WINDOW_MS,
-  WEEKLY_DOW,
   SEND_CHUNK,
   SITE_ORIGIN,
 } from '../alerts/config.mjs';
-import { projectFeed, diffSnapshot, closingWithin, feedUnchanged, weeklyWindow } from '../alerts/diff.mjs';
+import { projectFeed, diffSnapshot, closingWithin, feedUnchanged, weeklyWindow, sameEdition } from '../alerts/diff.mjs';
 import {
   normalizeSubscriber,
   matchingEvents,
@@ -57,6 +62,8 @@ import {
   wantsUrgent,
   wantsStarredChanges,
   wantsWeekly,
+  editionAudience,
+  editionHasLog,
 } from '../alerts/match.mjs';
 import { renderDigest, renderUrgent, renderStarredChanges } from '../alerts/render.mjs';
 import fs from 'node:fs';
@@ -233,9 +240,10 @@ async function fetchFeed() {
  * from the workshop's `added` date — which is what refused four real rows on
  * 2026-09-07 for the one-day lag between a file landing and the next run.
  *
- * Written on every WEEKLY pass, including quiet ones — an empty `events` array
- * is the honest state for a quiet week, and skipping the write would leave the
- * previous edition on the page claiming to be the current one.
+ * Written whenever the edition differs from the committed file, quiet weeks
+ * included — an empty `events` array is the honest state for a quiet week,
+ * and skipping that write would leave the previous edition on the page
+ * claiming to be the current one.
  */
 function writeChangesArtifact({ since, until, events }) {
   const out = {
@@ -257,12 +265,25 @@ function writeChangesArtifact({ since, until, events }) {
   // about its window either way: it comes from /admin/events, which a dry run
   // reads but never changes.
   //
-  // That is what makes the page republishable without mailing anyone. Since the
-  // write now lives in the weekly pass, an off-Monday republish needs
-  // force_weekly as well: dispatch with dry_run AND force_weekly. The window is
-  // anchored to the week's Monday (weeklyWindow), so that republish rewrites the
-  // SAME edition the Monday mail described, not the seven days ending today.
+  // That is what makes the page republishable without mailing anyone: the
+  // weekly pass runs on every run, so a dry-run dispatch on any day rewrites
+  // the current edition — anchored to its Monday by weeklyWindow(), so it is
+  // the SAME edition the Monday mail described — and the workflow commits it.
   const file = path.join(ROOT, 'data', 'changes.json');
+  // Only when the edition differs from the committed one. The pass runs daily,
+  // and `generated_at` alone would otherwise change the file every day — a
+  // commit and a deploy for nothing, and a stamp that moved while the content
+  // stood still. When the edition is unchanged, the committed file is true.
+  let committed = null;
+  try {
+    committed = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    // absent or unparseable: write it
+  }
+  if (committed && sameEdition(committed, out)) {
+    log(`   ${path.relative(ROOT, file)} already holds this edition (${out.events.length} event(s))`);
+    return;
+  }
   fs.writeFileSync(file, `${JSON.stringify(out, null, 2)}\n`);
   log(`   ${DRY_RUN ? '[dry-run] ' : ''}wrote ${path.relative(ROOT, file)} (${out.events.length} event(s))`);
 }
@@ -415,10 +436,9 @@ async function main() {
     log(`4b. saved-workshop changes: nothing to report (${priv(changeSubs.length)} subscriber(s) opted in)`);
   }
 
-  /* 5. weekly pass (Mondays) — the digest, and the page that mirrors it ------
+  /* 5. weekly pass — this week's edition, on every run ----------------------
    *
-   * ONE fetch, two consumers, and deliberately inside this branch rather than
-   * above it.
+   * ONE fetch, two consumers.
    *
    * /changes/ is not a live feed of the last seven days. It is the published
    * edition of the digest — the CTA on it says so ("this page, in your inbox
@@ -431,57 +451,84 @@ async function main() {
    * Tuesday.
    *
    * It is the same principle the page itself now follows in its filter and its
-   * sort: a record of one week reads the same whenever it is opened. An
-   * artifact rewritten daily cannot honour that no matter how the page renders
-   * it.
+   * sort: a record of one week reads the same whenever it is opened.
    *
-   * To republish between Mondays — after a bad feed, or to pick up a rendering
-   * fix — dispatch with dry_run AND force_weekly: that rebuilds the edition and
-   * commits it without mailing anyone.
+   * The pass therefore runs on EVERY run and is idempotent on the edition,
+   * rather than running on Mondays and hoping Monday goes well. weeklyWindow()
+   * names the same seven days all week; each subscriber is mailed an edition
+   * once (a `wk:<until>` row in urgent_log — the dedupe the same-day change
+   * mail already uses under `chg:`); and the artifact is rewritten only when
+   * the edition differs from the committed one. So a Monday run that GitHub
+   * started after midnight, or that failed before this point, is made good by
+   * Tuesday's run with exactly Monday's edition and exactly Monday's audience;
+   * and a run that failed AFTER sending, as on 2026-09-07, mails nobody the
+   * next day and just commits the feed. "Re-run the weekly pass" no longer
+   * exists as an operation — there is only "has this edition been handled",
+   * asked daily. A dry run on any day republishes the page without mail.
    */
-  const isWeeklyDay = NOW.getUTCDay() === WEEKLY_DOW;
-  let digestsSent = 0;
-  if (isWeeklyDay || FORCE_WEEKLY) {
-    // This week's edition — anchored to its Monday, the same seven days whether
-    // this is the scheduled run, a late dispatch or a republish; six days back
-    // from that Monday, not seven, or the previous edition's day rides into this
-    // one. weeklyWindow() carries the reasoning and the 2026-09-07 incident.
-    const { since, until } = weeklyWindow(NOW_MS);
-    const { events: fromStore } = await admin(`/admin/events?since=${since}`);
-    // The store answers "on or after"; the edition also ends. A dispatch later
-    // in the week must not pull that week's later days into Monday's edition.
-    const events = fromStore.filter((e) => !e.observed || e.observed <= until);
-    log(`5. weekly: ${events.length} event(s), ${since} – ${until}`);
-    writeChangesArtifact({ since, until, events });
+  const { since, until } = weeklyWindow(NOW_MS);
+  const { events: fromStore } = await admin(`/admin/events?since=${since}`);
+  // The store answers "on or after"; the edition also ends. A run later in the
+  // week must not pull that week's later days into Monday's edition.
+  const events = fromStore.filter((e) => !e.observed || e.observed <= until);
+  log(`5. weekly: edition ${since} – ${until}, ${events.length} event(s)`);
+  writeChangesArtifact({ since, until, events });
 
-    const messages = [];
-    // `starred_changes` subscribers opted out of a scheduled summary entirely.
-    const weeklySubs = subs.filter(wantsWeekly);
-    for (const sub of weeklySubs) {
-      const mine = matchingEvents(events, live.workshops, sub);
-      // Sections 3 and 4 read the live projection rather than events, so the
-      // projection is narrowed with the same tested matcher — a subscriber with
-      // no events at all can still have deadlines closing this week.
-      const scoped = Object.fromEntries(
-        Object.entries(live.workshops).filter(([, w]) => matchesSubscriber(w, sub)),
-      );
-      const mail = renderDigest({ sub, tz: sub.tz, events: mine, workshops: scoped, nowMs: NOW_MS, ids });
-      // An empty digest is skipped entirely — quiet weeks send nothing.
-      if (!mail) continue;
-      messages.push({ to: sub.email, subject: mail.subject, html: mail.html, text: mail.text });
-      // One line per recipient, so it is suppressed unless run locally —
-      // counting these lines would recover the subscriber count exactly.
-      if (DRY_RUN) {
-        perRecipient(`   digest #${messages.length}: "${mail.subject}" (${mine.length} matched event(s))`);
-      }
-    }
-
-    const { accepted, failed } = await send(messages, 'digest');
-    digestsSent = accepted;
-    log(`5. weekly: ${priv(accepted)} sent, ${priv(failed)} failed, ${priv(weeklySubs.length - messages.length)} skipped (empty)`);
-  } else {
-    log(`5. weekly: not today (UTC day ${NOW.getUTCDay()}, weekly day is ${WEEKLY_DOW})`);
+  // The edition's audience is fixed at its close: whoever was confirmed by the
+  // end of `until`. A late run mails the people Monday's would have, and
+  // someone who confirmed on Wednesday waits for the next edition. (The
+  // `starred_changes`-only subscribers opted out of a scheduled summary.)
+  const weeklySubs = editionAudience(subs.filter(wantsWeekly), until);
+  const wk = (sub) => ({ email: sub.email, slug: `wk:${until}`, deadline_utc: until });
+  // Once per subscriber per edition. FORCE_WEEKLY bypasses the log, but only
+  // in a dry run — previewing every digest is useful; re-mailing is not, and
+  // on a real run the flag is simply ignored.
+  let pending = weeklySubs;
+  if (!editionHasLog(until) && !(DRY_RUN && FORCE_WEEKLY)) {
+    // Mailed by the code that kept no log; the log's silence is not a miss.
+    log(`   edition ${until} closed before the send-log existed — treated as already mailed`);
+    pending = [];
+  } else if (weeklySubs.length && !(DRY_RUN && FORCE_WEEKLY)) {
+    const { items: fresh } = await admin('/admin/urgent-filter', { method: 'POST', body: { items: weeklySubs.map(wk) } });
+    const freshEmails = new Set(fresh.map((it) => it.email));
+    pending = weeklySubs.filter((sub) => freshEmails.has(sub.email));
   }
+  if (FORCE_WEEKLY && !DRY_RUN) log('   force_weekly is a dry-run preview flag; a real run mails each edition once regardless');
+
+  const messages = [];
+  const handled = []; // per message, the row to log once the provider accepts it
+  const empty = []; // an empty digest is this edition handled too, not something to retry
+  for (const sub of pending) {
+    const mine = matchingEvents(events, live.workshops, sub);
+    // Sections 3 and 4 read the live projection rather than events, so the
+    // projection is narrowed with the same tested matcher — a subscriber with
+    // no events at all can still have deadlines closing this week.
+    const scoped = Object.fromEntries(
+      Object.entries(live.workshops).filter(([, w]) => matchesSubscriber(w, sub)),
+    );
+    const mail = renderDigest({ sub, tz: sub.tz, events: mine, workshops: scoped, nowMs: NOW_MS, ids });
+    // An empty digest is skipped entirely — quiet weeks send nothing — and is
+    // logged as handled, or tomorrow would render it again only to skip it again.
+    if (!mail) {
+      empty.push(wk(sub));
+      continue;
+    }
+    messages.push({ to: sub.email, subject: mail.subject, html: mail.html, text: mail.text });
+    handled.push(wk(sub));
+    // One line per recipient, so it is suppressed unless run locally —
+    // counting these lines would recover the subscriber count exactly.
+    if (DRY_RUN) {
+      perRecipient(`   digest #${messages.length}: "${mail.subject}" (${mine.length} matched event(s))`);
+    }
+  }
+
+  const { accepted, failed, acceptedIndexes } = await send(messages, 'digest');
+  const digestsSent = accepted;
+  // Log what the provider accepted, plus the empties. A rejected send stays
+  // unlogged so the next run retries exactly that subscriber and no other.
+  const toLog = [...acceptedIndexes.map((i) => handled[i]), ...empty];
+  if (toLog.length && !DRY_RUN) await admin('/admin/urgent-log', { method: 'POST', body: { items: toLog } });
+  log(`5. weekly: ${priv(accepted)} sent, ${priv(failed)} failed, ${priv(empty.length)} skipped (empty), ${priv(weeklySubs.length - pending.length)} already handled this edition`);
 
   /* 6. maintenance -------------------------------------------------------- */
   if (!DRY_RUN) {

@@ -31,6 +31,8 @@ const isAll = (list) => !Array.isArray(list) || list.length === 0;
  * or 'off' when nothing is enabled — so there is no migration and no backfill.
  * The four historical values are still understood on read, forever.
  */
+import { WEEKLY_LOG_SINCE } from './config.mjs';
+
 export const NOTIFY_KINDS = ['weekly', 'urgent', 'changes'];
 
 const LEGACY_CADENCE = {
@@ -163,3 +165,36 @@ export const wantsStarredChanges = (sub) => flag(sub, 'changes');
 
 /** The Monday digest. */
 export const wantsWeekly = (sub) => flag(sub, 'weekly');
+
+/**
+ * Who an edition is for: the subscribers confirmed by the end of the day it
+ * closed (`until`, UTC).
+ *
+ * Fixed at the close, so a late run mails exactly the audience the Monday run
+ * would have. The weekly pass runs daily and mails each edition once per
+ * subscriber; without this, someone confirming on a Wednesday would receive
+ * Monday's edition on Thursday as their first digest — three days old and
+ * labelled as the week before they arrived. Their first digest is the next
+ * edition. A subscriber whose confirmation date does not parse is kept:
+ * isMailable() has already vouched for the row, and dropping it here would
+ * silently mail them nothing forever.
+ */
+/**
+ * Does the send-log speak for this edition? Before WEEKLY_LOG_SINCE the digest
+ * went out with no record kept, so an unlogged subscriber is not one who was
+ * missed. The weekly pass mails nobody for such an edition — the alternative,
+ * on the first run after the log shipped, was every subscriber receiving the
+ * previous Monday's digest again.
+ */
+export function editionHasLog(until) {
+  return typeof until === 'string' && until >= WEEKLY_LOG_SINCE;
+}
+
+export function editionAudience(subs, until) {
+  const close = Date.parse(`${until}T23:59:59.999Z`);
+  if (!Number.isFinite(close)) return [...subs];
+  return subs.filter((s) => {
+    const at = s?.confirmed_at ? Date.parse(s.confirmed_at) : NaN;
+    return !Number.isFinite(at) || at <= close;
+  });
+}

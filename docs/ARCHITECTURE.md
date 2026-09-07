@@ -1077,15 +1077,19 @@ all take the window from that one definition, and both surfaces name it through
 words for the same week. [ALERTS.md](ALERTS.md) records the 2026-09-07 double
 report that a look-back from the run clock produced before either existed.
 
-The file is rewritten **on the weekly pass only** — the page is the published
-edition of the digest, not a live feed. The CTA on it says as much ("this page,
-in your inbox every Monday"), and the digest's "and N more" links point at it as
-the fuller version of the mail just received. A subscriber who opens Monday's
-digest saying "45 deadline changes" and clicks through on Thursday has to land
-on those 45, not on a page that has rolled forward to a different week and a
-different count. To republish between Mondays, dispatch the workflow with
-`dry_run` **and** `force_weekly`: that rebuilds the edition and commits it
-without mailing anyone.
+The file is rewritten **only when the edition changes** — the page is the
+published edition of the digest, not a live feed. The CTA on it says as much
+("this page, in your inbox every Monday"), and the digest's "and N more" links
+point at it as the fuller version of the mail just received. A subscriber who
+opens Monday's digest saying "45 deadline changes" and clicks through on
+Thursday has to land on those 45, not on a page that has rolled forward to a
+different week and a different count. The weekly pass itself runs on every
+daily run and is idempotent on the edition — each subscriber is mailed an
+edition once, logged in D1, and the audience is fixed at the edition's close —
+so a Monday the scheduler started late, or that failed, is made good the next
+day with the same edition, and a run that failed after sending mails nobody
+again. A dry-run dispatch on any day republishes the page without mailing
+anyone.
 
 That is the same principle the page follows internally. Neither its
 passed-deadline filter nor its ordering reads the clock — both key off the

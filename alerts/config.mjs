@@ -20,8 +20,19 @@ export const URGENT_WINDOW_MS = 72 * 3600_000;
  *  never report a change the site itself suppresses. */
 export const MIN_CHANGE_MS = 3_600_000;
 
-/** Weekly digests go out on Monday (UTC), after the daily diff has run. */
+/** Weekly editions close on Monday (UTC). The digest for an edition goes out
+ *  on the first successful run on or after that day — normally Monday's own,
+ *  after its daily diff — and to each subscriber once (alerts/diff.mjs
+ *  weeklyWindow, scripts/alerts_run.mjs). */
 export const WEEKLY_DOW = 1;
+
+/** The first edition close (YYYY-MM-DD, UTC) for which the weekly send-log
+ *  exists. Editions that closed before it were mailed by code that kept no
+ *  log, so the log's silence about them means "already sent", not "never
+ *  sent": the pass treats them as handled rather than mailing everyone a
+ *  second time. Set to the day after the log shipped (2026-09-07's edition
+ *  went out that afternoon under the old code); it never needs to move. */
+export const WEEKLY_LOG_SINCE = '2026-09-08';
 
 /** Max items rendered per digest section before an "and N more →" link. */
 export const SECTION_CAP = 15;

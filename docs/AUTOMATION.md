@@ -33,7 +33,7 @@ for human review, as do dependency updates.
 | `official-list-decision.yml` | manual | Records one decision the official-list report asked for — `not_running` / `review_ack.official_list` via `scripts/mark_not_running.mjs` (a later verdict supersedes the earlier one in either direction, so a changed mind never fails the dispatch), or adopting/declining a drifted name or website via `scripts/apply_official_list.mjs` → commits to `main` |
 | `stale-check.yml` | weekly | One consolidated issue listing entries needing follow-up |
 | `link-check.yml` | monthly | One consolidated issue listing broken URLs Before running, `scripts/lychee_exclusions.mjs` appends every `review_ack.website` to `.lycheeignore`, so a URL deliberately removed as dead is not re-reported each month. |
-| `alerts.yml` | daily, manual | `scripts/alerts_run.mjs` — diffs `/api/workshops.json` against yesterday's snapshot, records events, sends urgent starred-deadline alerts, and on Mondays the weekly digests, committing that week's `data/changes.json` for the `/changes/` page. |
+| `alerts.yml` | daily, manual | `scripts/alerts_run.mjs` — diffs `/api/workshops.json` against yesterday's snapshot, records events, sends urgent starred-deadline alerts, and the week's digest — an edition closes each Monday and is mailed to each subscriber once, on the first run on or after it — committing that edition's `data/changes.json` for the `/changes/` page. |
 | `alerts-worker-deploy.yml` | push touching `alerts/**`, `lib/identity.mjs` or `lib/events.mjs`; manual | `wrangler deploy` of the alerts Worker, after checking `alerts/ids.json` is in sync with the data vocabulary. The two `lib/` files are inside the Worker bundle |
 | `alerts-ci.yml` | PRs & pushes touching `alerts/**`, `scripts/alerts_*`, the `lib/` files the Worker bundles, the two site sync scripts, or the conference/topic vocabularies | The eleven pure-logic alerts suites (tokens, diff, matching, rendering, sending, rate limits, mail, star-merge, session, dashboard, log hygiene) plus the ids sync check |
 
@@ -195,7 +195,7 @@ cycle closed over a year ago with no successor.
 
 ## The alerts job is outside the data-write group
 
-`alerts.yml` commits exactly one file — `data/changes.json`, on the weekly pass —
+`alerts.yml` commits exactly one file — `data/changes.json`, when the week's edition changes —
 and still deliberately does **not** join the `data-write` concurrency group
 described below: queueing it behind a slow discovery run would only delay mail,
 and the shared publish action's rebase-retry absorbs a collision with a data job.
