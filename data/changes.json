@@ -1,6 +1,7 @@
 {
-  "generated_at": "2026-09-07T14:09:04.393Z",
+  "generated_at": "2026-09-07T14:25:35.297Z",
   "since": "2026-09-01",
+  "until": "2026-09-07",
   "events": [
     {
       "slug": "iros-2026-aim-ctrl",
