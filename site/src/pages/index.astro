@@ -415,6 +415,13 @@ const datasetLd: Record<string, any> = {
       $('#homeDefault').hidden = searching;
       $('#searchPanel').hidden = !searching;
       $('#sortPick').hidden = !searching; // sorts the results, not the board
+      // The counts and the open-call line describe the WHOLE corpus, so during a
+      // search they contradict what is on screen — "941 workshop editions" above
+      // eleven results reads as a bug. Both return when the query clears.
+      for (const s of ['.hero .statline', '.hero .conf-line']) {
+        const el = $(s);
+        if (el) el.hidden = searching;
+      }
     }
 
     function renderChips() {
