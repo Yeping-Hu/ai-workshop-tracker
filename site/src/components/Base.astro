@@ -45,6 +45,7 @@ const canonical = Astro.site && !noindex ? new URL(Astro.url.pathname, Astro.sit
 const nav = [
   { label: 'Home', path: '/' },
   { label: 'Saved', path: '/saved/' },
+  { label: 'Trends', path: '/trends/' },
   { label: 'About', path: '/about/' },
 ];
 const buildDate = new Date().toISOString().slice(0, 10);

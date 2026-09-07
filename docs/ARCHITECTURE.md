@@ -1154,6 +1154,30 @@ every row; the urgent and saved-change alerts keep their per-subscriber local
 reading, being single-deadline messages. A footer line gives the median
 extension for the week, omitted entirely in a week with no extensions.
 
+## Trends page: one chart, built at build time
+
+`/trends/` is the one place the site draws a chart: the share of each year's
+workshop editions tagged with a topic, for the top eight topics by the latest
+year, across every conference (`lib/trends.mjs`). It exists because "is my area
+growing?" is a question the corpus answers well and nobody else's does.
+
+- **Share, not count.** Coverage grows every year, so raw counts would show
+  every topic tripling. The table beside the chart shows both.
+- **Static SVG, no client script.** The geometry is computed at build
+  (`barLayout()`) and emitted inline; it paints with `var(--accent)` and
+  `currentColor`, so dark mode is free and the `role="img"` label is a real
+  sentence. The table is the accessible data.
+- **One hue.** The palette is one accent plus one urgency colour, and eight
+  hues would fight it. Years are three opacity steps, oldest faintest, with a
+  three-item key rather than a legend.
+- **Multi-label topics are said, not normalised away**, in the footnote —
+  along with the shifting conference mix (ECCV is biennial) and the fact that
+  the latest year is still being imported.
+
+The board stays chart-free; the note above about the ticker and the card grid
+applies. Pinned by `scripts/trends_test.mjs`; the page is in `smoke_test.mjs`'s
+path list and `ui_test.mjs` checks the chart and the table agree.
+
 ## Build-time Markdown exports
 
 `/exports/<conference>-<year>-workshops.md` is regenerated on every deploy by

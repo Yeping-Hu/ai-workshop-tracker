@@ -1,0 +1,149 @@
+---
+/**
+ * /trends/ — one chart: the share of each year's workshop editions tagged with
+ * a topic, across every tracked conference. Built entirely at build time
+ * (lib/trends.mjs); the SVG is inline, no client script, theme-aware because
+ * it paints with the page's CSS variables. See docs/ARCHITECTURE.md,
+ * "Trends page: one chart, built at build time".
+ */
+import Base from '../components/Base.astro';
+import { workshops, topics, conferences } from '../lib/data';
+import { topicTrends, barLayout } from '../../../lib/trends.mjs';
+
+const trends = topicTrends(workshops, topics);
+const layout = barLayout(trends);
+const years = trends.years;
+const latest = years[years.length - 1];
+const first = years[0];
+const pct = (x: number) => `${Math.round(x * 100)}%`;
+const n = (x: number) => x.toLocaleString('en-US');
+const editionsCounted = years.reduce((s, y) => s + trends.totals[y], 0);
+
+// The chart's accessible name doubles as its one-sentence summary.
+const top = trends.rows[0];
+const riser = [...trends.rows].sort((a, b) => (b.shares[latest] - b.shares[first]) - (a.shares[latest] - a.shares[first]))[0];
+const ariaLabel =
+  `Share of workshop editions by topic, ${first} to ${latest}, top ${trends.rows.length} topics. ` +
+  (top ? `${top.label} leads ${latest} at ${pct(top.shares[latest])}. ` : '') +
+  (riser && riser.shares[latest] > riser.shares[first]
+    ? `${riser.label} rose from ${pct(riser.shares[first])} to ${pct(riser.shares[latest])}.`
+    : '');
+---
+
+<Base
+  title="Workshop trends — which topics are growing"
+  siteSuffix={false}
+  description={`Which AI workshop topics are growing: the share of each year's workshop editions by topic across ${conferences.length} conferences, ${first}–${latest}.`}
+>
+  <section class="masthead">
+    <p class="eyebrow">Across {conferences.length} conferences</p>
+    <h1>Where workshops are going</h1>
+    <p class="lede">
+      The share of each year's workshop editions tagged with a topic. Shares rather than counts, so a
+      tracker that covers more every year doesn't make every topic look like it's booming.
+    </p>
+    <div class="statline">
+      {years.map((y) => (
+        <span><strong>{n(trends.totals[y])}</strong> editions in {y}</span>
+      ))}
+    </div>
+  </section>
+
+  <section class="trend" aria-labelledby="trendChartHead">
+    <h2 id="trendChartHead">Top {trends.rows.length} topics, {first}–{latest}</h2>
+    <p class="muted small trend-key">
+      {layout.years.map((y, i) => (
+        <span class="trend-key-item">
+          <span class="trend-swatch" style={`opacity:${y.opacity}`}></span> {y.year}{i < layout.years.length - 1 ? ' ' : ''}
+        </span>
+      ))}
+    </p>
+    <div class="trend-chart">
+      <svg
+        viewBox={`0 0 ${layout.width} ${layout.height}`}
+        width={layout.width}
+        height={layout.height}
+        role="img"
+        aria-label={ariaLabel}
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {layout.rows.map((r) => (
+          <g class="trend-row" data-topic={r.id}>
+            <text class="trend-label" x={layout.plotX - 8} y={r.labelY} text-anchor="end" dominant-baseline="middle">{r.label}</text>
+            {r.bars.map((b) => (
+              <g>
+                <title>{r.label}, {b.year}: {n(b.count)} of {n(trends.totals[b.year])} editions ({b.pct}%)</title>
+                <rect x={b.x} y={b.y} width={b.width} height={b.height} fill="var(--accent)" fill-opacity={b.opacity} rx="1" />
+                <text class="trend-value" x={b.valueX} y={b.y + b.height / 2} dominant-baseline="middle">{b.pct}%</text>
+              </g>
+            ))}
+          </g>
+        ))}
+      </svg>
+    </div>
+  </section>
+
+  <section class="trend" aria-labelledby="trendTableHead">
+    <h2 id="trendTableHead">The numbers</h2>
+    <div class="trend-table-wrap">
+      <table class="trend-table">
+        <thead>
+          <tr>
+            <th scope="col">Topic</th>
+            {years.map((y) => <th scope="col" class="num">{y}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {trends.rows.map((r) => (
+            <tr>
+              <th scope="row">{r.label}</th>
+              {years.map((y) => (
+                <td class="num mono"><span class="trend-count">{n(r.counts[y])}</span> <span class="muted">{pct(r.shares[y])}</span></td>
+              ))}
+            </tr>
+          ))}
+          <tr class="trend-rest">
+            <th scope="row">{trends.rest.label} ({trends.rest.ids.length})</th>
+            {years.map((y) => (
+              <td class="num mono"><span class="trend-count">{n(trends.rest.counts[y])}</span> <span class="muted">{trends.totals[y] ? pct(trends.rest.counts[y] / trends.totals[y]) : '—'}</span></td>
+            ))}
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row">All editions</th>
+            {years.map((y) => <td class="num mono">{n(trends.totals[y])}</td>)}
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <ul class="muted small trend-notes">
+      <li>A workshop carries one to five topics, so it counts once under each and the rows don't add up to the year's total.</li>
+      <li>The conference mix shifts by year: ECCV runs every other year, and the tracker covers more conferences and more of each one over time. Shares soften that; they don't remove it.</li>
+      <li>{latest} is still being imported as workshops are announced, so its numbers move; {n(editionsCounted)} editions are counted in all.</li>
+      <li>Topics are the tracker's own broad labels, some assigned automatically from titles. Editions recorded as not running are left out.</li>
+    </ul>
+  </section>
+</Base>
+
+<style>
+  .trend { margin-top: 2rem; }
+  .trend h2 { margin-bottom: 0.4rem; }
+  .trend-key { margin: 0 0 0.5rem; font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.06em; }
+  .trend-key-item { margin-right: 0.9rem; white-space: nowrap; }
+  .trend-swatch { display: inline-block; width: 0.8rem; height: 0.55rem; background: var(--accent); border-radius: 1px; vertical-align: baseline; }
+  .trend-chart { max-width: 30rem; }
+  .trend-chart svg { width: 100%; height: auto; display: block; color: var(--ink); }
+  .trend-chart text { font-family: var(--font-mono); font-size: 9px; fill: currentColor; }
+  .trend-chart .trend-value { font-size: 7.5px; fill: var(--muted); }
+  .trend-table-wrap { overflow-x: auto; }
+  .trend-table { border-collapse: collapse; font-size: 0.86rem; min-width: 22rem; }
+  .trend-table th, .trend-table td { padding: 0.38rem 0.6rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: baseline; }
+  .trend-table th[scope="row"] { font-weight: 500; }
+  .trend-table thead th { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .trend-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .trend-table tfoot th, .trend-table tfoot td { border-bottom: none; color: var(--muted); }
+  .trend-rest th { color: var(--muted); }
+  .trend-notes { margin: 0.9rem 0 0; padding-left: 1.1rem; max-width: 62ch; }
+  .trend-notes li { margin: 0.25rem 0; }
+</style>

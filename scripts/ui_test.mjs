@@ -881,6 +881,26 @@ console.log('— the saved-page agenda: collisions and the usage event (data-dri
   }
 }
 
+console.log('— /trends/: one static chart and a table that agree —');
+{
+  await page.goto(`${BASE}/trends/`, { waitUntil: 'networkidle' });
+  check('nav carries a Trends link', await page.$$eval('.site-nav a', (els) => els.some((a) => a.textContent.trim() === 'Trends')));
+  check('exactly one chart, exposed as an image', (await page.$$('svg[role="img"]')).length === 1);
+  check('the chart has a sentence for a name', await page.$eval('svg[role="img"]', (el) => /Share of workshop editions by topic/.test(el.getAttribute('aria-label') || '')));
+  check('no script on the page beyond the site chrome', await page.$$eval('script[src]', (els) => els.every((s) => !/trends/i.test(s.getAttribute('src') || ''))));
+  const chartFirst = await page.$eval('svg[role="img"] .trend-row .trend-label', (el) => el.textContent.trim());
+  const tableFirst = await page.$eval('.trend-table tbody th[scope="row"]', (el) => el.textContent.trim());
+  check('the table and the chart lead with the same topic', chartFirst === tableFirst, `${chartFirst} vs ${tableFirst}`);
+  const bars = await page.$$eval('svg[role="img"] rect', (els) => els.map((r) => Number(r.getAttribute('width'))));
+  check('every bar has a finite non-negative width', bars.length > 0 && bars.every((w) => Number.isFinite(w) && w >= 0));
+  check('the chart does not overflow its column on a phone', await (async () => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    const ok = await page.$eval('.trend-chart svg', (el) => el.getBoundingClientRect().right <= window.innerWidth + 1);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    return ok;
+  })());
+}
+
 console.log('— extension insights (lib/extensions.mjs; skipped when no conference-year clears the gate) —');
 {
   const { readFileSync, readdirSync } = await import('node:fs');

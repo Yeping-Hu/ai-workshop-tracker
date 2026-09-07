@@ -103,7 +103,7 @@ function describeSearchState(ui) {
 
 /* --------------------------------------------------------- pages answer --- */
 console.log(`— every page answers (${BASE}) —`);
-for (const path of ['/', '/about/', '/alerts/', '/saved/', '/changes/']) {
+for (const path of ['/', '/about/', '/alerts/', '/saved/', '/changes/', '/trends/']) {
   const res = await page.goto(BASE + path, { waitUntil: 'domcontentloaded' });
   check(`${path} responds 200`, res?.status() === 200, `got ${res?.status()}`);
 }
