@@ -1,734 +1,405 @@
 {
-  "generated_at": "2026-08-31T14:17:45.301Z",
-  "since": "2026-08-24",
+  "generated_at": "2026-09-07T14:09:04.393Z",
+  "since": "2026-09-01",
   "events": [
     {
-      "slug": "corl-2026-webp",
-      "kind": "deadline_announced",
-      "days": null,
-      "old_utc": null,
-      "new_utc": "2026-10-10T04:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-evorobust",
-      "kind": "extended",
-      "days": 14,
-      "old_utc": "2026-08-30T12:29:00.000Z",
-      "new_utc": "2026-09-13T12:29:00.000Z"
-    },
-    {
-      "slug": "corl-2026-tag",
-      "kind": "deadline_announced",
-      "days": null,
-      "old_utc": null,
-      "new_utc": "2026-10-09T11:59:00.000Z"
-    },
-    {
-      "slug": "iros-2026-insect-scale-autonomy",
-      "kind": "extended",
-      "days": 9,
-      "old_utc": "2026-08-24T11:59:00.000Z",
-      "new_utc": "2026-09-02T11:59:00.000Z"
-    },
-    {
-      "slug": "iros-2026-scalable-tactile-manipulation",
-      "kind": "extended",
-      "days": 4,
-      "old_utc": "2026-08-25T03:59:00.000Z",
-      "new_utc": "2026-08-29T03:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-ai-and-the-self",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-29T12:15:00.000Z",
-      "new_utc": "2026-09-05T12:15:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-ai4chipdesign",
-      "kind": "extended",
-      "days": 4,
-      "old_utc": "2026-08-28T21:59:00.000Z",
-      "new_utc": "2026-09-01T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-fllmpt",
-      "kind": "extended",
-      "days": 13,
-      "old_utc": "2026-08-23T11:00:00.000Z",
-      "new_utc": "2026-09-05T22:00:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-interpscience",
-      "kind": "extended",
-      "days": 4,
-      "old_utc": "2026-08-29T11:59:00.000Z",
-      "new_utc": "2026-09-02T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-pre-to-post",
-      "kind": "extended",
-      "days": 1,
-      "old_utc": "2026-08-30T07:59:00.000Z",
-      "new_utc": "2026-08-30T12:00:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-socialagent",
-      "kind": "extended",
-      "days": 4,
-      "old_utc": "2026-08-26T11:59:00.000Z",
-      "new_utc": "2026-08-30T12:00:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-wiml",
-      "kind": "extended",
-      "days": 1,
-      "old_utc": "2026-08-24T11:59:00.000Z",
-      "new_utc": "2026-08-25T11:59:00.000Z"
-    },
-    {
-      "slug": "iros-2026-athletichumanoid",
-      "kind": "extended",
-      "days": 9,
-      "old_utc": "2026-08-24T05:00:00.000Z",
-      "new_utc": "2026-09-02T03:59:00.000Z"
-    },
-    {
-      "slug": "iros-2026-dom-r3",
-      "kind": "extended",
-      "days": 9,
-      "old_utc": "2026-08-21T13:00:00.000Z",
-      "new_utc": "2026-08-30T13:00:00.000Z"
-    },
-    {
-      "slug": "iros-2026-foc",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-25T11:59:00.000Z",
-      "new_utc": "2026-09-01T11:59:00.000Z"
-    },
-    {
-      "slug": "iros-2026-pwms",
-      "kind": "extended",
-      "days": 20,
-      "old_utc": "2026-08-20T23:59:00.000Z",
-      "new_utc": "2026-09-09T23:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-devai",
-      "kind": "extended",
-      "days": 8,
-      "old_utc": "2026-08-30T12:59:00.000Z",
-      "new_utc": "2026-09-07T12:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-lxai",
-      "kind": "extended",
-      "days": 1,
-      "old_utc": "2026-08-26T11:59:00.000Z",
-      "new_utc": "2026-08-27T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-ml4spatialbio",
-      "kind": "extended",
-      "days": 6,
-      "old_utc": "2026-08-29T23:59:00.000Z",
-      "new_utc": "2026-09-04T23:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-neurreps-findings",
-      "kind": "extended",
-      "days": 14,
-      "old_utc": "2026-08-25T11:59:00.000Z",
-      "new_utc": "2026-09-08T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-rl4xs",
-      "kind": "extended",
-      "days": 3,
-      "old_utc": "2026-08-29T10:00:00.000Z",
-      "new_utc": "2026-09-01T10:00:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-rtca",
-      "kind": "extended",
-      "days": 11,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-10T10:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-simbiochem",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-29T23:59:00.000Z",
-      "new_utc": "2026-09-05T11:59:00.000Z"
-    },
-    {
-      "slug": "iros-2026-ai-meets-autonomy",
-      "kind": "extended",
-      "days": 1,
-      "old_utc": "2026-08-26T07:59:00.000Z",
-      "new_utc": "2026-08-26T11:59:00.000Z"
-    },
-    {
-      "slug": "iros-2026-bimanual-manipulation",
-      "kind": "extended",
-      "days": 3,
-      "old_utc": "2026-08-25T11:59:00.000Z",
-      "new_utc": "2026-08-28T11:59:00.000Z"
-    },
-    {
-      "slug": "iros-2026-elsr",
-      "kind": "extended",
-      "days": 6,
-      "old_utc": "2026-08-31T08:00:00.000Z",
-      "new_utc": "2026-09-06T08:00:00.000Z"
-    },
-    {
-      "slug": "iros-2026-robowomo",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-26T12:59:00.000Z",
-      "new_utc": "2026-09-02T13:29:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-ai4dd",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-06T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-ai4powergrids",
+      "slug": "iros-2026-aim-ctrl",
       "kind": "extended",
       "days": 2,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-01T11:59:00.000Z"
+      "old_utc": "2026-08-31T03:59:00.000Z",
+      "new_utc": "2026-09-01T20:59:00.000Z"
     },
     {
-      "slug": "neurips-2026-gddl",
+      "slug": "iros-2026-heai",
       "kind": "extended",
-      "days": 4,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-03T11:59:00.000Z"
+      "days": 2,
+      "old_utc": "2026-09-01T11:59:00.000Z",
+      "new_utc": "2026-09-03T09:59:00.000Z"
     },
     {
-      "slug": "neurips-2026-iab",
-      "kind": "extended",
-      "days": 8,
-      "old_utc": "2026-08-29T12:00:00.000Z",
-      "new_utc": "2026-09-06T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-ml4molecules",
+      "slug": "iros-2026-lafr",
       "kind": "extended",
       "days": 1,
-      "old_utc": "2026-08-29T21:59:00.000Z",
-      "new_utc": "2026-08-30T11:59:00.000Z"
+      "old_utc": "2026-08-31T23:59:00.000Z",
+      "new_utc": "2026-09-01T17:01:00.000Z"
     },
     {
-      "slug": "neurips-2026-pta",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-06T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-robotics-world-modeling",
-      "kind": "extended",
-      "days": 4,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-03T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-sim2sci",
-      "kind": "extended",
-      "days": 4,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-03T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-ttcl",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-30T12:59:00.000Z",
-      "new_utc": "2026-09-06T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-wrl",
-      "kind": "extended",
-      "days": 3,
-      "old_utc": "2026-08-26T23:59:00.000Z",
-      "new_utc": "2026-08-29T11:59:00.000Z"
-    },
-    {
-      "slug": "iclr-2025-mlgenx",
-      "kind": "extended",
-      "days": 13,
-      "old_utc": "2025-02-11T11:59:00.000Z",
-      "new_utc": "2025-02-24T22:59:00.000Z"
-    },
-    {
-      "slug": "icml-2025-ai4math",
-      "kind": "extended",
-      "days": 27,
-      "old_utc": "2025-05-26T11:59:00.000Z",
-      "new_utc": "2025-06-22T11:59:00.000Z"
-    },
-    {
-      "slug": "icml-2025-es-fomo",
+      "slug": "iros-2026-mas-bw",
       "kind": "extended",
       "days": 1,
-      "old_utc": "2025-05-27T11:59:00.000Z",
-      "new_utc": "2025-05-27T23:59:00.000Z"
+      "old_utc": "2026-08-31T11:59:00.000Z",
+      "new_utc": "2026-08-31T20:00:00.000Z"
     },
     {
-      "slug": "iros-2026-dfr",
+      "slug": "iros-2026-ontoagenticai",
       "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-28T23:59:00.000Z",
-      "new_utc": "2026-09-04T23:59:00.000Z"
+      "days": 26,
+      "old_utc": "2026-08-31T03:59:00.000Z",
+      "new_utc": "2026-09-26T03:59:00.000Z"
     },
     {
       "slug": "iros-2026-rethinking-uncertainty",
       "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-24T11:59:00.000Z",
-      "new_utc": "2026-08-31T12:00:00.000Z"
-    },
-    {
-      "slug": "neurips-2024-math-ai",
-      "kind": "extended",
-      "days": 10,
-      "old_utc": "2024-09-16T11:59:00.000Z",
-      "new_utc": "2024-09-26T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2025-math-ai",
-      "kind": "extended",
-      "days": 38,
-      "old_utc": "2025-08-23T11:59:00.000Z",
-      "new_utc": "2025-09-30T20:00:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-aaba4et",
-      "kind": "extended",
-      "days": 2,
-      "old_utc": "2026-08-30T12:00:00.000Z",
-      "new_utc": "2026-09-01T12:00:00.000Z"
+      "days": 1,
+      "old_utc": "2026-08-31T12:00:00.000Z",
+      "new_utc": "2026-08-31T23:00:00.000Z"
     },
     {
       "slug": "neurips-2026-ai-native-academia",
       "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-06T04:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-bento",
-      "kind": "extended",
-      "days": 8,
-      "old_utc": "2026-08-29T23:59:00.000Z",
+      "days": 1,
+      "old_utc": "2026-09-06T04:59:00.000Z",
       "new_utc": "2026-09-06T11:59:00.000Z"
     },
     {
-      "slug": "neurips-2026-bialign",
+      "slug": "neurips-2026-aim",
       "kind": "extended",
-      "days": 6,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-05T11:59:00.000Z"
+      "days": 8,
+      "old_utc": "2026-08-30T12:00:00.000Z",
+      "new_utc": "2026-09-07T11:59:00.000Z"
     },
     {
       "slug": "neurips-2026-gem-bio",
       "kind": "extended",
       "days": 4,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-03T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-iab-competition-paper-track",
-      "kind": "extended",
-      "days": 4,
-      "old_utc": "2026-09-02T11:59:00.000Z",
-      "new_utc": "2026-09-06T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-icbinb-bio",
-      "kind": "extended",
-      "days": 4,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-03T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-interp4discovery",
-      "kind": "extended",
-      "days": 4,
-      "old_utc": "2026-08-30T01:00:00.000Z",
-      "new_utc": "2026-09-03T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-lp4fm",
-      "kind": "extended",
-      "days": 8,
-      "old_utc": "2026-08-30T11:59:00.000Z",
+      "old_utc": "2026-09-03T11:59:00.000Z",
       "new_utc": "2026-09-07T11:59:00.000Z"
     },
     {
-      "slug": "neurips-2026-math-ai",
+      "slug": "neurips-2026-globalsouthai",
       "kind": "earlier",
-      "days": 19,
-      "old_utc": "2026-09-26T11:59:00.000Z",
-      "new_utc": "2026-09-07T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-neurreps-extended-abstracts",
-      "kind": "extended",
-      "days": 3,
-      "old_utc": "2026-08-25T11:59:00.000Z",
-      "new_utc": "2026-08-28T10:00:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-neurreps-proceedings",
-      "kind": "extended",
-      "days": 3,
-      "old_utc": "2026-08-25T11:59:00.000Z",
-      "new_utc": "2026-08-28T10:00:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-newinml",
-      "kind": "extended",
       "days": 1,
-      "old_utc": "2026-08-29T08:59:00.000Z",
-      "new_utc": "2026-08-30T07:59:00.000Z"
+      "old_utc": "2026-09-06T11:59:00.000Z",
+      "new_utc": "2026-09-05T11:59:00.000Z"
     },
     {
-      "slug": "neurips-2026-pre-to-post",
+      "slug": "neurips-2026-ml4ps",
+      "kind": "deadline_announced",
+      "days": null,
+      "old_utc": null,
+      "new_utc": "2026-09-13T11:59:00.000Z"
+    },
+    {
+      "slug": "neurips-2026-mplr-fm",
       "kind": "extended",
       "days": 6,
       "old_utc": "2026-08-30T12:00:00.000Z",
       "new_utc": "2026-09-05T12:00:00.000Z"
     },
     {
-      "slug": "neurips-2026-prigm",
+      "slug": "neurips-2026-neuralartifacts",
       "kind": "extended",
-      "days": 3,
-      "old_utc": "2026-09-02T22:00:00.000Z",
-      "new_utc": "2026-09-05T22:00:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-remucai",
-      "kind": "extended",
-      "days": 4,
-      "old_utc": "2026-08-30T12:00:00.000Z",
-      "new_utc": "2026-09-03T11:00:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-stody",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-06T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-xai4science",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-30T12:00:00.000Z",
-      "new_utc": "2026-09-06T12:00:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-ai-for-peace",
-      "kind": "announced",
-      "days": null,
-      "old_utc": null,
-      "new_utc": "2026-09-15T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-aidar",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-06T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-aiwild",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-30T13:00:00.000Z",
-      "new_utc": "2026-09-06T13:00:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-automlr",
-      "kind": "extended",
-      "days": 1,
-      "old_utc": "2026-09-05T00:00:00.000Z",
-      "new_utc": "2026-09-06T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-esr-demo-track",
-      "kind": "announced",
-      "days": null,
-      "old_utc": null,
-      "new_utc": "2026-09-06T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-esr-paper-track",
-      "kind": "announced",
-      "days": null,
-      "old_utc": null,
-      "new_utc": "2026-09-06T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-fast",
-      "kind": "extended",
-      "days": 6,
-      "old_utc": "2026-08-29T23:00:00.000Z",
-      "new_utc": "2026-09-04T22:00:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-meta-agents",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-06T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-odi",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-06T11:59:00.000Z"
+      "days": 5,
+      "old_utc": "2026-09-02T11:59:00.000Z",
+      "new_utc": "2026-09-07T11:59:00.000Z"
     },
     {
       "slug": "neurips-2026-physunderstand",
       "kind": "extended",
-      "days": 5,
-      "old_utc": "2026-08-26T08:00:00.000Z",
-      "new_utc": "2026-08-31T08:00:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-reo-2",
-      "kind": "announced",
-      "days": null,
-      "old_utc": null,
-      "new_utc": "2026-09-03T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-slm-agents",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-29T13:00:00.000Z",
-      "new_utc": "2026-09-05T13:00:00.000Z"
+      "days": 2,
+      "old_utc": "2026-08-31T08:00:00.000Z",
+      "new_utc": "2026-09-02T11:59:00.000Z"
     },
     {
       "slug": "neurips-2026-unireps",
-      "kind": "announced",
+      "kind": "deadline_announced",
       "days": null,
       "old_utc": null,
-      "new_utc": null
+      "new_utc": "2026-09-25T22:00:00.000Z"
     },
     {
-      "slug": "neurips-2026-vlm4rwd",
+      "slug": "corl-2026-learn-deploy",
+      "kind": "deadline_announced",
+      "days": null,
+      "old_utc": null,
+      "new_utc": "2026-10-05T17:59:00.000Z"
+    },
+    {
+      "slug": "corl-2026-r2rl",
+      "kind": "deadline_announced",
+      "days": null,
+      "old_utc": null,
+      "new_utc": "2026-10-01T12:00:00.000Z"
+    },
+    {
+      "slug": "iros-2026-foc",
       "kind": "extended",
-      "days": 6,
-      "old_utc": "2026-08-31T04:00:00.000Z",
-      "new_utc": "2026-09-06T03:59:00.000Z"
+      "days": 1,
+      "old_utc": "2026-09-01T11:59:00.000Z",
+      "new_utc": "2026-09-02T11:59:00.000Z"
     },
     {
       "slug": "iros-2026-ltp",
       "kind": "extended",
-      "days": 1,
-      "old_utc": "2026-08-30T20:00:00.000Z",
-      "new_utc": "2026-08-31T22:00:00.000Z"
+      "days": 7,
+      "old_utc": "2026-08-31T22:00:00.000Z",
+      "new_utc": "2026-09-07T10:00:00.000Z"
     },
     {
-      "slug": "neurips-2026-ai4good",
+      "slug": "iros-2026-modular-robots",
+      "kind": "extended",
+      "days": 8,
+      "old_utc": "2026-09-02T11:59:00.000Z",
+      "new_utc": "2026-09-10T11:59:00.000Z"
+    },
+    {
+      "slug": "iros-2026-s2rcc",
+      "kind": "extended",
+      "days": 9,
+      "old_utc": "2026-09-01T04:00:00.000Z",
+      "new_utc": "2026-09-10T04:00:00.000Z"
+    },
+    {
+      "slug": "iros-2026-wpnmr",
+      "kind": "extended",
+      "days": 2,
+      "old_utc": "2026-09-01T05:00:00.000Z",
+      "new_utc": "2026-09-03T05:00:00.000Z"
+    },
+    {
+      "slug": "neurips-2026-ai-and-the-self",
       "kind": "extended",
       "days": 1,
-      "old_utc": "2026-09-01T12:30:00.000Z",
-      "new_utc": "2026-09-02T12:00:00.000Z"
+      "old_utc": "2026-09-05T12:15:00.000Z",
+      "new_utc": "2026-09-06T13:15:00.000Z"
+    },
+    {
+      "slug": "neurips-2026-prigm",
+      "kind": "extended",
+      "days": 4,
+      "old_utc": "2026-09-05T22:00:00.000Z",
+      "new_utc": "2026-09-09T12:00:00.000Z"
+    },
+    {
+      "slug": "neurips-2026-rl4xs",
+      "kind": "extended",
+      "days": 1,
+      "old_utc": "2026-09-01T10:00:00.000Z",
+      "new_utc": "2026-09-02T13:59:00.000Z"
+    },
+    {
+      "slug": "corl-2026-contact-rich-loco-manipulation",
+      "kind": "extended",
+      "days": 13,
+      "old_utc": "2026-09-17T06:00:00.000Z",
+      "new_utc": "2026-09-30T06:00:00.000Z"
+    },
+    {
+      "slug": "neurips-2026-ai-and-the-self",
+      "kind": "extended",
+      "days": 3,
+      "old_utc": "2026-09-06T13:15:00.000Z",
+      "new_utc": "2026-09-09T13:15:00.000Z"
+    },
+    {
+      "slug": "eccv-2026-dexhand-non-proceedings",
+      "kind": "extended",
+      "days": 8,
+      "old_utc": "2026-08-31T23:59:00.000Z",
+      "new_utc": "2026-09-08T23:59:00.000Z"
+    },
+    {
+      "slug": "iros-2026-full-shift-robot-co-workers",
+      "kind": "extended",
+      "days": 8,
+      "old_utc": "2026-09-03T03:59:00.000Z",
+      "new_utc": "2026-09-11T03:59:00.000Z"
+    },
+    {
+      "slug": "neurips-2026-globalsouthai",
+      "kind": "extended",
+      "days": 1,
+      "old_utc": "2026-09-05T11:59:00.000Z",
+      "new_utc": "2026-09-06T11:58:00.000Z"
+    },
+    {
+      "slug": "neurips-2026-remucai",
+      "kind": "extended",
+      "days": 1,
+      "old_utc": "2026-09-03T11:00:00.000Z",
+      "new_utc": "2026-09-03T14:00:00.000Z"
+    },
+    {
+      "slug": "iros-2026-aim-ctrl",
+      "kind": "earlier",
+      "days": 1,
+      "old_utc": "2026-09-01T20:59:00.000Z",
+      "new_utc": "2026-09-01T13:00:00.000Z"
+    },
+    {
+      "slug": "iros-2026-heai",
+      "kind": "earlier",
+      "days": 1,
+      "old_utc": "2026-09-03T09:59:00.000Z",
+      "new_utc": "2026-09-02T23:00:00.000Z"
+    },
+    {
+      "slug": "neurips-2026-babyvlm",
+      "kind": "earlier",
+      "days": 7,
+      "old_utc": "2026-09-15T04:00:00.000Z",
+      "new_utc": "2026-09-08T04:00:00.000Z"
+    },
+    {
+      "slug": "corl-2026-oopsie",
+      "kind": "announced",
+      "days": null,
+      "old_utc": null,
+      "new_utc": null
+    },
+    {
+      "slug": "corl-2026-pretrain-to-adapt",
+      "kind": "announced",
+      "days": null,
+      "old_utc": null,
+      "new_utc": "2026-10-04T12:00:00.000Z"
+    },
+    {
+      "slug": "iros-2026-beyond-exteroception",
+      "kind": "announced",
+      "days": null,
+      "old_utc": null,
+      "new_utc": "2026-09-20T07:00:00.000Z"
+    },
+    {
+      "slug": "iros-2026-social-robot-navigation",
+      "kind": "extended",
+      "days": 10,
+      "old_utc": "2026-09-06T07:59:00.000Z",
+      "new_utc": "2026-09-16T11:59:00.000Z"
+    },
+    {
+      "slug": "neurips-2026-agenticweb",
+      "kind": "extended",
+      "days": 1,
+      "old_utc": "2026-09-06T11:59:00.000Z",
+      "new_utc": "2026-09-07T11:59:00.000Z"
     },
     {
       "slug": "neurips-2026-diffulm",
       "kind": "extended",
-      "days": 4,
-      "old_utc": "2026-09-01T11:59:00.000Z",
-      "new_utc": "2026-09-05T19:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-haic",
-      "kind": "extended",
-      "days": 4,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-03T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-light",
-      "kind": "extended",
       "days": 1,
-      "old_utc": "2026-08-29T22:00:00.000Z",
-      "new_utc": "2026-08-30T10:00:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-med-reasoner",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-30T04:59:00.000Z",
-      "new_utc": "2026-09-06T04:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-mlforsys",
-      "kind": "extended",
-      "days": 3,
-      "old_utc": "2026-08-29T12:00:00.000Z",
-      "new_utc": "2026-09-01T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-newinml",
-      "kind": "extended",
-      "days": 1,
-      "old_utc": "2026-08-30T07:59:00.000Z",
-      "new_utc": "2026-08-30T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-palm",
-      "kind": "extended",
-      "days": 1,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-08-30T14:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-satquml",
-      "kind": "extended",
-      "days": 8,
-      "old_utc": "2026-08-29T12:00:00.000Z",
+      "old_utc": "2026-09-05T19:59:00.000Z",
       "new_utc": "2026-09-06T11:59:00.000Z"
     },
     {
-      "slug": "neurips-2026-slm-agents",
+      "slug": "neurips-2026-genai4health-demonstration-paper-track",
       "kind": "extended",
-      "days": 2,
-      "old_utc": "2026-09-05T13:00:00.000Z",
-      "new_utc": "2026-09-07T13:00:00.000Z"
+      "days": 4,
+      "old_utc": "2026-09-06T11:59:00.000Z",
+      "new_utc": "2026-09-10T13:00:00.000Z"
     },
     {
-      "slug": "neurips-2026-usersim",
+      "slug": "neurips-2026-genai4health-position-paper-track",
       "kind": "extended",
-      "days": 3,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-02T11:59:00.000Z"
+      "days": 4,
+      "old_utc": "2026-09-06T11:59:00.000Z",
+      "new_utc": "2026-09-10T13:00:00.000Z"
+    },
+    {
+      "slug": "neurips-2026-genai4health",
+      "kind": "extended",
+      "days": 4,
+      "old_utc": "2026-09-06T11:59:00.000Z",
+      "new_utc": "2026-09-10T13:00:00.000Z"
+    },
+    {
+      "slug": "neurips-2026-ml4spatialbio",
+      "kind": "extended",
+      "days": 1,
+      "old_utc": "2026-09-04T23:59:00.000Z",
+      "new_utc": "2026-09-05T14:00:00.000Z"
+    },
+    {
+      "slug": "neurips-2026-vlm4rwd",
+      "kind": "extended",
+      "days": 1,
+      "old_utc": "2026-09-06T03:59:00.000Z",
+      "new_utc": "2026-09-06T12:59:00.000Z"
     },
     {
       "slug": "neurips-2026-wm-pai",
       "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-29T13:59:00.000Z",
-      "new_utc": "2026-09-05T21:59:00.000Z"
+      "days": 1,
+      "old_utc": "2026-09-05T21:59:00.000Z",
+      "new_utc": "2026-09-06T13:59:00.000Z"
     },
     {
-      "slug": "corl-2026-agentic-robotics",
+      "slug": "iros-2026-elsr",
       "kind": "extended",
-      "days": 2,
-      "old_utc": "2026-09-26T12:59:00.000Z",
-      "new_utc": "2026-09-28T12:59:00.000Z"
+      "days": 1,
+      "old_utc": "2026-09-06T08:00:00.000Z",
+      "new_utc": "2026-09-07T06:59:00.000Z"
     },
     {
-      "slug": "corl-2026-compositional",
-      "kind": "announced",
-      "days": null,
-      "old_utc": null,
-      "new_utc": "2026-10-02T00:00:00.000Z"
-    },
-    {
-      "slug": "corl-2026-learn-deploy",
-      "kind": "announced",
-      "days": null,
-      "old_utc": null,
-      "new_utc": null
-    },
-    {
-      "slug": "corl-2026-r2rl",
-      "kind": "announced",
-      "days": null,
-      "old_utc": null,
-      "new_utc": null
-    },
-    {
-      "slug": "corl-2026-simbench2real",
-      "kind": "announced",
-      "days": null,
-      "old_utc": null,
-      "new_utc": "2026-10-01T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-attrib",
+      "slug": "iros-2026-insect-scale-autonomy",
       "kind": "extended",
-      "days": 4,
+      "days": 14,
       "old_utc": "2026-09-02T11:59:00.000Z",
-      "new_utc": "2026-09-06T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-cl4fmagents",
-      "kind": "extended",
-      "days": 9,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-08T11:59:00.000Z"
-    },
-    {
-      "slug": "neurips-2026-codec-fm",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-06T11:59:00.000Z"
+      "new_utc": "2026-09-16T11:59:00.000Z"
     },
     {
       "slug": "neurips-2026-cwm",
       "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-30T11:59:00.000Z",
-      "new_utc": "2026-09-06T11:59:00.000Z"
+      "days": 1,
+      "old_utc": "2026-09-06T11:59:00.000Z",
+      "new_utc": "2026-09-07T11:59:00.000Z"
     },
     {
-      "slug": "neurips-2026-e-values",
+      "slug": "neurips-2026-esr-demo-track",
       "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-08-30T13:00:00.000Z",
-      "new_utc": "2026-09-06T13:00:00.000Z"
+      "days": 5,
+      "old_utc": "2026-09-06T11:59:00.000Z",
+      "new_utc": "2026-09-11T11:59:00.000Z"
+    },
+    {
+      "slug": "neurips-2026-esr-paper-track",
+      "kind": "extended",
+      "days": 5,
+      "old_utc": "2026-09-06T11:59:00.000Z",
+      "new_utc": "2026-09-11T11:59:00.000Z"
     },
     {
       "slug": "neurips-2026-fast",
       "kind": "extended",
-      "days": 2,
-      "old_utc": "2026-09-04T22:00:00.000Z",
-      "new_utc": "2026-09-06T12:00:00.000Z"
+      "days": 1,
+      "old_utc": "2026-09-06T12:00:00.000Z",
+      "new_utc": "2026-09-06T14:40:00.000Z"
     },
     {
-      "slug": "neurips-2026-light",
+      "slug": "neurips-2026-globalsouthai",
       "kind": "extended",
       "days": 1,
-      "old_utc": "2026-08-30T10:00:00.000Z",
-      "new_utc": "2026-08-30T12:00:00.000Z"
+      "old_utc": "2026-09-06T11:58:00.000Z",
+      "new_utc": "2026-09-07T17:59:00.000Z"
     },
     {
-      "slug": "neurips-2026-musiml",
+      "slug": "neurips-2026-med-reasoner",
       "kind": "extended",
-      "days": 11,
-      "old_utc": "2026-08-29T20:00:00.000Z",
-      "new_utc": "2026-09-09T20:00:00.000Z"
+      "days": 2,
+      "old_utc": "2026-09-06T04:59:00.000Z",
+      "new_utc": "2026-09-08T04:59:00.000Z"
     },
     {
-      "slug": "neurips-2026-wmhs",
+      "slug": "neurips-2026-meta-agents",
       "kind": "extended",
-      "days": 14,
-      "old_utc": "2026-09-01T21:59:00.000Z",
-      "new_utc": "2026-09-15T22:59:00.000Z"
+      "days": 1,
+      "old_utc": "2026-09-06T11:59:00.000Z",
+      "new_utc": "2026-09-07T11:59:00.000Z"
     },
     {
-      "slug": "neurips-2026-wrl",
+      "slug": "neurips-2026-ml4spatialbio",
       "kind": "extended",
-      "days": 5,
-      "old_utc": "2026-08-29T11:59:00.000Z",
-      "new_utc": "2026-09-03T11:59:00.000Z"
+      "days": 1,
+      "old_utc": "2026-09-05T14:00:00.000Z",
+      "new_utc": "2026-09-06T16:00:00.000Z"
+    },
+    {
+      "slug": "neurips-2026-stody",
+      "kind": "extended",
+      "days": 1,
+      "old_utc": "2026-09-06T11:59:00.000Z",
+      "new_utc": "2026-09-06T23:59:00.000Z"
     }
   ]
 }
