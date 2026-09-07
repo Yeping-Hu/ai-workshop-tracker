@@ -853,6 +853,23 @@ whether it brings people back. The vocabulary, pinned by
 | `delight/aoe-open` | the "why 11:59 UTC" explainer is opened | is the time-zone confusion real? |
 | `delight/surprise` | "Surprise me" is clicked | is the paper cache browsed for fun? |
 
+### The agenda on `/saved/`
+
+Above the list, `/saved/` re-cuts the same starred workshops by month
+(`site/src/scripts/planner.js`): paper deadline, abstract stage, notification
+and workshop dates where the entry has them, plus one "conference week" item
+per starred conference-year from `data/editions.yml`. Only a handful of entries
+carry notification or workshop dates, so the conference week is what gives most
+agendas a second line; the editions are embedded at build for this page rather
+than added to the public API, being display data for one view. Months are UTC
+months, because every wall clock the site prints is UTC. Deadline items carry
+the board's own `data-deadline-ms` countdown and are hydrated by `board.js`, so
+there is no second clock. Three or more deadlines within ten days
+(`COLLISION_N`, `COLLISION_DAYS`) render a warning — a nudge about a lab's
+calendar, not a rule. The section is hidden at zero stars. Pure functions,
+pinned by `scripts/planner_test.mjs`; the DOM wiring is exercised by
+`ui_test.mjs`.
+
 Stars appear on every workshop list — the board, search and filter results,
 conference listings, and each workshop page. They are always rendered rather than
 revealed on hover, because most of the traffic is phones and hover does not exist

@@ -1,14 +1,23 @@
 ---
 import Base from '../components/Base.astro';
 import AlertsSignup from '../components/AlertsSignup.astro';
-import { conferences, topics as allTopics } from '../lib/data';
+import { conferences, topics as allTopics, editionByKey } from '../lib/data';
 import { ALERTS_API, href } from '../lib/site';
+import { formatDateSpan } from '../../../lib/dates.mjs';
 
 // Conference id -> {name, color} so saved rows get the same badges as the
 // board. Tiny (~10 entries), embedded at build time.
 const confMap = Object.fromEntries(conferences.map((c: any) => [c.id, { name: c.name, color: c.color }]));
 // Topic ids -> labels, so a saved row can show the same chips the board does.
 const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, t.label]));
+// Conference edition dates (data/editions.yml) for the agenda's "conference
+// week" item — 25 rows, embedded here rather than added to the public API,
+// because they are display data for this one page. The label is the same
+// formatDateSpan the conference-year page prints, so an edition never reads
+// two ways.
+const editionMap = Object.fromEntries(
+  [...editionByKey.entries()].map(([k, e]: [string, any]) => [k, { start: e.start ?? null, end: e.end ?? null, label: formatDateSpan(e.start, e.end) }]),
+);
 ---
 
 <Base
@@ -48,6 +57,15 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
     </div>
   )}
 
+  {/* The agenda: the same saved workshops re-cut by month (planner.js).
+      Hidden until there is at least one star; rendered from the same fetch as
+      the list below so both paint together. */}
+  <section aria-labelledby="savedPlannerHead" id="savedPlanner" hidden>
+    <h2 id="savedPlannerHead">What's next</h2>
+    <p class="muted small planner-lede">Every dated stage of your saved workshops, month by month. Times are UTC.</p>
+    <div id="savedPlannerBody"></div>
+  </section>
+
   <section aria-labelledby="savedWsHead">
     <h2 id="savedWsHead">Workshops <span class="muted count" id="savedWsCount"></span></h2>
     <div class="board" id="savedWsList"><p class="muted" id="savedWsStatus">Loading your saved workshops…</p></div>
@@ -70,14 +88,17 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
   <script src="../scripts/board.js"></script>
   <script type="application/json" id="awt-conf" set:html={JSON.stringify(confMap)} />
   <script type="application/json" id="awt-topics" set:html={JSON.stringify(topicMap)} />
+  <script type="application/json" id="awt-editions" set:html={JSON.stringify(editionMap)} />
 
   <script>
-    import { favWorkshops, favPapers } from '../scripts/favorites.js';
+    import { favWorkshops, favPapers, track } from '../scripts/favorites.js';
     import { wsRowHtml } from '../scripts/ws-row.js';
+    import { buildAgenda, agendaHtml, starBucket } from '../scripts/planner.js';
 
     const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
     const CONF = JSON.parse(document.getElementById('awt-conf')!.textContent || '{}');
     const TOPIC = JSON.parse(document.getElementById('awt-topics')!.textContent || '{}');
+    const EDITIONS = JSON.parse(document.getElementById('awt-editions')!.textContent || '{}');
     const $ = (s: string) => document.querySelector(s) as HTMLElement;
     const esc = (s: unknown) =>
       String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -130,10 +151,33 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
         rowAttrs: `data-saved-ws="${esc(w.slug)}"`,
       });
 
+    /* ---------------- the agenda ---------------- */
+    // Built from the rows the list below already fetched; nothing extra is
+    // loaded. The section stays hidden at zero stars (the list's empty state
+    // says everything), and re-renders whenever the star set changes. One
+    // usage event per page load, bucketed, so the dashboard can say whether
+    // people with several stars come back — the question the feature exists
+    // to answer.
+    let plannerTracked = false;
+    function renderPlanner(mine: any[]) {
+      const section = $('#savedPlanner');
+      if (!mine.length) { section.hidden = true; return; }
+      const agenda = buildAgenda(mine, { editions: EDITIONS });
+      $('#savedPlannerBody').innerHTML = agendaHtml(agenda, {
+        base,
+        esc,
+        conf: (id: string) => CONF[id] ?? { name: id, color: '#888' },
+      });
+      section.hidden = false;
+      (window as any).awtBoardHydrate?.($('#savedPlannerBody'));
+      if (!plannerTracked) { plannerTracked = true; track('planner/rendered', starBucket(mine.length)); }
+    }
+
     async function renderWorkshops() {
       const slugs = favWorkshops();
       $('#savedWsCount').textContent = slugs.length ? `(${slugs.length})` : '';
       if (slugs.length === 0) {
+        renderPlanner([]);
         $('#savedWsList').innerHTML =
           `<div class="empty-state">No saved workshops yet — star <span class="star-demo">☆</span> any
            workshop on the <a href="${base}/">deadline board</a> and it'll wait here, sorted by deadline.</div>`;
@@ -147,6 +191,7 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
       }
       const wanted = new Set(slugs);
       const mine = allWorkshops!.filter((w) => wanted.has(w.slug));
+      renderPlanner(mine);
       mine.sort((a, b) => {
         const [ga, ka] = sortKey(a), [gb, kb] = sortKey(b);
         return ga - gb || ka - kb || String(a.name).localeCompare(String(b.name));
@@ -299,6 +344,10 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
         const n = favWorkshops().length;
         $('#savedWsCount').textContent = n ? `(${n})` : '';
         if (n === 0) renderWorkshops();
+        else if (allWorkshops) {
+          const wanted = new Set(favWorkshops());
+          renderPlanner(allWorkshops.filter((w) => wanted.has(w.slug)));
+        }
       } else if (type === 'paper') {
         const li = document.querySelector(`li[data-saved-paper="${CSS.escape(id)}"]`);
         const group = li?.closest('.saved-paper-group');

@@ -373,6 +373,11 @@ if (firstStar) {
   await page.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
   await page.waitForSelector(`[data-saved-ws="${starredSlug}"]`, { timeout: 8000 });
   check('saved page lists the starred workshop', true);
+  // The agenda (planner.js) renders from the same fetch, above the list.
+  check('agenda section is shown with one star', await page.$eval('#savedPlanner', (el) => !el.hidden));
+  check('agenda lists the starred workshop', (await page.$(`#savedPlanner [data-planner-slug="${starredSlug}"]`)) !== null);
+  const agendaCd = await page.$eval(`#savedPlanner [data-planner-slug="${starredSlug}"] .countdown`, (el) => el.textContent.trim()).catch(() => '');
+  check('agenda deadline carries a live countdown (hydrated by board.js)', /\d+[dhm]\s/.test(agendaCd), agendaCd);
   // The saved list deliberately has no status pill — the countdown column and the
   // greyed row already say it. What matters is that status is still legible, so
   // assert the countdown carries it rather than asserting the pill is gone.
@@ -400,6 +405,7 @@ if (firstStar) {
   await page.click(`[data-saved-ws="${starredSlug}"] [data-star-ws]`);
   await page.waitForSelector('#savedWsList .empty-state', { timeout: 4000 });
   check('unstarring last workshop shows the empty state', true);
+  check('agenda hides again at zero stars', await page.$eval('#savedPlanner', (el) => el.hidden));
   check('nav badge hides again at zero', await page.$eval('#navSavedCount', (el) => el.hidden));
 
   // persistence: re-star, reload, still starred
@@ -839,6 +845,40 @@ if (allRows.length === 0) {
   check('a corrupt saved list still renders the rows',
     (await page.$$eval('[data-changes-row]', (els) => els.length)) === allRows.length);
   await page.evaluate(() => localStorage.removeItem('awt-fav-workshops'));
+}
+
+console.log('— the saved-page agenda: collisions and the usage event (data-driven) —');
+{
+  const { readFileSync } = await import('node:fs');
+  const api = JSON.parse(readFileSync('site/dist/api/workshops.json', 'utf8')).workshops;
+  const now = Date.now();
+  const open = api.filter((w) => w.status === 'upcoming' && w.deadline_utc && Date.parse(w.deadline_utc) > now)
+    .sort((a, b) => Date.parse(a.deadline_utc) - Date.parse(b.deadline_utc));
+  // Three open calls within ten days of each other, from the data.
+  let triple = null;
+  for (let i = 0; i + 2 < open.length && !triple; i++) {
+    if (Date.parse(open[i + 2].deadline_utc) - Date.parse(open[i].deadline_utc) <= 10 * 86_400_000) triple = open.slice(i, i + 3).map((w) => w.slug);
+  }
+  if (triple) {
+    const p2 = await browser.newPage();
+    await p2.addInitScript((slugs) => {
+      localStorage.setItem('awt-fav-workshops', JSON.stringify(slugs));
+      window.__awtEvents = [];
+      window.goatcounter = { count: (e) => window.__awtEvents.push(e) };
+    }, triple);
+    await p2.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
+    await p2.waitForSelector('#savedPlanner:not([hidden])', { timeout: 8000 });
+    check('three close deadlines render a collision warning', (await p2.$('#savedPlanner .planner-warn')) !== null);
+    check('the warning names all three', await p2.$eval('#savedPlanner .planner-warn', (el) => /^3 deadlines within 10 days/.test(el.textContent.trim())));
+    const months = await p2.$$eval('#savedPlanner .planner-month-head', (els) => els.map((e) => e.textContent.trim()));
+    check('items are grouped under month headings', months.length >= 1 && months.every((m) => /^[A-Z][a-z]+ \d{4}$/.test(m)), months.join(' | '));
+    const ev = await p2.evaluate(() => window.__awtEvents);
+    check('one planner/rendered event, bucketed 2-4', ev.filter((e) => e.path === 'planner/rendered').length === 1 && ev.some((e) => e.path === 'planner/rendered' && e.title === '2-4'), JSON.stringify(ev));
+    await p2.evaluate(() => localStorage.removeItem('awt-fav-workshops'));
+    await p2.close();
+  } else {
+    check('no three open calls within ten days — collision check skipped', true);
+  }
 }
 
 console.log('— extension insights (lib/extensions.mjs; skipped when no conference-year clears the gate) —');

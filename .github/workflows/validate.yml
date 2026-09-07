@@ -106,6 +106,8 @@ jobs:
         run: node scripts/analytics_events_test.mjs
       - name: Test the deadline extension-rate derivation
         run: node scripts/extension_stats_test.mjs
+      - name: Test the saved-page agenda
+        run: node scripts/planner_test.mjs
       - name: Validate workshop data
         id: validate
         run: node scripts/validate.mjs --report validation-report.md
