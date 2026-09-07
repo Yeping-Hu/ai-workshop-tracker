@@ -901,6 +901,45 @@ console.log('— /trends/: one static chart and a table that agree —');
   })());
 }
 
+console.log('— the time-zone explainer under an upcoming countdown —');
+{
+  const { readFileSync } = await import('node:fs');
+  const api = JSON.parse(readFileSync('site/dist/api/workshops.json', 'utf8')).workshops;
+  const up = api.find((w) => w.status === 'upcoming' && w.deadline_utc && Date.parse(w.deadline_utc) > Date.now());
+  if (up) {
+    const p2 = await browser.newPage();
+    await p2.addInitScript(() => { window.__awtEvents = []; window.goatcounter = { count: (e) => window.__awtEvents.push(e) }; });
+    await p2.goto(`${BASE}/workshop/${up.slug}/`, { waitUntil: 'networkidle' });
+    check('explainer is present and closed by default', await p2.$eval('.tz-help', (el) => !el.open));
+    check('explainer is kept out of the search index', await p2.$eval('.tz-help', (el) => el.hasAttribute('data-pagefind-ignore')));
+    const summary = await p2.$eval('.tz-help > summary', (el) => el.textContent.trim());
+    check('summary asks the question', /Why 11:59 UTC\?|What time is that, exactly\?/.test(summary), summary);
+    const isArtefact = /(11:59|12:00) UTC$/.test(up.deadline_wall_clock || '') && up.timezone === 'UTC';
+    check('the 11:59 question is asked exactly when the deadline is an AoE artefact', (summary === 'Why 11:59 UTC?') === isArtefact, `${summary} for ${up.deadline_wall_clock}`);
+    await p2.click('.tz-help > summary');
+    check('it opens on click', await p2.$eval('.tz-help', (el) => el.open));
+    const CLOCK = /^[A-Z][a-z]{2} \d{1,2}, \d{2}:\d{2}:\d{2}$/;
+    const read = () => p2.$$eval('[data-live-clock]', (els) => els.map((e) => [e.dataset.liveClock, e.textContent.trim()]));
+    const t1 = await read();
+    check('both clocks show a date and a time', t1.length === 2 && t1.every(([, t]) => CLOCK.test(t)), JSON.stringify(t1));
+    await p2.waitForTimeout(1500);
+    const t2 = await read();
+    check('the clocks advance', t2[0][1] !== t1[0][1], `${t1[0][1]} → ${t2[0][1]}`);
+    const toMs = (t) => Date.parse(`${t} 2026 UTC`.replace(/^(\w{3} \d{1,2}), (\d{2}:\d{2}:\d{2}) 2026 UTC$/, '$1 2026 $2 UTC'));
+    const utc = t2.find(([k]) => k === 'utc')?.[1], aoe = t2.find(([k]) => k === 'aoe')?.[1];
+    const diffH = (toMs(utc) - toMs(aoe)) / 3_600_000;
+    // The clocks carry no year, so across New Year the parsed gap is 12h minus a year.
+    check('UTC runs exactly twelve hours ahead of AoE', [12, 12 - 365 * 24, 12 - 366 * 24].some((x) => Math.abs(diffH - x) < 0.01), `${utc} vs ${aoe} (${diffH}h)`);
+    const ev = await p2.evaluate(() => window.__awtEvents);
+    check('opening sends one delight/aoe-open event carrying the slug', ev.filter((e) => e.path === 'delight/aoe-open').length === 1 && ev.some((e) => e.path === 'delight/aoe-open' && e.title === up.slug), JSON.stringify(ev));
+    await p2.click('.tz-help > summary'); await p2.click('.tz-help > summary');
+    check('re-opening does not send a second event', (await p2.evaluate(() => window.__awtEvents.filter((e) => e.path === 'delight/aoe-open').length)) === 1);
+    await p2.close();
+  } else {
+    check('no upcoming workshop with a deadline — explainer check skipped', true);
+  }
+}
+
 console.log('— extension insights (lib/extensions.mjs; skipped when no conference-year clears the gate) —');
 {
   const { readFileSync, readdirSync } = await import('node:fs');

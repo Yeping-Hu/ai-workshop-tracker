@@ -77,7 +77,9 @@ const isMachineDeadlineNote = (s) => !s || /^(OpenReview-synced|imported from Op
 // keep their arrows: a contributor's note can legitimately say "this OpenReview
 // venue was created early", and that must stay indexed.
 const WS_CHROME = ['Official website ↗', 'OpenReview venue ↗', '✎ Edit this entry', 'Copy as Markdown', 'help us add it',
-  'Help add it', 'Opens a short form', 'Add deadline to calendar'];
+  'Help add it', 'Opens a short form', 'Add deadline to calendar',
+  // The time-zone explainer (a details block under the countdown).
+  'Anywhere on Earth', 'Right now:'];
 const WS_STAMPS = ['OpenReview-synced', 'imported from OpenReview — check the website',
   'auto-suggested and may be imprecise', 'SEED DATA', 'Unverified seed entry',
   // The extension-rate line (lib/extensions.mjs) is derived, not written.

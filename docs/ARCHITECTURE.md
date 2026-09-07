@@ -281,6 +281,16 @@ per-track — to carry an explicit `timezone`. Whatever the stored zone, the boa
 and workshop pages convert to the **viewer's local time** at display, so the
 label is only reference.
 
+The consequence a first-time submitter meets is that most deadlines read
+"11:59 UTC": an AoE date ends at 11:59 UTC the next morning, and hundreds of
+rows are exactly that. So an upcoming workshop page carries a collapsed
+explainer under its countdown (`Why 11:59 UTC?`, or `What time is that,
+exactly?` when the wall clock is not such an artefact) with a live UTC clock
+and a live AoE clock beside each other — `board.js` ticks both from the
+countdown interval it already runs. The block is `data-pagefind-ignore`;
+opening it sends one `delight/aoe-open` event. Checked by `ui_test.mjs`
+(closed by default, the clocks advance, and they differ by exactly twelve hours).
+
 **Deadline sync (extensions).** A deadline the discovery bot imported is kept in
 step with OpenReview on later weekly runs, so an organizer's extension flows in
 without a hand edit. The mechanism is provenance-by-stamp: when the bot writes a

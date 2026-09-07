@@ -691,6 +691,13 @@ h2 .count { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 400;
 /* The extension-rate line under the deadline block (workshop page) and under
    the statline (conference hub): quiet, one line, no chrome. */
 .ext-insight { margin: 0.55rem 0 0; }
+/* The time-zone explainer under a countdown: same collapsed shape as the
+   deadline history, so the two read as one family of quiet footnotes. */
+.tz-help { margin-top: 0.45rem; }
+.tz-help > summary { cursor: pointer; color: var(--muted); }
+.tz-help > summary:hover { color: var(--ink); }
+.tz-help p { margin: 0.4rem 0 0; max-width: 60ch; }
+.tz-help .tz-now { font-size: 0.78rem; }
 .conf-ext { margin: 0.6rem 0 0; max-width: 60ch; }
 @media (max-width: 40rem) {
   .dl-history li { grid-template-columns: 1fr auto; }

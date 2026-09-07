@@ -46,8 +46,23 @@ function fmtRemaining(ms) {
 // every tick on purpose — a countdown added after load (the saved list and the
 // search results do this, and the UI suite injects one) must start ticking
 // without anything re-registering it.
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const pad2 = (n) => String(n).padStart(2, '0');
+// "Sep 7, 03:12:05" in UTC, or shifted by an offset (AoE is UTC−12). The date
+// is part of the text on purpose: the whole point of the AoE explainer on the
+// workshop page is that the two clocks can show different days.
+function fmtClock(ms) {
+  const d = new Date(ms);
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}:${pad2(d.getUTCSeconds())}`;
+}
+
 function tick() {
   const now = Date.now();
+  // Live clocks (the workshop page's time-zone explainer): [data-live-clock="utc"|"aoe"].
+  for (const el of $$('[data-live-clock]')) {
+    const text = fmtClock(el.dataset.liveClock === 'aoe' ? now - 12 * HOUR : now);
+    if (el.textContent !== text) el.textContent = text;
+  }
   for (const el of $$('[data-deadline-ms]')) {
     const rem = Number(el.dataset.deadlineMs) - now;
     if (rem <= 0) {
@@ -75,7 +90,7 @@ function tick() {
 // are ticked without anything re-registering them.
 let clock = null;
 function ensureClock() {
-  if (!clock && $$('[data-deadline-ms]').length) clock = setInterval(tick, 1000);
+  if (!clock && ($$('[data-deadline-ms]').length || $$('[data-live-clock]').length)) clock = setInterval(tick, 1000);
 }
 function hydrateRows(root = document) {
   localTimes(root);

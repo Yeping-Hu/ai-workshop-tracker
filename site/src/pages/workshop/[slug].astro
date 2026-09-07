@@ -4,6 +4,7 @@ import { workshops, conferenceById, editionByKey, topicById, loadPaperCache, wor
 import { href, REPO_URL, CALENDAR_ENABLED } from '../../lib/site';
 import MarkdownExport from '../../components/MarkdownExport.astro';
 import { formatSingleWorkshopInfo, isAutoTopicsNote, isBotDeadlineNote } from '../../lib/markdown';
+import { timezoneLabel } from '../../../../lib/dates.mjs';
 
 export function getStaticPaths() {
   return workshops.map((w) => ({ params: { slug: w.slug }, props: { w } }));
@@ -23,6 +24,12 @@ const isSeed = (w.notes || '').includes('SEED DATA');
 // pages; see lib/extensions.mjs for the gates.
 const insight = extensionInsight(w, extensionStats, (s: string) => workshopBySlug.get(s));
 const insightSentence = insight ? extensionSentence(insight, { confName: conf.name }) : '';
+// The time-zone explainer under the countdown. Every deadline is stored in
+// UTC, and an "Anywhere on Earth" deadline lands at 11:59 UTC the next day —
+// which is what most rows here read, and what first-time submitters find
+// baffling. When this deadline is such an artefact the summary asks the
+// question they have; otherwise it asks the general one.
+const tzArtefact = w.timezone === 'UTC' && /\b(11:59|12:00) UTC$/.test(w.deadlineWallClock ?? '');
 // Hand-written previous_editions rows are superseded by a tracked entry for
 // the same year (an internal link beats an external one); years we don't
 // track keep their external links.
@@ -473,6 +480,29 @@ const related = picked.map((o: any) => ({
                   data-stage={w.nextStageIsAbstract ? 'abstract' : null}
                 >—</span>
               </div>
+            )}
+            {w.status === 'upcoming' && (
+              <details class="tz-help small" data-pagefind-ignore data-slug={w.slug}>
+                <summary>{tzArtefact ? 'Why 11:59 UTC?' : 'What time is that, exactly?'}</summary>
+                {tzArtefact ? (
+                  <p>
+                    Deadlines here are shown in UTC. Many workshops announce theirs as “Anywhere on Earth”
+                    (AoE, UTC−12): a date that ends AoE ends at 11:59 UTC the next morning, which is where
+                    this 11:59 comes from. If it is still that date somewhere on Earth, you are on time.
+                  </p>
+                ) : (
+                  <p>
+                    Deadlines here are shown in {timezoneLabel(w.timezone ?? 'AoE')}, with your local time
+                    above. Many workshops announce theirs as “Anywhere on Earth” (AoE, UTC−12), the ML
+                    convention: a date-only deadline ends when that date ends everywhere, which is 11:59 UTC
+                    the next morning.
+                  </p>
+                )}
+                <p class="tz-now muted">
+                  Right now: <span class="mono" data-live-clock="utc">—</span> UTC ·{' '}
+                  <span class="mono" data-live-clock="aoe">—</span> AoE
+                </p>
+              </details>
             )}
             {w.deadlineChange && (
               <div class={`dl-callout dl-${w.deadlineChange.kind}`}>
