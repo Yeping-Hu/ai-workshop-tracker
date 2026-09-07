@@ -15,7 +15,7 @@ Deadlines, past editions, and accepted papers for AI/ML/Robotics conference work
 A static website that aggregates **AI/ML/Robotics conference workshop** information in one place:
 
 - 📅 **Upcoming submission deadlines** for COLM, CVPR, CoRL, ECCV, ICLR, ICML, ICRA, IROS, and NeurIPS workshops, with live countdowns and AoE → local-time conversion; the board shows open calls, and everything else is reachable through search
-- 🔎 **One unified, faceted search** across every workshop edition and 20k+ accepted-paper titles, filterable by conference, status, year, and topic — fully static (Pagefind), so it runs entirely in the browser with no search server
+- 🔎 **One unified, faceted search** across every workshop edition and 20k+ accepted-paper titles, filterable by conference, status, year, and topic, and sortable by best match, soonest deadline, oldest first, name, or most matching papers — fully static (Pagefind), so it runs entirely in the browser with no search server
 - ⭐ **Save workshops and papers** to a personal list, stored in your own browser (no account, no sign-in) — and optionally sync it across devices by subscribing to alerts
 - ✉️ **Optional weekly email digest** of deadline changes and new calls in the conferences and topics you pick, plus opt-in alerts when a starred deadline is within 72 hours — no password, one-click unsubscribe that deletes your address
 - 📄 **Auto-generated accepted-paper listings** for OpenReview-hosted workshops on each workshop's page

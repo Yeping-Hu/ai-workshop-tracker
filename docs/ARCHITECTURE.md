@@ -154,9 +154,27 @@ Behavior worth knowing before you touch the search code:
   keywords, and a *listed* paper must individually match all of them. Workshops
   where the keywords only co-occur across different papers get a quiet link
   rather than a nested list.
-- **Two ordering modes.** Filter-only browsing lists open calls first (soonest
-  deadline on top, then upcoming-TBA, then this year's closed calls, then past
-  editions newest-first). Typing keywords switches to relevance ranking. The
+- **Two default orders, and a sort picker.** Filter-only browsing lists open
+  calls first (soonest deadline on top, then upcoming-TBA, then everything
+  else most recently closed first; an edition that never published a deadline
+  takes its place by the date it was held). That is the build-time `order`
+  key in `workshop/[slug].astro`, which the engine sorts on. Typing keywords
+  switches to relevance ranking. A "Sort" picker in the filter bar, shown only
+  while a search or filter is active, offers Best match, Soonest deadline,
+  Oldest first, Name A–Z and Most matching papers; the rules live in
+  `site/src/scripts/result-sort.js`, pinned by `scripts/result_sort_test.mjs`.
+  Sorting is a re-order of the grouped results in the browser, never a new
+  search: everything the comparators need travels in each result's metadata
+  (the `order` key is published there for exactly this). The engine's own
+  `sort` option was not used because it replaces relevance outright and the
+  papers index carries no sort key, so a workshop matched only through its
+  papers could not be placed. The choice travels as `?sort=` and persists
+  until another order is picked or "Clear all"; the two keyword-only orders
+  (Best match, Most matching papers) are greyed in a filter-only browse and
+  the browse order applies instead, while a mode-independent choice such as
+  Oldest first carries across. The two-phase fast first page (item 6 above)
+  is taken only under the engine's own order; any other sort groups the whole
+  set first, since a slice's first page could come from anywhere in it. The
   result-count line always states which ordering is active.
 - **A result row is the board's row.** Badge, name, star, topic chips,
   location, the deadline with local time and a live countdown, rendered from
@@ -169,8 +187,10 @@ Behavior worth knowing before you touch the search code:
 - **The headline counts what is actually listed.** With keywords: "N workshops ·
   M matching papers · by relevance · page x/y", where N is distinct workshops
   shown and M is individual matching papers inside them. Browsing: "N workshops ·
-  open calls first". Results paginate 50 per page; the board paginates 25, both
-  with the same numbered pager.
+  open calls first". The phrase after the counts names the active sort (`says`
+  in `result-sort.js`: by relevance, open calls first, oldest first, by name,
+  most matching papers first). Results paginate 50 per page; the board
+  paginates 25, both with the same numbered pager.
 - **Statuses are inferred, not just from dates.** Accepted papers in the cache
   prove a call closed, so status resolves to "Open call", "Deadline unknown"
   (venue never published one), or "Past" from dates *and* paper caches together.
@@ -767,7 +787,7 @@ are untouched. Pinned by `scripts/deadline_history_test.mjs`.
 
 ## Back/forward navigation & the bfcache guard
 
-Search state lives in the URL (`?q=…&conf=…&page=…`), so results are
+Search state lives in the URL (`?q=…&conference=…&sort=…&page=…`), so results are
 reconstructable on any load. `hydrateFromUrl()` (index.astro) rebuilds the
 search from the URL on first paint and runs the search *immediately* (the
 non-debounced `pf.search`, since a lone debounced call on restore can be

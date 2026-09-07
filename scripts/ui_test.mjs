@@ -310,6 +310,128 @@ const ordKwTitle = await page.$eval('#results .pf-result .pf-title', (el) => el.
 check('top relevance hit matches the query topic', /surgical/i.test(ordKwTitle), ordKwTitle);
 await page.fill('#q', '');
 
+console.log('— sort picker —');
+// Hidden on the board, shown with results; the options are result-sort.js's.
+// The query needs a few open calls (fewer than a page) and plenty of closed
+// ones and papers, so every order has something to show on page one.
+const SORT_Q = 'robot';
+await page.goto(BASE, { waitUntil: 'networkidle' });
+await page.waitForFunction(() => document.querySelector('[data-facet="conference"]')?.children.length >= 5, null, { timeout: 8000 });
+check('sort picker hidden in default mode', await page.$eval('#sortPick', (el) => el.hidden));
+const countSettled = () => page.waitForFunction(() => /workshop/.test(document.querySelector('#searchCount')?.textContent || ''), null, { timeout: 20000 });
+const sortInUrl = (v) => page.waitForFunction((want) => new URL(location.href).searchParams.get('sort') === want, v);
+const sortValue = () => page.$eval('#sortBy', (s) => s.value);
+const countLine = () => page.$eval('#searchCount', (el) => el.textContent);
+const titlesOnPage = () => page.$$eval('#results .pf-result .pf-title', (els) => els.map((e) => e.textContent.trim()));
+// The edition year sits in the row's one classless meta span ("NeurIPS 2026").
+const yearsOnPage = () => page.$$eval('#results .pf-result', (els) =>
+  els.map((e) => Number((e.querySelector('.ws-meta > span:not([class])')?.textContent.match(/(\d{4})\s*$/) || [])[1])));
+const nameCmp = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+const nonDecreasing = (xs) => xs.length > 1 && xs.every((x, i) => i === 0 || x >= xs[i - 1]);
+const nonIncreasing = (xs) => xs.length > 1 && xs.every((x, i) => i === 0 || x <= xs[i - 1]);
+await page.fill('#q', SORT_Q);
+await page.keyboard.press('Enter');
+await countSettled();
+check('sort picker shown with results', !(await page.$eval('#sortPick', (el) => el.hidden)));
+const sortLabels = await page.$$eval('#sortBy option', (os) => os.map((o) => o.textContent));
+check('picker lists the five orders', JSON.stringify(sortLabels) === JSON.stringify(['Best match', 'Soonest deadline', 'Oldest first', 'Name A–Z', 'Most matching papers']), sortLabels.join(' | '));
+check('keywords default to Best match', (await sortValue()) === 'relevance');
+check('the default writes no sort to the URL', !new URL(await page.url()).searchParams.has('sort'));
+const relOrder = await titlesOnPage();
+
+// Soonest deadline: open calls first, ascending; then closed, most recent first.
+await page.selectOption('#sortBy', 'soonest');
+await sortInUrl('soonest');
+check('count line states the order', /open calls first/.test(await countLine()), await countLine());
+const soonRows = await page.$$eval('#results .pf-result', (els) => els.map((e) => ({
+  pill: e.querySelector('.pill')?.textContent.trim(),
+  iso: e.querySelector('.ws-deadline .local[data-iso]')?.getAttribute('data-iso') || null,
+})));
+const lastOpen = soonRows.map((r) => r.pill).lastIndexOf('Open call');
+check('open calls lead as one band', lastOpen >= 0 && soonRows.slice(0, lastOpen + 1).every((r) => r.pill === 'Open call'), soonRows.slice(0, 6).map((r) => r.pill).join(','));
+const openMs = soonRows.slice(0, lastOpen + 1).map((r) => Date.parse(r.iso)).filter(Number.isFinite);
+check('open-call deadlines ascend', nonDecreasing(openMs), `${openMs.length} open`);
+const closedMs = soonRows.slice(lastOpen + 1).filter((r) => r.pill === 'Past' && r.iso).map((r) => Date.parse(r.iso));
+check('closed calls most recent first', nonIncreasing(closedMs), closedMs.slice(0, 4).map((v) => new Date(v).toISOString().slice(0, 10)).join(' | '));
+
+// Oldest first: edition years never decrease down the page.
+await page.selectOption('#sortBy', 'oldest');
+await sortInUrl('oldest');
+const oldYears = await yearsOnPage();
+check('oldest first: years never decrease', nonDecreasing(oldYears), oldYears.slice(0, 10).join(','));
+check('count line says "oldest first"', /oldest first/.test(await countLine()), await countLine());
+
+// Name A–Z, the same collation the module uses.
+await page.selectOption('#sortBy', 'name');
+await sortInUrl('name');
+const names = await titlesOnPage();
+check('name A–Z: titles ascend', names.length > 1 && names.every((n, i) => i === 0 || nameCmp(names[i - 1], n) <= 0), names.slice(0, 4).join(' | '));
+check('count line says "by name"', /by name/.test(await countLine()), await countLine());
+
+// Most matching papers: what each row lists (five, plus "…N more") never
+// increases down the page.
+await page.selectOption('#sortBy', 'papers');
+await sortInUrl('papers');
+const matched = await page.$$eval('#results .pf-result', (els) => els.map((e) =>
+  e.querySelectorAll('.pf-papers .pf-paper').length + Number((e.querySelector('.pf-more')?.textContent.match(/(\d+) more/) || [])[1] || 0)));
+check('most matching papers: counts never increase', nonIncreasing(matched), matched.slice(0, 10).join(','));
+check('the top result has matching papers', matched[0] > 0, String(matched[0]));
+check('count line says "most matching papers first"', /most matching papers first/.test(await countLine()), await countLine());
+
+// Back to Best match: the engine's order again, untouched by the detour.
+await page.selectOption('#sortBy', 'relevance');
+await sortInUrl('relevance');
+check('Best match restores the relevance order', JSON.stringify(await titlesOnPage()) === JSON.stringify(relOrder));
+
+// A choice outlives the keyword it was made with: remove the keyword with a
+// filter on and "Oldest first" still orders the browse, while the two
+// keyword-only orders are greyed until a keyword returns.
+await page.selectOption('#sortBy', 'oldest');
+await sortInUrl('oldest');
+await page.click('summary[data-facet-summary="conference"]');
+await page.check('[data-facet="conference"] input[value="ICML"]');
+await page.click('.kw-chip .kw-x');
+await page.waitForFunction(() => !new URL(location.href).searchParams.has('q'));
+await countSettled();
+check('an explicit sort survives removing the keyword', (await sortValue()) === 'oldest' && /oldest first/.test(await countLine()), await countLine());
+check('Best match is greyed without keywords', await page.$eval('#sortBy option[value="relevance"]', (o) => o.disabled));
+check('Most matching papers is greyed without keywords', await page.$eval('#sortBy option[value="papers"]', (o) => o.disabled));
+check('Soonest deadline is not', !(await page.$eval('#sortBy option[value="soonest"]', (o) => o.disabled)));
+check('the browse obeys the sort', nonDecreasing(await yearsOnPage()), (await yearsOnPage()).slice(0, 10).join(','));
+await page.fill('#q', SORT_Q);
+await page.keyboard.press('Enter');
+await page.waitForFunction((q) => new URL(location.href).searchParams.get('q') === q, SORT_Q);
+await countSettled();
+check('an explicit sort survives a new keyword', (await sortValue()) === 'oldest' && new URL(await page.url()).searchParams.get('sort') === 'oldest');
+
+// Clear all forgets the sort; the next keyword search is Best match again.
+await page.click('#clearSearch');
+await page.waitForSelector('#homeDefault:not([hidden])');
+check('Clear all drops the sort from the URL', !(await page.url()).includes('sort='));
+await page.fill('#q', SORT_Q);
+await page.keyboard.press('Enter');
+await countSettled();
+check('after Clear all, keywords are Best match again', (await sortValue()) === 'relevance' && /by relevance/.test(await countLine()), await countLine());
+
+// Deep links: a known sort hydrates the picker and the order; an unknown one
+// is the default and leaves the URL.
+await page.goto(`${BASE}/?q=${SORT_Q}&sort=name`, { waitUntil: 'networkidle' });
+await countSettled();
+const dlNames = await titlesOnPage();
+check('deep link hydrates the picker', (await sortValue()) === 'name');
+check('deep link applies the order', dlNames.length > 1 && dlNames.every((n, i) => i === 0 || nameCmp(dlNames[i - 1], n) <= 0), dlNames.slice(0, 4).join(' | '));
+await page.goto(`${BASE}/?q=${SORT_Q}&sort=bogus`, { waitUntil: 'networkidle' });
+await countSettled();
+check('an unknown sort is the default', (await sortValue()) === 'relevance');
+check('and is dropped from the URL', !new URL(await page.url()).searchParams.has('sort'));
+
+// Changing the sort returns to page one of a paginated set.
+await page.goto(`${BASE}/?conference=ICML&page=2`, { waitUntil: 'networkidle' });
+await page.waitForFunction(() => document.querySelector('#results .pager button.is-on')?.dataset.page === '2', null, { timeout: 20000 });
+await page.selectOption('#sortBy', 'name');
+await page.waitForFunction(() => new URL(location.href).searchParams.get('sort') === 'name' && !new URL(location.href).searchParams.has('page'));
+check('changing the sort returns to page 1', (await page.$eval('#results .pager button.is-on', (b) => b.dataset.page)) === '1');
+
 console.log('— deadline board pagination —');
 await page.goto(BASE, { waitUntil: 'networkidle' });
 const bRows = await page.$$eval('.board [data-ws-row]', (els) => els.length);

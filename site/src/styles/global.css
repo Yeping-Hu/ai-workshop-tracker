@@ -203,6 +203,21 @@ details.dd .dd-panel {
 }
 .btn-quiet:hover { color: var(--ink); }
 .resultcount { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); margin-left: auto; }
+/* The sort picker: a pill like the facet summaries beside it — the word, then
+   a native <select> with its own box stripped, so it reads "Sort  Best match"
+   in the bar's type with only the platform's arrow left. */
+.sort-pick {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-size: 0.9rem; padding: 0.4rem 0.75rem;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
+  cursor: pointer;
+}
+.sort-pick:focus-within { border-color: var(--accent); }
+.sort-pick-word { color: var(--muted); }
+.sort-pick select {
+  font: inherit; color: var(--ink); background: transparent;
+  border: none; padding: 0; margin: 0; cursor: pointer; outline: none; max-width: 14rem;
+}
 
 /* ---------- the board ---------- */
 .board { margin-top: 0.4rem; }

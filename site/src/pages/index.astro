@@ -14,6 +14,9 @@ import {
   loadPaperCache,
 } from '../lib/data';
 import { href, REPO_URL } from '../lib/site';
+// The sort picker's options and the count line's phrases come from the one
+// module that also orders the results (bridged onto window further down).
+import { SORTS } from '../scripts/result-sort.js';
 
 const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
 // conference display-name -> color, for badges on search results
@@ -137,6 +140,19 @@ const datasetLd: Record<string, any> = {
       <details class="dd"><summary data-facet-summary="status">Status</summary><div class="dd-panel" data-facet="status"></div></details>
       <details class="dd"><summary data-facet-summary="year">Year</summary><div class="dd-panel" data-facet="year"></div></details>
       <details class="dd"><summary data-facet-summary="topic">Topic</summary><div class="dd-panel" data-facet="topic"></div></details>
+      {/* The sort picker. Hidden until a keyword or filter is active: the
+          board under the hero has its own fixed order and is not what this
+          sorts. A native <select> rather than a details.dd of radios — one
+          value, keyboard and screen-reader semantics for free, the platform's
+          own picker on a phone. The options come from SORTS (result-sort.js),
+          which is also what orders the results and words the count line, so
+          the three cannot list different orders. */}
+      <label class="sort-pick" id="sortPick" hidden>
+        <span class="sort-pick-word">Sort</span>
+        <select id="sortBy" aria-label="Sort results">
+          {SORTS.map((s) => <option value={s.key}>{s.label}</option>)}
+        </select>
+      </label>
       <button class="btn-quiet" id="clearSearch" type="button">Clear all</button>
       <span class="resultcount" id="searchCount"></span>
     </div>
@@ -257,10 +273,12 @@ const datasetLd: Record<string, any> = {
       awtFavsHydrate. */}
   <script>
     import { wsRowHtml } from '../scripts/ws-row.js';
+    import { sortResults, effectiveSort } from '../scripts/result-sort.js';
     (window as any).awtWsRowHtml = wsRowHtml;
+    (window as any).awtResultSort = { sortResults, effectiveSort };
   </script>
 
-  <script is:inline define:vars={{ base, confColors, facetCounts, FW, pfExpect, TOPIC }}>
+  <script is:inline define:vars={{ base, confColors, facetCounts, FW, pfExpect, TOPIC, SORTS }}>
     // ---- Unified search over every workshop & paper (Pagefind, faceted) ----
     const $ = (s) => document.querySelector(s);
     const input = $('#q');
@@ -269,6 +287,17 @@ const datasetLd: Record<string, any> = {
     const FACET_LABEL = { conference: 'Conference', status: 'Status', year: 'Year', topic: 'Topic' };
     let keywords = [];
     const sel = Object.fromEntries(FACETS.map((f) => [f, new Set()]));
+    // The requested sort: the picker's value, `?sort=` in the URL. null means
+    // the mode's default — relevance with keywords, the browse order without.
+    // What is actually applied is resolved by result-sort.js at render time,
+    // because a choice outlives the mode it was made in: "Best match" picked
+    // with a keyword means nothing once the keyword is removed (the browse
+    // order applies until a keyword returns), while "Oldest first" carries
+    // across either way. It persists until the reader picks another order or
+    // clears everything.
+    let sortKey = null;
+    const SORT_SAYS = Object.fromEntries(SORTS.map((s) => [s.key, s.says]));
+    const sortPick = $('#sortBy');
     let pfReady = null, pagefind = null;
     let pfBust = 0; // appended to the engine URL when re-importing after a deploy
     let pfInited = null; // the engine module whose worker has already loaded both indexes
@@ -353,6 +382,7 @@ const datasetLd: Record<string, any> = {
     function setMode(searching) {
       $('#homeDefault').hidden = searching;
       $('#searchPanel').hidden = !searching;
+      $('#sortPick').hidden = !searching; // sorts the results, not the board
     }
 
     function renderChips() {
@@ -361,12 +391,20 @@ const datasetLd: Record<string, any> = {
         .join('');
     }
 
-    function syncUrl() {
+    // The search state as the URL carries it. One builder: syncUrl writes it,
+    // and the bfcache guard below compares it against what was restored, so the
+    // two cannot drift about which params exist.
+    function searchQueryString() {
       const p = new URLSearchParams();
       if (keywords.length) p.set('q', keywords.join(','));
       for (const f of FACETS) if (sel[f].size) p.set(f, [...sel[f]].join(','));
+      if (isSearching() && sortKey) p.set('sort', sortKey);
       if (isSearching() && rState.page > 1) p.set('page', String(rState.page));
-      history.replaceState(null, '', p.toString() ? `?${p}` : location.pathname);
+      return p.toString();
+    }
+    function syncUrl() {
+      const q = searchQueryString();
+      history.replaceState(null, '', q ? `?${q}` : location.pathname);
     }
 
     const PF_MERGE_TRIES = 3; // re-imports allowed when a merge looks unclean
@@ -722,7 +760,10 @@ const datasetLd: Record<string, any> = {
       // Empty query = browsing: order by the build-time key (open calls first,
       // soonest deadline on top), and filter to Workshops so browsing never
       // touches the papers index. With keywords, Pagefind's relevance ranking is
-      // what people expect.
+      // what people expect. Either is the engine's order; the sort picker
+      // re-orders the grouped results at render time (result-sort.js) rather
+      // than asking the engine, whose `sort` would drop relevance and cannot
+      // place a workshop matched only through the papers index.
       const opts = query === null
         ? { filters: { ...filters, type: { any: ['Workshops'] } }, sort: { order: 'asc' } }
         : { filters };
@@ -751,9 +792,18 @@ const datasetLd: Record<string, any> = {
         // (results are score-sorted, each workshop's papers ride in its own
         // result), so the first page paints right away and the headline count
         // settles a beat later. Skipped when restoring a deep-linked page
-        // (pendingPage > 1), which wants the exact page immediately.
+        // (pendingPage > 1), which wants the exact page immediately — and
+        // skipped under any sort other than the engine's own (relevance, or
+        // the browse key): the first page of "Name A–Z" can come from anywhere
+        // in the set, so a slice would paint a wrong page and then reshuffle.
+        // A reader who chose that order gets the whole set grouped first:
+        // the right order over a faster first paint. (The sorter arrives with
+        // the bundled scripts; if it is somehow not here yet, the single full
+        // pass is the safe answer too.)
         const FAST = PAGE_SIZE * 2;
-        const twoPhase = res.results.length > FAST && pendingPage <= 1;
+        const engineOrder = query === null ? 'soonest' : 'relevance';
+        const shownOrder = window.awtResultSort ? window.awtResultSort.effectiveSort(sortKey, query !== null) : null;
+        const twoPhase = res.results.length > FAST && pendingPage <= 1 && shownOrder === engineOrder;
         let n = await buildState(res, query, filters, terms, twoPhase ? FAST : undefined);
         if (gen !== searchGen) return; // a newer search superseded us mid-build
         healAttempted = false; // healthy — a future deploy may heal again
@@ -821,20 +871,36 @@ const datasetLd: Record<string, any> = {
         location_label: meta.location_label || null,
         location_distinguishes: !!meta.location_label,
         deadline_change: json(meta.deadline_change),
+        // The build-time browse key, for the "Soonest deadline" sort.
+        order: meta.order || null,
       };
     }
 
     function renderResultsPage() {
-      // The row renderer arrives with the bundled module scripts; on a deep
-      // link this inline script can get here first. Wait a beat rather than
-      // paint a row without it.
-      if (!window.awtWsRowHtml) { setTimeout(renderResultsPage, 50); return; }
+      // The row renderer and the sorter arrive with the bundled module
+      // scripts; on a deep link this inline script can get here first. Wait a
+      // beat rather than paint a row without them.
+      if (!window.awtWsRowHtml || !window.awtResultSort) { setTimeout(renderResultsPage, 50); return; }
       const { groups, page, nPapers, hasQuery } = rState;
       const SUBS_PER_WS = 5;
+      // The picker's order, applied to the grouped results here rather than by
+      // a new search: everything the comparators need travels in each result's
+      // metadata, so a change of sort is a re-render, not a fetch. `matched`
+      // counts the papers the keywords hit inside the workshop — the fallback
+      // "Matching papers →" link is not one.
+      const sorted = window.awtResultSort.sortResults(
+        groups.map(([key, g]) => ({ key, g, view: (g.view ??= viewFromMeta(g)), matched: (g.subs ?? []).filter((s) => !s.fall).length })),
+        sortKey,
+        hasQuery,
+      );
+      const order = sorted.key;
+      // The picker shows what is applied, and greys the orders a filter-only
+      // browse cannot use (no score to rank by, no matching papers to count).
+      sortPick.value = order;
+      for (const o of sortPick.options) o.disabled = !hasQuery && SORTS.some((s) => s.key === o.value && s.needsQuery);
       const nPages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE));
       const rows = [];
-      for (const [key, g] of groups.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)) {
-        const view = viewFromMeta(g);
+      for (const { g, view } of sorted.items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)) {
         const conf = view.conference;
         const wsName = view.name;
         const slug = g.slug || '';
@@ -886,7 +952,7 @@ const datasetLd: Record<string, any> = {
       $('#searchCount').textContent = rState.partial
         ? 'Counting…'
         : (n
-          ? `${n} workshop${n === 1 ? '' : 's'}${hasQuery && nPapers ? ` · ${nPapers} matching paper${nPapers === 1 ? '' : 's'}` : ''}${!hasQuery ? ' · open calls first' : ' · by relevance'}${nPages > 1 ? ` · page ${page}/${nPages}` : ''}`
+          ? `${n} workshop${n === 1 ? '' : 's'}${hasQuery && nPapers ? ` · ${nPapers} matching paper${nPapers === 1 ? '' : 's'}` : ''}${' · ' + SORT_SAYS[order]}${nPages > 1 ? ` · page ${page}/${nPages}` : ''}`
           : '');
       $('#results').innerHTML =
         rows.join('') ||
@@ -933,9 +999,21 @@ const datasetLd: Record<string, any> = {
       updateLiveCounts(); updateFacetSummaries(); runSearch();
     });
     $('#clearSearch').addEventListener('click', () => {
-      keywords = []; input.value = '';
+      keywords = []; input.value = ''; sortKey = null;
       for (const f of FACETS) sel[f].clear();
       renderChips(); renderFacetPanels(); runSearch();
+    });
+    // A new order is a re-render of what is already grouped, from page one.
+    // If a search is still in flight, the URL carries the choice and that
+    // search's own render applies it. Scroll back to the top of the list only
+    // when the reader had scrolled past it — the picker is in the sticky bar,
+    // so mostly they are already there and a jump would be noise.
+    sortPick.addEventListener('change', () => {
+      sortKey = sortPick.value;
+      rState.page = 1;
+      if (rState.key) renderResultsPage(); else syncUrl();
+      const panel = document.getElementById('searchPanel');
+      if (panel.getBoundingClientRect().top < 0) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     // Facet dropdown open/close now lives in scripts/dropdowns.js, loaded by
     // Base.astro and shared with the alerts pickers.
@@ -975,6 +1053,8 @@ const datasetLd: Record<string, any> = {
       keywords = (p.get('q') || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
       for (const f of FACETS) { sel[f].clear(); for (const v of (p.get(f) || '').split(',').filter(Boolean)) sel[f].add(v); }
       pendingPage = Math.max(1, Number(p.get('page')) || 1);
+      // An unknown order is the default, and drops out of the URL on the next sync.
+      sortKey = SORTS.some((s) => s.key === p.get('sort')) ? p.get('sort') : null;
       input.value = ''; // committed keywords live in `keywords`; clear any stale partial text
       renderChips();
       renderFacetPanels();
@@ -993,13 +1073,7 @@ const datasetLd: Record<string, any> = {
     window.addEventListener('pageshow', (e) => {
       if (!e.persisted) return;
       const urlQ = new URLSearchParams(location.search).toString();
-      const renderedQ = (() => {
-        const p = new URLSearchParams();
-        if (keywords.length) p.set('q', keywords.join(','));
-        for (const f of FACETS) if (sel[f].size) p.set(f, [...sel[f]].join(','));
-        if (isSearching() && rState.page > 1) p.set('page', String(rState.page));
-        return p.toString();
-      })();
+      const renderedQ = searchQueryString();
       const hasResults = $('#results').querySelector('.pf-result, .pf-empty, .pf-error');
       // Re-hydrate only if the restored view doesn't match the URL, or results
       // somehow didn't survive the restore. Matching state → leave it untouched.

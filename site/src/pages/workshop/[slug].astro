@@ -91,6 +91,9 @@ const pfFields: [string, string][] = [
   ['deadline_change', w.deadlineChange
     ? JSON.stringify({ kind: w.deadlineChange.kind, days: w.deadlineChange.days, recorded: w.deadlineChange.recorded })
     : ''],
+  // The browse-order key, so the results' "Soonest deadline" sort applies to
+  // a keyword search exactly the order the engine applies to a browse.
+  ['order', searchOrder],
 ];
 const pfAttrs = Object.fromEntries(pfFields.map(([k, v]) => [`data-pf-${k}`, v]));
 const PF_META = pfFields.map(([k]) => `${k}[data-pf-${k}]`).join(', ');
