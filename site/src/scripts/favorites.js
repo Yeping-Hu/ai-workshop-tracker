@@ -249,9 +249,17 @@ async function reconcile() {
   }
 }
 
-/** Anonymous usage signal (GoatCounter custom event) — fires only on ADD,
- *  so the dashboard shows whether the feature earns a real backend later. */
-function track(path, title) {
+/**
+ * Anonymous usage signal (GoatCounter custom event). A no-op when GoatCounter
+ * is not on the page (local preview, forks, blockers). The star events fire
+ * only on ADD, so the dashboard shows whether the feature earns a real backend
+ * later. Exported — and bridged to `window.awtTrack` below — because every
+ * other feature that wants a usage signal must send it through here: one
+ * helper, one place the event vocabulary is written down
+ * (docs/ARCHITECTURE.md "Favorites without accounts"), and
+ * scripts/analytics_events_test.mjs checks the call sites against that list.
+ */
+export function track(path, title) {
   try {
     window.goatcounter?.count?.({ path, title, event: true });
   } catch {}
@@ -346,6 +354,9 @@ if (!window.__awtFavsInit) {
   // Exposed rather than reimplemented: a second copy of the merge is how the
   // upload half went missing on the confirm page in the first place.
   window.awtFavsSync = reconcile;
+  // Page scripts that are not modules (workshop page, planner) send their
+  // usage events through the same helper rather than each calling GoatCounter.
+  window.awtTrack = track;
 
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-star-ws],[data-star-paper]');

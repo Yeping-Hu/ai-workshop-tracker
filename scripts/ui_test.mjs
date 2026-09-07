@@ -334,6 +334,13 @@ if (bRows > 25) {
 console.log('— device-local favorites (star → /saved/ → unstar) —');
 await page.goto(BASE, { waitUntil: 'networkidle' });
 check('nav badge hidden when nothing saved', await page.$eval('#navSavedCount', (el) => el.hidden));
+// The usage-event helper is on every page and must be harmless without
+// GoatCounter — this build has none (pr-build-check sets no PUBLIC_GOATCOUNTER),
+// which is exactly the fork / local-preview case. The vocabulary itself is
+// checked by analytics_events_test.mjs; the wiring is checked below by
+// stubbing window.goatcounter on the pages that send events.
+check('window.awtTrack is a function on every page', await page.evaluate(() => typeof window.awtTrack === 'function'));
+check('awtTrack is a no-op without GoatCounter', await page.evaluate(() => { try { window.awtTrack('fav/star-workshop', 'x'); return true; } catch { return false; } }));
 const firstStar = await page.$('.board [data-star-ws]');
 if (firstStar) {
   const starredSlug = await firstStar.getAttribute('data-star-ws');

@@ -102,6 +102,8 @@ jobs:
         run: node scripts/slug_redirects_test.mjs
       - name: Test the OpenReview rate limiter
         run: node scripts/openreview_rate_test.mjs
+      - name: Test the usage-event vocabulary against the docs
+        run: node scripts/analytics_events_test.mjs
       - name: Validate workshop data
         id: validate
         run: node scripts/validate.mjs --report validation-report.md

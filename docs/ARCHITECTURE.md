@@ -804,8 +804,24 @@ stay live (open calls first), and clusters saved papers by conference
 (alphabetical, latest year first within each). Every saved paper's title links
 to its workshop page; an exact PDF link sits beside it, derived from the
 OpenReview forum id and suppressed for the ~8% of papers with no PDF via
-`/api/papers-without-pdf.json`. GoatCounter star events are the only signal
-collected, to gauge whether the feature ever justifies real accounts.
+`/api/papers-without-pdf.json`.
+
+GoatCounter custom events are the only usage signal the site collects, and
+every one of them goes through the single `track()` helper in `favorites.js`
+(exposed as `window.awtTrack` for non-module page scripts), which is a no-op
+when GoatCounter is not on the page. GoatCounter cannot recognise a returning
+visitor across days — by design — so these events are how a feature shows
+whether it brings people back. The vocabulary, pinned by
+`scripts/analytics_events_test.mjs` against the call sites:
+
+| Event path | Fires when | Answers |
+|---|---|---|
+| `fav/star-workshop` | a workshop is starred (add only) | does saving earn real accounts? |
+| `fav/star-paper` | a paper is starred (add only) | same, for papers |
+| `insight/extension` | an extension-rate line renders (title: `series` or `conference`) | is the deadline-provenance data read? |
+| `planner/rendered` | the `/saved/` agenda renders with ≥ 1 star (title: a star-count bucket) | do people come back to their list? |
+| `delight/aoe-open` | the "why 11:59 UTC" explainer is opened | is the time-zone confusion real? |
+| `delight/surprise` | "Surprise me" is clicked | is the paper cache browsed for fun? |
 
 Stars appear on every workshop list — the board, search and filter results,
 conference listings, and each workshop page. They are always rendered rather than
