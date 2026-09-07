@@ -161,7 +161,7 @@ Behavior worth knowing before you touch the search code:
   key in `workshop/[slug].astro`, which the engine sorts on. Typing keywords
   switches to relevance ranking. A "Sort" picker in the filter bar, shown only
   while a search or filter is active, offers Best match, Newest first,
-  Oldest first, Name A–Z and Most matching papers; the rules live in
+  Paper first (most matching papers) and Name A–Z; the rules live in
   `site/src/scripts/result-sort.js`, pinned by `scripts/result_sort_test.mjs`.
   Sorting is a re-order of the grouped results in the browser, never a new
   search: everything the comparators need travels in each result's metadata
@@ -170,9 +170,9 @@ Behavior worth knowing before you touch the search code:
   papers index carries no sort key, so a workshop matched only through its
   papers could not be placed. The choice travels as `?sort=` and persists
   until another order is picked or "Clear all"; the two keyword-only orders
-  (Best match, Most matching papers) are greyed in a filter-only browse and
+  (Best match, Paper first) are greyed in a filter-only browse and
   the browse order applies instead, while a mode-independent choice such as
-  Oldest first carries across. The two-phase fast first page (item 6 above)
+  Name A–Z carries across. The two-phase fast first page (item 6 above)
   is taken only under the engine's own order; any other sort groups the whole
   set first, since a slice's first page could come from anywhere in it. The
   result-count line always states which ordering is active.
@@ -193,8 +193,8 @@ Behavior worth knowing before you touch the search code:
   M matching papers · by relevance · page x/y", where N is distinct workshops
   shown and M is individual matching papers inside them. Browsing: "N workshops ·
   newest first". The phrase after the counts names the active sort (`says`
-  in `result-sort.js`: by relevance, newest first, oldest first, by name,
-  most matching papers first). Results paginate 50 per page; the board
+  in `result-sort.js`: by relevance, newest first, most paper
+  matches first, by name). Results paginate 50 per page; the board
   paginates 25, both with the same numbered pager.
 - **Statuses are inferred, not just from dates.** Accepted papers in the cache
   prove a call closed, so status resolves to "Open call", "Deadline unknown"

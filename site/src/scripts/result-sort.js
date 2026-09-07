@@ -7,8 +7,7 @@
  * the build-time browse key when there are none. The picker re-orders those
  * groups in the browser — no second search, no fetch — from the metadata every
  * result carries anyway (the `pfFields` contract in workshop/[slug].astro): the
- * browse key itself (`order`), the edition year, the paper deadline as an ISO
- * instant, and the name.
+ * browse key itself (`order`), the name, and the edition year.
  *
  * Why in the browser and not in the engine: Pagefind's `sort` option replaces
  * relevance outright, and the papers index carries no sort key, so with a
@@ -39,9 +38,8 @@
 export const SORTS = [
   { key: 'relevance', label: 'Best match', says: 'by relevance', needsQuery: true },
   { key: 'newest', label: 'Newest first', says: 'newest first' },
-  { key: 'oldest', label: 'Oldest first', says: 'oldest first' },
+  { key: 'papers', label: 'Paper first', says: 'most paper matches first', needsQuery: true },
   { key: 'name', label: 'Name A–Z', says: 'by name' },
-  { key: 'papers', label: 'Most matching papers', says: 'most matching papers first', needsQuery: true },
 ];
 
 /** With keywords, Pagefind's relevance; without, the browse order. */
@@ -65,10 +63,6 @@ const num = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 };
-const instant = (iso) => {
-  const ms = iso ? Date.parse(iso) : NaN;
-  return Number.isNaN(ms) ? null : ms;
-};
 // Dictionary order, digits as numbers ("Workshop 2" before "Workshop 10"),
 // case and accents folded — a list of names should read as a list of names.
 const byName = (a, b) => String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true, sensitivity: 'base' });
@@ -85,16 +79,6 @@ const COMPARE = {
   // key was published, in the seconds around a deploy) goes last rather than
   // first: '~' is above every digit.
   newest: (a, b) => byKey(a.view.order || '~', b.view.order || '~') || bySlug(a.view, b.view),
-  // By edition year, then by the paper deadline within the year. An edition
-  // with no deadline closes its year — a "TBA" is not older than a dated
-  // sibling — and an unknown year goes last. Names, then slugs, settle the rest.
-  oldest: (a, b) => {
-    const ya = num(a.view.year), yb = num(b.view.year);
-    if (ya !== yb) return ya == null ? 1 : yb == null ? -1 : ya - yb;
-    const wa = instant(a.view.deadline_utc), wb = instant(b.view.deadline_utc);
-    if ((wa == null) !== (wb == null)) return wa == null ? 1 : -1;
-    return (wa ?? 0) - (wb ?? 0) || byName(a.view.name, b.view.name) || bySlug(a.view, b.view);
-  },
   // Same name across editions: newest edition first, the way a series reads.
   name: (a, b) =>
     byName(a.view.name, b.view.name) || (num(b.view.year) ?? 0) - (num(a.view.year) ?? 0) || bySlug(a.view, b.view),

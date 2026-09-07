@@ -53,7 +53,7 @@ const ENGINE_ORDER = ITEMS.map((i) => i.view.slug);
 const slugs = (r) => r.items.map((it) => it.view.slug);
 
 // --- the vocabulary ----------------------------------------------------------
-check('the picker lists these orders, in this order', SORTS.map((s) => s.key), ['relevance', 'newest', 'oldest', 'name', 'papers']);
+check('the picker lists these orders, in this order', SORTS.map((s) => s.key), ['relevance', 'newest', 'papers', 'name']);
 check('every option has a label and a count-line phrase', SORTS.every((s) => s.label && s.says), true);
 check('the two keyword-only orders are marked so', SORTS.filter((s) => s.needsQuery).map((s) => s.key), ['relevance', 'papers']);
 check('the browse phrase matches the picker\'s label', SORTS.find((s) => s.key === 'newest').says, 'newest first');
@@ -62,11 +62,11 @@ check('so is the relevance phrase', SORTS.find((s) => s.key === 'relevance').say
 // --- which order applies -----------------------------------------------------
 check('keywords default to relevance', defaultSort(true), 'relevance');
 check('a filter-only browse defaults to the browse order', defaultSort(false), 'newest');
-check('a known order applies as asked', effectiveSort('oldest', true), 'oldest');
+check('a known order applies as asked', effectiveSort('name', true), 'name');
 check('an unknown order falls back to the default', effectiveSort('bogus', true), 'relevance');
 check('null falls back to the default', effectiveSort(null, false), 'newest');
 check('"Best match" without keywords is the browse order', effectiveSort('relevance', false), 'newest');
-check('"Most matching papers" without keywords is the browse order', effectiveSort('papers', false), 'newest');
+check('"Paper first" without keywords is the browse order', effectiveSort('papers', false), 'newest');
 check('a mode-independent choice survives losing the keyword', effectiveSort('name', false), 'name');
 
 // --- relevance: the engine's order, untouched --------------------------------
@@ -87,15 +87,6 @@ check('a mode-independent choice survives losing the keyword', effectiveSort('na
   check('the default without keywords is this order', sortResults(ITEMS, null, false).key, 'newest');
 }
 
-// --- oldest --------------------------------------------------------------------
-{
-  const r = sortResults(ITEMS, 'oldest', false);
-  check('by year, then deadline within it; a TBA closes its year; unknown year last', slugs(r), [
-    'cvpr-2021-old', 'neurips-2025-b', 'icml-2026-a', 'neurips-2026-open-soon', 'neurips-2026-open-late', 'iros-2026-tba', 'unknown-year',
-  ]);
-  check('and reports what it applied', r.key, 'oldest');
-}
-
 // --- name ----------------------------------------------------------------------
 {
   const r = sortResults(ITEMS, 'name', true);
@@ -107,7 +98,7 @@ check('a mode-independent choice survives losing the keyword', effectiveSort('na
 // --- papers --------------------------------------------------------------------
 {
   const r = sortResults(ITEMS, 'papers', true);
-  check('most matching papers first; ties keep the engine order', slugs(r), [
+  check('most paper matches first; ties keep the engine order', slugs(r), [
     'icml-2026-a', 'neurips-2025-b', 'iros-2026-tba', 'neurips-2026-open-late', 'cvpr-2021-old', 'neurips-2026-open-soon', 'unknown-year',
   ]);
   check('without keywords there is nothing to count, so the browse order applies', sortResults(ITEMS, 'papers', false).key, 'newest');
@@ -116,13 +107,13 @@ check('a mode-independent choice survives losing the keyword', effectiveSort('na
 // --- determinism ---------------------------------------------------------------
 {
   const shuffled = [ITEMS[3], ITEMS[6], ITEMS[0], ITEMS[5], ITEMS[1], ITEMS[4], ITEMS[2]];
-  for (const key of ['newest', 'oldest', 'name']) {
+  for (const key of ['newest', 'name']) {
     check(`${key}: independent of the incoming order`, slugs(sortResults(shuffled, key, true)), slugs(sortResults(ITEMS, key, true)));
   }
   check('the input is never mutated', ITEMS.map((i) => i.view.slug), ENGINE_ORDER);
   const same = { name: 'Same', year: '2024', deadline_utc: iso(D(2024, 1, 1)), order: closed(D(2024, 1, 1)) };
   const twins = [item('b-twin', same), item('a-twin', same)];
-  for (const key of ['newest', 'oldest', 'name']) {
+  for (const key of ['newest', 'name']) {
     check(`${key}: rows identical in every field fall back to the slug`, slugs(sortResults(twins, key, false)), ['a-twin', 'b-twin']);
   }
 }
