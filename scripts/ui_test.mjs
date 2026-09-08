@@ -984,6 +984,12 @@ await page.evaluate(() => localStorage.clear());
   check('an empty archive opens the demo on its own', true);
   check('the demo says how to work it',
     /Hover a book|Drag a finger/.test(await page.$eval('#savedArcTryNote', (el) => el.textContent)));
+  // Exactly one, never both. The two spans are written at runtime, so they carry
+  // no data-astro-cid and a scoped rule would match neither — which printed both
+  // sentences run together. They are :global() for that reason.
+  check('only the hint for this pointer type is shown',
+    (await page.$$eval('#savedArcTryNote .hint-hover, #savedArcTryNote .hint-tap',
+      (els) => els.filter((e) => getComputedStyle(e).display !== 'none').length)) === 1);
   check('demo paints volumes', (await page.$$('.awt-book')).length > 1);
   // The break captions between conference-years are half of what a shelf looks
   // like, so a demo drawn from one group would demo the wrong thing.

@@ -328,7 +328,7 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
       // The hint is what tells someone the shelf is worth touching; which verb
       // is right depends on the pointer, so both ship and CSS picks one.
       $('#savedArcTryNote').innerHTML = demo
-        ? `<span class="hint-hover">Hover a book to open it.</span><span class="hint-tap">Drag a finger along the shelf to open the books.</span>
+        ? `<span class="hint-hover">Hover a book to open it.</span> <span class="hint-tap">Drag a finger along the shelf to open the books.</span>
            Real workshops, none of them yours — star <span class="star-demo">☆</span> anything on the
            <a href="${base}/">deadline board</a> and your own shelf fills up as its deadlines pass.`
         : '';
@@ -602,11 +602,16 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
     .saved-arc-try { margin: 0.7rem 0 0; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: baseline; }
     .saved-arc-try .small { flex: 1 1 18rem; }
     /* Which half of the hint applies is a property of the pointer, not the
-       screen: a laptop in tablet mode and a desktop both answer hover. */
-    .saved-arc-try .hint-tap { display: none; }
+       screen: a laptop in tablet mode and a desktop both answer hover.
+       :global() because these two spans are written by the script below, so
+       they never carry the data-astro-cid attribute Astro scopes styles with —
+       without it the rules match nothing and BOTH sentences render, run
+       together. The .saved-arc-try ancestor is server-rendered and keeps its
+       scope, so this still cannot leak to another page. */
+    .saved-arc-try :global(.hint-tap) { display: none; }
     @media (hover: none) {
-      .saved-arc-try .hint-hover { display: none; }
-      .saved-arc-try .hint-tap { display: inline; }
+      .saved-arc-try :global(.hint-hover) { display: none; }
+      .saved-arc-try :global(.hint-tap) { display: inline; }
     }
 
     /* Book size. The slider writes --awt-scale to :root, which is where
