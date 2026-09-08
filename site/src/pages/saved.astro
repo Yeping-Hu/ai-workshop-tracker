@@ -78,7 +78,6 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
       <h2 id="savedArcHead">Archived workshops <span class="muted count" id="savedArcHeadCount"></span></h2>
       <div class="awt-arc" id="savedArc">
         <div class="awt-arc__head">
-          <span class="awt-arc__count" id="savedArcCount"></span>
           <div class="awt-arc__tools">
             {/* Percent rather than a fraction so the step lands on whole numbers;
                 the script divides by 100 before writing --awt-scale. */}
@@ -86,7 +85,7 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
               <span class="muted small">Size</span>
               <input id="savedArcSize" type="range" min="70" max="130" step="5" value="100" aria-label="Book size">
             </label>
-            <input class="awt-find" id="savedArcFind" type="search" placeholder="Find a volume" autocomplete="off" aria-label="Find a saved workshop">
+            <input class="awt-find" id="savedArcFind" type="search" placeholder="Find a workshop" autocomplete="off" aria-label="Find a saved workshop">
             <div class="awt-seg" role="group" aria-label="View">
               <button type="button" id="savedArcShelfBtn" aria-pressed="true">Shelf</button>
               <button type="button" id="savedArcListBtn" aria-pressed="false">List</button>
@@ -245,7 +244,6 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
       if (shelf) return shelf;
       shelf = (window as any).awtArchiveShelf({
         mount: $('#savedArcMount'),
-        countEl: $('#savedArcCount'),
         workshops: [],
         conf: CONF,
         base,
@@ -271,7 +269,6 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
         // on screen was narrowed by, and the demo would relabel itself as
         // "16 volumes" of work the reader never saved.
         if (find.value) shelf.filter(find.value);
-        markCount();
       };
       shelfBtn.addEventListener('click', () => setView('shelf'));
       listBtn.addEventListener('click', () => setView('list'));
@@ -292,7 +289,6 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
         requestAnimationFrame(() => {
           queued = false;
           shelf.replace(arcList); // repaints, re-measures, and re-applies the filter
-          markCount();
         });
       });
       // Only once the reader has settled on a size, not on every frame of the drag.
@@ -306,12 +302,10 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
       return shelf;
     }
 
-    // replace() rewrites the count element every time it paints, so anything
-    // that repaints has to say again that a demo is a demo — otherwise
-    // nudging the size slider relabels the demo as "16 volumes" of saved work.
-    const markCount = () => {
-      if (demoMode) $('#savedArcCount').textContent = 'demo';
-    };
+    // The shelf's own count is gone: the section heading carries it, and two
+    // counters for one set can only drift apart. That retires the "demo" label the
+    // count doubled as — the note under a demo shelf already says "Real workshops,
+    // none of them yours", which is the part that matters.
 
     /* ---- whether the demo shows itself ----
        An empty shelf opens the demo on its own: an optional button is a thing
@@ -343,7 +337,6 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
       // Gates the search box and the view toggle: both are noise over an empty
       // shelf, and both are the point of the demo.
       $('#savedArc').toggleAttribute('data-filled', list.length > 0);
-      markCount();
       $('#savedArcTry').hidden = list.length > 0 && !demo;
       $('#savedArcTryBtn').textContent = demo ? 'Hide the demo' : 'Curious? Try a demo shelf';
       // The hint is what tells someone the shelf is worth touching; which verb

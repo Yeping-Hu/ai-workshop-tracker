@@ -1061,8 +1061,11 @@ await page.evaluate(() => localStorage.clear());
   // The break captions between conference-years are half of what a shelf looks
   // like, so a demo drawn from one group would demo the wrong thing.
   check('demo spans several conference-years', (await page.$$('.awt-brk')).length > 1);
+  // The shelf's own count carried a 'demo' label; with that count gone the
+  // note under the shelf is what tells the reader these are not their saves,
+  // so that is what gets asserted — same property, different carrier.
   check('demo does not claim the volumes are saved',
-    (await page.$eval('#savedArcCount', (el) => el.textContent)) === 'demo');
+    /none of them yours/.test(await page.$eval('#savedArcTryNote', (el) => el.textContent)));
   // The demo is an invitation, not a backlog: one row on a desktop plank,
   // filled well short of the end so it reads as "room for yours".
   const shelfFit = await page.evaluate(() => {
@@ -1108,7 +1111,7 @@ await page.evaluate(() => localStorage.clear());
   // demo as volumes the reader saved.
   await page.click('#savedArcListBtn');
   check('the demo is still labelled a demo after a view change',
-    (await page.$eval('#savedArcCount', (el) => el.textContent)) === 'demo');
+    /none of them yours/.test(await page.$eval('#savedArcTryNote', (el) => el.textContent)));
   await page.click('#savedArcShelfBtn');
   check('demo leaves the board list empty', (await page.$('#savedWsList .empty-state')) !== null);
 
@@ -1149,8 +1152,6 @@ await page.evaluate(() => localStorage.clear());
     (await page.$eval('#savedWsCount', (el) => el.textContent)) === `(${openSlugs.length})`);
   check('the archived heading counts the shelf volumes',
     (await page.$eval('#savedArcHeadCount', (el) => el.textContent)) === `(${pastSlugs.length})`);
-  check('the archive carries its own volume count',
-    (await page.$eval('#savedArcCount', (el) => el.textContent)) === `${pastSlugs.length} volumes`);
   check('a filled archive drops the demo offer', await page.$eval('#savedArcTry', (el) => el.hidden));
 
   await page.click('#savedArcListBtn');

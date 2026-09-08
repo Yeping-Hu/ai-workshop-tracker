@@ -257,7 +257,6 @@ html{ color-scheme:light dark; }
   font:600 1.32rem/1.2 var(--font-display); margin:0; color:var(--ink);
   letter-spacing:.005em;
 }
-.awt-arc__count{ font:400 .95rem/1 var(--font-mono); color:var(--muted); }
 .awt-arc__tools{ display:flex; gap:.5rem; margin-left:auto; align-items:center; }
 
 .awt-seg{ display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
