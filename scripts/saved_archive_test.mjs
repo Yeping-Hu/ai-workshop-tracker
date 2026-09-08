@@ -62,9 +62,27 @@ const seen = new Set(corpus.map((w) => w.status));
 check('the corpus exercises more than one status', seen.size > 1, [...seen].join(', '));
 
 /* ---------------- the demo shelf ---------------- */
-console.log('— the demo shelf —');
+// On its own fixture, not on the corpus above. These assertions are about how
+// demoShelf SHAPES a shelf, which is pure — and validate.yml runs this suite
+// without building the site, so the ambient corpus there is a stand-in with a
+// single conference-year. Hanging group-shape checks off that meant the ones
+// that could not run were skipped and the one that could not be skipped failed
+// in CI while passing locally, where site/dist happened to exist.
+console.log('— the demo shelf (fixture) —');
 
-const demo = demoShelf(corpus);
+const FIXTURE = [
+  ...['aaa-2030', 'bbb-2030', 'ccc-2029', 'ddd-2029', 'eee-2028', 'fff-2028'].flatMap((key) => {
+    const [conference, year] = [key.slice(0, 3), Number(key.slice(4))];
+    return Array.from({ length: 8 }, (_, i) => ({
+      slug: `${key}-${i}`, name: `${key} ${i}`, conference, year: Number(year), status: 'past',
+      deadline_utc: `${year}-0${(i % 9) + 1}-01T00:00:00.000Z`,
+    }));
+  }),
+  // must never reach a shelf
+  { slug: 'still-open', conference: 'aaa', year: 2030, status: 'upcoming' },
+  { slug: 'cancelled', conference: 'aaa', year: 2030, status: 'not_running' },
+];
+
 const byGroup = (list) => {
   const n = new Map();
   for (const w of list) {
@@ -74,62 +92,65 @@ const byGroup = (list) => {
   return [...n.values()];
 };
 
+const demo = demoShelf(FIXTURE);
 check('every demo volume is archived', demo.every(isArchived));
-check('the demo is capped at the limit', demoShelf(corpus, { limit: 12 }).length <= 12);
+check('the demo is capped at the limit', demoShelf(FIXTURE, { limit: 12 }).length <= 12);
 check(
   'the demo is deterministic',
-  JSON.stringify(demoShelf(corpus).map((w) => w.slug)) === JSON.stringify(demo.map((w) => w.slug)),
+  JSON.stringify(demoShelf(FIXTURE).map((w) => w.slug)) === JSON.stringify(demo.map((w) => w.slug)),
 );
 check('the demo holds no duplicates', new Set(demo.map((w) => w.slug)).size === demo.length);
 
 // One row on a desktop plank, about 60% full, is the whole point of the
 // default: the demo is an invitation, not a backlog. The width that follows
 // from 16 is asserted in the browser by ui_test.mjs; the count is asserted here.
-check('the default demo stays small enough for one shelf row', demo.length <= 16, `${demo.length}`);
+check('the default demo stays small enough for one shelf row', demo.length === 16, `${demo.length}`);
 check(
   'each conference-year contributes its share of the pattern',
-  (() => {
-    const want = [4, 2, 5, 3, 2];
-    return byGroup(demoShelf(corpus)).every((c, i) => c <= want[i % want.length]);
-  })(),
+  JSON.stringify(byGroup(demo)) === JSON.stringify([4, 2, 5, 3, 2]),
   byGroup(demo).join(','),
 );
 // Equal-sized groups read as a generated grid rather than a shelf.
-if (corpus.length > 10) {
-  check('the groups are uneven', new Set(byGroup(demo)).size > 1, byGroup(demo).join(','));
-} else {
-  console.log('· unevenness check skipped (stand-in corpus is a single group)');
-}
+check('the groups are uneven', new Set(byGroup(demo)).size > 1, byGroup(demo).join(','));
+// The break captions between groups are half of what the shelf looks like, so
+// a demo drawn from one conference-year would demo the wrong thing.
+check('the demo spans several conference-years', byGroup(demo).length > 1, `${byGroup(demo).length} group(s)`);
 check(
   'a custom pattern is honoured',
-  JSON.stringify(byGroup(demoShelf(corpus, { limit: 6, sizes: [1, 5] }))) === JSON.stringify([1, 5]),
-  JSON.stringify(byGroup(demoShelf(corpus, { limit: 6, sizes: [1, 5] }))),
+  JSON.stringify(byGroup(demoShelf(FIXTURE, { limit: 6, sizes: [1, 5] }))) === JSON.stringify([1, 5]),
+  JSON.stringify(byGroup(demoShelf(FIXTURE, { limit: 6, sizes: [1, 5] }))),
+);
+// Newest year first, then conference A→Z — the order the renderer paints in.
+check(
+  'groups are taken newest year first, then conference A→Z',
+  demo[0].conference === 'aaa' && demo[0].year === 2030,
+  `${demo[0].conference} ${demo[0].year}`,
 );
 
 // A conference-year too thin to fill its share must not leave the shelf short —
 // the loop walks on into older groups. Newest year first, so `thin` is taken up
 // first and gives 1 of its 4; the rest has to come from the group behind it.
 {
-  const thin = [{ slug: 't1', conference: 'aaa', year: 2030, status: 'past', deadline_utc: '2030-01-01T00:00:00.000Z' }];
-  const deep = Array.from({ length: 20 }, (_, i) => ({
-    slug: `d${i}`, conference: 'bbb', year: 2029, status: 'past', deadline_utc: `2029-01-${String(i + 1).padStart(2, '0')}T00:00:00.000Z`,
-  }));
-  const got = demoShelf([...thin, ...deep], { limit: 6, sizes: [4, 5] });
+  const thin = [{ slug: 't1', conference: 'aaa', year: 2031, status: 'past', deadline_utc: '2031-01-01T00:00:00.000Z' }];
+  const got = demoShelf([...thin, ...FIXTURE], { limit: 6, sizes: [4, 5] });
   check('a thin newest group is made up for by the next one', got.length === 6, `${got.length}`);
   check('the thin group still contributes what it has', got[0].slug === 't1');
 }
 
-// The break captions between conference-years are half of what the shelf looks
-// like, so a demo that is all one group would demo the wrong thing.
-const groups = new Set(demo.map((w) => `${w.conference}-${w.year}`));
-if (corpus.length > 10) {
-  check('the demo spans several conference-years', groups.size > 1, `${groups.size} group(s)`);
-} else {
-  console.log('· spread check skipped (stand-in corpus is a single group)');
-}
-
 check('an empty corpus yields an empty demo', demoShelf([]).length === 0);
 check('a corpus with nothing archived yields an empty demo', demoShelf([{ status: 'upcoming', conference: 'icml', year: 2026 }]).length === 0);
+
+// And one pass over whatever the real corpus is, when a build has produced it:
+// the fixture proves the shaping, this proves the shaping still finds a full
+// shelf in the data the page will actually hand it.
+if (fs.existsSync(API)) {
+  const live = demoShelf(corpus);
+  check('the live corpus fills a demo shelf', live.length === 16, `${live.length}`);
+  check('every live demo volume is archived', live.every(isArchived));
+  check('the live demo spans several conference-years', byGroup(live).length > 1, `${byGroup(live).length}`);
+} else {
+  console.log('· live-corpus checks skipped (no site/dist; run after a build)');
+}
 
 console.log(failed ? `\n${failed} check(s) failed` : '\nall checks passed');
 process.exit(failed ? 1 : 0);
