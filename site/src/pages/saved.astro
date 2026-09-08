@@ -667,9 +667,12 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
     #savedAlerts.is-linked { display: none; }
     #savedAlerts.is-linked + section h2 { margin-top: 0.9rem; }
 
-    /* The archive is a subsection of Workshops, so it needs air above it but
-       not the full section gap — that would read as a third top-level heading. */
-    #savedArc { margin-top: 1.9rem; }
+    /* No top margin of its own. The 1.9rem separated it from the workshops board
+       when it was nested under an h3 inside that section; now it sits directly
+       under its own h2, whose 0.7rem bottom margin is the spacing — and 1.9rem
+       collapsed over that left a 30px hole where the other two sections have 11px
+       and 19px. */
+    #savedArc { margin-top: 0; }
     /* Nothing to search and nothing to switch between until the shelf has
        volumes on it (the reader's own, or the demo). */
     #savedArc:not([data-filled]) .awt-arc__tools { display: none; }
