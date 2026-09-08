@@ -10,6 +10,14 @@
    opacity inside a spine, clip-path rather than overflow on the rack.
 
    Changed here:
+   - Break captions stack onto two lines when one line will not fit, and only
+     then (fitCaptions). A caption is absolutely positioned, so it reserves no
+     width and gets only whatever its own group occupies — one book is ~27px
+     against a ~53px caption, so one-book groups printed over each other. The
+     year hangs into space that was already empty, so the shelf gains no height,
+     and books in a stacked group are capped at --hf .97 so a full-height volume
+     cannot reach the hanging year. Opening a book buys its row a cover's width,
+     which is why that caption goes back to one line.
    - No closing date, on a cover or in the list. A deadline that has already
      gone is the one fact about an archived workshop nobody can act on, and on
      a cover it cost two of about six lines — which is what forced the location
@@ -129,10 +137,16 @@
       '</div></li>';
   }
 
+  /* Name and year as separate spans so fitCaptions() can put them on two lines
+     when one will not fit. No whitespace text node between them — the inline gap
+     is a margin on the name, dropped when stacked, because whitespace under
+     white-space:nowrap can open a stray line box between two block spans. */
   function breakHTML(g, cf){
-    var text = cf.name + ' ' + g.year;
     return '<li class="awt-item awt-brk" aria-hidden="true" style="--conf:' + esc(cf.color) + '">' +
-      '<span class="awt-brk__label">' + esc(text) + '</span></li>';
+      '<span class="awt-brk__label">' +
+        '<span class="awt-brk__conf">' + esc(cf.name) + '</span>' +
+        '<span class="awt-brk__year">' + esc(g.year) + '</span>' +
+      '</span></li>';
   }
 
   function listHTML(groups, confMap, base, topicLabel){
@@ -260,11 +274,15 @@
           sib = sib.previousElementSibling;
         }
       }
+      /* The row has just given up a cover's width, so a caption that was too
+         tight for one line may not be any more. */
+      fitCaptions();
     }
     function close(){
       var open = mount.querySelector('.awt-book.is-open');
       if (open) open.classList.remove('is-open');
       clearPush();
+      fitCaptions(); /* the room that opening the volume bought is going away */
     }
     function overCover(book, x, y){
       var c = book && book.querySelector('.awt-face--cover');
@@ -413,6 +431,85 @@
       }
     }
 
+    /* ---- captions that do not fit go onto two lines --------------------
+       A caption is absolutely positioned, so it reserves no width and the room
+       it gets is only ever whatever its own group happens to occupy. One book
+       is about 27px against a caption of 51-55px, so a one-book group used to
+       print its caption over the next one. Stacking the year under the name
+       halves the width; the year hangs into space that is already empty above
+       the books, so the shelf gains no height.
+
+       Only the captions that need it stack: a group with room keeps one line.
+       That is also why this re-runs when a book opens — the row steps aside by
+       a whole cover width, and the caption of the group holding the open book
+       suddenly has about 100px, so it goes back to one line. */
+    var CAP_DOT = 13;   /* the next dot is 7px wide and starts 3px left of its break */
+    var CAP_HF  = 0.97; /* see below: how tall a book in a stacked group may be */
+    function fitCaptions(){
+      var rack = mount.querySelector('.awt-shelf__rack');
+      if (!rack) return;
+      var brks = [].slice.call(rack.querySelectorAll('.awt-brk'));
+      if (!brks.length) return;
+
+      /* The natural one-line width, cached on first sight while nothing is
+         stacked. paint() rebuilds these elements whenever the data or the size
+         changes, so a cached width can never be stale against --awt-scale. */
+      var i, b;
+      for (i = 0; i < brks.length; i++){
+        if (!brks[i].dataset.w){
+          brks[i].classList.remove('is-stacked');
+          brks[i].dataset.w = Math.ceil(
+            brks[i].querySelector('.awt-brk__label').getBoundingClientRect().width);
+        }
+      }
+
+      /* Where each break sits once its row has stepped aside for an open cover.
+         Computed from the class rather than read off getBoundingClientRect, so
+         the answer does not depend on how far the transition has got. */
+      var cs = getComputedStyle(rack);
+      var push = parseFloat(cs.getPropertyValue('--awt-push')) || 0;
+      var pull = parseFloat(cs.getPropertyValue('--awt-pull')) || 0;
+      var pos = brks.map(function(el){
+        var d = el.classList.contains('is-pushed') ? push
+              : el.classList.contains('is-pulled') ? -pull : 0;
+        return { el: el, x: el.offsetLeft + d, row: el.offsetTop };
+      });
+
+      for (i = 0; i < pos.length; i++){
+        var next = pos[i + 1];
+        var room = (next && next.row === pos[i].row)
+          ? next.x - pos[i].x - CAP_DOT
+          : rack.clientWidth - pos[i].x - 4;
+        var stacked = Number(pos[i].el.dataset.w) > room;
+        pos[i].el.classList.toggle('is-stacked', stacked);
+
+        /* A stacked caption hangs its year into the slot the books stand in, so
+           the books of that group must not reach the top of theirs. --hf runs
+           .90-1.00 and 1.00 does happen; at the largest size that overlaps the
+           year by ~1px. Capping only these groups keeps the uneven skyline
+           everywhere else, and .97 against 1.00 is ~5px on a 184px book. */
+        b = pos[i].el.nextElementSibling;
+        while (b && b.classList.contains('awt-book')){
+          /* Always written, never removed: --hf IS the generated height, set in
+             the style attribute by bookHTML. Deleting it leaves height:calc()
+             with nothing to multiply, which computes to nothing and collapses
+             the volume to a sliver. Restore the cached original instead. */
+          var hf = hfOf(b);
+          b.style.setProperty('--hf', String(stacked ? Math.min(CAP_HF, hf) : hf));
+          b = b.nextElementSibling;
+        }
+      }
+    }
+    /* The generated height, remembered the first time this volume is seen — i.e.
+       before anything here has written to it — so capping is reversible. */
+    function hfOf(book){
+      if (!book.dataset.hf){
+        var v = parseFloat(getComputedStyle(book).getPropertyValue('--hf'));
+        book.dataset.hf = String(v > 0 ? v : 1);
+      }
+      return parseFloat(book.dataset.hf) || 1;
+    }
+
     /* Re-tidy and re-measure whenever the shelf changes width. Height changes
        on its own as rows appear, so only a width change counts. */
     var ro = null, lastW = -1;
@@ -423,6 +520,7 @@
       if (!shelf || !rack) return;
       tidyBreaks(rack);
       measure();
+      fitCaptions();
       if (typeof ResizeObserver === 'undefined') return;
       lastW = Math.round(shelf.getBoundingClientRect().width);
       ro = new ResizeObserver(function(entries){
@@ -432,6 +530,7 @@
         close();
         tidyBreaks(rack);
         measure();
+        fitCaptions();
       });
       ro.observe(shelf);
     }

@@ -1127,6 +1127,109 @@ await page.evaluate(() => localStorage.clear());
     /Nothing open right now/.test(await page.$eval('#savedWsList .empty-state', (el) => el.textContent)));
 
   // Book size: a legibility setting, so unlike the Shelf/List choice it is kept.
+  /* ---- break captions ----
+     A caption is absolutely positioned, so nothing reserves room for it: the
+     space it gets is only ever what its own group occupies. One book is ~27px
+     against a caption of ~53px, so one-book groups used to print their captions
+     over each other. They now stack onto two lines when — and only when — one
+     line will not fit. Seeded so EVERY group is a single book, which is the
+     worst case and the one that was broken. */
+  console.log('— /saved/ archive shelf: break captions —');
+  {
+    const seen = new Set();
+    const oneEach = [];
+    for (const w of api) {
+      if (!(w.status === 'past' || w.status === 'deadline_passed')) continue;
+      const k = `${w.conference}-${w.year}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      oneEach.push(w.slug);
+      if (oneEach.length >= 8) break;
+    }
+    // A group with room, so the fix cannot pass by stacking everything.
+    const roomy = api.filter((w) => (w.status === 'past' || w.status === 'deadline_passed') &&
+      `${w.conference}-${w.year}` === [...seen][1]).slice(0, 5).map((w) => w.slug);
+
+    const probe = () => {
+      const rack = document.querySelector('.awt-shelf__rack');
+      const brks = [...rack.querySelectorAll('.awt-brk')];
+      let minCaptionGap = Infinity, minYearGap = Infinity, misaligned = 0, stacked = 0;
+      brks.forEach((b, i) => {
+        const lab = b.querySelector('.awt-brk__label');
+        const lr = lab.getBoundingClientRect();
+        const item = b.getBoundingClientRect();
+        // The LINE BOX, not a span's rect: an inline span reports the font's
+        // content box, which is taller than the line box and reads ~1px low.
+        const font = parseFloat(getComputedStyle(lab).fontSize);
+        const dot = getComputedStyle(b, '::before');
+        const dotCentre = parseFloat(dot.top) + parseFloat(dot.height) / 2;
+        if (Math.abs((lr.top + font / 2 - item.top) - dotCentre) > 0.6) misaligned++;
+        if (b.classList.contains('is-stacked')) stacked++;
+        let bk = b.nextElementSibling;
+        while (bk && bk.classList.contains('awt-book')) {
+          minYearGap = Math.min(minYearGap,
+            bk.querySelector('.awt-book__body').getBoundingClientRect().top - lr.bottom);
+          bk = bk.nextElementSibling;
+        }
+        const n = brks[i + 1];
+        if (n && n.offsetTop === b.offsetTop) {
+          minCaptionGap = Math.min(minCaptionGap,
+            n.querySelector('.awt-brk__label').getBoundingClientRect().left - lr.right);
+        }
+      });
+      return { stacked, total: brks.length,
+               minCaptionGap: minCaptionGap === Infinity ? null : minCaptionGap,
+               minYearGap, misaligned };
+    };
+
+    for (const pct of [70, 100, 130]) {
+      await page.evaluate((sl) => localStorage.setItem('awt-fav-workshops', JSON.stringify(sl)), oneEach);
+      await page.evaluate((p) => localStorage.setItem('awt-shelf-size', String(p)), pct);
+      await page.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('.awt-book', { timeout: 8000 });
+      await page.waitForTimeout(350);
+      const r = await page.evaluate(probe);
+      check(`captions never overlap each other at ${pct}%`,
+        r.minCaptionGap === null || r.minCaptionGap >= 0, `${r.minCaptionGap}px`);
+      // A stacked caption hangs its year into the slot the books stand in.
+      check(`a stacked year never lands on a book at ${pct}%`, r.minYearGap >= 0, `${r.minYearGap}px`);
+      check(`every caption's first line sits on its dot at ${pct}%`, r.misaligned === 0, `${r.misaligned} off`);
+      check(`one-book groups stack at ${pct}%`, r.stacked > 0, `${r.stacked}/${r.total}`);
+    }
+    await page.evaluate(() => localStorage.removeItem('awt-shelf-size'));
+
+    // Stacking is a last resort, not the default: a group with room keeps one line.
+    if (roomy.length >= 3) {
+      await page.evaluate((sl) => localStorage.setItem('awt-fav-workshops', JSON.stringify(sl)), roomy);
+      await page.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('.awt-book', { timeout: 8000 });
+      check('a group with room keeps its caption on one line',
+        (await page.$$eval('.awt-brk', (els) => els.every((e) => !e.classList.contains('is-stacked')))));
+    }
+
+    // Opening a book buys its row a whole cover's width, so that caption fits again.
+    await page.evaluate((sl) => localStorage.setItem('awt-fav-workshops', JSON.stringify(sl)), oneEach);
+    await page.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
+    // A break is a zero-width flex item, so it is never "visible" to Playwright.
+    await page.waitForSelector('.awt-brk.is-stacked', { state: 'attached', timeout: 8000 });
+    const spine = await page.$eval('.awt-brk.is-stacked + .awt-book .awt-face--spine', (el) => {
+      const r = el.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height * 0.6 };
+    });
+    await page.mouse.move(spine.x, spine.y);
+    await page.waitForTimeout(700);
+    check('opening a book un-stacks its own caption',
+      await page.$eval('.awt-book.is-open', (bk) => {
+        let p = bk.previousElementSibling;
+        while (p && !p.classList.contains('awt-brk')) p = p.previousElementSibling;
+        return !!p && !p.classList.contains('is-stacked');
+      }));
+    await page.mouse.move(4, 4);
+    await page.waitForTimeout(700);
+    check('closing it stacks the caption again', (await page.$('.awt-brk.is-stacked')) !== null);
+    await page.evaluate(() => localStorage.clear());
+  }
+
   await page.evaluate(() => localStorage.clear());
   await page.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
   await page.waitForSelector('.awt-book', { timeout: 8000 }); // opens itself

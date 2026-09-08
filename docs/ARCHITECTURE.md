@@ -876,6 +876,26 @@ and documented at the component: no `z-index` or `opacity` anywhere inside a
 spine (either one makes iOS drop the spine label), and `clip-path` rather than
 `overflow` on the rack.
 
+A conference-year caption floats above the books, absolutely positioned, so it
+reserves no width — the room it gets is only ever what its own group occupies.
+One book is about 27px against a caption of 51-55px, so one-book groups (common
+in a saved list) printed their captions over each other. `fitCaptions()` now
+stacks the year under the name, but **only** on the captions that would not fit:
+a group with room keeps one line. The year hangs into space that was already
+empty above the books, so `--awt-tab`, `--awt-air` and the row pitch are
+unchanged and the shelf gains no height. Two consequences worth knowing: books
+in a stacked group are capped at `--hf` .97, because a full-height volume reaches
+the top of its slot and would otherwise meet the hanging year (measured -0.9px at
+the largest size); and opening a book steps its row aside by a whole cover width,
+so that caption has room again and returns to one line until the book closes.
+
+A known follow-up rather than a bug: `--awt-tab` and `--awt-air` do not scale
+with `--awt-scale`, so the caption band stays 24px while the books and the
+caption font grow. That is why the clearance is tightest at 130% and why the
+phone block needed its own `--awt-tab` raise (18px to 24px — free, since the row
+pitch derives from `--awt-air`, which had slack). Scaling the band with the books
+would be the principled fix; it makes the shelf taller at large sizes.
+
 Neither view shows a closing date. A deadline that has already gone is the one
 fact about an archived workshop nobody can act on, and on a cover it cost two of
 about six available lines — which is what forced the location line into the

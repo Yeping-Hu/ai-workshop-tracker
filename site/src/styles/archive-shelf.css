@@ -15,6 +15,11 @@
        the date's two lines.
      - Break gaps and captions scale too, or a two-volume group ends up
        narrower than its own caption.
+     - .awt-brk__label is anchored to its dot (line 1 centred on it) and splits
+       into .awt-brk__conf / .awt-brk__year, which fitCaptions() stacks when one
+       line will not fit. The phone block's --awt-tab went 18px -> 24px so a
+       stacked year clears the books there too: that is the tightest case in
+       this file, because --awt-u stays 1rem below 641px.
 
    Defines ONLY --awt-* tokens and .awt-* rules. It CONSUMES these from the
    site's own stylesheet and does not declare them:
@@ -349,11 +354,29 @@ html{ color-scheme:light dark; }
   background:color-mix(in srgb, var(--conf) 26%, #0000);
 }
 .awt-brk__label{
-  position:absolute; left:9px; top:calc(var(--awt-tab) * -1 + 2px); z-index:5;
+  /* The first line sits on the dot. The dot centre is (-tab + 8.5px), and the
+     line box is 1em tall (the font shorthand below sets line-height 1), so
+     backing off half of it lands line 1 centred on the dot. Written in em, not
+     as a fixed nudge: the caption scales with --awt-u, and a constant would be
+     right at one slider position and wrong at every other. */
+  position:absolute; left:9px; top:calc(var(--awt-tab) * -1 + 8.5px - .5em); z-index:5;
   white-space:nowrap;
   font:600 calc(.6*var(--awt-u))/1 var(--font-body); letter-spacing:.05em;
   color:color-mix(in oklab, var(--conf) 34%, var(--ink));
 }
+/* The inline gap between name and year. A margin rather than a space in the
+   markup: whitespace between two block spans under white-space:nowrap can open
+   a line box of its own once the caption stacks. */
+.awt-brk__conf{ margin-right:.4em; }
+/* Stacked, set by fitCaptions() only on the captions that will not fit on one
+   line. Line 1 keeps the position above, so the year hangs into the empty space
+   over the books and the shelf gains no height. */
+.awt-brk.is-stacked .awt-brk__conf,
+.awt-brk.is-stacked .awt-brk__year{ display:block; margin-right:0; }
+/* Quieter than the name, so the two lines still read as one caption. A colour
+   rather than opacity: a composited layer is the one thing this component must
+   not grow near the books (see the header). */
+.awt-brk.is-stacked .awt-brk__year{ color:color-mix(in oklab, var(--conf) 24%, var(--muted)); }
 
 
 /* ---- a book ------------------------------------------------------------ */
@@ -594,7 +617,13 @@ html{ color-scheme:light dark; }
 @media (max-width:640px){
   :root{
     --awt-book-h:158px; --awt-cover-w:120px;
-    --awt-tab:18px; --awt-air:28px;
+    /* The tab is 24px here rather than 18px so a stacked caption can hang its
+       year without landing on a full-height book: this is the tightest case in
+       the file, because --awt-u stays 1rem at this width (the caption is LARGER
+       than on a desktop, 9.6px against 8.4px) while the books are smaller. It
+       is free — --awt-row and the row gap derive from --awt-air, which still
+       clears the tab with room to spare. */
+    --awt-tab:24px; --awt-air:28px;
     --awt-open-pad:5px;
     --awt-spine-max:28px;   /* thinner volumes, so a narrow shelf holds more */
     --awt-case-pad:12px; --awt-board-pad:6px;
