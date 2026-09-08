@@ -659,10 +659,15 @@ console.log('â€” a saved slug that left the dataset (merged away, or removed) â€
   const outbox = await page.evaluate(() => JSON.parse(localStorage.getItem('awt-fav-pending') || '{}'));
   check('the removal is recorded for the account, not just done locally', (outbox.removeWs || []).includes(ghost), JSON.stringify(outbox));
   const shown = await volumes();
+  // Two headings now partition the list, so it is their SUM that must equal
+  // what the page renders â€” either alone would be a half-truth.
+  const headSum = async () =>
+    Number((await page.$eval('#savedWsCount', (el) => el.textContent)).replace(/\D/g, '')) +
+    Number((await page.$eval('#savedArcHeadCount', (el) => el.textContent)).replace(/\D/g, ''));
   check(
-    'the heading counts exactly what the page renders',
-    (await page.$eval('#savedWsCount', (el) => el.textContent.trim())) === `(${shown})`,
-    `${await page.$eval('#savedWsCount', (el) => el.textContent.trim())} vs ${shown} rendered`,
+    'the two headings together count exactly what the page renders',
+    (await headSum()) === shown,
+    `${await headSum()} vs ${shown} rendered`,
   );
   check(
     'the reader is told what was taken off the list',
@@ -683,8 +688,8 @@ console.log('â€” a saved slug that left the dataset (merged away, or removed) â€
   const second = await page.$eval('#savedWsList', (el) => el.textContent);
   check('the note does not return on the next visit', !/taken off your list|no longer in the dataset/.test(second), second.slice(0, 120));
   check(
-    'and the count still matches the rows',
-    (await page.$eval('#savedWsCount', (el) => el.textContent.trim())) === `(${await volumes()})`,
+    'and the counts still match the rows',
+    (await headSum()) === (await volumes()),
   );
   await page.evaluate(() => localStorage.clear());
 }
@@ -1138,8 +1143,12 @@ await page.evaluate(() => localStorage.clear());
   check('open calls stay board rows', (await page.$$('[data-saved-ws]')).length === openSlugs.length);
   check('no past save is left in the board list',
     await page.$$eval('[data-saved-ws]', (els, p) => els.every((e) => !p.includes(e.dataset.savedWs)), pastSlugs));
-  check('the Workshops count still covers both halves',
-    (await page.$eval('#savedWsCount', (el) => el.textContent)) === `(${pastSlugs.length + openSlugs.length})`);
+  // Each heading covers its own half now. Asserting both is what catches a
+  // regression that moves rows between the two without moving the counts.
+  check('the upcoming heading counts the board rows',
+    (await page.$eval('#savedWsCount', (el) => el.textContent)) === `(${openSlugs.length})`);
+  check('the archived heading counts the shelf volumes',
+    (await page.$eval('#savedArcHeadCount', (el) => el.textContent)) === `(${pastSlugs.length})`);
   check('the archive carries its own volume count',
     (await page.$eval('#savedArcCount', (el) => el.textContent)) === `${pastSlugs.length} volumes`);
   check('a filled archive drops the demo offer', await page.$eval('#savedArcTry', (el) => el.hidden));
@@ -1173,8 +1182,13 @@ await page.evaluate(() => localStorage.clear());
   check('unstarring a volume removes it from storage',
     (await page.evaluate(() => JSON.parse(localStorage.getItem('awt-fav-workshops') || '[]'))).length === pastSlugs.length + openSlugs.length - 1);
   check('unstarring a volume takes it off the shelf', (await page.$$('.awt-list li')).length === pastSlugs.length - 1);
-  check('unstarring a volume updates the Workshops count',
-    (await page.$eval('#savedWsCount', (el) => el.textContent)) === `(${pastSlugs.length + openSlugs.length - 1})`);
+  // A shelf volume belongs to the archived half, so that is the count that
+  // moves; the upcoming heading must NOT flinch, which is the whole point of
+  // splitting them.
+  check('unstarring a volume updates the archived count',
+    (await page.$eval('#savedArcHeadCount', (el) => el.textContent)) === `(${pastSlugs.length - 1})`);
+  check('and leaves the upcoming count alone',
+    (await page.$eval('#savedWsCount', (el) => el.textContent)) === `(${openSlugs.length})`);
 
   // Opening a cover by hover is the real path to the shelf-view star.
   await page.click('#savedArcShelfBtn');
