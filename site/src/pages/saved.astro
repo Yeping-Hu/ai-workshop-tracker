@@ -57,37 +57,51 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
       part of that answer that no longer needs a countdown. Ids follow the page's
       savedX convention; the .awt-* classes are what archive-shelf.css styles and
       must stay exactly as they are. */}
-  <section aria-labelledby="savedWsHead">
-    <h2 id="savedWsHead">Workshops <span class="muted count" id="savedWsCount"></span></h2>
-    <div class="board" id="savedWsList"><p class="muted" id="savedWsStatus">Loading your saved workshops…</p></div>
+    <section aria-labelledby="savedWsHead">
+      <h2 id="savedWsHead">Upcoming workshops <span class="muted count" id="savedWsCount"></span></h2>
+      <div class="board" id="savedWsList"><p class="muted" id="savedWsStatus">Loading your saved workshops…</p></div>
+    </section>
 
-    <div class="awt-arc" id="savedArc">
-      <div class="awt-arc__head">
-        <h3 class="awt-arc__title" id="savedArcHead">Archived</h3>
-        <span class="awt-arc__count" id="savedArcCount"></span>
-        <div class="awt-arc__tools">
-          {/* Percent rather than a fraction so the step lands on whole numbers;
-              the script divides by 100 before writing --awt-scale. */}
-          <label class="saved-arc-size" for="savedArcSize">
-            <span class="muted small">Size</span>
-            <input id="savedArcSize" type="range" min="70" max="130" step="5" value="100" aria-label="Book size">
-          </label>
-          <input class="awt-find" id="savedArcFind" type="search" placeholder="Find a volume" autocomplete="off" aria-label="Find an archived workshop">
-          <div class="awt-seg" role="group" aria-label="View">
-            <button type="button" id="savedArcShelfBtn" aria-pressed="true">Shelf</button>
-            <button type="button" id="savedArcListBtn" aria-pressed="false">List</button>
+    {/* Its own section now rather than a subsection of the one above. The case
+        for nesting was that "which workshops have I saved?" is one question and
+        this is half its answer — true, but this half carries a size slider, a
+        find box and a Shelf/List switch, which is section-weight furniture under
+        an h3, and its count was styled differently from the two h2 counts, so the
+        page already showed two kinds of counter for what reads as three
+        equivalent groups.
+
+        The heading stays visible when the shelf is empty: hiding it would drop
+        the page from three headings to two, which looks like a fault to anyone
+        who saw three a moment ago. The .awt-* classes are what archive-shelf.css
+        styles and must stay exactly as they are. */}
+    <section aria-labelledby="savedArcHead">
+      <h2 id="savedArcHead">Archived workshops <span class="muted count" id="savedArcHeadCount"></span></h2>
+      <div class="awt-arc" id="savedArc">
+        <div class="awt-arc__head">
+          <span class="awt-arc__count" id="savedArcCount"></span>
+          <div class="awt-arc__tools">
+            {/* Percent rather than a fraction so the step lands on whole numbers;
+                the script divides by 100 before writing --awt-scale. */}
+            <label class="saved-arc-size" for="savedArcSize">
+              <span class="muted small">Size</span>
+              <input id="savedArcSize" type="range" min="70" max="130" step="5" value="100" aria-label="Book size">
+            </label>
+            <input class="awt-find" id="savedArcFind" type="search" placeholder="Find a volume" autocomplete="off" aria-label="Find a saved workshop">
+            <div class="awt-seg" role="group" aria-label="View">
+              <button type="button" id="savedArcShelfBtn" aria-pressed="true">Shelf</button>
+              <button type="button" id="savedArcListBtn" aria-pressed="false">List</button>
+            </div>
           </div>
         </div>
+        {/* Outside the mount: the component owns that element's innerHTML and
+            rewrites it on every paint. */}
+        <div id="savedArcMount"></div>
+        <p class="saved-arc-try" id="savedArcTry" hidden>
+          <button type="button" class="btn-quiet" id="savedArcTryBtn">See it with a full shelf</button>
+          <span class="muted small" id="savedArcTryNote"></span>
+        </p>
       </div>
-      {/* Outside the mount: the component owns that element's innerHTML and
-          rewrites it on every paint. */}
-      <div id="savedArcMount"></div>
-      <p class="saved-arc-try" id="savedArcTry" hidden>
-        <button type="button" class="btn-quiet" id="savedArcTryBtn">See it with a full shelf</button>
-        <span class="muted small" id="savedArcTryNote"></span>
-      </p>
-    </div>
-  </section>
+    </section>
 
   <section aria-labelledby="savedPaperHead">
     <h2 id="savedPaperHead">Papers <span class="muted count" id="savedPaperCount"></span></h2>
@@ -371,7 +385,8 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
     // same list, so the empty half is one function that takes whatever line
     // belongs above it.
     function paintNoWorkshops(note = '') {
-      $('#savedWsCount').textContent = '';
+      // The count is set by the caller, which knows both halves; blanking it here
+      // would leave the heading looking mid-load.
       $('#savedWsList').innerHTML =
         note +
         `<div class="empty-state">No saved workshops yet — star <span class="star-demo">☆</span> any
@@ -401,10 +416,19 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
       return '';
     }
 
+    // (n) for anything, including zero: an empty section keeps its heading, so it
+    // needs a count that says empty rather than an absent one that reads as
+    // "still loading".
+    function setCount(sel: string, n: number) {
+      const el = $(sel);
+      if (el) el.textContent = "(" + n + ")";
+    }
+
     async function renderWorkshops() {
       const stored = favWorkshops();
-      $('#savedWsCount').textContent = stored.length ? `(${stored.length})` : '';
       if (stored.length === 0) {
+        setCount('#savedWsCount', 0);
+        setCount('#savedArcHeadCount', 0);
         paintNoWorkshops();
         return;
       }
@@ -421,8 +445,9 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
       const fixed = repairWorkshops({ live: allWorkshops!.map((w) => w.slug), moved: movedSlugs });
       const note = repairNote(fixed);
       const slugs = favWorkshops(); // re-read: the repair may have rewritten it
-      $('#savedWsCount').textContent = slugs.length ? `(${slugs.length})` : '';
       if (slugs.length === 0) {
+        setCount('#savedWsCount', 0);
+        setCount('#savedArcHeadCount', 0);
         paintNoWorkshops(note);
         return;
       }
@@ -435,6 +460,11 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
         return ga - gb || ka - kb || String(a.name).localeCompare(String(b.name));
       });
       activeCount = active.length;
+      // The two headings partition one list, so each counts its own half. Before
+      // the split this heading counted EVERY saved workshop, which as a top-level
+      // pair would have read (41) upcoming beside (38) archived on a list of 41.
+      setCount('#savedWsCount', active.length);
+      setCount('#savedArcHeadCount', archived.length);
       $('#savedWsList').innerHTML =
         (active.length
           ? active.map(wsRow).join('')
@@ -478,7 +508,7 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
 
     async function renderPapers() {
       const papers = favPapers();
-      $('#savedPaperCount').textContent = papers.length ? `(${papers.length})` : '';
+      setCount('#savedPaperCount', papers.length);
       if (papers.length === 0) {
         $('#savedPaperList').innerHTML =
           `<div class="empty-state">No saved papers yet — open any workshop's accepted-papers list and
@@ -583,7 +613,12 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
         const row = document.querySelector(`[data-saved-ws="${CSS.escape(id)}"]`);
         if (row) { row.remove(); activeCount--; }
         const n = favWorkshops().length;
-        $('#savedWsCount').textContent = n ? `(${n})` : '';
+        // Each heading counts its own half, so the total cannot go in the upcoming
+        // heading any more: unstarring a shelf volume would otherwise decrement the
+        // count above rows it did not touch. activeCount tracks the rows in
+        // #savedWsList; the shelf is whatever is left.
+        setCount('#savedWsCount', activeCount);
+        setCount('#savedArcHeadCount', Math.max(0, n - activeCount));
         // A shelf volume is already gone by the time this fires — the component
         // removes it before calling back — so re-render only when the copy has
         // to change: the active half just emptied, or nothing is saved at all.
