@@ -627,6 +627,68 @@ check('derived PDF suppressed for papers without one', byTitle['PDF-less from se
 check('stored empty pdf renders no PDF link', byTitle['Known no-PDF page save']?.pdf === null, String(byTitle['Known no-PDF page save']?.pdf));
 await page.evaluate(() => localStorage.clear());
 
+console.log('— a saved slug that left the dataset (merged away, or removed) —');
+// The list stores slugs, so an entry that leaves the corpus used to stay in it
+// as a save nothing could render: counted by the heading and the nav badge,
+// with no row to un-star. Seed one of each kind and assert the page comes back
+// consistent — a merged slug followed, a removed one gone, and the count equal
+// to what is on screen.
+{
+  const dump = JSON.parse(rfL('site/dist/api/workshops.json', 'utf8'));
+  const moved = Object.entries(dump.moved_slugs || {});
+  const liveTwo = dump.workshops.slice(0, 2).map((w) => w.slug);
+  const ghost = 'icml-2019-a-workshop-that-no-longer-exists';
+  const seed = [liveTwo[0], ghost, liveTwo[1], ...moved.map(([from]) => from)];
+  const volumes = async () =>
+    (await page.$$('#savedWsList [data-saved-ws]')).length + (await page.$$('#savedArcMount [data-slug]')).length;
+  await page.evaluate((list) => {
+    localStorage.setItem('awt-fav-workshops', JSON.stringify(list));
+    // Otherwise an empty archive opens the 16-volume demo, whose books carry
+    // the same data-slug and would be counted as the reader's own.
+    localStorage.setItem('awt-shelf-demo', 'hidden');
+  }, seed);
+  await page.goto(`${BASE}/saved/`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('#savedWsList [data-saved-ws], #savedArcMount [data-slug]', { timeout: 8000 });
+
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('awt-fav-workshops') || '[]'));
+  check('a slug that left the dataset is cleared from storage', !stored.includes(ghost), JSON.stringify(stored));
+  check('saves that still exist are untouched', liveTwo.every((s) => stored.includes(s)), JSON.stringify(stored));
+  // The account holds the same stale slug, and the merge rule adopts anything
+  // the server has that this device did not explicitly remove — so a repair
+  // that only wrote localStorage would be undone on the next reconcile.
+  const outbox = await page.evaluate(() => JSON.parse(localStorage.getItem('awt-fav-pending') || '{}'));
+  check('the removal is recorded for the account, not just done locally', (outbox.removeWs || []).includes(ghost), JSON.stringify(outbox));
+  const shown = await volumes();
+  check(
+    'the heading counts exactly what the page renders',
+    (await page.$eval('#savedWsCount', (el) => el.textContent.trim())) === `(${shown})`,
+    `${await page.$eval('#savedWsCount', (el) => el.textContent.trim())} vs ${shown} rendered`,
+  );
+  check(
+    'the reader is told what was taken off the list',
+    /taken off your list/.test(await page.$eval('#savedWsList', (el) => el.textContent)),
+  );
+  if (moved.length) {
+    check(
+      'a merged-away slug follows the merge instead of vanishing',
+      stored.includes(moved[0][1]) && !stored.includes(moved[0][0]),
+      `${moved[0][0]} -> ${moved[0][1]}: ${JSON.stringify(stored)}`,
+    );
+  }
+
+  // Second visit: the repair is done, so there is nothing to fix and nothing to
+  // say — the note is a one-off, not a permanent footnote like the count was.
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForSelector('#savedWsList [data-saved-ws], #savedArcMount [data-slug]', { timeout: 8000 });
+  const second = await page.$eval('#savedWsList', (el) => el.textContent);
+  check('the note does not return on the next visit', !/taken off your list|no longer in the dataset/.test(second), second.slice(0, 120));
+  check(
+    'and the count still matches the rows',
+    (await page.$eval('#savedWsCount', (el) => el.textContent.trim())) === `(${await volumes()})`,
+  );
+  await page.evaluate(() => localStorage.clear());
+}
+
 console.log('— external links open a new tab; internal links navigate in place —');
 const ctx = page.context();
 const popupOn = async (sel) => {

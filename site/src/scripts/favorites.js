@@ -5,7 +5,10 @@
  * server. Two keys:
  *   awt-fav-workshops  ["<slug>", ...]            (slugs only — the saved
  *                       page re-fetches live data from /api/workshops.json,
- *                       so deadlines/status are never stale)
+ *                       so deadlines/status are never stale. The cost of
+ *                       storing a pointer rather than a snapshot is that the
+ *                       pointer can go stale instead: repairWorkshops() below
+ *                       reconciles the list with the corpus it points at.)
  *   awt-fav-papers     [{id,title,ws,wsName,pdf?}] (tiny snapshot — there
  *                       is no global papers JSON to re-fetch ~20k papers
  *                       from, and titles don't change). The saved page links
@@ -48,6 +51,7 @@ import {
   emptyPending,
   capPending,
 } from './star-merge.js';
+import { repairSavedWorkshops } from './saved-repair.js';
 
 const WS_KEY = 'awt-fav-workshops';
 const P_KEY = 'awt-fav-papers';
@@ -321,6 +325,53 @@ function setWorkshopSaved(slug, btn = null) {
  */
 export function unstarWorkshop(slug) {
   if (favWorkshops().includes(slug)) setWorkshopSaved(slug, null);
+}
+
+/**
+ * Bring the saved list back in line with the corpus: follow merges, drop what
+ * is gone. The rule and its refusal to act on a broken dump live in
+ * saved-repair.js; this is the storage, outbox and repaint around it.
+ *
+ * Called by /saved/, which is the one page that holds the whole corpus in the
+ * browser. A stale slug is otherwise permanent — it has no row, so it has no
+ * star to press — and it is counted by the heading and the nav badge, which is
+ * how a list of 26 came to say 27.
+ *
+ * The removal is recorded in the outbox like any other, and it has to be: the
+ * account holds the same stale slug, and `local = (server ∪ add) − remove`
+ * means an unrecorded local delete is simply re-adopted on the next reconcile.
+ * A rename records both halves — remove the old slug, add the current one — so
+ * whichever lands first, the account converges on the same list.
+ *
+ * @returns { renamed, dropped, stale } — `stale` counts entries that could not
+ *   be resolved AND are still in storage, i.e. only when the write failed;
+ *   /saved/ uses it to choose between telling the reader what was cleaned up
+ *   and telling them what it could not clean up.
+ */
+export function repairWorkshops({ live, moved } = {}) {
+  const saved = favWorkshops();
+  const r = repairSavedWorkshops({ saved, live, moved });
+  // Corpus not to be trusted (see MIN_CORPUS): say nothing, change nothing.
+  if (!r.ran) return { renamed: [], dropped: [], stale: 0 };
+  if (!r.changed) return { renamed: [], dropped: [], stale: 0 };
+  if (!write(WS_KEY, r.ws)) {
+    return { renamed: [], dropped: [], stale: r.renamed.length + r.dropped.length };
+  }
+
+  let p = readPending();
+  for (const { from, to } of r.renamed) {
+    p = notePending(p, { op: 'remove', kind: 'ws', slug: from });
+    p = notePending(p, { op: 'add', kind: 'ws', slug: to });
+  }
+  for (const slug of r.dropped) p = notePending(p, { op: 'remove', kind: 'ws', slug });
+  writePending(p);
+  flush();
+
+  // No track() call: a rename is not somebody starring a workshop, and the
+  // star-event counter is there to measure what readers do.
+  hydrate();
+  document.dispatchEvent(new CustomEvent('awt:favs-changed', { detail: { type: 'repair' } }));
+  return { renamed: r.renamed, dropped: r.dropped, stale: 0 };
 }
 
 function togglePaper(btn) {

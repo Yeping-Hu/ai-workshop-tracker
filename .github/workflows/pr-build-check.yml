@@ -67,6 +67,13 @@ jobs:
       - name: Check what the search index contains
         run: node scripts/pagefind_index_test.mjs
 
+      # Re-run here for its last section only: with site/dist present it checks
+      # the built /api/workshops.json really carries `moved_slugs`, which is what
+      # lets /saved/ follow a merged workshop instead of counting a star it can
+      # no longer show. validate.yml runs the same suite against the sources.
+      - name: Check the saved-list repair against the built API dump
+        run: node scripts/saved_repair_test.mjs
+
       # --- UI behavior suite -------------------------------------------------
       # The only guard on the homepage's runtime behaviour: the dual-index
       # search and its merge-immune counts, deterministic result order, the

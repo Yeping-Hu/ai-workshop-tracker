@@ -14,6 +14,7 @@ import {
   workshopShortName,
   nameTokens,
   latestProposalCall,
+  mergedSlugRedirects,
 } from '../../../lib/workshops.mjs';
 
 export type Workshop = Record<string, any>;
@@ -36,6 +37,14 @@ export const upcoming = sortByDeadline(workshops.filter((w: Workshop) => w.statu
 export const upcomingWithDeadline = upcoming.filter((w: Workshop) => w.deadlineUtcMs != null);
 export const upcomingTba = upcoming.filter((w: Workshop) => w.deadlineUtcMs == null);
 export const proposalCalls = loadProposalCalls();
+
+/**
+ * Old slug -> current slug for every workshop that was merged away, derived
+ * from `merged_venue_ids` (mergedSlugRedirects). astro.config.mjs turns the
+ * same map into URL redirects; this copy is for the payloads a browser reads,
+ * where a saved star pointing at the old slug has to be able to follow it.
+ */
+export const movedSlugs: Record<string, string> = Object.fromEntries(mergedSlugRedirects());
 
 /**
  * Editions recorded as not taking place. `status: 'not_running'` is why none of

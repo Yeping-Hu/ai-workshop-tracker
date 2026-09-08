@@ -111,7 +111,7 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
   <script type="application/json" id="awt-topics" set:html={JSON.stringify(topicMap)} />
 
   <script>
-    import { favWorkshops, favPapers, unstarWorkshop } from '../scripts/favorites.js';
+    import { favWorkshops, favPapers, unstarWorkshop, repairWorkshops } from '../scripts/favorites.js';
     import { wsRowHtml } from '../scripts/ws-row.js';
     import { isArchived, demoShelf } from '../scripts/archive-split.js';
 
@@ -124,13 +124,20 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
 
     /* ---------------- workshops ---------------- */
     let allWorkshops: any[] | null = null; // from /api/workshops.json, fetched once
+    // Old slug -> current slug, from the same payload: a star saved before two
+    // OpenReview groups were merged has to follow the merge the way the URL
+    // already does. Empty until the fetch lands, and empty is a valid map —
+    // it just means no save can be rescued, only dropped.
+    let movedSlugs: Record<string, string> = {};
     let wsLoadErr = '';
     async function ensureWorkshops(): Promise<any[] | null> {
       if (allWorkshops) return allWorkshops;
       try {
         const res = await fetch(`${base}/api/workshops.json`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        allWorkshops = (await res.json()).workshops;
+        const payload = await res.json();
+        allWorkshops = payload.workshops;
+        movedSlugs = payload.moved_slugs || {};
       } catch (err) {
         wsLoadErr = (err as Error).message || 'fetch failed';
       }
@@ -360,21 +367,63 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
     });
 
     /* ---------------- the saved list ---------------- */
+    // "Nothing saved yet" and "everything you had saved is gone" arrive at the
+    // same list, so the empty half is one function that takes whatever line
+    // belongs above it.
+    function paintNoWorkshops(note = '') {
+      $('#savedWsCount').textContent = '';
+      $('#savedWsList').innerHTML =
+        note +
+        `<div class="empty-state">No saved workshops yet — star <span class="star-demo">☆</span> any
+         workshop on the <a href="${base}/">deadline board</a> and it'll wait here, sorted by deadline.</div>`;
+      activeCount = 0;
+      paintArc([]);
+    }
+
+    /**
+     * What to say about a repair, once. A rename gets no line: the workshop is
+     * still on the list, under the name the rest of the site now uses. A drop
+     * does, because a count went down without the reader pressing anything —
+     * and it is said in the past tense, since by the time this renders the list
+     * has already been cleaned and the next visit has nothing to report.
+     */
+    function repairNote(fixed: { dropped: string[]; stale: number }) {
+      const gone = fixed.dropped.length;
+      if (gone)
+        return `<p class="muted small">${gone} saved workshop${gone === 1 ? '' : 's'} left the dataset
+                (removed upstream), so ${gone === 1 ? 'it has' : 'they have'} been taken off your list.</p>`;
+      // Only reachable when the list could not be written — a browser blocking
+      // or full on storage. The mismatch survives this visit, so say why.
+      if (fixed.stale)
+        return `<p class="muted small">${fixed.stale} saved workshop${fixed.stale === 1 ? ' is' : 's are'}
+                no longer in the dataset, and this browser wouldn't let us clear
+                ${fixed.stale === 1 ? 'it' : 'them'} from your list.</p>`;
+      return '';
+    }
+
     async function renderWorkshops() {
-      const slugs = favWorkshops();
-      $('#savedWsCount').textContent = slugs.length ? `(${slugs.length})` : '';
-      if (slugs.length === 0) {
-        $('#savedWsList').innerHTML =
-          `<div class="empty-state">No saved workshops yet — star <span class="star-demo">☆</span> any
-           workshop on the <a href="${base}/">deadline board</a> and it'll wait here, sorted by deadline.</div>`;
-        activeCount = 0;
-        paintArc([]);
+      const stored = favWorkshops();
+      $('#savedWsCount').textContent = stored.length ? `(${stored.length})` : '';
+      if (stored.length === 0) {
+        paintNoWorkshops();
         return;
       }
       if (!(await ensureWorkshops())) {
         $('#savedWsList').innerHTML =
           `<p class="muted">Couldn't load workshop data (${esc(wsLoadErr)}) —
            your stars are safe; <button type="button" class="btn-quiet" onclick="location.reload()">reload to retry</button>.</p>`;
+        return;
+      }
+      // A saved slug the corpus no longer has is repaired here rather than
+      // explained in a footnote: it follows a merge if the workshop was merged,
+      // and leaves the list if it is genuinely gone. Doing it before anything is
+      // counted is what keeps the heading, the nav badge and the rows agreeing.
+      const fixed = repairWorkshops({ live: allWorkshops!.map((w) => w.slug), moved: movedSlugs });
+      const note = repairNote(fixed);
+      const slugs = favWorkshops(); // re-read: the repair may have rewritten it
+      $('#savedWsCount').textContent = slugs.length ? `(${slugs.length})` : '';
+      if (slugs.length === 0) {
+        paintNoWorkshops(note);
         return;
       }
       const wanted = new Set(slugs);
@@ -385,16 +434,13 @@ const topicMap = Object.fromEntries((allTopics as any[]).map((t: any) => [t.id, 
         const [ga, ka] = sortKey(a), [gb, kb] = sortKey(b);
         return ga - gb || ka - kb || String(a.name).localeCompare(String(b.name));
       });
-      const missing = slugs.length - mine.length; // slug removed/renamed upstream
       activeCount = active.length;
       $('#savedWsList').innerHTML =
         (active.length
           ? active.map(wsRow).join('')
           : `<div class="empty-state">Nothing open right now — everything you've saved has closed and
              is on the shelf below.</div>`) +
-        (missing > 0
-          ? `<p class="muted small">${missing} saved workshop${missing === 1 ? ' is' : 's are'} no longer in the dataset (renamed or removed).</p>`
-          : '');
+        note;
       // Local times, countdowns and the clock come from board.js, loaded on
       // this page for exactly that (its pager is a no-op here).
       (window as any).awtBoardHydrate?.($('#savedWsList'));

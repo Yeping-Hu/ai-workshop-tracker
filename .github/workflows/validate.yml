@@ -66,6 +66,8 @@ jobs:
         run: node scripts/row_parity_test.mjs
       - name: Check the saved list's archive split agrees with the status ladder
         run: node scripts/saved_archive_test.mjs
+      - name: Check saved stars follow a merge and drop what left the dataset
+        run: node scripts/saved_repair_test.mjs
       - name: Test Markdown export formatting
         run: node scripts/markdown_test.mjs
       - name: Test imminent-deadline re-check selection (band, freeze-on-touch)

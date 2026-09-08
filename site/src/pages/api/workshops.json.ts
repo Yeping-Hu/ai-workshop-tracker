@@ -3,7 +3,7 @@
  * to build on this data (CC-BY-4.0). Regenerated on every deploy.
  */
 import type { APIRoute } from 'astro';
-import { workshops, conferenceById, workshopShortName } from '../../lib/data';
+import { workshops, conferenceById, workshopShortName, movedSlugs } from '../../lib/data';
 import { REPO_URL } from '../../lib/site';
 
 export const GET: APIRoute = () => {
@@ -12,6 +12,13 @@ export const GET: APIRoute = () => {
     license: 'CC-BY-4.0',
     source: REPO_URL,
     count: workshops.length,
+    // Slugs that USED to be in this dump, and what they became: the duplicate
+    // half of a merged workshop keeps its URL alive as a redirect, and anything
+    // holding the old slug — a bookmark, another site's link, this site's own
+    // saved list — needs the same map to follow it. Without it a stored slug
+    // can only be guessed at, which is how /saved/ ended up counting a workshop
+    // it could no longer show (see site/src/scripts/saved-repair.js).
+    moved_slugs: movedSlugs,
     workshops: workshops.map((w) => ({
       slug: w.slug,
       name: w.name,

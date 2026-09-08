@@ -931,6 +931,48 @@ conference listings, and each workshop page. They are always rendered rather tha
 revealed on hover, because most of the traffic is phones and hover does not exist
 there.
 
+### A saved slug that leaves the dataset
+
+Saving a slug instead of a snapshot is what keeps deadlines live, and the cost is
+that the pointer can go stale: a workshop whose entry later leaves the corpus
+stays in `awt-fav-workshops` as a slug nothing renders. It was counted by the
+heading and the nav badge, no row existed to un-star it, and the account synced
+the same ghost to every other device — so a list of 26 said 27 permanently, with
+a footnote where a fix belonged.
+
+`site/src/scripts/saved-repair.js` reconciles the list with the corpus, and
+`/saved/` runs it before it counts anything, since that is the one page holding
+the whole corpus in the browser. A slug leaves the dataset in two ways and they
+get opposite answers: a workshop **merged** into another (two OpenReview groups,
+one deleted file, its id recorded in the survivor's `merged_venue_ids`) has its
+star **follow the merge**, exactly as its URL already does; a workshop genuinely
+**removed** has its star **dropped**, so the count goes down instead of being
+explained. A rename that lands on a slug the reader had already starred — both
+halves of a merge, saved before it happened — collapses to one entry rather than
+rendering the workshop twice.
+
+Following a merge in the browser needs the map the redirects are built from, so
+`/api/workshops.json` publishes it as `moved_slugs` (`movedSlugs` in
+`site/src/lib/data.ts`, the same `mergedSlugRedirects()` that
+`astro.config.mjs` turns into URL redirects — one derivation, two consumers).
+
+The repair goes through `repairWorkshops()` in `favorites.js` rather than
+touching storage directly, for the reason `unstarWorkshop()` does: the nav badge,
+the alerts outbox and the `awt:favs-changed` announcement all have to happen.
+Recording the removal in the outbox is load-bearing, not tidiness — the merge
+rule is `local = (server ∪ pending.add) − pending.remove`, so a local delete that
+was never recorded is simply re-adopted from the account on the next reconcile,
+and the ghost would come back forever. A rename records both halves.
+
+One refusal is deliberate: the corpus arrives over the network, so a truncated or
+empty `/api/workshops.json` would read as *every workshop you saved is gone*. A
+dump below `MIN_CORPUS` (100, against a corpus of ~940 that only grows) is
+refused outright and nothing is written — a broken deploy costs a repaint, never
+a saved list. `scripts/saved_repair_test.mjs` pins all of it, including that
+every slug the site publishes a redirect for is repairable against the real data;
+`pr-build-check.yml` re-runs it with `site/dist` present, where it also asserts
+the built dump really carries `moved_slugs`.
+
 ### One client renderer for three surfaces
 
 The board renders a row server-side from `WorkshopRow.astro`. Two surfaces
@@ -1119,6 +1161,13 @@ board prints, derived from the entry's history), and `deadline_wall_clock` /
 client renders "Sep 26, 2026, 12:59 UTC" rather than re-printing the raw stored
 value). These exist for the saved list, which renders rows in the browser; see
 "One client renderer for three surfaces" below.
+
+Beside the rows, `moved_slugs` maps every slug that has *left* this dump to what
+it became, derived from `merged_venue_ids` — the same map `astro.config.mjs`
+turns into URL redirects. Anything holding an old slug (a bookmark, another
+site's link, this site's own saved list) can follow a merge instead of guessing;
+without it a stored slug can only be dropped, which is how `/saved/` came to
+count a workshop it could no longer show.
 
 It also carries `short_name` and `track_label` — the site's own one-line identity
 for the entry (see "A workshop's one-line identity"). These exist because
@@ -1390,7 +1439,9 @@ landing page. Old URLs are handled by Astro's `redirects` — instant
 meta-refresh stubs, since GitHub Pages cannot send a 301, which Google treats as
 permanent — and the map includes every slug a merged duplicate once had,
 derived from `merged_venue_ids` (`mergedSlugRedirects()` in
-`lib/workshops.mjs`), so a merge never strands a URL. Titles and descriptions
+`lib/workshops.mjs`), so a merge never strands a URL. The same map is published
+as `moved_slugs` in `/api/workshops.json`, so a saved star follows a merge the
+way a bookmark does (see "A saved slug that leaves the dataset"). Titles and descriptions
 drop the " · AI Workshop Tracker" suffix on hubs as they already did on
 workshop pages (it pushed the searched-for words past what a result shows),
 and sibling tracks of one workshop carry their track label in the description
