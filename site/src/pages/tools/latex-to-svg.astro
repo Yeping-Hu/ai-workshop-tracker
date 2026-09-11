@@ -6,11 +6,10 @@ import { href } from '../../lib/site';
 <ToolPage slug="latex-to-svg">
   <Fragment slot="head">
     <script is:inline set:html={`window.MathJax = { svg: { fontCache: 'local' }, startup: { typeset: false }, options: { enableMenu: false, enableAssistiveMml: false } };`} />
-    <script is:inline src={href('/vendor/mathjax/tex-svg.js')} async></script>
   </Fragment>
-  <form class="tool-form" id="toolForm" data-slug="latex-to-svg" data-mode="svg">
+  <form class="tool-form" id="toolForm" data-slug="latex-to-svg" data-mode="svg" data-mathjax-src={href('/vendor/mathjax/tex-svg.js')}>
     <label>LaTeX (math mode; use \text&#123;&#125; for words)
-      <textarea id="toolInput" rows="4" spellcheck="false">\int_0^\infty e^&#123;-x^2&#125;\,dx = \frac&#123;\sqrt&#123;\pi&#125;&#125;&#123;2&#125;</textarea>
+      <textarea id="toolInput" rows="4" spellcheck="false" placeholder="\int_0^\infty e^&#123;-x^2&#125;\,dx = \frac&#123;\sqrt&#123;\pi&#125;&#125;&#123;2&#125;"></textarea>
     </label>
     <div class="tool-opts">
       <label>Font size

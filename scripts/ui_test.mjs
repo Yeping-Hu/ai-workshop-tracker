@@ -1420,8 +1420,14 @@ await page.evaluate(() => localStorage.clear());
   await page.waitForSelector('#toolStats .tool-stat', { timeout: 5000 });
   check('the word counter reports text words, headers and math separately', (await page.$$eval('#toolStats .tool-stat b', (els) => els.map((e) => e.textContent))).slice(0, 2).join(',') === '4,1');
   await page.goto(`${BASE}/tools/latex-to-png/`, { waitUntil: 'networkidle' });
-  await page.waitForSelector('#toolPreview svg', { timeout: 20000 });
-  check('MathJax renders the default equation from the vendored bundle', await page.$eval('#toolPreview svg', (svg) => svg.querySelector('defs path') !== null));
+  // The box starts empty with the sample as a placeholder, and the 686 KB bundle
+  // is not fetched until the tool is used — so the test has to type. Asserting
+  // nothing is fetched on an idle visit is what keeps that true.
+  check('the renderer is not fetched on an idle visit',
+    (await page.$$eval('script[src]', (els) => els.map((e) => e.src).filter((u) => u.includes('/vendor/mathjax/')))).length === 0);
+  await page.type('#toolInput', 'e^{i\\pi}+1=0', { delay: 10 });
+  await page.waitForSelector('#toolPreview svg', { timeout: 25000 });
+  check('MathJax renders a typed equation from the vendored bundle', await page.$eval('#toolPreview svg', (svg) => svg.querySelector('defs path') !== null));
   // The assistive MathML copy MathJax adds for screen readers is hidden only by
   // a stylesheet a full typeset injects; a convert-only page showed it as a
   // second, native rendering under the SVG.

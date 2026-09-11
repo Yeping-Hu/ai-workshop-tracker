@@ -27,8 +27,40 @@ if (form) {
   let timer = null;
   let ready = false;
 
+  // The renderer is 686 KB over the wire (2.1 MB unzipped) and used to load on
+  // every page view, whether or not the visitor typed anything. It now arrives on
+  // first use: focusing the box, typing, changing an option, or asking for a file.
+  // Someone who lands here and leaves pays nothing, and the download overlaps
+  // their first keystrokes.
+  let loader = null;
+  function loadRenderer() {
+    if (loader) return loader;
+    loader = new Promise((resolve, reject) => {
+      // Test for the API, not for window.MathJax: the page sets a CONFIG object
+      // of that name in the head, and it has its own `startup` key, so checking
+      // `MathJax.startup` sees the config and concludes the library is already
+      // here — the script never loads and tex2svgPromise is missing.
+      if (typeof window.MathJax?.tex2svgPromise === 'function') { resolve(); return; }
+      const src = form.dataset.mathjaxSrc;
+      if (!src) { reject(new Error('The renderer URL is missing.')); return; }
+      const el = document.createElement('script');
+      el.src = src;
+      el.async = true;
+      el.addEventListener('load', () => resolve());
+      el.addEventListener('error', () => reject(new Error('The renderer failed to load.')));
+      document.head.appendChild(el);
+    });
+    return loader;
+  }
+
   async function mathjax() {
-    if (!window.MathJax || !window.MathJax.startup) throw new Error('The renderer is still loading; try again in a moment.');
+    await loadRenderer();
+    // The bundle replaces the config object with the real one, and on a slow parse
+    // the load event can land a tick early, so wait for the API to appear.
+    for (let n = 0; typeof window.MathJax?.tex2svgPromise !== 'function' && n < 200; n += 1) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    if (typeof window.MathJax?.tex2svgPromise !== 'function') throw new Error('The renderer did not initialise.');
     await window.MathJax.startup.promise;
     return window.MathJax;
   }
@@ -157,17 +189,19 @@ if (form) {
     setTimeout(() => { copyPng.textContent = label; }, 1400);
   });
 
-  // The vendor script is async; poll briefly for it, then render the default.
-  const waitStart = Date.now();
-  const poll = setInterval(() => {
-    if (window.MathJax && window.MathJax.startup) {
-      clearInterval(poll);
-      ready = true;
-      render();
-    } else if (Date.now() - waitStart > 20000) {
-      clearInterval(poll);
-      setStatus(status, 'The renderer did not load. Reload the page, or check an ad blocker.', 'error');
-    }
-  }, 100);
+  // Nothing renders until there is something to render. The box starts empty with
+  // the sample as its placeholder, so this is the resting state, not a loading
+  // one — "Loading the renderer…" was a claim about a download that had not
+  // started.
+  preview.textContent = 'Type some LaTeX above.';
+  preview.classList.add('is-empty');
+
+  // Fetch the renderer at the first sign the tool will be used, so it is usually
+  // there by the time an expression is complete. Focus alone is enough.
+  const warm = () => { loadRenderer().catch(() => {}); };
+  input.addEventListener('focus', warm, { once: true });
+  for (const el of [size, color, bg, scale, inline]) {
+    if (el) el.addEventListener('change', warm, { once: true });
+  }
   void ready;
 }

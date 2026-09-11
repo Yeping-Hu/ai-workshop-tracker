@@ -211,6 +211,10 @@ console.log('— the conference deadlines page and the tools answer —');
   check('a DOI resolves to BibTeX through the live registries', cited, cited ? '' : `no @article within 25s — the page says: “${toolStatus}”`);
 
   await page.goto(BASE + '/tools/latex-to-png/', { waitUntil: 'domcontentloaded' });
+  // The renderer is no longer fetched on page view, so the check has to use the
+  // tool: type an expression, which is what triggers the download. That also
+  // makes this a truer test than waiting for a sample to appear by itself.
+  await page.type('#toolInput', 'e^{i\\pi}+1=0', { delay: 20 });
   let rendered = false;
   // 45s, not 25s. This waits on /vendor/mathjax/tex-svg.js — 2.1 MB, loaded
   // async, then parsed and run before anything reaches the DOM. Run #130 missed
@@ -229,7 +233,7 @@ console.log('— the conference deadlines page and the tools answer —');
         }))
         .then((v) => ` — MathJax ${v.mathjax}, tex2svgPromise ${v.tex2svg}, preview “${v.preview}”`)
         .catch(() => '');
-  check('the vendored MathJax renders an equation', rendered, rendered ? '' : `no SVG within 45s${mjState}`);
+  check('the vendored MathJax renders an equation', rendered, rendered ? '' : `no SVG within 45s of typing${mjState}`);
 }
 
 await browser.close();
