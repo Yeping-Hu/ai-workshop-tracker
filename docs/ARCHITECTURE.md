@@ -1698,7 +1698,14 @@ attribute on the root `<svg>`: a standalone file then has its own default
 (the browser's rasteriser honours it for the PNG) while an inline copy still
 follows a CSS `color` rule, as the SVG page's FAQ promises. Without it every
 saved file was black whatever the picker showed, because the preview's
-colour came from the page container. The bundle is configured
+colour came from the page container. In the preview itself the size and
+colour are set on the rendered equation's container, never on the preview
+box: the box outlives every render, an inline style on it beats the
+placeholder's class rule, and so "Type some LaTeX above." once came back in
+the last equation's 24 px and picked colour after the box was emptied.
+Emptying the box is the resting state and puts the page back as it arrived,
+status line included; `ui_test.mjs` pins that for every tool that converts
+as you type. The bundle is configured
 with `enableAssistiveMml: false`: MathJax otherwise attaches a hidden MathML
 copy of each equation for screen readers and hides it with a stylesheet that
 only a full typeset run injects, so on these convert-only pages the copy

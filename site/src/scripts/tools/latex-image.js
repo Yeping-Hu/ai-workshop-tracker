@@ -9,6 +9,14 @@
  * `fontCache: 'local'`: the glyph outlines it uses are written into the
  * file's <defs>, so nothing depends on a font being installed. The PNG is
  * drawn from that same SVG at the chosen scale, so it is sharp at any size.
+ *
+ * The picked size and colour are set on the rendered equation, never on the
+ * preview box. The box outlives every render, and an inline style on it beat
+ * the placeholder's class rule in tools.css, so once anything had been typed
+ * "Type some LaTeX above." kept the last equation's 24 px and its picked
+ * colour. Emptying the box is the resting state and puts the page back as it
+ * arrived, status line included; ui_test.mjs pins that for every tool that
+ * converts as you type.
  */
 import { $, setStatus, download, bindCopy, copyImage, used } from './ui.js';
 
@@ -68,9 +76,15 @@ if (form) {
   async function render() {
     const tex = input.value.trim();
     if (!tex) {
+      // Everything the last render wrote goes with it: the equation, the file
+      // behind the buttons, and the status line, which once kept a "LaTeX
+      // error" about an expression that was no longer there. The size and
+      // colour went with the equation (below), so the placeholder's own rule
+      // in tools.css (`.latex-preview.is-empty`) applies unaided.
       preview.textContent = 'Type some LaTeX above.';
       preview.classList.add('is-empty');
       svgEl = null;
+      setStatus(status, '');
       return;
     }
     try {
@@ -86,10 +100,17 @@ if (form) {
       // configured without it (enableAssistiveMml: false); this is the belt to
       // that brace, for a cached older bundle.
       for (const mml of node.querySelectorAll('mjx-assistive-mml')) mml.remove();
+      // The size and colour go on the equation's own container, not on the
+      // preview box. MathJax sizes the SVG in `ex` and paints it in
+      // `currentColor`, both resolved from the nearest ancestor's font and
+      // colour, so the container serves as well as the box did; and the box
+      // outlives every render, where an inline style beat the placeholder's
+      // class rule and "Type some LaTeX above." wore the last equation's
+      // 24 px and its picked colour after the box was emptied.
+      node.style.fontSize = `${Number(size.value) || 24}px`;
+      node.style.color = color.value;
       preview.innerHTML = '';
       preview.classList.remove('is-empty');
-      preview.style.fontSize = `${Number(size.value) || 24}px`;
-      preview.style.color = color.value;
       preview.appendChild(node);
       svgEl = svg;
       const err = node.querySelector('[data-mjx-error]');
@@ -113,9 +134,10 @@ if (form) {
     c.setAttribute('width', `${w}px`);
     c.setAttribute('height', `${h}px`);
     // MathJax paints every glyph and rule with `currentColor`, which is the
-    // CSS `color` of the nearest ancestor. In the preview that is the page's
-    // container; in a standalone file there is no ancestor, so the colour
-    // fell back to black whatever was picked. `color` is an SVG presentation
+    // CSS `color` of the nearest ancestor. In the preview that is the
+    // equation's own container, where render() put it; in a standalone file
+    // there is no ancestor, so the colour fell back to black whatever was
+    // picked. `color` is an SVG presentation
     // attribute, so setting it on the root gives the file its own default,
     // the browser's rasteriser honours it for the PNG, and the fills stay
     // `currentColor` as the SVG page's FAQ promises: a CSS `color` rule on an

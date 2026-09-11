@@ -1457,19 +1457,52 @@ await page.evaluate(() => localStorage.clear());
   await page.unroute('https://doi.org/**');
 
   console.log('— /tools/: LaTeX tools and AoE —');
+  // Every tool that converts as you type goes back to its arrival state when
+  // the box is emptied: nothing a run wrote survives, whether an output
+  // block, the status line, or the LaTeX preview's colour and size. The
+  // LaTeX placeholder once kept the last equation's 24 px and its picked
+  // colour, because both were inline styles on the preview box, which
+  // outlives every render, and an inline style beats the placeholder's class
+  // rule; and a "LaTeX error" line outlived the expression it was about.
+  const toolState = () => page.evaluate(() => {
+    const st = document.querySelector('#toolStatus');
+    const pv = document.querySelector('#toolPreview');
+    const cs = pv && getComputedStyle(pv);
+    return JSON.stringify({
+      status: st && [st.textContent, st.className],
+      out: [...document.querySelectorAll('.tool-out')].map((o) => [o.hidden, o.hidden ? '' : o.textContent.trim()]),
+      preview: pv && [pv.textContent.trim(), pv.className, cs.color, cs.fontSize, pv.querySelector('svg') !== null],
+    });
+  });
+  // Empties the box and waits for the debounced run to act on it; the empty
+  // branch is synchronous, so its first visible effect means all of it ran.
+  const backToArrival = async (slug, arrived) => {
+    await page.fill('#toolInput', '');
+    await page.waitForFunction(() => document.querySelector('#toolOut')?.hidden || document.querySelector('#toolPreview')?.classList.contains('is-empty'), null, { timeout: 5000 });
+    const now = await toolState();
+    check(`${slug}: emptying the box puts the page back as it arrived`, now === arrived, now);
+  };
   await page.goto(`${BASE}/tools/excel-to-latex/`, { waitUntil: 'networkidle' });
+  const arrivedExcel = await toolState();
   await page.fill('#toolInput', 'Model,Acc\nBERT,92.1\nGPT,95.0');
   await page.waitForFunction(() => document.querySelector('#toolResult')?.textContent.includes('tabular'), null, { timeout: 5000 });
   check('CSV becomes a booktabs table with numbers right-aligned', (await page.$eval('#toolResult', (el) => el.textContent)).includes('\\begin{tabular}{lr}\n    \\toprule\n    Model & Acc \\\\'));
+  await backToArrival('excel-to-latex', arrivedExcel);
   await page.goto(`${BASE}/tools/markdown-to-latex/`, { waitUntil: 'networkidle' });
+  const arrivedMarkdown = await toolState();
   await page.fill('#toolInput', '# Intro\n\nSome **bold** text with 5% and x_1.');
   await page.waitForFunction(() => document.querySelector('#toolResult')?.textContent.includes('section'), null, { timeout: 5000 });
   check('Markdown becomes escaped LaTeX', (await page.$eval('#toolResult', (el) => el.textContent)) === '\\section{Intro}\n\nSome \\textbf{bold} text with 5\\% and x\\_1.');
+  await backToArrival('markdown-to-latex', arrivedMarkdown);
   await page.goto(`${BASE}/tools/latex-word-count/`, { waitUntil: 'networkidle' });
+  const arrivedCount = await toolState();
   await page.fill('#toolInput', '\\section{Intro}\nFour words are here \\cite{x}. $y$');
   await page.waitForSelector('#toolStats .tool-stat', { timeout: 5000 });
   check('the word counter reports text words, headers and math separately', (await page.$$eval('#toolStats .tool-stat b', (els) => els.map((e) => e.textContent))).slice(0, 2).join(',') === '4,1');
+  await backToArrival('latex-word-count', arrivedCount);
   await page.goto(`${BASE}/tools/latex-to-png/`, { waitUntil: 'networkidle' });
+  await page.waitForFunction(() => document.querySelector('#toolPreview')?.textContent === 'Type some LaTeX above.', null, { timeout: 5000 });
+  const arrivedLatex = await toolState();
   // The box starts empty with the sample as a placeholder, and the 686 KB bundle
   // is not fetched until the tool is used — so the test has to type. Asserting
   // nothing is fetched on an idle visit is what keeps that true.
@@ -1482,6 +1515,18 @@ await page.evaluate(() => localStorage.clear());
   // a stylesheet a full typeset injects; a convert-only page showed it as a
   // second, native rendering under the SVG.
   check('the preview shows the equation once (no assistive MathML copy)', (await page.$$eval('#toolPreview svg, #toolPreview mjx-assistive-mml, #toolPreview math', (els) => els.map((e) => e.tagName.toLowerCase()).join(','))) === 'svg');
+  // The size and colour are set on the equation's own container, not on the
+  // preview box (the placeholder checks below say why); MathJax sizes the
+  // SVG in `ex`, resolved from that container's font, so the picked size
+  // has to reach the drawing from there.
+  const svgWidth = () => page.$eval('#toolPreview svg', (s) => s.getBoundingClientRect().width);
+  const widthAt24 = await svgWidth();
+  await page.selectOption('#optSize', '48');
+  await page.waitForFunction((w) => { const s = document.querySelector('#toolPreview svg'); return !!s && Math.abs(s.getBoundingClientRect().width / w - 2) < 0.05; }, widthAt24, { timeout: 5000 }).catch(() => {});
+  const widthAt48 = await svgWidth();
+  check('the picked font size sizes the equation (48 px draws it twice as wide as 24 px)', Math.abs(widthAt48 / widthAt24 - 2) < 0.05, `${widthAt24} -> ${widthAt48}`);
+  await page.selectOption('#optSize', '24');
+  await page.waitForFunction((w) => { const s = document.querySelector('#toolPreview svg'); return !!s && Math.abs(s.getBoundingClientRect().width / w - 1) < 0.05; }, widthAt24, { timeout: 5000 }).catch(() => {});
   // The buttons save a file rather than opening the image as a page (the
   // site's link handler once sent the host-less blob: URL to a new tab), and
   // the PNG can go to the clipboard as an image.
@@ -1497,7 +1542,7 @@ await page.evaluate(() => localStorage.clear());
   // which resolved to black in a standalone SVG (and so in every PNG drawn
   // from it) until the exporter set `color` on the root element.
   await page.fill('#optColor', '#ff0000');
-  await page.waitForFunction(() => document.querySelector('#toolPreview')?.style.color === 'rgb(255, 0, 0)', null, { timeout: 5000 });
+  await page.waitForFunction(() => { const s = document.querySelector('#toolPreview svg'); return !!s && getComputedStyle(s).color === 'rgb(255, 0, 0)'; }, null, { timeout: 5000 });
   const [redSvgDl] = await Promise.all([page.waitForEvent('download', { timeout: 8000 }), page.click('#dlSvg')]);
   const redSvg = readFileSync(await redSvgDl.path(), 'utf8');
   check('the downloaded SVG carries the picked colour as its own default', /<svg[^>]* color="#ff0000"/.test(redSvg) && redSvg.includes('fill="currentColor"'), redSvg.slice(0, 300));
@@ -1519,6 +1564,14 @@ await page.evaluate(() => localStorage.clear());
     return [...seen];
   });
   check('the copied PNG is drawn in the picked colour, not black', pngColour.length > 0 && pngColour.every((c) => c === '255,0,0'), pngColour.slice(0, 5).join(' | '));
+  // The report that found the leak: an equation rendered, the colour changed,
+  // the box emptied, and the placeholder came back red at 24 px.
+  await backToArrival('latex-to-png', arrivedLatex);
+  // An error line goes the same way: "\frac{" leaves "LaTeX error: Missing
+  // close brace" under the buttons, about an expression that is then gone.
+  await page.fill('#toolInput', '\\frac{');
+  await page.waitForFunction(() => document.querySelector('#toolStatus')?.classList.contains('is-error'), null, { timeout: 8000 });
+  await backToArrival('latex-to-png after a LaTeX error', arrivedLatex);
   await page.goto(`${BASE}/tools/aoe-time/`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => /^\d\d:\d\d:\d\d$/.test(document.querySelector('#aoeClockTime')?.textContent || ''), null, { timeout: 5000 });
   const aoe = await page.evaluate(() => {
