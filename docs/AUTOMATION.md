@@ -24,6 +24,7 @@ for human review, as do dependency updates.
 | `backfill-deadlines.yml` | daily | `scripts/backfill_deadlines.mjs` — fills a **blank** `submission_deadline` for OpenReview-linked, single-deadline entries (fill-only, never overwrites) → commits to `main` |
 | `sync-tracks.yml` | daily | `scripts/sync_tracks.mjs` — refreshes the per-track deadlines of **multi-track** venues from their sub-track child groups (fill blanks, later-only per track), re-deriving the headline → commits to `main` |
 | `sync-proposal-calls.yml` | daily | `scripts/sync_proposal_calls.mjs` — keeps `data/proposal_calls.yml` (each conference's call-for-workshop-proposals deadline) in step with the proposal venue OpenReview registers under the conference's prefix: records a cycle once its deadline is published, later-only afterwards, freeze on hand edit → commits to `main` |
+| `sync-editions.yml` | daily | `scripts/sync_editions.mjs` — keeps the main conference's facts in `data/editions.yml` (paper and abstract deadlines, notification, dates, place, website) and the acceptance-rate history in `data/acceptance_rates.yml` in step with the community trackers ccfddl/ccf-deadlines, huggingface/ai-deadlines and lixin4ever/Conference-Acceptance-Rate: a row appears for this year and next once an edition's dates are known, blanks are filled, bot values follow the trackers (deadlines later-only), a person's values are frozen → commits to `main` |
 | `openreview-refresh.yml` | monthly | Re-fetch paper caches for recent years (`scripts/fetch_openreview.mjs --recent`) → commits to `main` |
 | `issue-to-pr.yml` | "Add a workshop" issue form | Converts the form to a YAML file + PR, validates, reports back |
 | `edit-to-pr.yml` | "Edit a workshop" issue form | Applies the edit to the existing YAML + PR (timezone-safe), validates, reports back |
@@ -192,6 +193,53 @@ specific to a cycle:
 Rules are pinned by `scripts/proposal_calls_test.mjs`; the file is checked by
 `validate.mjs` like `editions.yml`, which also warns when a conference's newest
 cycle closed over a year ago with no successor.
+
+## Main-conference facts come from the community trackers
+
+`data/editions.yml` began as hand-typed conference dates and grew the main
+conference's deadlines, notification date, place and website, plus
+`data/acceptance_rates.yml`, because the conference hub and year pages answer
+"neurips 2026 deadline" and "iclr acceptance rate" (ARCHITECTURE.md,
+"Main-conference deadlines, dates and acceptance rates"). Nobody types those
+dates here: three MIT-licensed community projects already maintain them, and the
+daily `sync-editions.yml` reads their raw files from GitHub —
+`ccfddl/ccf-deadlines` (`conference/AI/<id>.yml`), `huggingface/ai-deadlines`
+(`src/data/conferences/<id>.yml`) and the README table of
+`lixin4ever/Conference-Acceptance-Rate` — and applies the same discipline as the
+OpenReview syncs (`scripts/sync_editions.mjs`):
+
+- **Two trackers, one record.** Per field the first tracker with a value wins:
+  deadlines from ccfddl, dates and place from ai-deadlines, the edition's site
+  from ccfddl; start and end travel as a pair. The two agreed on every deadline
+  they both held when this was built; a disagreement over an hour is printed
+  and the precedence still decides.
+- **Zones.** AoE and UTC are kept as the call states them; a fixed offset
+  ("UTC-8", "PST") becomes the UTC instant. Both deadlines of a row share its
+  zone. An abbreviation that names two zones (CST, IST) is refused and the
+  deadline named, rather than guessed fourteen hours wrong.
+- **Hand-typed values are adopted, never overwritten.** The bot stamps what it
+  wrote per field in the row's `synced` mapping; a field that still matches its
+  stamp is the bot's to update, one that differs was edited by a person and is
+  frozen, one with no stamp is a person's and is only filled when blank.
+  Deadlines move later only (an earlier upstream value is printed, not
+  applied); dates, place, site and notification follow an upstream correction
+  either way. A changed `timezone` freezes both deadlines.
+- **New rows only for this year and next**, and only once a tracker knows the
+  edition's `end` (validate.mjs requires one, and it is what "Past" derives
+  from). Older years fill existing rows but never gain one.
+- **Acceptance rates:** rows the bot wrote (their `source` names the README's
+  repo) are replaced by the fresh parse; a row anyone else wrote is kept and
+  wins. A row whose rate contradicts its counts by over a point is skipped and
+  named — the table itself has one such typo (ECCV 2014). A parse that yields
+  no rows is treated as a failed fetch.
+- A tracker that cannot be fetched is named and the others still apply; nothing
+  is ever blanked or removed; the job exits 0. Each file is written only when a
+  row changed, through the one serializer that owns its header comment.
+
+A tracker files a conference under our id unless `SOURCE_IDS` says otherwise
+(NeurIPS is `nips` on ccfddl), so a conference added per `skills/add-conference/`
+is picked up with no change when the file names match. Rules are pinned by
+`scripts/editions_sync_test.mjs`; both files are checked by `validate.mjs`.
 
 ## The alerts job is outside the data-write group
 

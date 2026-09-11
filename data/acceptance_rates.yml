@@ -1,0 +1,314 @@
+# Main-conference acceptance rates, one row per conference-year: the rate and,
+# where the source publishes them, the accepted and submitted counts, shown on
+# /conference/<id>/. Written by scripts/sync_editions.mjs (daily) from the
+# community-maintained table at github.com/lixin4ever/Conference-Acceptance-Rate
+# (MIT). Rows the bot wrote carry that `source` and are replaced on every run;
+# any other row is kept as typed and wins over the bot's for the same year.
+# validate.mjs checks every row: a known conference id, an integer year, a rate
+# between 0 and 100 that agrees with the counts.
+
+- conference: cvpr
+  year: 2014
+  rate: 29.9
+  accepted: 540
+  submitted: 1807
+  detail: 104 orals and 436 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: cvpr
+  year: 2015
+  rate: 28.3
+  accepted: 602
+  submitted: 2123
+  detail: 71 orals and 531 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: cvpr
+  year: 2016
+  rate: 29.9
+  accepted: 643
+  submitted: 2145
+  detail: 83 orals, 123 spotlights and 437 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: cvpr
+  year: 2017
+  rate: 29.9
+  accepted: 783
+  submitted: 2620
+  detail: 71 orals, 144 spotlights and 568 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: cvpr
+  year: 2018
+  rate: 29.6
+  accepted: 979
+  submitted: 3303
+  detail: 70 orals, 224 spotlights and 685 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: cvpr
+  year: 2019
+  rate: 25
+  accepted: 1294
+  submitted: 5160
+  detail: 288 short orals and 1294 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: cvpr
+  year: 2020
+  rate: 22.1
+  accepted: 1470
+  submitted: 6656
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: cvpr
+  year: 2021
+  rate: 23.7
+  accepted: 1661
+  submitted: 7015
+  detail: 295 orals and 1366 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: cvpr
+  year: 2022
+  rate: 25.3
+  accepted: 2067
+  submitted: 8161
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: cvpr
+  year: 2023
+  rate: 25.8
+  accepted: 2360
+  submitted: 9155
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: cvpr
+  year: 2024
+  rate: 23.6
+  accepted: 2719
+  submitted: 11532
+  detail: 90 orals, 324 Highlight, 2305 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: cvpr
+  year: 2025
+  rate: 22.1
+  accepted: 2872
+  submitted: 13008
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: eccv
+  year: 2016
+  rate: 26.6
+  accepted: 415
+  submitted: 1561
+  detail: 28 orals, 45 spotlights and 342 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: eccv
+  year: 2018
+  rate: 31.8
+  accepted: 776
+  submitted: 2439
+  detail: 59 orals and 717 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: eccv
+  year: 2020
+  rate: 27.1
+  accepted: 1361
+  submitted: 5025
+  detail: 104 orals, 161 spotlights and 1096 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: iclr
+  year: 2017
+  rate: 39.1
+  accepted: 198
+  submitted: 507
+  detail: 15 orals and 183 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: iclr
+  year: 2018
+  rate: 32
+  accepted: 314
+  submitted: 981
+  detail: 23 orals and 291 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: iclr
+  year: 2019
+  rate: 31.4
+  accepted: 500
+  submitted: 1591
+  detail: 24 orals and 476 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: iclr
+  year: 2020
+  rate: 26.5
+  accepted: 687
+  submitted: 2594
+  detail: 48 orals, 107 spotlights and 532 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: iclr
+  year: 2021
+  rate: 28.7
+  accepted: 860
+  submitted: 2997
+  detail: 53 orals, 114 spotlights and 693 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: iclr
+  year: 2022
+  rate: 32.9
+  accepted: 1095
+  submitted: 3328
+  detail: 54 orals, 176 spotlights and 865 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: iclr
+  year: 2023
+  rate: 32
+  accepted: 1574
+  submitted: 4956
+  detail: 91 orals, 280 spotlights and 1203 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: iclr
+  year: 2024
+  rate: 30.81
+  accepted: 2250
+  submitted: 7304
+  detail: 85 orals, 366 spotlights and 1799 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: iclr
+  year: 2025
+  rate: 31.75
+  accepted: 3706
+  submitted: 11672
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: icml
+  year: 2015
+  rate: 26
+  accepted: 270
+  submitted: 1037
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: icml
+  year: 2016
+  rate: 24
+  accepted: 322
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: icml
+  year: 2017
+  rate: 25.9
+  accepted: 434
+  submitted: 1676
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: icml
+  year: 2018
+  rate: 25.1
+  accepted: 621
+  submitted: 2473
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: icml
+  year: 2019
+  rate: 22.6
+  accepted: 773
+  submitted: 3424
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: icml
+  year: 2020
+  rate: 21.8
+  accepted: 1088
+  submitted: 4990
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: icml
+  year: 2021
+  rate: 21.5
+  accepted: 1184
+  submitted: 5513
+  detail: 166 long talks, 1018 short talks
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: icml
+  year: 2022
+  rate: 21.9
+  accepted: 1235
+  submitted: 5630
+  detail: 118 long talks, 1117 short talks
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: icml
+  year: 2023
+  rate: 27.9
+  accepted: 1827
+  submitted: 6538
+  detail: 158 live orals, 1669 virtual orals with posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: icml
+  year: 2024
+  rate: 27.5
+  accepted: 2610
+  submitted: 9473
+  detail: 144 orals, 191 spotlights and 2275 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: neurips
+  year: 2014
+  rate: 24.7
+  accepted: 414
+  submitted: 1678
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: neurips
+  year: 2015
+  rate: 21.9
+  accepted: 403
+  submitted: 1838
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: neurips
+  year: 2016
+  rate: 23.6
+  accepted: 569
+  submitted: 2403
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: neurips
+  year: 2017
+  rate: 20.9
+  accepted: 678
+  submitted: 3240
+  detail: 40 orals, 112 spotlights and 526 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: neurips
+  year: 2018
+  rate: 20.8
+  accepted: 1011
+  submitted: 4856
+  detail: 30 orals, 168 spotlights and 813 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: neurips
+  year: 2019
+  rate: 21.1
+  accepted: 1428
+  submitted: 6743
+  detail: 36 orals, 164 spotlights and 1228 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: neurips
+  year: 2020
+  rate: 20.1
+  accepted: 1900
+  submitted: 9454
+  detail: 105 orals, 280 spotlights and 1515 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: neurips
+  year: 2021
+  rate: 25.7
+  accepted: 2344
+  submitted: 9122
+  detail: 55 orals, 260 spotlights and 2029 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: neurips
+  year: 2022
+  rate: 25.6
+  submitted: 10411
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: neurips
+  year: 2023
+  rate: 26.1
+  accepted: 3218
+  submitted: 12343
+  detail: 67 orals, 378 spotlights and 2773 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: neurips
+  year: 2024
+  rate: 25.8
+  accepted: 4037
+  submitted: 15671
+  detail: 61 orals, 327 spotlights and 3649 posters
+  source: lixin4ever/Conference-Acceptance-Rate
+- conference: neurips
+  year: 2025
+  rate: 24.5
+  accepted: 5290
+  submitted: 21575
+  detail: 77 orals, 688 spotlights and 4525 posters
+  source: lixin4ever/Conference-Acceptance-Rate

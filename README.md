@@ -31,7 +31,8 @@ Conference deadline trackers exist; *workshop* deadlines never had one. This fil
 GitHub repo (single source of truth)
  ├── data/workshops/*.yml      one YAML file per workshop edition (community-edited)
  ├── data/conferences.yml      conference metadata
- ├── data/editions.yml         per-edition conference dates, and each edition's official accepted-workshop list
+ ├── data/editions.yml         per-edition conference dates, the main conference's deadlines, place and site (synced daily from the community trackers), and each edition's official accepted-workshop list
+ ├── data/acceptance_rates.yml main-conference acceptance rates per year, synced daily, shown on each conference page
  ├── data/topics.yml           controlled topic vocabulary
  ├── data/proposal_calls.yml   call-for-workshop-proposals deadlines, synced daily from OpenReview, shown on the homepage
  ├── data/changes.json         this week's dataset changes, written by the alerts job for /changes/

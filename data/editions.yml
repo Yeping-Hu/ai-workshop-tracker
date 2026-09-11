@@ -1,130 +1,547 @@
-# Conference edition dates. `end` drives workshop status: an entry with no
-# submission_deadline and no workshop_date is shown as "Past" once its
-# conference edition ends (resolved in lib/workshops.mjs; years missing here
-# fall back to the coarser `typical_month` in data/conferences.yml).
+# Conference editions: one row per conference-year.
 #
-# Add a row when a new edition's dates are announced — `node
-# scripts/validate.mjs` prints a note for tracked years that lack one.
-# `start` and `source` are optional but encouraged for provenance.
+#   start / end          the conference's dates. `end` is what flips a workshop
+#                        with no deadline and no workshop_date to "Past" the day
+#                        the conference ends (lib/workshops.mjs); years missing
+#                        here fall back to the coarser `typical_month` in
+#                        data/conferences.yml.
+#   source               where a person took the dates from (optional).
+#   workshop_list_url    the conference's OFFICIAL accepted-workshop announcement;
+#                        switches on the weekly reconciliation
+#                        (scripts/official_list_check.mjs), which also proposes a
+#                        candidate from the conference's `announcement_feed`.
+#   url, place           the edition's website and city.
+#   abstract_deadline, paper_deadline, timezone, notification
+#                        the MAIN conference's call for papers (not a workshop's),
+#                        shown on /conference/<id>/ and /conference/<id>/<year>/.
+#   synced               what the daily sync-editions job last wrote, per field,
+#                        with the trackers it read (`from`) and when (`as_of`).
 #
-# `workshop_list_url` points at the conference's OFFICIAL accepted-workshop
-# announcement, and switches on the weekly reconciliation
-# (scripts/official_list_check.mjs). It lives here, not in conferences.yml,
-# because the URL is not derivable from the year — NeurIPS 2026's carries its own
-# publication date in the path. The same script proposes candidates from a
-# conference's `announcement_feed`, so this is normally adopted by dispatch
-# rather than typed. Without it, that conference-year is simply not reconciled;
-# OpenReview discovery is unaffected either way.
+# The main-conference fields, the dates and the place are kept in step with the
+# community trackers ccfddl/ccf-deadlines and huggingface/ai-deadlines by
+# scripts/sync_editions.mjs (daily): a row appears for this year and next once
+# a tracker knows the edition's dates, blanks are filled, and a value the bot
+# wrote follows the trackers (deadlines move later only). Edit any value and
+# that field is frozen (yours wins); `source` and `workshop_list_url` are
+# always yours. See CONTRIBUTING.md, "Conference editions".
 
 - conference: iclr
   year: 2024
-  start: "2024-05-07"
-  end: "2024-05-11"
+  start: '2024-05-07'
+  end: '2024-05-11'
+  url: https://iclr.cc/Conferences/2024
+  place: Vienna, Austria
+  abstract_deadline: 2023-09-21 23:59
+  paper_deadline: 2023-09-28 23:59
+  timezone: AoE
+  synced:
+    from: ccfddl
+    as_of: '2026-09-11'
+    url: https://iclr.cc/Conferences/2024
+    place: Vienna, Austria
+    abstract_deadline: 2023-09-21 23:59
+    paper_deadline: 2023-09-28 23:59
+    timezone: AoE
 - conference: icra
   year: 2024
-  start: "2024-05-13"
-  end: "2024-05-17"
+  start: '2024-05-13'
+  end: '2024-05-17'
+  url: https://2024.ieee-icra.org
+  place: Yokohama, Japan
+  paper_deadline: 2023-09-16 07:59
+  timezone: UTC
+  synced:
+    from: ccfddl
+    as_of: '2026-09-11'
+    url: https://2024.ieee-icra.org
+    place: Yokohama, Japan
+    paper_deadline: 2023-09-16 07:59
+    timezone: UTC
 - conference: cvpr
   year: 2024
-  start: "2024-06-17"
-  end: "2024-06-21"
+  start: '2024-06-17'
+  end: '2024-06-21'
+  url: https://cvpr.thecvf.com/Conferences/2024
+  place: Seattle, USA
+  paper_deadline: 2023-11-18 07:59
+  timezone: UTC
+  synced:
+    from: ccfddl
+    as_of: '2026-09-11'
+    url: https://cvpr.thecvf.com/Conferences/2024
+    place: Seattle, USA
+    paper_deadline: 2023-11-18 07:59
+    timezone: UTC
 - conference: icml
   year: 2024
-  start: "2024-07-21"
-  end: "2024-07-27"
-- conference: colm
-  year: 2024
-  start: "2024-10-07"
-  end: "2024-10-09"
-- conference: iros
-  year: 2024
-  start: "2024-10-14"
-  end: "2024-10-18"
-- conference: corl
-  year: 2024
-  start: "2024-11-06"
-  end: "2024-11-09"
-- conference: neurips
-  year: 2024
-  start: "2024-12-10"
-  end: "2024-12-15"
-
-- conference: iclr
-  year: 2025
-  start: "2025-04-24"
-  end: "2025-04-28"
-- conference: icra
-  year: 2025
-  start: "2025-05-19"
-  end: "2025-05-23"
-- conference: cvpr
-  year: 2025
-  start: "2025-06-11"
-  end: "2025-06-15"
-- conference: icml
-  year: 2025
-  start: "2025-07-13"
-  end: "2025-07-19"
-- conference: corl
-  year: 2025
-  start: "2025-09-27"
-  end: "2025-09-30"
-- conference: colm
-  year: 2025
-  start: "2025-10-07"
-  end: "2025-10-10"
-- conference: iros
-  year: 2025
-  start: "2025-10-19"
-  end: "2025-10-25"
-- conference: neurips
-  year: 2025
-  start: "2025-12-02"
-  end: "2025-12-07"
-
-- conference: iclr
-  year: 2026
-  start: "2026-04-23"
-  end: "2026-04-27"
-  source: "https://iclr.cc/Conferences/2026/CallForWorkshops"
-  workshop_list_url: "https://blog.iclr.cc/2026/01/13/iclr2026-workshops/"
-- conference: icra
-  year: 2026
-  start: "2026-06-01"
-  end: "2026-06-05"
-  source: "https://2026.ieee-icra.org/"
-- conference: cvpr
-  year: 2026
-  start: "2026-06-03"
-  end: "2026-06-07"
-  source: "https://cvpr.thecvf.com/Conferences/2026/Dates"
-- conference: icml
-  year: 2026
-  end: "2026-07-11"
-  source: "https://icml.cc/Conferences/2026/CallForWorkshops"
-- conference: iros
-  year: 2026
-  start: "2026-09-27"
-  end: "2026-10-01"
-  source: "https://2026.ieee-iros.org/"
-- conference: colm
-  year: 2026
-  start: "2026-10-06"
-  end: "2026-10-09"
-  source: "https://colmweb.org/"
-- conference: neurips
-  year: 2026
-  start: "2026-12-06"
-  end: "2026-12-13"
-  source: "https://neurips.cc/"
-  workshop_list_url: "https://blog.neurips.cc/2026/08/10/announcing-the-neurips-2026-workshops/"
+  start: '2024-07-21'
+  end: '2024-07-27'
+  url: https://icml.cc/Conferences/2024
+  place: Messe Wien Exhibition Congress Center, Vienna, Austria
+  paper_deadline: 2024-02-01 23:59
+  timezone: AoE
+  synced:
+    from: ccfddl
+    as_of: '2026-09-11'
+    url: https://icml.cc/Conferences/2024
+    place: Messe Wien Exhibition Congress Center, Vienna, Austria
+    paper_deadline: 2024-02-01 23:59
+    timezone: AoE
 - conference: eccv
   year: 2024
-  start: "2024-09-29"
-  end: "2024-10-04"
-  source: "https://eccv.ecva.net/"
+  start: '2024-09-29'
+  end: '2024-10-04'
+  source: https://eccv.ecva.net/
+  url: https://eccv2024.ecva.net/
+  place: MiCo Milano, Italy
+  abstract_deadline: 2024-02-29 21:00
+  paper_deadline: 2024-03-07 21:00
+  timezone: UTC
+  synced:
+    from: ccfddl
+    as_of: '2026-09-11'
+    url: https://eccv2024.ecva.net/
+    place: MiCo Milano, Italy
+    abstract_deadline: 2024-02-29 21:00
+    paper_deadline: 2024-03-07 21:00
+    timezone: UTC
+- conference: colm
+  year: 2024
+  start: '2024-10-07'
+  end: '2024-10-09'
+  url: https://colmweb.org/cfp.html
+  place: Philadelphia, Pennsylvania, United States
+  abstract_deadline: 2024-03-22 23:59
+  paper_deadline: 2024-03-29 23:59
+  timezone: AoE
+  synced:
+    from: ccfddl
+    as_of: '2026-09-11'
+    url: https://colmweb.org/cfp.html
+    place: Philadelphia, Pennsylvania, United States
+    abstract_deadline: 2024-03-22 23:59
+    paper_deadline: 2024-03-29 23:59
+    timezone: AoE
+- conference: iros
+  year: 2024
+  start: '2024-10-14'
+  end: '2024-10-18'
+  url: http://iros2024-abudhabi.org/
+  place: Abu Dhabi, UAE
+  paper_deadline: 2024-03-16 07:59
+  timezone: UTC
+  synced:
+    from: ccfddl
+    as_of: '2026-09-11'
+    url: http://iros2024-abudhabi.org/
+    place: Abu Dhabi, UAE
+    paper_deadline: 2024-03-16 07:59
+    timezone: UTC
+- conference: corl
+  year: 2024
+  start: '2024-11-06'
+  end: '2024-11-09'
+  url: https://2024.corl.org/
+  place: Munich, Germany
+  paper_deadline: 2024-06-06 23:59
+  timezone: AoE
+  synced:
+    from: ccfddl
+    as_of: '2026-09-11'
+    url: https://2024.corl.org/
+    place: Munich, Germany
+    paper_deadline: 2024-06-06 23:59
+    timezone: AoE
+- conference: neurips
+  year: 2024
+  start: '2024-12-10'
+  end: '2024-12-15'
+  url: https://neurips.cc/Conferences/2024
+  place: Vancouver, Canada
+  paper_deadline: 2024-05-22 20:00
+  timezone: UTC
+  synced:
+    from: ccfddl
+    as_of: '2026-09-11'
+    url: https://neurips.cc/Conferences/2024
+    place: Vancouver, Canada
+    paper_deadline: 2024-05-22 20:00
+    timezone: UTC
+
+- conference: iclr
+  year: 2025
+  start: '2025-04-24'
+  end: '2025-04-28'
+  url: https://iclr.cc/Conferences/2025
+  place: Singapore, Singapore
+  abstract_deadline: 2024-09-27 23:59
+  paper_deadline: 2024-10-01 23:59
+  timezone: AoE
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    url: https://iclr.cc/Conferences/2025
+    place: Singapore, Singapore
+    abstract_deadline: 2024-09-27 23:59
+    paper_deadline: 2024-10-01 23:59
+    timezone: AoE
+- conference: icra
+  year: 2025
+  start: '2025-05-19'
+  end: '2025-05-23'
+  url: https://2025.ieee-icra.org
+  place: Atlanta, USA
+  paper_deadline: 2024-09-17 06:59
+  timezone: UTC
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    url: https://2025.ieee-icra.org
+    place: Atlanta, USA
+    paper_deadline: 2024-09-17 06:59
+    timezone: UTC
+- conference: cvpr
+  year: 2025
+  start: '2025-06-11'
+  end: '2025-06-15'
+  url: https://cvpr.thecvf.com/Conferences/2025/CallForPapers
+  place: Nashville, Tennessee
+  abstract_deadline: 2024-11-08 07:59
+  paper_deadline: 2024-11-15 07:59
+  timezone: UTC
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    url: https://cvpr.thecvf.com/Conferences/2025/CallForPapers
+    place: Nashville, Tennessee
+    abstract_deadline: 2024-11-08 07:59
+    paper_deadline: 2024-11-15 07:59
+    timezone: UTC
+- conference: icml
+  year: 2025
+  start: '2025-07-13'
+  end: '2025-07-19'
+  url: https://icml.cc/Conferences/2025
+  place: Vancouver, Canada
+  abstract_deadline: 2025-01-23 23:59
+  paper_deadline: 2025-01-30 23:59
+  timezone: AoE
+  notification: '2025-05-01'
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    url: https://icml.cc/Conferences/2025
+    place: Vancouver, Canada
+    abstract_deadline: 2025-01-23 23:59
+    paper_deadline: 2025-01-30 23:59
+    timezone: AoE
+    notification: '2025-05-01'
+- conference: corl
+  year: 2025
+  start: '2025-09-27'
+  end: '2025-09-30'
+  url: https://www.corl.org/
+  place: Seoul, South Korea
+  paper_deadline: 2025-04-30 23:59
+  timezone: AoE
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    url: https://www.corl.org/
+    place: Seoul, South Korea
+    paper_deadline: 2025-04-30 23:59
+    timezone: AoE
+- conference: colm
+  year: 2025
+  start: '2025-10-07'
+  end: '2025-10-10'
+  url: https://colmweb.org/cfp.html
+  place: Montreal, Canada
+  abstract_deadline: 2025-03-22 23:59
+  paper_deadline: 2025-03-28 23:59
+  timezone: AoE
+  notification: '2025-07-07'
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    url: https://colmweb.org/cfp.html
+    place: Montreal, Canada
+    abstract_deadline: 2025-03-22 23:59
+    paper_deadline: 2025-03-28 23:59
+    timezone: AoE
+    notification: '2025-07-07'
+- conference: iros
+  year: 2025
+  start: '2025-10-19'
+  end: '2025-10-25'
+  url: http://www.iros25.org/
+  place: Hangzhou, China
+  paper_deadline: 2025-03-02 07:59
+  timezone: UTC
+  notification: '2025-06-30'
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    url: http://www.iros25.org/
+    place: Hangzhou, China
+    paper_deadline: 2025-03-02 07:59
+    timezone: UTC
+    notification: '2025-06-30'
+- conference: neurips
+  year: 2025
+  start: '2025-12-02'
+  end: '2025-12-07'
+  url: https://neurips.cc/Conferences/2025
+  place: San Diego, USA
+  abstract_deadline: 2025-05-11 23:59
+  paper_deadline: 2025-05-15 23:59
+  timezone: AoE
+  notification: '2025-09-18'
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    url: https://neurips.cc/Conferences/2025
+    place: San Diego, USA
+    abstract_deadline: 2025-05-11 23:59
+    paper_deadline: 2025-05-15 23:59
+    timezone: AoE
+    notification: '2025-09-18'
+
+- conference: iclr
+  year: 2026
+  start: '2026-04-23'
+  end: '2026-04-27'
+  source: https://iclr.cc/Conferences/2026/CallForWorkshops
+  workshop_list_url: https://blog.iclr.cc/2026/01/13/iclr2026-workshops/
+  url: https://iclr.cc/Conferences/2026
+  place: Rio de Janeiro, Brazil
+  abstract_deadline: 2025-09-19 23:59
+  paper_deadline: 2025-09-24 23:59
+  timezone: AoE
+  notification: '2026-01-25'
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    url: https://iclr.cc/Conferences/2026
+    place: Rio de Janeiro, Brazil
+    abstract_deadline: 2025-09-19 23:59
+    paper_deadline: 2025-09-24 23:59
+    timezone: AoE
+    notification: '2026-01-25'
+- conference: icra
+  year: 2026
+  start: '2026-06-01'
+  end: '2026-06-05'
+  source: https://2026.ieee-icra.org/
+  url: https://2026.ieee-icra.org/
+  place: Vienna, Austria
+  paper_deadline: 2025-09-16 07:59
+  timezone: UTC
+  notification: '2026-01-31'
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    url: https://2026.ieee-icra.org/
+    place: Vienna, Austria
+    paper_deadline: 2025-09-16 07:59
+    timezone: UTC
+    notification: '2026-01-31'
+- conference: cvpr
+  year: 2026
+  start: '2026-06-03'
+  end: '2026-06-07'
+  source: https://cvpr.thecvf.com/Conferences/2026/Dates
+  url: https://cvpr.thecvf.com/Conferences/2026
+  place: Denver, USA
+  abstract_deadline: 2025-11-06 23:59
+  paper_deadline: 2025-11-13 23:59
+  timezone: AoE
+  notification: '2026-02-20'
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    url: https://cvpr.thecvf.com/Conferences/2026
+    place: Denver, USA
+    abstract_deadline: 2025-11-06 23:59
+    paper_deadline: 2025-11-13 23:59
+    timezone: AoE
+    notification: '2026-02-20'
+- conference: icml
+  year: 2026
+  start: '2026-07-06'
+  end: '2026-07-11'
+  source: https://icml.cc/Conferences/2026/CallForWorkshops
+  url: https://icml.cc/Conferences/2026
+  place: Seoul, South Korea
+  abstract_deadline: 2026-01-24 11:59
+  paper_deadline: 2026-01-29 11:59
+  timezone: UTC
+  notification: '2026-04-30'
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    start: '2026-07-06'
+    url: https://icml.cc/Conferences/2026
+    place: Seoul, South Korea
+    abstract_deadline: 2026-01-24 11:59
+    paper_deadline: 2026-01-29 11:59
+    timezone: UTC
+    notification: '2026-04-30'
 - conference: eccv
   year: 2026
-  start: "2026-09-08"
-  end: "2026-09-13"
-  source: "https://eccv.ecva.net/"
+  start: '2026-09-08'
+  end: '2026-09-13'
+  source: https://eccv.ecva.net/
+  url: https://eccv.ecva.net/
+  place: Malmö, Sweden
+  abstract_deadline: 2026-02-26 22:00
+  paper_deadline: 2026-03-05 22:00
+  timezone: UTC
+  notification: '2026-06-17'
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    url: https://eccv.ecva.net/
+    place: Malmö, Sweden
+    abstract_deadline: 2026-02-26 22:00
+    paper_deadline: 2026-03-05 22:00
+    timezone: UTC
+    notification: '2026-06-17'
+- conference: iros
+  year: 2026
+  start: '2026-09-27'
+  end: '2026-10-01'
+  source: https://2026.ieee-iros.org/
+  url: https://2026.ieee-iros.org/
+  place: Pittsburgh, USA
+  paper_deadline: 2026-03-03 07:59
+  timezone: UTC
+  notification: '2026-06-16'
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    url: https://2026.ieee-iros.org/
+    place: Pittsburgh, USA
+    paper_deadline: 2026-03-03 07:59
+    timezone: UTC
+    notification: '2026-06-16'
+- conference: colm
+  year: 2026
+  start: '2026-10-06'
+  end: '2026-10-09'
+  source: https://colmweb.org/
+  url: https://colmweb.org
+  place: San Francisco, USA
+  abstract_deadline: 2026-03-26 23:59
+  paper_deadline: 2026-03-31 23:59
+  timezone: AoE
+  notification: '2026-07-08'
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    url: https://colmweb.org
+    place: San Francisco, USA
+    abstract_deadline: 2026-03-26 23:59
+    paper_deadline: 2026-03-31 23:59
+    timezone: AoE
+    notification: '2026-07-08'
+- conference: corl
+  year: 2026
+  start: '2026-11-09'
+  end: '2026-11-12'
+  url: https://www.corl.org/
+  place: Austin, United States
+  abstract_deadline: 2026-05-25 23:59
+  paper_deadline: 2026-05-28 23:59
+  timezone: AoE
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    start: '2026-11-09'
+    end: '2026-11-12'
+    url: https://www.corl.org/
+    place: Austin, United States
+    abstract_deadline: 2026-05-25 23:59
+    paper_deadline: 2026-05-28 23:59
+    timezone: AoE
+- conference: neurips
+  year: 2026
+  start: '2026-12-06'
+  end: '2026-12-13'
+  source: https://neurips.cc/
+  workshop_list_url: https://blog.neurips.cc/2026/08/10/announcing-the-neurips-2026-workshops/
+  url: https://neurips.cc/Conferences/2026
+  place: Sydney, Australia
+  abstract_deadline: 2026-05-05 11:59
+  paper_deadline: 2026-05-07 11:59
+  timezone: UTC
+  notification: '2026-09-24'
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    url: https://neurips.cc/Conferences/2026
+    place: Sydney, Australia
+    abstract_deadline: 2026-05-05 11:59
+    paper_deadline: 2026-05-07 11:59
+    timezone: UTC
+    notification: '2026-09-24'
+
+- conference: iclr
+  year: 2027
+  start: '2027-04-26'
+  end: '2027-04-30'
+  url: https://iclr.cc/Conferences/2027
+  place: San Francisco, United States
+  abstract_deadline: 2026-09-18 23:59
+  paper_deadline: 2026-09-25 23:59
+  timezone: AoE
+  notification: '2026-12-16'
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    start: '2027-04-26'
+    end: '2027-04-30'
+    url: https://iclr.cc/Conferences/2027
+    place: San Francisco, United States
+    abstract_deadline: 2026-09-18 23:59
+    paper_deadline: 2026-09-25 23:59
+    timezone: AoE
+    notification: '2026-12-16'
+- conference: icra
+  year: 2027
+  start: '2027-05-24'
+  end: '2027-05-28'
+  url: https://2027.ieee-icra.org/
+  place: Seoul, South Korea
+  paper_deadline: 2026-09-16 06:59
+  timezone: UTC
+  notification: '2027-01-31'
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    start: '2027-05-24'
+    end: '2027-05-28'
+    url: https://2027.ieee-icra.org/
+    place: Seoul, South Korea
+    paper_deadline: 2026-09-16 06:59
+    timezone: UTC
+    notification: '2027-01-31'
+- conference: cvpr
+  year: 2027
+  start: '2027-06-19'
+  end: '2027-06-26'
+  url: https://cvpr.thecvf.com/Conferences/2027
+  place: Seattle, USA
+  abstract_deadline: 2026-11-10 23:59
+  paper_deadline: 2026-11-16 23:59
+  timezone: AoE
+  synced:
+    from: ccfddl, ai-deadlines
+    as_of: '2026-09-11'
+    start: '2027-06-19'
+    end: '2027-06-26'
+    url: https://cvpr.thecvf.com/Conferences/2027
+    place: Seattle, USA
+    abstract_deadline: 2026-11-10 23:59
+    paper_deadline: 2026-11-16 23:59
+    timezone: AoE

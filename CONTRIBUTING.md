@@ -148,6 +148,13 @@ only bot-managed deadlines within `[−7d, +14d]` (the look-back is what catches
 post-deadline extension) and skips hand-edited, legacy, multi-track, and
 venue-id-less entries; its apply path reuses the sync helpers above.
 
+`node scripts/editions_sync_test.mjs` — the daily editions sync reads the two
+deadline trackers the way it should (zones, free-text dates, which entry is the
+paper track), takes each field from the right tracker, fills a hand-typed row
+without overwriting it, freezes a field a person edited, moves a deadline later
+only, and parses the acceptance-rate table (skipping rows that contradict
+themselves).
+
 `node scripts/deadline_crosscheck_test.mjs` — the cross-check classifies a
 stored-vs-OpenReview gap (tz-suspect vs. real change) and, by provenance, decides
 what needs human review: a human-edited deadline that disagrees, or a bot-managed
@@ -186,6 +193,32 @@ hand-written row — `conference`, `year`, `proposal_deadline` (quoted), `timezo
 `url`, any `notes`, and no `deadline_notes`. Leave past cycles in place;
 `validate.mjs` checks every row and warns when a conference's newest cycle closed
 over a year ago with no successor recorded.
+
+## Conference editions
+
+`data/editions.yml` holds one row per conference-year: the conference's `start`
+and `end` (what flips a deadline-less workshop to Past), the optional hand-typed
+`source` and `workshop_list_url` (the official accepted-workshop list, which
+switches on the weekly reconciliation), and the **main conference's** facts the
+hub and year pages show — `url`, `place`, `abstract_deadline`, `paper_deadline`
+(quoted, `YYYY-MM-DD HH:MM`) with a `timezone` (AoE, UTC or an IANA name),
+and the `notification` date.
+
+Most of it writes itself. The daily `sync-editions` workflow reads the
+community trackers ccfddl/ccf-deadlines and huggingface/ai-deadlines, adds a row
+for this year and next once an edition's dates are known, fills blanks, and
+follows the trackers on the values it wrote (deadlines later-only). It stamps
+every value it writes in the row's `synced` mapping: edit a value and that field
+is frozen (yours wins); edit `timezone` and both deadlines are yours; `source`
+and `workshop_list_url` are never touched. To hand-type a row, give it
+`conference`, `year`, `end` and whatever else you know, and leave `synced` out.
+
+`data/acceptance_rates.yml` is the acceptance-rate history the same workflow
+writes from the table at github.com/lixin4ever/Conference-Acceptance-Rate — one
+row per conference-year with `rate`, `accepted`, `submitted`, an optional
+`detail` and a `source`. A row with any other `source` is yours and wins over
+the bot's for that year. `validate.mjs` checks both files (known conference,
+real dates, a rate that agrees with its counts).
 
 ## Paper lists
 

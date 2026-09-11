@@ -1,0 +1,58 @@
+# Daily: keep the MAIN conference's facts — paper and abstract deadlines,
+# notification date, dates, place and website of each edition — and the
+# acceptance-rate history in step with the community trackers that maintain
+# them (ccfddl/ccf-deadlines and huggingface/ai-deadlines for deadlines and
+# dates, lixin4ever/Conference-Acceptance-Rate for the rates; all MIT). The
+# conference hub and conference-year pages show them: "neurips 2026 deadline"
+# and "icml 2026 dates" are the largest family of queries the site is shown
+# for. A row appears in data/editions.yml for this year and next once a
+# tracker knows an edition's dates, blanks are filled, and a value the bot
+# wrote follows the trackers (deadlines later-only); anything a person typed
+# is frozen (scripts/sync_editions.mjs). Whatever changed is validated and, on
+# success, committed straight to main (and a deploy is dispatched), with each
+# change recorded in the commit message.
+name: Sync conference editions
+
+on:
+  schedule:
+    - cron: '7 2 * * *' # daily 02:07 UTC — at least 30 minutes from every other data cron
+  workflow_dispatch:
+
+concurrency:
+  # Serialise every workflow that commits to `main` (see AUTOMATION.md, "The
+  # data jobs are serialised"): queue behind a sibling rather than race its push.
+  group: data-write
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Sync main-conference deadlines, dates and acceptance rates from the trackers
+        env:
+          DEADLINE_CHANGELOG: ${{ github.workspace }}/.deadline-changes.md
+        run: node scripts/sync_editions.mjs
+      - name: Validate
+        run: node scripts/validate.mjs
+      # Validation passed above — publish directly. A failed validation fails
+      # the job before anything is committed (GitHub emails the owner).
+      - name: Publish updated editions and acceptance rates (if any)
+        uses: ./.github/actions/publish-data
+        with:
+          paths: data/editions.yml data/acceptance_rates.yml
+          subject: 'data: daily conference-edition sync from the deadline trackers (auto-published after validation)'
+          changelog: ${{ github.workspace }}/.deadline-changes.md
+          changelog-heading: 'Main-conference changes synced from ccfddl, ai-deadlines and the acceptance-rate table:'
+          nothing-message: 'No conference-edition changes today.'
+          token: ${{ github.token }}

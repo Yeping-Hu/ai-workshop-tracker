@@ -6,9 +6,14 @@
  *      conference+year, deadline parses & is sane, no duplicates.
  *   3. data/editions.yml: valid conference ids, parsable start/end dates,
  *      no duplicate rows; warns when a tracked current/future year has none.
+ *      The main-conference fields the editions sync writes (paper and abstract
+ *      deadlines with a timezone, notification, place, url, the `synced`
+ *      stamp) are checked the way a workshop's deadline is.
  *   4. data/proposal_calls.yml: valid conference ids, a parsable deadline with
  *      a timezone, an http(s) url, known fields, no duplicate rows; warns when
  *      a conference's newest call closed over a year ago with no successor.
+ *   5. data/acceptance_rates.yml: valid conference ids, integer years, a rate
+ *      between 0 and 100 that agrees with the counts, no duplicate rows.
  *
  * Exit code 1 if any ERROR. Warnings never fail the build.
  *
@@ -26,6 +31,7 @@ import { REPO_ROOT,
   loadConferences,
   loadTopics,
   loadEditions, loadProposalCallRows, slugOfFile } from '../lib/workshops.mjs';
+import { loadAcceptanceRates, EDITION_FIELDS, SYNCED_FIELDS } from '../lib/editions.mjs';
 import { resolveDeadlineUtcMs, parseDateUtcMs, parseDeadlineString, isValidTimezone, DAY_MS, TWO_YEARS_MS } from '../lib/dates.mjs';
 import { validateChangesFeed } from './validate_changes_feed.mjs';
 
@@ -318,6 +324,38 @@ for (const filePath of listWorkshopFiles()) {
       if (startMs == null) errors.push({ file: ref, msg: '`start` is not a valid calendar date.' });
       else if (endMs != null && startMs > endMs) errors.push({ file: ref, msg: '`start` is after `end`.' });
     }
+    // The main-conference fields (written daily by scripts/sync_editions.mjs,
+    // or by hand): a deadline is checked exactly like a workshop's, since it
+    // is shown with a countdown on the conference pages.
+    const ALLOWED_ED = new Set(EDITION_FIELDS);
+    for (const k of Object.keys(e ?? {})) if (!ALLOWED_ED.has(k)) errors.push({ file: ref, msg: `Unknown field \`${k}\`.` });
+    const dl = {};
+    for (const k of ['paper_deadline', 'abstract_deadline']) {
+      if (e?.[k] == null) continue;
+      if (!parseDeadlineString(String(e[k]))) errors.push({ file: ref, msg: `\`${k}\` must be a real date, YYYY-MM-DD or YYYY-MM-DD HH:MM (quoted).` });
+      else if (!e.timezone) errors.push({ file: ref, msg: `\`${k}\` needs a \`timezone\` — AoE, UTC or an IANA name.` });
+      else if (!isValidTimezone(e.timezone)) errors.push({ file: ref, msg: `Unknown timezone "${e.timezone}".` });
+      else dl[k] = resolveDeadlineUtcMs(String(e[k]), e.timezone);
+    }
+    if (dl.paper_deadline != null && dl.abstract_deadline != null && dl.abstract_deadline > dl.paper_deadline) {
+      errors.push({ file: ref, msg: '`abstract_deadline` is after `paper_deadline`.' });
+    }
+    if (dl.paper_deadline != null && Math.abs(Number(String(e.paper_deadline).slice(0, 4)) - e.year) > 1) {
+      errors.push({ file: ref, msg: '`paper_deadline` is more than a year away from the edition\'s year.' });
+    }
+    if (e?.notification != null && parseDateUtcMs(String(e.notification)) == null) errors.push({ file: ref, msg: '`notification` must be a YYYY-MM-DD date.' });
+    for (const k of ['url', 'source', 'workshop_list_url']) {
+      if (e?.[k] != null && !/^https?:\/\/\S+$/.test(String(e[k]))) errors.push({ file: ref, msg: `\`${k}\` must be an http(s) link.` });
+    }
+    if (e?.place != null && typeof e.place !== 'string') errors.push({ file: ref, msg: '`place` must be a string.' });
+    if (e?.synced != null) {
+      if (typeof e.synced !== 'object' || Array.isArray(e.synced)) errors.push({ file: ref, msg: '`synced` must be a mapping of the fields the sync wrote.' });
+      else {
+        const okKeys = new Set(['from', 'as_of', ...SYNCED_FIELDS]);
+        for (const k of Object.keys(e.synced)) if (!okKeys.has(k)) errors.push({ file: ref, msg: `Unknown \`synced\` key \`${k}\`.` });
+        if (e.synced.as_of != null && parseDateUtcMs(String(e.synced.as_of)) == null) errors.push({ file: ref, msg: '`synced.as_of` must be a YYYY-MM-DD date.' });
+      }
+    }
     const k = `${e?.conference}-${e?.year}`;
     if (seenEd.has(k)) errors.push({ file: ref, msg: 'Duplicate conference-year row.' });
     seenEd.add(k);
@@ -386,6 +424,36 @@ for (const filePath of listWorkshopFiles()) {
         msg: `The newest ${conferences.get(conf)?.name ?? conf} proposal call (${cur.year}) closed ${Math.round((NOW - cur.ms) / DAY_MS)} days ago and no later cycle is recorded.`,
       });
     }
+  }
+}
+
+// ---- data/acceptance_rates.yml: main-conference acceptance rates ----
+// Written daily by scripts/sync_editions.mjs from a community table; a bad row
+// would print a wrong percentage on a hub page, so the shape is checked here
+// and a rate is required to agree with its counts.
+{
+  const rel = 'data/acceptance_rates.yml';
+  const ALLOWED = new Set(['conference', 'year', 'rate', 'accepted', 'submitted', 'detail', 'source']);
+  const seenRate = new Set();
+  for (const r of loadAcceptanceRates()) {
+    if (!r || typeof r !== 'object') {
+      errors.push({ file: rel, msg: 'Every row must be a mapping (conference, year, rate, source).' });
+      continue;
+    }
+    const ref = `${rel} (${r.conference ?? '?'} ${r.year ?? '?'})`;
+    if (!conferences.has(r.conference)) errors.push({ file: ref, msg: 'Unknown conference id.' });
+    if (!Number.isInteger(r.year) || r.year < 1980 || r.year > new Date(NOW).getUTCFullYear() + 1) errors.push({ file: ref, msg: '`year` must be a plausible integer year.' });
+    if (typeof r.rate !== 'number' || !(r.rate > 0 && r.rate < 100)) errors.push({ file: ref, msg: '`rate` must be a number between 0 and 100.' });
+    for (const k of ['accepted', 'submitted']) if (r[k] != null && (!Number.isInteger(r[k]) || r[k] < 0)) errors.push({ file: ref, msg: `\`${k}\` must be a non-negative integer.` });
+    if (Number.isInteger(r.accepted) && Number.isInteger(r.submitted) && r.submitted > 0 && typeof r.rate === 'number' && Math.abs(r.rate - (r.accepted / r.submitted) * 100) > 1) {
+      errors.push({ file: ref, msg: `\`rate\` ${r.rate}% does not agree with ${r.accepted}/${r.submitted}.` });
+    }
+    for (const k of ['detail', 'source']) if (r[k] != null && typeof r[k] !== 'string') errors.push({ file: ref, msg: `\`${k}\` must be a string.` });
+    if (!r.source) errors.push({ file: ref, msg: '`source` is required — where the numbers came from.' });
+    for (const k of Object.keys(r)) if (!ALLOWED.has(k)) errors.push({ file: ref, msg: `Unknown field \`${k}\`.` });
+    const key = `${r.conference}-${r.year}`;
+    if (seenRate.has(key)) errors.push({ file: ref, msg: 'Duplicate conference-year row.' });
+    seenRate.add(key);
   }
 }
 

@@ -74,6 +74,8 @@ jobs:
         run: node scripts/recheck_imminent_test.mjs
       - name: Test the daily proposal-call sync rules (probe, adopt, later-only, freeze)
         run: node scripts/proposal_calls_test.mjs
+      - name: Test the daily editions sync (tracker readers, precedence, fill-only, freeze, rates table)
+        run: node scripts/editions_sync_test.mjs
       - name: Test deadline cross-check classifier
         run: node scripts/deadline_crosscheck_test.mjs
       - name: Test status logic (open deadline beats inferred event date)

@@ -114,11 +114,17 @@ done
 node scripts/validate.mjs
 ```
 
-Add a `data/editions.yml` row for each imported year now (`{conference, year,
-end, optional start/source}` — from the official site). It is what flips a
-deadline-less workshop to "Past" the day the conference ends; without it the
-status falls back to the blunter `typical_month`, and `validate.mjs` warns about
-every tracked current/future year that lacks one.
+Check `data/editions.yml` has a row for each imported year (`{conference, year,
+end, optional start/source}`). The daily `sync-editions` workflow creates rows
+for this year and next from the community deadline trackers (ccfddl,
+ai-deadlines) and fills the main conference's deadlines, dates and place —
+provided the tracker files a conference under the same id; if its file name
+differs, add the mapping to `SOURCE_IDS` in `scripts/sync_editions.mjs` (NeurIPS
+is `nips` on ccfddl). Run `node scripts/sync_editions.mjs` once to see, and type
+the row by hand for a year the trackers lack (`end` is required). The `end` is
+what flips a deadline-less workshop to "Past" the day the conference ends;
+without it the status falls back to the blunter `typical_month`, and
+`validate.mjs` warns about every tracked current/future year that lacks one.
 
 Lines like `(skipped N archival/non-archival track twin(s))` are normal —
 workshops often register duplicate track venues and discovery merges them.
