@@ -21,6 +21,25 @@
   font: inherit; color: var(--ink); background: var(--paper);
   border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.7rem; width: 100%;
 }
+/* iOS Safari sizes native date and time controls to their formatted value and
+   ignores `width: 100%` while the native appearance is in force, so on a phone
+   these two ran past the card the other controls sat inside — the select and the
+   clock panels above them stop short, these did not. Neutralising the appearance
+   lets the shared width apply; min-width defeats the intrinsic floor a form
+   control otherwise keeps, and max-width is the belt to that brace.
+
+   Not reproducible in Chromium or in Playwright's WebKit, both of which already
+   size them to 324px inside a 358px card — this is specific to mobile Safari,
+   which is why it needs the vendor-prefixed reset rather than a width tweak. */
+.tool-form input[type="date"],
+.tool-form input[type="time"],
+.tool-form input[type="datetime-local"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .tool-form textarea { min-height: 9rem; font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.5; resize: vertical; }
 .tool-form textarea:focus, .tool-form input:focus, .tool-form select:focus {
   border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft);
