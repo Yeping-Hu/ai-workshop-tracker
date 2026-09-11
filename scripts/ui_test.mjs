@@ -3,6 +3,7 @@
  * Run a build first, then:  node scripts/ui_test.mjs [http://localhost:4321]
  */
 import { chromium } from 'playwright';
+import { loadEditions, loadAcceptanceRates } from '../lib/editions.mjs';
 
 const BASE = process.argv[2] || 'http://localhost:4321';
 let pass = 0, fail = 0;
@@ -1428,6 +1429,43 @@ await page.evaluate(() => localStorage.clear());
   });
   check('the AoE clock is UTC minus twelve hours', aoe.shown === aoe.want, `${aoe.shown} vs ${aoe.want}`);
   check('the converter rendered a default result and the open-call table has rows', (await page.$$eval('#aoeTable tbody tr', (els) => els.length)) >= 10 && (await page.$$eval('#aoeCalls tbody tr', (els) => els.length)) >= 1);
+}
+
+// --- conference hub and year pages: the main conference ---------------------
+// Which pages to look at comes from the data itself (data/editions.yml and
+// data/acceptance_rates.yml, kept current by the daily editions sync), so the
+// checks hold whichever conference's call happens to be open on the day.
+{
+  console.log('— conference pages: main-conference deadline, dates and acceptance rate —');
+  const eds = loadEditions();
+  const withDeadline = eds.filter((e) => e.paper_deadline).sort((a, b) => b.year - a.year)[0];
+  if (withDeadline) {
+    await page.goto(`${BASE}/conference/${withDeadline.conference}/${withDeadline.year}/`, { waitUntil: 'networkidle' });
+    check('a year page with a main-conference deadline says so in its H1', /deadline, dates and workshops$/i.test(await page.$eval('h1', (h) => h.textContent.trim())), await page.$eval('h1', (h) => h.textContent.trim()));
+    check('… and in its title', /Deadline, Dates & Workshops/.test(await page.title()), await page.title());
+    check('… with a key-dates block naming the paper deadline', (await page.$eval('.conf-dates', (el) => el.textContent)).includes('Paper deadline'));
+    check('… converted to the reader\'s local time', (await page.$$eval('.conf-dates .js-local[data-local-done]', (els) => els.filter((e) => /Your time/.test(e.textContent)).length)) >= 1);
+    const ld = await page.$$eval('script[type="application/ld+json"]', (els) => els.map((e) => JSON.parse(e.textContent)));
+    check('… and a FAQ entry for the deadline in the JSON-LD', ld.some((d) => d['@type'] === 'FAQPage' && d.mainEntity.some((q) => /paper submission deadline\?$/.test(q.name))));
+  }
+  const rates = loadAcceptanceRates();
+  const byConf = new Map();
+  for (const r of rates) byConf.set(r.conference, (byConf.get(r.conference) ?? 0) + 1);
+  const ratedConf = [...byConf.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  if (ratedConf) {
+    const n = Math.min(12, byConf.get(ratedConf));
+    await page.goto(`${BASE}/conference/${ratedConf}/`, { waitUntil: 'networkidle' });
+    check('the hub title carries the acceptance-rate query', /Acceptance Rate/.test(await page.title()), await page.title());
+    check(`the hub tabulates the ${n} most recent acceptance rates`, (await page.$$eval('.rate-table tbody tr', (els) => els.length)) === n);
+    check('the hub headlines a main-conference edition with a link to its year page', (await page.$('.conf-main a[href*="/conference/"]')) !== null);
+  }
+  // An edition the trackers know but no workshop does yet still has a page.
+  const wsYears = new Set(apiTop.map((w) => `${w.conference}-${w.year}`));
+  const only = eds.find((e) => e.paper_deadline && !wsYears.has(`${e.conference}-${e.year}`));
+  if (only) {
+    const res = await page.goto(`${BASE}/conference/${only.conference}/${only.year}/`, { waitUntil: 'networkidle' });
+    check('an edition-only year page exists and says its workshops are not announced yet', res.status() === 200 && (await page.textContent('body')).includes('not been announced yet'));
+  }
 }
 
 check('no page/console errors during the whole run', errors.length === 0, errors.slice(0, 3).join(' | '));

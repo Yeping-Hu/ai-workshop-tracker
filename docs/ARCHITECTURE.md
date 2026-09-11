@@ -763,6 +763,63 @@ readers and gates (AUTOMATION.md, "Proposal calls come from the same prefix"),
 so a hand edit freezes a row exactly as it freezes a workshop's deadline.
 `validate.mjs` checks the file like `editions.yml`.
 
+## Main-conference deadlines, dates and acceptance rates
+
+The site tracks workshops, but the queries it is shown for most are about the
+conference itself: "neurips 2026 deadline", "icml 2026 dates", "iclr
+acceptance rate" — around 13,000 US searches a month across the nine
+conferences in the September 2026 keyword research, four to six times the
+"<conf> <year> workshops" family, and the official sites hold only the first
+few results. The conference hub and conference-year pages now answer them,
+from two files the daily `sync-editions` job keeps current (AUTOMATION.md,
+"Main-conference facts come from the community trackers"):
+
+- **`data/editions.yml`** grew from "the conference's dates" into one row of
+  facts per edition: `start`/`end`, `place`, `url`, the main conference's
+  `abstract_deadline` and `paper_deadline` with a `timezone`, `notification`,
+  the hand-typed `source` and `workshop_list_url`, and a `synced` mapping
+  recording what the bot wrote per field. `lib/editions.mjs` resolves a row
+  once (`resolveEdition`: wall clocks, ISO instants, open/closed, over/ahead)
+  and every page reads that, so the hub, the year page and the workshop page's
+  `superEvent` cannot disagree about one edition.
+- **`data/acceptance_rates.yml`** is the acceptance-rate history: one row per
+  conference-year with the rate and, where the source has them, the accepted
+  and submitted counts and the oral/spotlight/poster breakdown.
+
+What the pages do with it:
+
+- **The year page** (`/conference/<id>/<year>/`) opens with the deadline
+  sentence, carries a key-dates table (abstract and paper deadlines with a
+  live countdown while open and the reader's local time under each,
+  notification, dates and place, that year's acceptance rate, the official
+  site), a FAQ entry per fact, and a schema.org `Event` for the conference
+  when start date and a single place are known. Its title becomes "<conf>
+  <year> Deadline, Dates & Workshops" and its H1 the same, because the
+  deadline query is the larger one; a year without main-conference facts keeps
+  the older "<conf> <year> Workshops" title. The page exists for every edition
+  the trackers know, workshops or not — ICLR 2027 has a page from September
+  2026, when "iclr 2027 deadline" is searched, saying its workshops are not
+  announced yet; discovery fills them in later with no further change.
+- **The hub** (`/conference/<id>/`) headlines one edition — the one whose
+  paper deadline is open, else the one still ahead or running, else the latest
+  (`featuredEdition`) — in a paragraph with a countdown and a link to the year
+  page, and tabulates the acceptance-rate history (twelve most recent years)
+  under an anchor the head links to. Its title gains "Acceptance Rate" only
+  when a table is actually there.
+- A conference the trackers do not know shows none of this and keeps its old
+  titles; nothing is per-conference.
+
+Two facts about the data. Deadlines keep the zone the call states when it is
+AoE or UTC, which is what an author expects to read back, and a fixed-offset
+zone ("UTC-8", "PST") is converted to the UTC instant; both deadlines of a row
+share its zone. And the `end` date a bot-created row carries feeds the same
+status ladder as a hand-typed one, so a 2027 workshop imported later flips to
+"Past" the day its conference ends without anyone adding the row.
+
+Pinned by `scripts/editions_sync_test.mjs` (readers, precedence, decision,
+serializers, the rates parser, `featuredEdition`) and the conference-pages
+section of `scripts/ui_test.mjs`; the files are checked by `validate.mjs`.
+
 ## Deadline provenance (append-only observation log)
 
 Every entry whose deadline the automation touches accumulates a
@@ -1377,7 +1434,12 @@ ranked on page four for all of them — its title could not say the year, and it
 list was three times longer than the answer. So the year page's title says
 exactly that query, and the hub lists only its latest year in full (plus any
 earlier year that still has an open call), summarising the others with a link,
-so no two pages publish the same list and compete. Each carries a data-driven
+so no two pages publish the same list and compete. Since the editions sync, a
+year page whose edition has main-conference facts is titled "<conf> <year>
+Deadline, Dates & Workshops" and exists before any workshop is known, and a hub
+with an acceptance-rate history is titled "<conf> Workshops, Deadlines &
+Acceptance Rate" (see "Main-conference deadlines, dates and acceptance
+rates"). Each carries a data-driven
 FAQ and a `BreadcrumbList`; every workshop page's breadcrumb and "All <conf>
 <year> workshops" link point at its year page, so each year page has hundreds
 of incoming links from the day it exists. `getStaticPaths` iterates

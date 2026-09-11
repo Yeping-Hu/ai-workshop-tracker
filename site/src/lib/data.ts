@@ -17,19 +17,31 @@ import {
   mergedSlugRedirects,
 } from '../../../lib/workshops.mjs';
 
+// @ts-ignore - shared plain-JS module at the repo root
+import { resolveEdition, loadAcceptanceRates } from '../../../lib/editions.mjs';
+
 export type Workshop = Record<string, any>;
 export type Conference = Record<string, any>;
 export type Topic = { id: string; label: string };
 
-export const workshops: Workshop[] = loadWorkshops();
+/** One build-time "now" for every derived value on the site. */
+const NOW = Date.now();
+export const workshops: Workshop[] = loadWorkshops(NOW);
 export const conferences: Conference[] = loadConferences();
 export const topics: Topic[] = loadTopics();
 export const conferenceById = new Map(conferences.map((c: Conference) => [c.id, c]));
-/** Conference edition dates (data/editions.yml), keyed `conf-year`. */
-const editions: Record<string, any>[] = loadEditions();
+/**
+ * Conference editions (data/editions.yml) resolved for display — dates, the
+ * main conference's deadlines with wall clocks and openness, place, site —
+ * keyed `conf-year`. The rows themselves are exported for the hub, which
+ * picks the edition to headline (featuredEdition) from all of them.
+ */
+export const editions: Record<string, any>[] = loadEditions().map((e: Record<string, any>) => resolveEdition(e, NOW));
 export const editionByKey = new Map<string, Record<string, any>>(
   editions.map((e: Record<string, any>) => [`${e.conference}-${e.year}`, e]),
 );
+/** Main-conference acceptance rates (data/acceptance_rates.yml), raw rows. */
+export const acceptanceRates: Record<string, any>[] = loadAcceptanceRates();
 export const topicById = new Map(topics.map((t: Topic) => [t.id, t]));
 export { loadPaperCache };
 

@@ -3,9 +3,10 @@ import Base from '../../components/Base.astro';
 import AlertsSignup from '../../components/AlertsSignup.astro';
 import MarkdownExport from '../../components/MarkdownExport.astro';
 import ConferenceWorkshopList from '../../components/ConferenceWorkshopList.astro';
-import { workshops, conferences, proposalCalls, latestProposalCall } from '../../lib/data';
+import { workshops, conferences, proposalCalls, latestProposalCall, editions, acceptanceRates } from '../../lib/data';
 import { href, REPO_URL } from '../../lib/site';
 import { formatDateYmd } from '../../../../lib/dates.mjs';
+import { featuredEdition, previousEdition, acceptanceHistory, formatRate } from '../../../../lib/editions.mjs';
 
 // One hub page per conference, generated from the same data the rest of the
 // site uses. Intentionally carries NO data-pf-ws / data-pf-papers attributes,
@@ -19,6 +20,14 @@ import { formatDateYmd } from '../../../../lib/dates.mjs';
 // compete with each other for "neurips 2025 workshops"; this way the hub
 // answers "<conf> workshops" and each year page answers "<conf> <year>
 // workshops", and both link to the other.
+//
+// Two things about the MAIN conference live here as well, because the queries
+// are the conference's name plus "deadline" or "acceptance rate" with no
+// year, and the hub is the page without a year: the edition to headline (the
+// open call, else the edition still ahead, else the latest — featuredEdition)
+// with its paper deadline and dates, and the acceptance-rate history. Both
+// come from data the daily editions sync keeps current; a conference the
+// trackers do not know simply shows neither.
 export function getStaticPaths() {
   // status order for listings: open call -> unknown -> past -> not running
   const rank = (w: any) =>
@@ -74,6 +83,11 @@ const yearGroups = [...byYear.entries()].sort((a, b) => b[0] - a[0]);
 // an open call (a reader arriving here is looking for something to submit
 // to). Everything else is a one-line summary pointing at the year page.
 const inFull = (year: number, ws: any[]) => year === yearMax || ws.some((w) => w.statusLabel === 'Open call');
+// The "By year" line also names the editions the trackers know but no
+// workshop does yet (ICLR 2027 in September 2026): their year page exists
+// from the day the call is announced.
+const editionYears = editions.filter((e: any) => e.conference === conf.id && e.hasMainConference).map((e: any) => e.year as number);
+const navYears = [...new Set([...yearGroups.map(([y]) => y), ...editionYears])].sort((a, b) => b - a);
 
 // A conference hub answers "where is this?" differently depending on the
 // conference. NeurIPS 2026 is split across Sydney, Paris and Atlanta, so
@@ -88,6 +102,34 @@ const sharedLocation = (ws: any[]) => {
     : null;
 };
 
+// --- The main conference: the edition to headline, and the rates ---------
+const main = featuredEdition(editions, conf.id);
+const prev = main && !main.paper_deadline ? previousEdition(editions, conf.id, main.year) : null;
+const history = acceptanceHistory(acceptanceRates, conf.id);
+const latest = history[0] ?? null;
+const RATE_ROWS = 12;
+const num = (n: number) => n.toLocaleString('en-US');
+const deadlineSentence = !main
+  ? ''
+  : main.paper_deadline
+    ? `The ${confName} ${main.year} paper deadline ${main.paperOpen ? 'is' : 'was'} ${main.paperDeadlineWallClock}` +
+      (main.abstractDeadlineWallClock ? ` (abstracts ${main.abstractOpen ? 'by' : 'closed'} ${main.abstractDeadlineWallClock})` : '') +
+      '.'
+    : `${confName} ${main.year}'s paper deadline has not been announced` + (prev ? `; ${confName} ${prev.year}'s was ${prev.paperDeadlineWallClock}.` : '.');
+const whenSentence =
+  main && (main.dateSpan || main.place)
+    ? ` The conference ${main.over ? 'ran' : 'runs'} ${main.dateSpan ? `${main.dateSpan}${main.place ? ` in ${main.place}` : ''}` : `in ${main.place}`}.`
+    : '';
+const rateSentence = (r: any) =>
+  r.accepted != null && r.submitted != null
+    ? `${confName} ${r.year} accepted ${num(r.accepted)} of ${num(r.submitted)} submissions, an acceptance rate of ${formatRate(r.rate)}`
+    : `The ${confName} ${r.year} acceptance rate was ${formatRate(r.rate)}${r.submitted != null ? ` of ${num(r.submitted)} submissions` : ''}`;
+const rateRange =
+  history.length > 1 ? { min: Math.min(...history.map((r: any) => r.rate)), max: Math.max(...history.map((r: any) => r.rate)) } : null;
+const rateParagraph = latest
+  ? `${rateSentence(latest)}.${rateRange ? ` Over the ${history.length} years recorded here it has ranged from ${formatRate(rateRange.min)} to ${formatRate(rateRange.max)}.` : ''}`
+  : '';
+
 const SITE = Astro.site;
 const abs = (p: string) => (SITE ? new URL(href(p), SITE).href : href(p));
 const pageUrl = SITE ? new URL(Astro.url.pathname, SITE).href : href(`/conference/${conf.id}/`);
@@ -101,9 +143,24 @@ const span =
 // description, not the title: "neurips 2025 workshops" is the year page's
 // query now, and this page's is "neurips workshops". The full conference name
 // stays out of the description — it ate 60 characters of a 160-character
-// snippet and the H1 area already spells it out.
+// snippet and the H1 area already spells it out. "Acceptance rate" joins the
+// title only when the page actually tabulates one: "<conf> acceptance rate"
+// is the third query family after deadlines and workshops.
 const yearRange =
   yearMin && yearMax ? (yearMin === yearMax ? String(yearMax) : `${yearMin}–${yearMax}`) : '';
+const title = latest ? `${confName} Workshops, Deadlines & Acceptance Rate` : `${confName} Workshops — Deadlines & Accepted Papers`;
+// The description leads with whatever is on the page beyond the workshops
+// — the deadline family is searched more — and stays near 160 characters.
+const descParts = [
+  main ? `${confName} ${main.year} paper deadline and dates` : null,
+  latest ? `the ${confName} acceptance rate (${formatRate(latest.rate)} in ${latest.year})` : null,
+  `every ${confName} workshop's deadline and accepted papers${yearRange ? ` (${yearRange})` : ''}`,
+].filter(Boolean) as string[];
+const description = main || latest
+  ? (descParts.length > 2 ? `${descParts.slice(0, -1).join(', ')}, and ${descParts[descParts.length - 1]}` : descParts.join(' and ')) + '. Updated daily.'
+  : `${confName} workshop submission deadlines, dates, topics, official websites, and accepted papers` +
+    (yearRange ? `, ${yearRange}` : '') +
+    `. ${list.length} editions and ${paperTotal.toLocaleString('en-US')} papers tracked, updated daily.`;
 const intro =
   `This page tracks ${list.length} ${confName} workshop edition${list.length === 1 ? '' : 's'}${span}, ` +
   `with ${paperTotal.toLocaleString('en-US')} accepted papers. ` +
@@ -115,6 +172,14 @@ const intro =
 // FAQ rendered visibly below AND mirrored as FAQPage JSON-LD (Google requires
 // the answer text to be present on the page). Answers are data-driven.
 const faqs = [
+  ...(main && main.paper_deadline
+    ? [
+        {
+          q: `When is the ${confName} ${main.year} paper submission deadline?`,
+          a: `${deadlineSentence}${whenSentence} Workshop deadlines are separate and usually later; each ${confName} workshop below lists its own. Confirm the main-conference date on the official site before submitting.`,
+        },
+      ]
+    : []),
   {
     q: `When are ${confName} workshop paper submission deadlines?`,
     a: openCalls.length
@@ -123,6 +188,14 @@ const faqs = [
         `The full list, each with its own deadline, is below.`
       : `There are no open ${confName} workshop calls at the moment. Upcoming deadlines are added automatically as workshops announce them; past editions and their deadlines are listed below.`,
   },
+  ...(latest
+    ? [
+        {
+          q: `What is the ${confName} acceptance rate?`,
+          a: `${rateParagraph} The full table, with the accepted and submitted counts per year, is on this page; workshops have their own, usually higher, rates.`,
+        },
+      ]
+    : []),
   {
     q: `How many ${confName} workshops are tracked here?`,
     a:
@@ -157,17 +230,16 @@ const breadcrumbLd = {
     { '@type': 'ListItem', position: 2, name: `${confName} workshops`, item: pageUrl },
   ],
 };
+const hostOf = (u: string) => {
+  try {
+    return new URL(u).host.replace(/^www\./, '');
+  } catch {
+    return u;
+  }
+};
 ---
 
-<Base
-  title={`${confName} Workshops — Deadlines & Accepted Papers`}
-  description={
-    `${confName} workshop submission deadlines, dates, topics, official websites, and accepted papers` +
-    (yearRange ? `, ${yearRange}` : '') +
-    `. ${list.length} editions and ${paperTotal.toLocaleString('en-US')} papers tracked, updated daily.`
-  }
-  siteSuffix={false}
->
+<Base title={title} description={description} siteSuffix={false}>
   <Fragment slot="head">
     <script is:inline type="application/ld+json" set:html={JSON.stringify(faqLd)} />
     <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbLd)} />
@@ -193,15 +265,39 @@ const breadcrumbLd = {
         )}
       </p>
     )}
-    {yearGroups.length > 1 && (
+    {(navYears.length > 1 || latest) && (
       <p class="conf-years-nav muted small">
-        By year:{' '}
-        {yearGroups.map(([year], i) => (
-          <Fragment>{i > 0 ? ' · ' : ''}<a href={href(`/conference/${conf.id}/${year}/`)}>{confName} {year}</a></Fragment>
-        ))}
+        {navYears.length > 1 && (
+          <Fragment>
+            By year:{' '}
+            {navYears.map((year, i) => (
+              <Fragment>{i > 0 ? ' · ' : ''}<a href={href(`/conference/${conf.id}/${year}/`)}>{confName} {year}</a></Fragment>
+            ))}
+          </Fragment>
+        )}
+        {latest && <Fragment>{navYears.length > 1 ? ' · ' : ''}<a href="#acceptance-rate">Acceptance rate ↓</a></Fragment>}
       </p>
     )}
   </section>
+
+  {/* The main conference, in one paragraph: its paper deadline (with a live
+      countdown while the call is open), its dates and place, and the link to
+      the year page that carries the full key-dates table. The hub is the page
+      a "neurips deadline" search lands on; the year page is "neurips 2026
+      deadline". */}
+  {main && (
+    <section class="conf-main" aria-labelledby="mainconf">
+      <h2 id="mainconf">{confName} {main.year} deadline and dates</h2>
+      <p class="conf-main-line">
+        {deadlineSentence}{whenSentence}
+        {main.paperOpen && <Fragment>{' '}<span class="countdown" data-deadline-ms={main.paperDeadlineUtcMs}>—</span></Fragment>}
+      </p>
+      <p class="muted small">
+        <a href={href(`/conference/${conf.id}/${main.year}/`)}>{confName} {main.year}: deadline, dates and workshops →</a>
+        {main.url && <Fragment>{' · '}<a href={main.url} rel="noopener">{hostOf(main.url)} ↗</a></Fragment>}
+      </p>
+    </section>
+  )}
 
   {/* Conference hubs are where most visitors arrive from search, so the offer
       belongs here too — collapsed, so it never displaces the listings people
@@ -236,6 +332,40 @@ const breadcrumbLd = {
     );
   })}
 
+  {/* The acceptance-rate history. After the listings on purpose: "<conf>
+      workshops" is still this page's first query, and a reader who came for
+      the rate has the anchor link at the top. Twelve rows is a decade plus the
+      two most-cited older years; older rows are in the data file. */}
+  {history.length > 0 && (
+    <section class="conf-rates" id="acceptance-rate" aria-labelledby="rates-h">
+      <h2 id="rates-h">{confName} acceptance rate</h2>
+      <p class="conf-intro">{rateParagraph}</p>
+      <div class="rate-table-wrap">
+        <table class="rate-table">
+          <thead>
+            <tr><th>Year</th><th>Submitted</th><th>Accepted</th><th>Rate</th><th>Breakdown</th></tr>
+          </thead>
+          <tbody>
+            {history.slice(0, RATE_ROWS).map((r: any) => (
+              <tr>
+                <td>{confName} {r.year}</td>
+                <td class="num">{r.submitted != null ? num(r.submitted) : '—'}</td>
+                <td class="num">{r.accepted != null ? num(r.accepted) : '—'}</td>
+                <td class="num"><b>{formatRate(r.rate)}</b></td>
+                <td class="muted small">{r.detail ?? ''}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="muted small">
+        Main-conference figures from the community-maintained{' '}
+        <a href="https://github.com/lixin4ever/Conference-Acceptance-Rate" rel="noopener">Conference-Acceptance-Rate</a> table,
+        refreshed daily. Workshops set their own, usually higher, acceptance rates.
+      </p>
+    </section>
+  )}
+
   <section class="conf-faq">
     <h2>Frequently asked questions</h2>
     <dl>
@@ -252,15 +382,33 @@ const breadcrumbLd = {
     Missing a {confName} workshop? <a href={`${REPO_URL}/issues/new?template=add-workshop.yml&conference=${conf.id}`}>Add it →</a>
   </p>
 
+  {/* Countdowns and "Your time" conversion for the main-conference deadline;
+      the board pagination in the same script finds no .board here and does
+      nothing. */}
+  <script src="../../scripts/board.js"></script>
+
   <style>
     .conf-intro { font-size: 1.04rem; line-height: 1.55; color: var(--muted); max-width: 48rem; margin: 0.4rem 0 1rem; }
     .conf-years-nav { margin: 0.8rem 0 0; }
     .conf-call { margin: 0.6rem 0 0; }
+    .conf-main { margin: 1.4rem 0 0; padding: 1rem 1.2rem; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; max-width: 48rem; }
+    .conf-main h2 { margin: 0 0 0.4rem; font-size: 1.15rem; }
+    .conf-main-line { margin: 0; line-height: 1.55; }
+    .conf-main .countdown { font-size: 0.85rem; padding: 0.1rem 0.5rem; border: 1px solid var(--line); border-radius: 99px; white-space: nowrap; }
+    .conf-main .muted.small { margin: 0.5rem 0 0; }
     .conf-year { margin: 1.6rem 0; }
     .conf-year h2 a { color: inherit; text-decoration: none; }
     .conf-year h2 a:hover { text-decoration: underline; }
     .conf-year-summary { margin: 1.2rem 0; }
     .conf-year-summary p { margin: 0.2rem 0 0; }
+    .conf-rates { margin: 2.4rem 0; max-width: 48rem; }
+    .rate-table-wrap { overflow-x: auto; }
+    .rate-table { width: 100%; border-collapse: collapse; margin: 0.6rem 0 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-size: 0.9rem; }
+    .rate-table th, .rate-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .rate-table th { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+    .rate-table tr:last-child td { border-bottom: 0; }
+    .rate-table .num { font-family: var(--font-mono); text-align: right; white-space: nowrap; }
+    .rate-table th:nth-child(2), .rate-table th:nth-child(3), .rate-table th:nth-child(4) { text-align: right; }
     .conf-faq { margin: 2.4rem 0; max-width: 48rem; }
     .conf-faq dt { font-weight: 600; margin-top: 1rem; }
     .conf-faq dd { margin: 0.3rem 0 0; color: var(--muted); }
