@@ -37,8 +37,21 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 const consoleErrors = [];
 const netProblems = [];
 const pagefind = { requests: 0, byStatus: {} };
+// The MathJax check waits on a single 2.1 MB async bundle, so "did it fail" is
+// not the useful question — "did it arrive, and when" is. Run #130 failed twice
+// with no MathJax request in the failure list at all, which told us it had not
+// failed but not whether it was still downloading.
+const mathjax = { requested: false, status: null, bytes: null, ms: null, startedAt: null };
 page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 160)); });
-page.on('response', (r) => {
+page.on('request', (r) => {
+  if (r.url().includes('/vendor/mathjax/')) { mathjax.requested = true; mathjax.startedAt = Date.now(); }
+});
+page.on('response', async (r) => {
+  if (r.url().includes('/vendor/mathjax/')) {
+    mathjax.status = r.status();
+    mathjax.ms = mathjax.startedAt ? Date.now() - mathjax.startedAt : null;
+    mathjax.bytes = Number(r.headers()['content-length'] ?? 0) || null;
+  }
   const isPf = r.url().includes('pagefind');
   if (isPf) { pagefind.requests += 1; pagefind.byStatus[r.status()] = (pagefind.byStatus[r.status()] || 0) + 1; }
   if (r.status() >= 400) netProblems.push(`${r.status()} ${r.url().slice(0, 120)}`);
@@ -199,8 +212,24 @@ console.log('— the conference deadlines page and the tools answer —');
 
   await page.goto(BASE + '/tools/latex-to-png/', { waitUntil: 'domcontentloaded' });
   let rendered = false;
-  await page.waitForSelector('#toolPreview svg', { timeout: 25000 }).then(() => { rendered = true; }).catch(() => {});
-  check('the vendored MathJax renders an equation', rendered);
+  // 45s, not 25s. This waits on /vendor/mathjax/tex-svg.js — 2.1 MB, loaded
+  // async, then parsed and run before anything reaches the DOM. Run #130 missed
+  // 25s twice while the runner was being rate-limited (429 from the analytics
+  // endpoint) and challenged (401 plus a DNS failure from Cloudflare); no MathJax
+  // request failed, so the bundle was simply still in flight. From a warm CDN it
+  // arrives in under 200ms, so the extra budget costs no signal.
+  await page.waitForSelector('#toolPreview svg', { timeout: 45000 }).then(() => { rendered = true; }).catch(() => {});
+  const mjState = rendered
+    ? ''
+    : await page
+        .evaluate(() => ({
+          mathjax: typeof window.MathJax,
+          tex2svg: !!(window.MathJax && window.MathJax.tex2svgPromise),
+          preview: (document.getElementById('toolPreview')?.textContent || '').trim().slice(0, 40),
+        }))
+        .then((v) => ` — MathJax ${v.mathjax}, tex2svgPromise ${v.tex2svg}, preview “${v.preview}”`)
+        .catch(() => '');
+  check('the vendored MathJax renders an equation', rendered, rendered ? '' : `no SVG within 45s${mjState}`);
 }
 
 await browser.close();
@@ -213,6 +242,14 @@ if (fail) {
   console.log(`- pagefind requests: ${pagefind.requests} (${Object.entries(pagefind.byStatus).map(([k, v]) => `${k}×${v}`).join(' ') || 'none'})`);
   console.log(`- failed/4xx/5xx requests: ${netProblems.length ? netProblems.slice(0, 8).join(' | ') : 'none'}`);
   console.log(`- console errors: ${consoleErrors.length ? consoleErrors.slice(0, 5).join(' | ') : 'none'}`);
+  console.log(
+    `- mathjax bundle: ${
+      mathjax.requested
+        ? `requested, status ${mathjax.status ?? 'no response yet'}` +
+          `${mathjax.bytes ? `, ${mathjax.bytes} bytes` : ''}${mathjax.ms != null ? `, ${mathjax.ms}ms to respond` : ''}`
+        : 'never requested'
+    }`,
+  );
   if (searchUi) console.log(`- the page at the moment search gave up: ${JSON.stringify(searchUi)}`);
 }
 process.exit(fail ? 1 : 0);
