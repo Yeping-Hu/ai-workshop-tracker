@@ -108,6 +108,12 @@ jobs:
         run: node scripts/openreview_rate_test.mjs
       - name: Test the search results' sort orders
         run: node scripts/result_sort_test.mjs
+      - name: Test the citation model and formatters (BibTeX, APA, MLA, IEEE, ACM)
+        run: node scripts/citations_test.mjs
+      - name: Test the reference readers (RIS, NBIB, CSL, ISBN, PubMed, identifiers)
+        run: node scripts/reference_parsers_test.mjs
+      - name: Test the LaTeX tools (escaping, tables, Markdown, word count)
+        run: node scripts/latex_tools_test.mjs
       - name: Validate workshop data
         id: validate
         run: node scripts/validate.mjs --report validation-report.md
