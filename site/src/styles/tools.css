@@ -79,10 +79,22 @@
    is why the compact selects dropped back to 28px but the Caption and Label
    fields on excel-to-latex stayed at 41. Matching its specificity and coming
    later wins. */
+/* The compact row gets its OWN floor rather than the full-size 2.55rem: these sit
+   inline with their labels and are meant to be smaller. 2rem, because a select
+   with the same padding and font still computes shorter than an input — 28px
+   against 32px — and only a floor makes the two agree. */
 .tool-opts select,
-.tool-opts input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]) { min-height: 0; }
+.tool-opts input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]) { min-height: 2rem; }
 .tool-opts select { font: inherit; font-size: 0.88rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 0.25rem 0.45rem; }
-.tool-opts input[type="number"], .tool-opts input[type="text"] { font: inherit; font-size: 0.88rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 0.25rem 0.45rem; width: 7rem; }
+/* Same :not() chain as the full-size rule, for the same reason as the min-height
+   opt-out above: at (0,2,1) this lost to that rule's (0,5,1), so its padding never
+   applied and these inputs kept the full-size 0.5rem — 39px beside 28px selects in
+   a row meant to be uniform. Matching specificity lets the compact padding land.
+   The width stays on the type selectors, which is all it needed. */
+.tool-opts input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]) {
+  font: inherit; font-size: 0.88rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 0.25rem 0.45rem; width: 7rem;
+}
+.tool-opts input[type="number"], .tool-opts input[type="text"] { width: 7rem; }
 .tool-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
 .tool-actions .btn { cursor: pointer; font: inherit; font-size: 0.92rem; font-weight: 600; line-height: 1.3; }
 /* A button in the same row as the fields matches their height. .tool-row aligns
