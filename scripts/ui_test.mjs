@@ -1532,7 +1532,12 @@ await page.evaluate(() => localStorage.clear());
   check('a render that finishes after the box was emptied does not show', await page.$eval('#toolPreview', (el) => el.classList.contains('is-empty') && el.querySelector('svg') === null && el.textContent === 'Type some LaTeX above.'), await page.$eval('#toolPreview', (el) => `${el.className} / ${el.textContent.trim().slice(0, 30)} / svg:${el.querySelector('svg') !== null}`));
   await page.unroute('**/vendor/mathjax/tex-svg.js');
   await page.type('#toolInput', 'e^{i\\pi}+1=0', { delay: 10 });
-  await page.waitForSelector('#toolPreview svg', { timeout: 25000 });
+  // The render of the whole expression at a size: its last glyph, the "0",
+  // in an SVG whose font is that size. On a slow runner the typing pauses
+  // long enough for a partial expression to render, and "e^{i\p" renders as
+  // an error box, so the first SVG to appear is not always the equation.
+  const settledAt = (px) => page.waitForFunction((want) => { const s = document.querySelector('#toolPreview svg'); return !!s && getComputedStyle(s).fontSize === want && !!s.querySelector('[data-c="30"]'); }, `${px}px`, { timeout: 25000 });
+  await settledAt(24);
   check('MathJax renders a typed equation from the vendored bundle', await page.$eval('#toolPreview svg', (svg) => svg.querySelector('defs path') !== null));
   // The assistive MathML copy MathJax adds for screen readers is hidden only by
   // a stylesheet a full typeset injects; a convert-only page showed it as a
@@ -1545,11 +1550,11 @@ await page.evaluate(() => localStorage.clear());
   const svgWidth = () => page.$eval('#toolPreview svg', (s) => s.getBoundingClientRect().width);
   const widthAt24 = await svgWidth();
   await page.selectOption('#optSize', '48');
-  await page.waitForFunction((w) => { const s = document.querySelector('#toolPreview svg'); return !!s && Math.abs(s.getBoundingClientRect().width / w - 2) < 0.05; }, widthAt24, { timeout: 5000 }).catch(() => {});
+  await settledAt(48);
   const widthAt48 = await svgWidth();
   check('the picked font size sizes the equation (48 px draws it twice as wide as 24 px)', Math.abs(widthAt48 / widthAt24 - 2) < 0.05, `${widthAt24} -> ${widthAt48}`);
   await page.selectOption('#optSize', '24');
-  await page.waitForFunction((w) => { const s = document.querySelector('#toolPreview svg'); return !!s && Math.abs(s.getBoundingClientRect().width / w - 1) < 0.05; }, widthAt24, { timeout: 5000 }).catch(() => {});
+  await settledAt(24);
   // The buttons save a file rather than opening the image as a page (the
   // site's link handler once sent the host-less blob: URL to a new tab), and
   // the PNG can go to the clipboard as an image.
