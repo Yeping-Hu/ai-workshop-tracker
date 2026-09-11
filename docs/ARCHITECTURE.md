@@ -828,9 +828,19 @@ share its zone. And the `end` date a bot-created row carries feeds the same
 status ladder as a hand-typed one, so a 2027 workshop imported later flips to
 "Past" the day its conference ends without anyone adding the row.
 
+What the sync cannot settle on its own — an earlier upstream deadline,
+trackers that disagree, a hand-typed value the trackers now contradict, a
+next cycle that should have appeared, acceptance rates the source lacks —
+goes to one self-maintaining `data-health` issue, and a run that fails opens
+another (AUTOMATION.md, "Main-conference facts come from the community
+trackers"). The daily smoke test loads `/conference/`, resolves a DOI through
+the live registries and renders an equation, so a broken page or a registry
+that stopped answering opens the `smoke` issue like a broken search does.
+
 Pinned by `scripts/editions_sync_test.mjs` (readers, precedence, decision,
-serializers, the rates parser, `featuredEdition`) and the conference-pages
-section of `scripts/ui_test.mjs`; the files are checked by `validate.mjs`.
+serializers, the rates parser, `featuredEdition`, the review report) and the
+conference-pages section of `scripts/ui_test.mjs`; the files are checked by
+`validate.mjs`.
 
 ## Deadline provenance (append-only observation log)
 
@@ -1647,6 +1657,19 @@ with `enableAssistiveMml: false`: MathJax otherwise attaches a hidden MathML
 copy of each equation for screen readers and hides it with a stylesheet that
 only a full typeset run injects, so on these convert-only pages the copy
 rendered natively under the SVG and the preview showed every equation twice.
+
+**Downloads and the clipboard.** A generated file is saved through a one-off
+`<a download>` pointing at a blob URL (`download()` in `ui.js`). Base.astro's
+link handler exempts download links (see "External links open a new tab"),
+because a blob URL has no host and the handler once sent it to a new tab,
+where the browser showed the equation as a page. The LaTeX pages also copy
+the PNG to the clipboard as an image (`copyImage()`): the `ClipboardItem` is
+built from the still-rendering promise, since Safari only allows a clipboard
+write inside the click that asked for it and the canvas has not finished by
+then. SVG has no such path — no browser accepts `image/svg+xml` on the
+clipboard — so the SVG page copies the markup, which vector editors paste as
+graphics, and its FAQ says so. `ui_test.mjs` checks both downloads by
+filename and the clipboard copy.
 
 **What they deliberately do not do**, and say so in their FAQs: no tool
 calls an LLM; the word counter does not follow `\input`; the URL tool

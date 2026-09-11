@@ -25,6 +25,11 @@ import {
   parseAcceptanceReadme,
   sourceId,
   ACCEPTANCE_SOURCE,
+  relevantReview,
+  missingNextCycles,
+  staleAcceptanceRates,
+  buildEditionsReport,
+  reviewKey,
 } from './sync_editions.mjs';
 import { resolveEdition, featuredEdition, previousEdition, hasMainConference, acceptanceHistory, latestAcceptanceRate, formatRate, editionOrder, typicalTiming } from '../lib/editions.mjs';
 import { utcMsToWallClock, zonedToUtcMs } from '../lib/dates.mjs';
@@ -36,6 +41,7 @@ function check(label, got, expect) {
   console.log(`${ok ? '✓' : '✗'} ${label}: ${JSON.stringify(got)}${ok ? '' : `  (expected ${JSON.stringify(expect)})`}`);
 }
 const NOW = Date.UTC(2026, 8, 10, 12, 0); // 2026-09-10 12:00 UTC
+const DAY = 86_400_000;
 const TODAY = '2026-09-10';
 
 console.log('— zones and deadlines as the trackers write them —');
@@ -270,9 +276,11 @@ check('… as one changelog line', moved.changes, ['iclr 2027 paper_deadline: 20
 const earlier = { ...rec27, paper_deadline: '2026-09-20 23:59' };
 const blocked = decideEdition({ row: bot, rec: earlier, conf: 'iclr', year: 2027, nowMs: NOW });
 check('an earlier upstream deadline is not applied', [blocked.action, blocked.reason, blocked.warnings.length], ['skip', 'unchanged', 1]);
+check('… and is handed to a person with both instants', [blocked.review[0].kind, blocked.review[0].stored, blocked.review[0].tracker, blocked.review[0].storedMs > blocked.review[0].trackerMs], ['earlier-blocked', '2026-09-25 23:59 AoE', '2026-09-20 23:59 AoE', true]);
 const edited = { ...bot, paper_deadline: '2026-09-26 23:59' };
 const frozenD = decideEdition({ row: edited, rec: later, conf: 'iclr', year: 2027, nowMs: NOW });
 check('a deadline a person edited is frozen', [frozenD.action, frozenD.reason, frozenD.frozen], ['skip', 'frozen', ['paper_deadline']]);
+check('… and reported as diverging from the tracker', frozenD.review.map((r) => [r.kind, r.field, r.stored, r.tracker]), [['frozen-diverged', 'paper_deadline', '2026-09-26 23:59 AoE', '2026-09-28 23:59 AoE']]);
 const rezoned = { ...bot, timezone: 'UTC' };
 check('a changed timezone freezes both deadlines', decideEdition({ row: rezoned, rec: later, conf: 'iclr', year: 2027, nowMs: NOW }).frozen, ['abstract_deadline', 'paper_deadline']);
 const corrected = { ...rec27, place: 'San Francisco, CA, United States' };
@@ -284,6 +292,9 @@ check('an unchanged row is a no-op', decideEdition({ row: bot, rec: rec27, conf:
 const implausible = { ...rec27, paper_deadline: '2029-09-25 23:59', abstract_deadline: undefined };
 const imp = decideEdition({ row: null, rec: implausible, conf: 'iclr', year: 2027, nowMs: NOW, today: TODAY });
 check('an implausible deadline is skipped and named, the rest still lands', ['paper_deadline' in imp.row, imp.row.place, imp.warnings.length], [false, 'San Francisco, United States', 1]);
+check('… and reported', imp.review.map((r) => r.kind), ['implausible']);
+check('a deadline without dates is reported so a person can add the row', decideEdition({ row: null, rec: { ...rec27, start: undefined, end: undefined }, conf: 'iclr', year: 2027, nowMs: NOW }).review.map((r) => [r.kind, r.tracker]), [['no-dates-yet', '2026-09-25 23:59 AoE']]);
+check('a disagreement between trackers is a review item with both instants', merged.get('icml-2026').conflicts.map((c) => [c.kind, c.chosenSource, c.otherSource, c.chosenMs < c.otherMs]), [['disagreement', 'ccfddl', 'ai-deadlines', true]]);
 const handZone = { conference: 'icra', year: 2027, end: '2027-05-28', timezone: 'America/Los_Angeles' };
 const inZone = decideEdition({ row: handZone, rec: { conference: 'icra', year: 2027, timezone: 'UTC', paper_deadline: '2026-09-16 07:59', from: ['ai-deadlines'], provenance: { paper_deadline: 'ai-deadlines', timezone: 'ai-deadlines' }, warnings: [] }, conf: 'icra', year: 2027, nowMs: NOW });
 // 07:59 UTC on Sep 16 is 00:59 PDT (the tracker had written "PST" for a September date).
@@ -322,7 +333,7 @@ check('NeurIPS 2025 in full', parsed.rows.find((r) => r.conference === 'neurips'
 check('a "?" count is left out, the rate kept', parsed.rows.find((r) => r.year === 2022), { conference: 'neurips', year: 2022, rate: 25.6, submitted: 10411, source: ACCEPTANCE_SOURCE });
 check('a detail with placeholders is left out', 'detail' in parsed.rows.find((r) => r.conference === 'iclr' && r.year === 2025), false);
 check('the NIPS alias maps to neurips', parsed.rows.find((r) => r.year === 2017).conference, 'neurips');
-check('a rate that contradicts its counts is skipped and named', parsed.skipped, ['iclr 2023: 99% does not match 1574/4956']);
+check('a rate that contradicts its counts is skipped and named', parsed.skipped, [{ conference: 'iclr', year: 2023, message: '99% does not match 1574/4956' }]);
 const ratesText = serializeAcceptanceRates(parsed.rows);
 check('the rates file round-trips, sorted by conference and year', yaml.load(ratesText).map((r) => `${r.conference}-${r.year}`), ['cvpr-2025', 'iclr-2024', 'iclr-2025', 'icml-2016', 'neurips-2017', 'neurips-2022', 'neurips-2025']);
 
@@ -364,6 +375,42 @@ check('… or a spread of months', typicalTiming(spread, 'x'), { deadline: 'Janu
 check('… mid-month reads as a compound', typicalTiming([resolveEdition({ conference: 'y', year: 2026, end: '2026-06-05', paper_deadline: '2025-09-15 23:59', timezone: 'AoE' }, NOW)], 'y', 6).deadline, 'mid-September');
 check('… the configured month when no edition has dates', typicalTiming([resolveEdition({ conference: 'z', year: 2026, paper_deadline: '2025-11-13 23:59', timezone: 'AoE' }, NOW)], 'z', 6).conference, 'June');
 check('… and nothing without a past call', typicalTiming(eds, 'corl'), null);
+
+console.log('— the review report —');
+const rev = [
+  { kind: 'earlier-blocked', conf: 'iclr', year: 2027, field: 'paper_deadline', stored: 'a', storedMs: NOW + 10 * DAY, tracker: 'b', trackerMs: NOW + 5 * DAY, source: 'ccfddl' },
+  { kind: 'earlier-blocked', conf: 'iclr', year: 2026, field: 'paper_deadline', stored: 'a', storedMs: NOW - 300 * DAY, tracker: 'b', trackerMs: NOW - 305 * DAY, source: 'ccfddl' },
+  { kind: 'disagreement', conf: 'icml', year: 2026, field: 'paper_deadline', chosen: 'a', chosenMs: NOW - 200 * DAY, other: 'b', otherMs: NOW - 198 * DAY, chosenSource: 'ccfddl', otherSource: 'ai-deadlines' },
+  { kind: 'frozen-diverged', conf: 'eccv', year: 2026, field: 'end', stored: '2026-09-13', tracker: '2026-09-12', source: 'ai-deadlines' },
+  { kind: 'frozen-diverged', conf: 'iclr', year: 2026, field: 'end', stored: 'x', tracker: 'y', source: 'ai-deadlines' },
+  { kind: 'no-dates-yet', conf: 'cvpr', year: 2027, tracker: 'c', trackerMs: NOW + 60 * DAY, source: 'ccfddl' },
+];
+const kept = relevantReview(rev, eds, NOW);
+check('only items that still matter survive: a future deadline, a running edition, a row still to create', kept.map(reviewKey), ['earlier-blocked:iclr-2027:paper_deadline', 'frozen-diverged:eccv-2026:end', 'no-dates-yet:cvpr-2027']);
+const cycleEds = (deadline, year, prevYear = null) => [
+  ...(prevYear ? [resolveEdition({ conference: 'c', year: prevYear, end: `${prevYear}-07-15`, paper_deadline: `${prevYear}-01-30 23:59`, timezone: 'AoE' }, NOW)] : []),
+  resolveEdition({ conference: 'c', year, end: `${year}-07-15`, paper_deadline: deadline, timezone: 'AoE' }, NOW),
+];
+const NOV = Date.UTC(2026, 10, 15, 12, 0);
+check('a yearly call due in late January is asked for from mid-November', missingNextCycles(cycleEds('2026-01-29 23:59', 2026, 2025), NOV).map((it) => [it.kind, it.year, it.lastYear, it.hasRow]), [['next-cycle-missing', 2027, 2026, false]]);
+check('… not in September', missingNextCycles(cycleEds('2026-01-29 23:59', 2026, 2025), NOW), []);
+check('… not once the next edition has a deadline', missingNextCycles([...cycleEds('2026-01-29 23:59', 2026), resolveEdition({ conference: 'c', year: 2027, end: '2027-07-15', paper_deadline: '2027-01-28 23:59', timezone: 'AoE' }, NOV)], NOV), []);
+check('… a dates-only next row still asks for the deadline', missingNextCycles([...cycleEds('2026-01-29 23:59', 2026), resolveEdition({ conference: 'c', year: 2027, end: '2027-07-15' }, NOV)], NOV)[0].hasRow, true);
+check('… a biennial conference keeps its own cadence', missingNextCycles([resolveEdition({ conference: 'e', year: 2024, end: '2024-10-04', paper_deadline: '2024-03-07 21:00', timezone: 'UTC' }, NOV), resolveEdition({ conference: 'e', year: 2026, end: '2026-09-13', paper_deadline: '2026-03-05 22:00', timezone: 'UTC' }, NOV)], Date.UTC(2026, 11, 20)), []);
+check('… and is dropped after the grace period', missingNextCycles(cycleEds('2025-01-30 23:59', 2025), Date.UTC(2026, 9, 1)), []);
+const rateRows = [{ conference: 'c', year: 2024, rate: 20, source: 's' }];
+const rateEds = [
+  resolveEdition({ conference: 'c', year: 2024, end: '2024-07-15' }, NOW),
+  resolveEdition({ conference: 'c', year: 2025, end: '2025-07-19' }, NOW),
+  resolveEdition({ conference: 'c', year: 2026, end: '2026-07-11' }, NOW),
+  resolveEdition({ conference: 'd', year: 2025, end: '2025-06-01' }, NOW),
+];
+check('a finished edition without a rate is asked for after 120 days; a recent one is not; a conference with no rates at all is not', staleAcceptanceRates(rateEds, rateRows, [], NOW), [{ kind: 'rate-missing', conf: 'c', years: [2025] }]);
+check('a recent contradictory source row is reported, an old one is not', staleAcceptanceRates(rateEds, rateRows, [{ conference: 'c', year: 2025, message: 'bad' }, { conference: 'c', year: 2014, message: 'old' }], NOW).map((it) => it.kind), ['rate-missing', 'rate-contradiction']);
+const body = buildEditionsReport([...kept, ...missingNextCycles(cycleEds('2026-01-29 23:59', 2026, 2025), NOV), ...staleAcceptanceRates(rateEds, rateRows, [], NOW)], { names: new Map([['iclr', 'ICLR'], ['c', 'Conf']]) });
+check('the report has one section per kind and names the conference', ['### A tracker says a deadline moved earlier', '**ICLR 2027**', '### The next call should have appeared by now', '**Conf 2027**', '### Acceptance rates not yet in the source table'].every((t) => body.includes(t)), true);
+check('… and carries every key for the workflow', /<!-- editions-review-keys: earlier-blocked:iclr-2027:paper_deadline, frozen-diverged:eccv-2026:end, no-dates-yet:cvpr-2027, next-cycle-missing:c-2027, rate-missing:c-2025 -->/.test(body), true);
+check('nothing to review is an empty report', buildEditionsReport([]), '');
 
 console.log(failed ? `\n${failed} check(s) failed` : '\nall checks passed');
 process.exit(failed ? 1 : 0);

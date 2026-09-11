@@ -165,6 +165,44 @@ if (searched) {
   check('clicking it lands on the paper row', landed.scrolled && landed.isTarget, JSON.stringify(landed));
 }
 
+/* ------------------------------ the conference deadlines and the tools --- */
+// Added with the conference pages and the /tools/ section: a page that lists
+// the main-conference deadlines, one citation tool driven end to end against
+// the real registries (doi.org content negotiation answered by Crossref with
+// CORS headers is the path every citation tool shares, so a registry that
+// stops answering browsers is caught here), and the vendored MathJax bundle.
+console.log('— the conference deadlines page and the tools answer —');
+{
+  const res = await page.goto(BASE + '/conference/', { waitUntil: 'domcontentloaded' });
+  const dl = await page.evaluate(() => ({
+    rows: document.querySelectorAll('.dl-table tbody tr').length,
+    open: document.querySelectorAll('.dl-table tbody tr.is-open').length,
+  }));
+  check('/conference/ lists the conferences with their deadlines', res?.status() === 200 && dl.rows >= 5, `status ${res?.status()}, ${dl.rows} rows`);
+  if (dl.open) {
+    let ticking = false;
+    await page
+      .waitForFunction(() => /\d+[dhm]/.test(document.querySelector('.dl-table tr.is-open .countdown')?.textContent || ''), null, { timeout: 8000 })
+      .then(() => { ticking = true; })
+      .catch(() => {});
+    check('an open call counts down', ticking);
+  }
+
+  await page.goto(BASE + '/tools/bibtex-citation-generator/?q=10.1038%2Fnature14539', { waitUntil: 'domcontentloaded' });
+  let cited = false;
+  await page
+    .waitForFunction(() => /@article\{/.test(document.querySelector('#toolOut')?.textContent || ''), null, { timeout: 25000 })
+    .then(() => { cited = true; })
+    .catch(() => {});
+  const toolStatus = cited ? '' : await page.$eval('#toolStatus', (el) => el.textContent.trim()).catch(() => '(no status)');
+  check('a DOI resolves to BibTeX through the live registries', cited, cited ? '' : `no @article within 25s — the page says: “${toolStatus}”`);
+
+  await page.goto(BASE + '/tools/latex-to-png/', { waitUntil: 'domcontentloaded' });
+  let rendered = false;
+  await page.waitForSelector('#toolPreview svg', { timeout: 25000 }).then(() => { rendered = true; }).catch(() => {});
+  check('the vendored MathJax renders an equation', rendered);
+}
+
 await browser.close();
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) {

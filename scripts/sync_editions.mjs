@@ -66,15 +66,37 @@
  *     written only when a row changed, and each change is appended to
  *     $DEADLINE_CHANGELOG for the commit message, like every other data job.
  *
+ * What the sync cannot settle goes to a person. `--report <file>` writes the
+ * markdown body of ONE self-maintaining issue ("Data health: conference
+ * editions to review", kept by sync-editions.yml; an empty report closes it),
+ * listing only what a person has to decide, and only while it still matters
+ * (the edition is not over, the deadline in question still ahead):
+ *
+ *   - a tracker gives an EARLIER deadline than the stored bot value
+ *     (later-only declined it; a real correction is set by hand);
+ *   - the two trackers disagree on a deadline by more than an hour;
+ *   - a value a person typed differs from what the trackers now say;
+ *   - a tracker value was skipped as implausible;
+ *   - a tracker knows a deadline but no dates, so no row could be created;
+ *   - the next cycle should have appeared by now — the previous call's
+ *     anniversary (at the conference's own cadence, so a biennial one is not
+ *     asked for yearly) is within 90 days and no later edition exists — and
+ *     is dropped again 180 days past it, so a conference that stopped does
+ *     not stay on the list forever;
+ *   - a finished edition (120 days past its end) has no acceptance rate in
+ *     the source table, or the table's row for a recent year contradicts
+ *     itself and was skipped.
+ *
  * Usage:
  *   node scripts/sync_editions.mjs
  *   node scripts/sync_editions.mjs --dry-run
+ *   node scripts/sync_editions.mjs --report editions-review.md
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
 import { REPO_ROOT, loadConferences, loadEditions } from '../lib/workshops.mjs';
-import { loadAcceptanceRates, EDITION_FIELDS, SYNCED_FIELDS } from '../lib/editions.mjs';
+import { loadAcceptanceRates, resolveEdition, EDITION_FIELDS, SYNCED_FIELDS } from '../lib/editions.mjs';
 import {
   parseDeadlineString,
   parseDateUtcMs,
@@ -84,6 +106,8 @@ import {
   utcMsToWallClock,
   resolveDeadlineUtcMs,
   plausibleDeadline,
+  formatDeadlineWallClock,
+  DAY_MS,
 } from '../lib/dates.mjs';
 import { decideDeadlineUpdate } from './discover_openreview.mjs';
 
@@ -322,7 +346,7 @@ export function mergeRecords(records) {
   const out = new Map();
   for (const [k, recs] of groups) {
     const by = Object.fromEntries(recs.map((r) => [r.source, r]));
-    const m = { conference: recs[0].conference, year: recs[0].year, from: [], provenance: {}, warnings: [] };
+    const m = { conference: recs[0].conference, year: recs[0].year, from: [], provenance: {}, warnings: [], conflicts: [] };
     // Deadlines and their zone are one unit, from the first tracker with a
     // paper deadline (or, failing that, an abstract deadline).
     const unitSrc =
@@ -350,6 +374,18 @@ export function mergeRecords(records) {
           const other = resolveDeadlineUtcMs(by[s].paper_deadline, by[s].timezone);
           if (mine != null && other != null && Math.abs(mine - other) > 3_600_000) {
             m.warnings.push(`${k}: ${unitSrc} says the paper deadline is ${m.paper_deadline} ${m.timezone}, ${s} says ${by[s].paper_deadline} ${by[s].timezone} — using ${unitSrc}`);
+            m.conflicts.push({
+              kind: 'disagreement',
+              conf: m.conference,
+              year: m.year,
+              field: 'paper_deadline',
+              chosen: `${m.paper_deadline} ${m.timezone}`,
+              chosenSource: unitSrc,
+              chosenMs: mine,
+              other: `${by[s].paper_deadline} ${by[s].timezone}`,
+              otherSource: s,
+              otherMs: other,
+            });
           }
         }
       }
@@ -399,12 +435,14 @@ export function orderRow(r) {
 
 const DEADLINE_FIELDS = ['abstract_deadline', 'paper_deadline'];
 const PLAIN_FIELDS = ['start', 'end', 'url', 'place', 'notification'];
-const skip = (reason, extra = {}) => ({ action: 'skip', reason, row: null, changes: [], warnings: [], frozen: [], ...extra });
+const skip = (reason, extra = {}) => ({ action: 'skip', reason, row: null, changes: [], warnings: [], frozen: [], review: [], ...extra });
 
 /**
- * {action: 'create'|'update'|'skip', reason, row, changes, warnings, frozen}.
- * `row` is the complete replacement row; `changes` are changelog lines;
- * `frozen` names the fields a person's value kept.
+ * {action: 'create'|'update'|'skip', reason, row, changes, warnings, frozen,
+ * review}. `row` is the complete replacement row; `changes` are changelog
+ * lines; `frozen` names the fields a person's value kept; `review` holds
+ * the structured items a person should look at (see the header), each
+ * with the instants involved so relevantReview can drop the stale ones.
  */
 export function decideEdition({ row, rec, conf, year, nowMs = Date.now(), today = isoDay(nowMs) }) {
   const thisYear = new Date(nowMs).getUTCFullYear();
@@ -413,17 +451,26 @@ export function decideEdition({ row, rec, conf, year, nowMs = Date.now(), today 
   const changes = [];
   const warnings = [];
   const frozen = [];
+  const review = [];
   const yearOf = (v) => Number(String(v).slice(0, 4));
   const plausible = (f) => {
     const ms = resolveDeadlineUtcMs(rec[f], rec.timezone);
     if (ms != null && plausibleDeadline(ms, yearOf(rec[f]), year, nowMs)) return ms;
     warnings.push(`${label}: ${rec.provenance[f]} gives ${f} ${rec[f]} ${rec.timezone}, which looks implausible for ${year} — skipped`);
+    review.push({ kind: 'implausible', conf, year, field: f, tracker: `${rec[f]} ${rec.timezone}`, trackerMs: ms, source: rec.provenance[f] });
     return null;
   };
 
   if (!row) {
     if (year < thisYear) return skip('past-year');
-    if (!rec.end) return skip('no-dates-yet');
+    if (!rec.end) {
+      return skip(
+        'no-dates-yet',
+        rec.paper_deadline
+          ? { review: [{ kind: 'no-dates-yet', conf, year, tracker: `${rec.paper_deadline} ${rec.timezone}`, trackerMs: resolveDeadlineUtcMs(rec.paper_deadline, rec.timezone), source: rec.provenance.paper_deadline }] }
+          : {},
+      );
+    }
     const next = { conference: conf, year };
     const synced = { from: rec.from.join(', '), as_of: today };
     for (const f of PLAIN_FIELDS) {
@@ -441,7 +488,7 @@ export function decideEdition({ row, rec, conf, year, nowMs = Date.now(), today 
     }
     next.synced = synced;
     changes.unshift(`${label}: new row from ${rec.from.join(' and ')} (${[next.start && next.end ? `${next.start} to ${next.end}` : null, next.place].filter(Boolean).join(', ') || 'dates'})`);
-    return { action: 'create', reason: 'new-edition', row: orderRow(next), changes, warnings, frozen };
+    return { action: 'create', reason: 'new-edition', row: orderRow(next), changes, warnings, frozen, review };
   }
 
   const stamps = row.synced && typeof row.synced === 'object' ? row.synced : {};
@@ -465,7 +512,10 @@ export function decideEdition({ row, rec, conf, year, nowMs = Date.now(), today 
         synced[f] = rec[f];
         touched = true;
       }
-    } else if (!same(row[f], rec[f])) frozen.push(f);
+    } else if (!same(row[f], rec[f])) {
+      frozen.push(f);
+      review.push({ kind: 'frozen-diverged', conf, year, field: f, stored: String(row[f]), tracker: String(rec[f]), source: rec.provenance[f] });
+    }
   }
 
   // A person who changed the row's zone owns both deadlines from then on.
@@ -474,6 +524,11 @@ export function decideEdition({ row, rec, conf, year, nowMs = Date.now(), today 
     if (rec[f] == null) continue;
     if (zoneFrozen) {
       frozen.push(f);
+      const storedMs = resolveDeadlineUtcMs(row[f], row.timezone);
+      const trackerMs = resolveDeadlineUtcMs(rec[f], rec.timezone);
+      if (row[f] == null || storedMs !== trackerMs) {
+        review.push({ kind: 'frozen-diverged', conf, year, field: f, stored: row[f] == null ? '(blank)' : `${row[f]} ${row.timezone}`, storedMs, tracker: `${rec[f]} ${rec.timezone}`, trackerMs, source: rec.provenance[f] });
+      }
       continue;
     }
     const srcMs = plausible(f);
@@ -500,15 +555,19 @@ export function decideEdition({ row, rec, conf, year, nowMs = Date.now(), today 
         changes.push(`${label} ${f}: ${row[f]} ${row.timezone} -> ${value} ${zone} (${d.reason}, ${rec.provenance[f]})`);
       } else if (d.reason === 'earlier-blocked') {
         warnings.push(`${label}: ${rec.provenance[f]} gives ${f} ${rec[f]} ${rec.timezone}, earlier than the stored ${row[f]} ${row.timezone} — left unchanged (later-only)`);
+        review.push({ kind: 'earlier-blocked', conf, year, field: f, stored: `${row[f]} ${row.timezone}`, storedMs: curMs, tracker: `${rec[f]} ${rec.timezone}`, trackerMs: srcMs, source: rec.provenance[f] });
       }
-    } else if (resolveDeadlineUtcMs(row[f], row.timezone) !== srcMs) frozen.push(f);
+    } else if (resolveDeadlineUtcMs(row[f], row.timezone) !== srcMs) {
+      frozen.push(f);
+      review.push({ kind: 'frozen-diverged', conf, year, field: f, stored: `${row[f]} ${row.timezone}`, storedMs: resolveDeadlineUtcMs(row[f], row.timezone), tracker: `${rec[f]} ${rec.timezone}`, trackerMs: srcMs, source: rec.provenance[f] });
+    }
   }
 
-  if (!touched) return skip(frozen.length ? 'frozen' : 'unchanged', { warnings, frozen });
+  if (!touched) return skip(frozen.length ? 'frozen' : 'unchanged', { warnings, frozen, review });
   synced.from = rec.from.join(', ');
   synced.as_of = today;
   next.synced = synced;
-  return { action: 'update', reason: 'synced', row: orderRow(next), changes, warnings, frozen };
+  return { action: 'update', reason: 'synced', row: orderRow(next), changes, warnings, frozen, review };
 }
 
 /** The four conference-years a run looks at: two back, this year, next. */
@@ -632,7 +691,7 @@ export function parseAcceptanceReadme(md, conferences) {
     const submitted = m[5] === '?' ? null : Number(m[5]);
     if (!(rate > 0 && rate < 100)) continue;
     if (accepted != null && submitted != null && (submitted === 0 || Math.abs(rate - (accepted / submitted) * 100) > 1)) {
-      skipped.push(`${id} ${year}: ${rate}% does not match ${accepted}/${submitted}`);
+      skipped.push({ conference: id, year, message: `${rate}% does not match ${accepted}/${submitted}` });
       continue;
     }
     seen.add(key);
@@ -648,6 +707,132 @@ export function parseAcceptanceReadme(md, conferences) {
     });
   }
   return { rows, skipped };
+}
+
+// ---------------------------------------------------------------------------
+// What a person has to decide: the review report
+// ---------------------------------------------------------------------------
+
+const DEADLINE_KINDS = new Set(['earlier-blocked', 'disagreement', 'implausible', 'no-dates-yet']);
+
+/**
+ * Only the items that still matter: the edition is not over, and for anything
+ * about a deadline, the deadline in question (stored or the tracker's) is
+ * still ahead. A tracker's other opinion about a call that closed in March is
+ * not something to act on in September.
+ */
+export function relevantReview(items, resolved, nowMs = Date.now()) {
+  const byKey = new Map((resolved ?? []).map((e) => [`${e.conference}-${e.year}`, e]));
+  return (items ?? []).filter((it) => {
+    const ed = byKey.get(`${it.conf}-${it.year}`);
+    if (ed?.over) return false;
+    const aboutDeadline = DEADLINE_KINDS.has(it.kind) || (it.kind === 'frozen-diverged' && /deadline/.test(it.field ?? ''));
+    if (!aboutDeadline) return true;
+    const instants = [it.storedMs, it.trackerMs, it.chosenMs, it.otherMs].filter((x) => x != null);
+    return instants.length ? Math.max(...instants) > nowMs : true;
+  });
+}
+
+/**
+ * Conferences whose next call should have appeared by now. The previous
+ * call's anniversary, at the conference's own cadence (the gap between its
+ * last two dated editions, so a biennial conference is not asked for
+ * yearly), is within `leadDays`, and no later edition has a deadline. Dropped
+ * again `graceDays` past the anniversary: a conference that stopped or moved
+ * its cycle should not sit on the list for ever. `hasRow` says whether a
+ * dates-only row for that year already exists (then only the deadline is
+ * missing).
+ */
+export function missingNextCycles(resolved, nowMs = Date.now(), { leadDays = 90, graceDays = 180 } = {}) {
+  const byConf = new Map();
+  for (const e of resolved ?? []) {
+    if (!byConf.has(e.conference)) byConf.set(e.conference, []);
+    byConf.get(e.conference).push(e);
+  }
+  const out = [];
+  for (const [conf, eds] of byConf) {
+    const dated = eds.filter((e) => e.paperDeadlineUtcMs != null).sort((a, b) => a.year - b.year);
+    if (!dated.length) continue;
+    const latest = dated[dated.length - 1];
+    if (latest.paperDeadlineUtcMs > nowMs) continue;
+    const cadence = dated.length > 1 ? Math.max(1, latest.year - dated[dated.length - 2].year) : 1;
+    const expected = latest.paperDeadlineUtcMs + cadence * 365.25 * DAY_MS;
+    if (nowMs < expected - leadDays * DAY_MS || nowMs > expected + graceDays * DAY_MS) continue;
+    const nextYear = latest.year + cadence;
+    out.push({
+      kind: 'next-cycle-missing',
+      conf,
+      year: nextYear,
+      lastYear: latest.year,
+      last: latest.paperDeadlineWallClock,
+      expected: isoDay(expected),
+      hasRow: eds.some((e) => e.year === nextYear),
+    });
+  }
+  return out;
+}
+
+/**
+ * Acceptance rates the source has not caught up with: for each conference
+ * that has any rate at all, the tracked editions that ended more than
+ * `graceDays` ago without a row for their year; plus a recent row the parser
+ * skipped because it contradicted itself (older contradictions are history).
+ */
+export function staleAcceptanceRates(resolved, rates, skipped = [], nowMs = Date.now(), { graceDays = 120 } = {}) {
+  const have = new Set((rates ?? []).map((r) => `${r.conference}-${r.year}`));
+  const rated = new Set((rates ?? []).map((r) => r.conference));
+  const out = [];
+  for (const conf of rated) {
+    const years = (resolved ?? [])
+      .filter((e) => e.conference === conf && e.endMs != null && e.endMs + graceDays * DAY_MS < nowMs && !have.has(`${conf}-${e.year}`))
+      .map((e) => e.year)
+      .sort((a, b) => a - b);
+    if (years.length) out.push({ kind: 'rate-missing', conf, years });
+  }
+  const thisYear = new Date(nowMs).getUTCFullYear();
+  for (const s of skipped) {
+    if (s.year >= thisYear - 3 && !have.has(`${s.conference}-${s.year}`)) out.push({ kind: 'rate-contradiction', conf: s.conference, year: s.year, detail: s.message });
+  }
+  return out;
+}
+
+/** A stable identity per item, so the workflow can tell what is new. */
+export const reviewKey = (it) => [it.kind, `${it.conf}-${it.year ?? (it.years ?? []).join('+')}`, it.field].filter(Boolean).join(':');
+
+const SECTIONS = [
+  ['earlier-blocked', 'A tracker says a deadline moved earlier (later-only, so not applied)', (it, n) => `**${n(it.conf)} ${it.year}** \`${it.field}\`: stored ${it.stored}; ${it.source} now says ${it.tracker}. If the correction is real, set the value by hand (the field is then yours).`],
+  ['disagreement', 'The trackers disagree', (it, n) => `**${n(it.conf)} ${it.year}** paper deadline: ${it.chosenSource} says ${it.chosen} (used); ${it.otherSource} says ${it.other}. Check the official call and set the value by hand if the used one is wrong.`],
+  ['frozen-diverged', 'A value you typed differs from the trackers', (it, n) => `**${n(it.conf)} ${it.year}** \`${it.field}\`: yours ${it.stored}; ${it.source} says ${it.tracker}. Yours stands; edit the row if the tracker is right.`],
+  ['implausible', 'A tracker value looked implausible and was skipped', (it, n) => `**${n(it.conf)} ${it.year}** \`${it.field}\`: ${it.source} gives ${it.tracker}. Set it by hand if it is right after all.`],
+  ['no-dates-yet', 'A deadline is known but the edition has no dates yet', (it, n) => `**${n(it.conf)} ${it.year}**: ${it.source} gives the paper deadline ${it.tracker} but no conference dates, so no row was created. Add a row with \`end\` (and \`start\`) by hand and the deadline flows in on the next run.`],
+  ['next-cycle-missing', 'The next call should have appeared by now', (it, n) => `**${n(it.conf)} ${it.year}**: ${n(it.conf)} ${it.lastYear}'s paper deadline was ${it.last}, so the ${it.year} call is normally out around ${it.expected}, and ${it.hasRow ? 'its row has no deadline yet' : 'the trackers have nothing for it yet'}. Add the deadline by hand from the official call for papers, or wait for the trackers.`],
+  ['rate-missing', 'Acceptance rates not yet in the source table', (it, n) => `**${n(it.conf)}** ${it.years.join(', ')}: the conference has ended but the source table (${ACCEPTANCE_SOURCE}) has no row. If the official numbers are out, add a row to \`data/acceptance_rates.yml\` with \`source\` set to where you read them; it wins over the bot's.`],
+  ['rate-contradiction', 'A source row contradicts itself and was skipped', (it, n) => `**${n(it.conf)} ${it.year}**: ${it.detail}. Add the correct row by hand if you know it.`],
+];
+
+/**
+ * The issue body: one section per kind, in a fixed order, or '' when there is
+ * nothing to review (the workflow then closes the issue). The trailing HTML
+ * comment carries every item's key so the workflow can comment on what is
+ * genuinely new — editing an issue body notifies nobody.
+ */
+export function buildEditionsReport(items, { names = new Map() } = {}) {
+  if (!items?.length) return '';
+  const n = (id) => names.get(id) ?? id;
+  const out = ['## Conference editions to review', ''];
+  out.push(
+    '_The cases the daily editions sync will not settle on its own — a person decides. Edit `data/editions.yml` (or `data/acceptance_rates.yml`) to set a value; a field you edit is yours from then on and the bot leaves it alone. This issue is updated automatically by the `sync-editions` workflow and closes itself when nothing is left._',
+    '',
+  );
+  for (const [kind, heading, line] of SECTIONS) {
+    const mine = items.filter((it) => it.kind === kind);
+    if (!mine.length) continue;
+    out.push(`### ${heading}`, '');
+    for (const it of mine) out.push(`- ${line(it, n)}`);
+    out.push('');
+  }
+  out.push(`<!-- editions-review-keys: ${items.map(reviewKey).join(', ')} -->`, '');
+  return out.join('\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -669,13 +854,14 @@ async function fetchText(url) {
   return { ok: false, reason: 'unreachable' };
 }
 
-async function main({ dryRun }) {
+async function main({ dryRun, reportPath }) {
   const nowMs = Date.now();
   const today = isoDay(nowMs);
   const confs = loadConferences();
   const notes = [];
   const warnings = [];
   const changes = [];
+  const review = [];
 
   // --- editions ---------------------------------------------------------------
   const records = [];
@@ -703,10 +889,14 @@ async function main({ dryRun }) {
       const key = `${c.id}-${year}`;
       const row = index.has(key) ? rows[index.get(key)] : null;
       const rec = merged.get(key) ?? null;
-      if (rec) warnings.push(...rec.warnings);
+      if (rec) {
+        warnings.push(...rec.warnings);
+        review.push(...rec.conflicts);
+      }
       const d = decideEdition({ row, rec, conf: c.id, year, nowMs, today });
       tally[d.action]++;
       warnings.push(...d.warnings);
+      review.push(...d.review);
       if (d.action === 'skip') {
         if (!skipped.has(d.reason)) skipped.set(d.reason, []);
         skipped.get(d.reason).push(key + (d.frozen?.length ? ` [${d.frozen.join(', ')}]` : ''));
@@ -726,14 +916,17 @@ async function main({ dryRun }) {
 
   // --- acceptance rates -------------------------------------------------------
   let ratesChanged = 0;
+  let finalRates = loadAcceptanceRates();
+  let rateSkips = [];
   const ratesRes = await fetchText(ACCEPTANCE_URL);
   if (!ratesRes.ok) notes.push(`acceptance rates: the README could not be fetched (${ratesRes.reason})`);
   else {
     const { rows: fresh, skipped: bad } = parseAcceptanceReadme(ratesRes.text, confs);
-    warnings.push(...bad.map((s) => `acceptance rates: ${s}`));
+    rateSkips = bad;
+    warnings.push(...bad.map((s) => `acceptance rates: ${s.conference} ${s.year}: ${s.message}`));
     if (!fresh.length) notes.push('acceptance rates: the README yielded no rows (format changed?) — file left as it is');
     else {
-      const existing = loadAcceptanceRates();
+      const existing = finalRates;
       const kept = existing.filter((r) => r?.source !== ACCEPTANCE_SOURCE);
       const keptKeys = new Set(kept.map((r) => `${r.conference}-${r.year}`));
       const next = [...kept, ...fresh.filter((r) => !keptKeys.has(`${r.conference}-${r.year}`))];
@@ -743,8 +936,19 @@ async function main({ dryRun }) {
       const text = serializeAcceptanceRates(next);
       if ((ratesChanged || !fs.existsSync(RATES_FILE)) && !dryRun) fs.writeFileSync(RATES_FILE, text);
       if (ratesChanged) changes.push(`acceptance rates: ${ratesChanged} row(s) added or changed from ${ACCEPTANCE_SOURCE}`);
+      finalRates = next;
     }
   }
+
+  // --- what a person has to decide ---------------------------------------------
+  const resolved = rows.map((r) => resolveEdition(r, nowMs));
+  const items = [
+    ...relevantReview(review, resolved, nowMs),
+    ...missingNextCycles(resolved, nowMs),
+    ...staleAcceptanceRates(resolved, finalRates, rateSkips, nowMs),
+  ];
+  const report = buildEditionsReport(items, { names: new Map(confs.map((c) => [c.id, c.name])) });
+  if (reportPath) fs.writeFileSync(reportPath, report);
 
   if (changes.length && process.env.DEADLINE_CHANGELOG && !dryRun) {
     fs.appendFileSync(process.env.DEADLINE_CHANGELOG, changes.map((c) => `- ${c}`).join('\n') + '\n');
@@ -756,13 +960,16 @@ async function main({ dryRun }) {
   for (const [reason, keys] of skipped) console.log(`    skipped (${reason}): ${keys.join(', ')}`);
   for (const n of notes) console.log(`    note: ${n}`);
   for (const w of warnings) console.warn(`  ⚠ ${w}`);
+  console.log(`    to review: ${items.length} item(s)${items.length ? ` — ${items.map(reviewKey).join(', ')}` : ''}${reportPath ? ` (report: ${reportPath})` : ''}`);
 }
 
 // Only run the CLI when invoked directly, so the pure exports can be imported
 // by the test without the module hitting the network.
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const dryRun = process.argv.slice(2).includes('--dry-run');
-  main({ dryRun }).catch((e) => {
+  const argv = process.argv.slice(2);
+  const dryRun = argv.includes('--dry-run');
+  const reportPath = argv.includes('--report') ? argv[argv.indexOf('--report') + 1] : null;
+  main({ dryRun, reportPath }).catch((e) => {
     console.error(e.stack || e.message);
     process.exit(1);
   });

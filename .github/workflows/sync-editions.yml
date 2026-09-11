@@ -3,14 +3,27 @@
 # acceptance-rate history in step with the community trackers that maintain
 # them (ccfddl/ccf-deadlines and huggingface/ai-deadlines for deadlines and
 # dates, lixin4ever/Conference-Acceptance-Rate for the rates; all MIT). The
-# conference hub and conference-year pages show them: "neurips 2026 deadline"
-# and "icml 2026 dates" are the largest family of queries the site is shown
-# for. A row appears in data/editions.yml for this year and next once a
-# tracker knows an edition's dates, blanks are filled, and a value the bot
-# wrote follows the trackers (deadlines later-only); anything a person typed
-# is frozen (scripts/sync_editions.mjs). Whatever changed is validated and, on
-# success, committed straight to main (and a deploy is dispatched), with each
-# change recorded in the commit message.
+# conference hub, conference-year and /conference/ pages show them: "neurips
+# 2026 deadline" and "icml 2026 dates" are the largest family of queries the
+# site is shown for. A row appears in data/editions.yml for this year and next
+# once a tracker knows an edition's dates, blanks are filled, and a value the
+# bot wrote follows the trackers (deadlines later-only); anything a person
+# typed is frozen (scripts/sync_editions.mjs). Whatever changed is validated
+# and, on success, committed straight to main (and a deploy is dispatched),
+# with each change recorded in the commit message.
+#
+# Two issues, both labelled data-health, are this job's way of asking for a
+# person:
+#   - "Data health: conference editions to review" — the cases the sync will
+#     not settle on its own (an earlier upstream deadline, trackers that
+#     disagree, a hand-typed value the trackers contradict, a next cycle that
+#     should have appeared, acceptance rates the source lacks). Updated in
+#     place from the script's --report, commented on when something is new,
+#     closed when nothing is left.
+#   - "Data health: the conference-edition sync failed" — opened when the job
+#     itself fails (a crash, or validation refusing what a tracker sent),
+#     since nothing is committed then and a job that is red for a week is
+#     otherwise only an email. Closed by the next green run.
 name: Sync conference editions
 
 on:
@@ -27,6 +40,7 @@ concurrency:
 permissions:
   contents: write
   actions: write
+  issues: write
 
 jobs:
   sync:
@@ -40,13 +54,19 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Sync main-conference deadlines, dates and acceptance rates from the trackers
+        id: sync
+        # `shell: bash` for pipefail: the log is kept for the failure issue,
+        # and without it the pipe into tee would hide the script's exit code.
+        shell: bash
         env:
           DEADLINE_CHANGELOG: ${{ github.workspace }}/.deadline-changes.md
-        run: node scripts/sync_editions.mjs
+        run: node scripts/sync_editions.mjs --report editions-review.md 2>&1 | tee /tmp/sync-editions.log
       - name: Validate
-        run: node scripts/validate.mjs
+        id: validate
+        shell: bash
+        run: node scripts/validate.mjs 2>&1 | tee /tmp/validate.log
       # Validation passed above — publish directly. A failed validation fails
-      # the job before anything is committed (GitHub emails the owner).
+      # the job before anything is committed.
       - name: Publish updated editions and acceptance rates (if any)
         uses: ./.github/actions/publish-data
         with:
@@ -56,3 +76,73 @@ jobs:
           changelog-heading: 'Main-conference changes synced from ccfddl, ai-deadlines and the acceptance-rate table:'
           nothing-message: 'No conference-edition changes today.'
           token: ${{ github.token }}
+
+      # The review issue: the same shape as deadline-review.yml's. Editing an
+      # issue body notifies nobody, so whatever is new since the last run is
+      # also posted as a comment, which does.
+      - name: Create/update the review issue
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.existsSync('editions-review.md') ? fs.readFileSync('editions-review.md', 'utf8').trim() : '';
+            const title = 'Data health: conference editions to review';
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open', labels: 'data-health', per_page: 100,
+            });
+            const existing = open.find((i) => i.title === title);
+            if (!report) {
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number,
+                  body: 'Nothing is left to review; closed automatically by the `sync-editions` workflow.',
+                });
+                await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, state: 'closed' });
+              }
+              return;
+            }
+            const keysOf = (text) => new Set(((String(text || '').match(/<!-- editions-review-keys: ([^>]*) -->/) || [, ''])[1]).split(',').map((k) => k.trim()).filter(Boolean));
+            if (existing) {
+              const before = keysOf(existing.body);
+              const added = [...keysOf(report)].filter((k) => !before.has(k));
+              await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, body: report });
+              if (added.length) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number,
+                  body: `New since the last run — ${added.length} item${added.length === 1 ? '' : 's'}:\n\n` + added.map((k) => `- \`${k}\``).join('\n') + '\n\nSee the issue body above for what to do.',
+                });
+              }
+            } else {
+              await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body: report, labels: ['data-health'] });
+            }
+
+      # The failure issue, mirrored on smoke.yml's: opened or commented on when
+      # the job fails, closed by the next green run so an OPEN issue means
+      # "the sync is failing right now".
+      - name: Close the failure issue once the job is green again
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          EXISTING=$(gh issue list --state open --label data-health --json number,title --jq '.[] | select(.title == "Data health: the conference-edition sync failed") | .number' | head -1 || true)
+          if [ -n "$EXISTING" ]; then
+            gh issue close "$EXISTING" --reason completed --comment "$(printf 'The conference-edition sync ran green again.\n\n**Run:** %s\n\nClosed automatically.' "$RUN_URL")"
+          fi
+      - name: Open or update the failure issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SYNC_OUTCOME: ${{ steps.sync.outcome }}
+          VALIDATE_OUTCOME: ${{ steps.validate.outcome }}
+        run: |
+          TITLE="Data health: the conference-edition sync failed"
+          LOG=$( { [ -f /tmp/validate.log ] && [ "$VALIDATE_OUTCOME" = failure ] && tail -40 /tmp/validate.log; } || tail -40 /tmp/sync-editions.log 2>/dev/null || echo "(no log captured)")
+          BODY=$(printf 'The daily conference-edition sync did not complete (sync step: %s, validation: %s), so nothing was committed today. The data on the site is unchanged; the trackers will be read again tomorrow.\n\n**Run:** %s\n\n```\n%s\n```\n' "$SYNC_OUTCOME" "$VALIDATE_OUTCOME" "$RUN_URL" "$LOG")
+          EXISTING=$(gh issue list --state open --label data-health --json number,title --jq '.[] | select(.title == "'"$TITLE"'") | .number' | head -1 || true)
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --label data-health --body "$BODY"
+          fi

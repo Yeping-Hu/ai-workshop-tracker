@@ -5,26 +5,28 @@ job is the part that needs judgement: reviewing PRs and working through the
 auto-updated "Data health" issues (~1–2 h/week in deadline season, less
 otherwise).
 
-**Publishing is zero-touch for OpenReview data.** The weekly discovery job, the
-daily imminent-deadline re-check, and the monthly paper refresh validate their
-changes and, on success, commit straight to `main` and trigger a deploy — newly
-announced workshops appear on the site with no human action. If validation fails,
-nothing is committed and GitHub emails the repo owner (that email is the alert
-channel). Community submissions via the issue form still arrive as pull requests
+**Publishing is zero-touch for OpenReview data and for the main-conference facts
+the community trackers hold.** The weekly discovery job, the daily
+imminent-deadline re-check, the daily editions sync and the monthly paper refresh
+validate their changes and, on success, commit straight to `main` and trigger a
+deploy — newly announced workshops and conference deadlines appear on the site
+with no human action. If validation fails, nothing is committed and GitHub emails
+the repo owner (that email is the alert channel; the editions sync also opens a
+`data-health` issue, see below). Community submissions via the issue form still arrive as pull requests
 for human review, as do dependency updates.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `validate.yml` | PRs & pushes touching data | Schema + sanity checks; comments fixes on the PR |
 | `pr-build-check.yml` | PRs & pushes to `main` | Builds the site, then runs the suites that need `site/dist` (`pagefind_index_test.mjs`, `saved_repair_test.mjs`) and the three browser suites — `ui_test.mjs` on the fork build, `alerts_ui_test.mjs` and `shipped_ui_test.mjs` on the alerts-configured one. The only job that asserts anything about the page it ships; it runs on pushes because work lands here without a PR |
-| `smoke.yml` | after each deploy, daily, manual | Runs `scripts/smoke_test.mjs` against the **live** site — the only check that sees what a reader gets rather than a locally built artefact. Opens or updates a `smoke`-labelled issue on failure |
+| `smoke.yml` | after each deploy, daily, manual | Runs `scripts/smoke_test.mjs` against the **live** site — the only check that sees what a reader gets rather than a locally built artefact: the pages answer, the board and search work, `/conference/` lists the deadlines, a DOI resolves to BibTeX through the live registries, the vendored MathJax renders. Opens or updates a `smoke`-labelled issue on failure, closes it on the next green run |
 | `deploy.yml` | push to `main`, daily, manual | Build & deploy (daily run refreshes derived statuses) |
 | `discover.yml` | weekly | Discovers new workshops/venues/deadlines from OpenReview, backfills a `website`/deadline/tracks that organizers published after the venue was imported, and syncs extensions (later-only) → commits to `main` |
 | `recheck-imminent.yml` | daily | Re-checks only deadlines within `[−7d, +14d]` for extensions (one lookup each, later-only) → commits to `main` |
 | `backfill-deadlines.yml` | daily | `scripts/backfill_deadlines.mjs` — fills a **blank** `submission_deadline` for OpenReview-linked, single-deadline entries (fill-only, never overwrites) → commits to `main` |
 | `sync-tracks.yml` | daily | `scripts/sync_tracks.mjs` — refreshes the per-track deadlines of **multi-track** venues from their sub-track child groups (fill blanks, later-only per track), re-deriving the headline → commits to `main` |
 | `sync-proposal-calls.yml` | daily | `scripts/sync_proposal_calls.mjs` — keeps `data/proposal_calls.yml` (each conference's call-for-workshop-proposals deadline) in step with the proposal venue OpenReview registers under the conference's prefix: records a cycle once its deadline is published, later-only afterwards, freeze on hand edit → commits to `main` |
-| `sync-editions.yml` | daily | `scripts/sync_editions.mjs` — keeps the main conference's facts in `data/editions.yml` (paper and abstract deadlines, notification, dates, place, website) and the acceptance-rate history in `data/acceptance_rates.yml` in step with the community trackers ccfddl/ccf-deadlines, huggingface/ai-deadlines and lixin4ever/Conference-Acceptance-Rate: a row appears for this year and next once an edition's dates are known, blanks are filled, bot values follow the trackers (deadlines later-only), a person's values are frozen → commits to `main` |
+| `sync-editions.yml` | daily | `scripts/sync_editions.mjs` — keeps the main conference's facts in `data/editions.yml` (paper and abstract deadlines, notification, dates, place, website) and the acceptance-rate history in `data/acceptance_rates.yml` in step with the community trackers ccfddl/ccf-deadlines, huggingface/ai-deadlines and lixin4ever/Conference-Acceptance-Rate: a row appears for this year and next once an edition's dates are known, blanks are filled, bot values follow the trackers (deadlines later-only), a person's values are frozen → commits to `main`. Keeps one `data-health` issue of what needs a person ("conference editions to review") and opens another if the job itself fails |
 | `openreview-refresh.yml` | monthly | Re-fetch paper caches for recent years (`scripts/fetch_openreview.mjs --recent`) → commits to `main` |
 | `issue-to-pr.yml` | "Add a workshop" issue form | Converts the form to a YAML file + PR, validates, reports back |
 | `edit-to-pr.yml` | "Edit a workshop" issue form | Applies the edit to the existing YAML + PR (timezone-safe), validates, reports back |
@@ -240,6 +242,37 @@ A tracker files a conference under our id unless `SOURCE_IDS` says otherwise
 (NeurIPS is `nips` on ccfddl), so a conference added per `skills/add-conference/`
 is picked up with no change when the file names match. Rules are pinned by
 `scripts/editions_sync_test.mjs`; both files are checked by `validate.mjs`.
+
+**What needs a person goes to an issue.** The script's `--report` writes the
+body of one self-maintaining issue, *Data health: conference editions to
+review* (label `data-health`), which the workflow updates in place, comments on
+when an item is new (editing a body notifies nobody), and closes when nothing is
+left. It lists only what the sync will not settle on its own, and only while it
+still matters (the edition not over, the deadline in question still ahead):
+
+- a tracker gives an **earlier** deadline than the stored bot value (later-only
+  declined it; if the correction is real, set the value by hand);
+- the two trackers **disagree** on a deadline by more than an hour (the
+  precedence chose one; check the official call);
+- a value **you typed differs** from what the trackers now say (yours stands;
+  edit the row if the tracker is right);
+- a tracker value was skipped as **implausible**;
+- a tracker knows a **deadline but no dates**, so no row could be created (add
+  a row with `end` by hand and the deadline flows in);
+- the **next cycle should have appeared**: the previous call's anniversary, at
+  the conference's own cadence (a biennial one is not asked for yearly), is
+  within 90 days and no later edition has a deadline — dropped again 180 days
+  past it, so a conference that stopped does not sit there for ever;
+- **acceptance rates the source lacks** for editions that ended over 120 days
+  ago, or a recent source row that contradicts itself (add a hand row with your
+  own `source`; it wins).
+
+A run that **fails** — a crash, or validation refusing what a tracker sent, so
+nothing was committed — opens *Data health: the conference-edition sync failed*
+with the log, comments on it while it keeps failing, and the next green run
+closes it, so an open one means "failing right now". Run the script by hand
+with `--dry-run` to see what a run would do, or `--report review.md` to read
+the review body locally.
 
 ## The alerts job is outside the data-write group
 
