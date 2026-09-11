@@ -1516,6 +1516,41 @@ await page.evaluate(() => localStorage.clear());
   });
   check('the AoE clock is UTC minus twelve hours', aoe.shown === aoe.want, `${aoe.shown} vs ${aoe.want}`);
   check('the converter rendered a default result and the open-call table has rows', (await page.$$eval('#aoeTable tbody tr', (els) => els.length)) >= 10 && (await page.$$eval('#aoeCalls tbody tr', (els) => els.length)) >= 1);
+  // The open-calls table's instants: every column spelled one way (Intl's
+  // en-GB once wrote "Sept" and a comma beside the page's own "Sep"), and at
+  // a desktop width a cell never breaks: the Left column showed "6h" over
+  // "25m" and the AoE column "Fri 11 Sep 2026 12:00" over a lone "AoE". On a
+  // phone a cell may break once, between the date and the time, never inside
+  // either piece.
+  const WHEN = /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d{1,2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d\d:\d\d( AoE)?$/;
+  const callRows = () => page.$$eval('#aoeCalls tbody tr', (rows) => rows.map((r) => {
+    const lines = (el) => { const rg = document.createRange(); rg.selectNodeContents(el); return new Set([...rg.getClientRects()].map((b) => Math.round(b.top))).size; };
+    return {
+      when: [...r.querySelectorAll('td.when')].map((td) => ({ text: td.textContent.replace(/\s+/g, ' ').trim(), lines: lines(td), pieces: [...td.querySelectorAll('span')].map(lines) })),
+      left: { text: r.lastElementChild.textContent.trim(), lines: lines(r.lastElementChild) },
+    };
+  }));
+  let callRowsSeen = await callRows();
+  check('every deadline and local time in the table is spelled the same way', callRowsSeen.length > 0 && callRowsSeen.every((r) => r.when.length === 2 && r.when.every((w) => WHEN.test(w.text))), JSON.stringify(callRowsSeen[0]?.when));
+  check('at desktop width no instant and no countdown wraps', callRowsSeen.every((r) => r.when.every((w) => w.lines === 1) && r.left.lines === 1), JSON.stringify(callRowsSeen.find((r) => r.when.some((w) => w.lines !== 1) || r.left.lines !== 1)));
+  await page.setViewportSize({ width: 390, height: 800 });
+  callRowsSeen = await callRows();
+  check('on a phone a cell breaks only between the date and the time', callRowsSeen.every((r) => r.when.every((w) => w.pieces.length === 2 && w.pieces.every((n) => n === 1)) && r.left.lines === 1), JSON.stringify(callRowsSeen[0]));
+  // Four columns of instants cannot fit a phone however they wrap, and a table
+  // that scrolls sideways hides "Your time": the rows stack into labelled
+  // lines instead, and the table stays inside the screen.
+  const phone = await page.evaluate(() => {
+    const t = document.querySelector('#aoeCalls');
+    const tds = [...t.querySelectorAll('tbody tr:first-child td')];
+    return {
+      fits: t.scrollWidth <= document.documentElement.clientWidth,
+      headerGone: getComputedStyle(t.querySelector('thead')).display === 'none',
+      stacked: tds.length === 4 && tds.every((td, i) => i === 0 || td.getBoundingClientRect().top > tds[i - 1].getBoundingClientRect().bottom - 1),
+      labels: tds.slice(1).map((td) => getComputedStyle(td, '::before').content),
+    };
+  });
+  check('on a phone the open-calls table stacks its rows and fits the screen', phone.fits && phone.headerGone && phone.stacked && phone.labels.join() === '"Deadline","Your time","Left"', JSON.stringify(phone));
+  await page.setViewportSize({ width: 1280, height: 900 });
 }
 
 // --- conference hub and year pages: the main conference ---------------------

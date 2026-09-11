@@ -143,6 +143,37 @@
 .tool-table th, .tool-table td { text-align: left; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
 .tool-table th { font-weight: 600; color: var(--muted); font-size: 0.82rem; }
 .tool-table td.num, .tool-table th.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+/* A table of instants (the AoE page): the date and the time of one cell never
+   break inside themselves, and on a wide screen not between themselves either,
+   so a deadline reads on one line and the Workshop column, which can wrap,
+   gives way. Auto table layout otherwise shrinks these columns toward their
+   longest word and wraps the tail onto a line of its own: the open-calls table
+   showed "6h" over "25m" in a Left column three characters wide, and
+   "Fri 11 Sep 2026 12:00" over a lone "AoE". Headers stay whole for the same
+   reason. On a phone a cell may break once, between the date and the time,
+   and the wrapper above scrolls if that still does not fit. */
+.tool-table th, .tool-table td.nowrap, .tool-table .when > span { white-space: nowrap; }
+@media (min-width: 601px) { .tool-table .when { white-space: nowrap; } }
+/* On a phone the open-calls table stacks. Four columns of instants cannot fit
+   358px however they wrap (two dates alone are 240px of monospace), and a
+   table that scrolls sideways hides "Your time", which is the column a phone
+   reader came for. Each row becomes a block: the workshop, then three lines
+   labelled with the header's words, so the header itself goes. The hanging
+   indent keeps a value that still wraps aligned under itself, not under the
+   label. */
+@media (max-width: 600px) {
+  .aoe-calls thead { display: none; }
+  .aoe-calls tbody, .aoe-calls tr, .aoe-calls td { display: block; }
+  .aoe-calls tr { padding: 0.55rem 0; border-bottom: 1px solid var(--line); }
+  .aoe-calls td { border: 0; padding: 0.1rem 0; }
+  /* Same specificity as `.tool-table td.num` above, which right-aligns the
+     column on a desktop and would otherwise win here too. */
+  .aoe-calls td.num { text-align: left; padding-left: 5.4rem; text-indent: -5.4rem; }
+  .aoe-calls td.num::before { display: inline-block; width: 5.4rem; text-indent: 0; font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+  .aoe-calls td:nth-child(2)::before { content: 'Deadline'; }
+  .aoe-calls td:nth-child(3)::before { content: 'Your time'; }
+  .aoe-calls td:nth-child(4)::before { content: 'Left'; }
+}
 
 /* Clocks on the AoE page. */
 .aoe-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.8rem; }
