@@ -1552,7 +1552,11 @@ await page.evaluate(() => localStorage.clear());
   await page.selectOption('#optSize', '48');
   await settledAt(48);
   const widthAt48 = await svgWidth();
-  check('the picked font size sizes the equation (48 px draws it twice as wide as 24 px)', Math.abs(widthAt48 / widthAt24 - 2) < 0.05, `${widthAt24} -> ${widthAt48}`);
+  // Not "exactly twice": `ex` is the font's x-height, which Linux grid-fits
+  // at each size, so the Linux runner draws 48 px 1.86 times as wide as
+  // 24 px where a Mac draws 1.99. settledAt has already seen the SVG's font
+  // at the picked size; a drawing the size never reached would not grow.
+  check('the picked font size reaches the drawing (48 px draws it about twice as wide as 24 px)', widthAt48 / widthAt24 > 1.6 && widthAt48 / widthAt24 < 2.4, `${widthAt24} -> ${widthAt48}`);
   await page.selectOption('#optSize', '24');
   await settledAt(24);
   // The buttons save a file rather than opening the image as a page (the
