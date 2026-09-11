@@ -10,7 +10,7 @@
  * file's <defs>, so nothing depends on a font being installed. The PNG is
  * drawn from that same SVG at the chosen scale, so it is sharp at any size.
  */
-import { $, setStatus, download, bindCopy, used } from './ui.js';
+import { $, setStatus, download, bindCopy, copyImage, used } from './ui.js';
 
 const form = $('#toolForm');
 if (form) {
@@ -136,6 +136,18 @@ if (form) {
     else setStatus(status, 'Render something first.', 'error');
   });
   bindCopy($('#copySvg'), () => (standalone() || {}).xml || '');
+  // The PNG goes to the clipboard as an image, so it pastes straight into
+  // slides, docs and chat. SVG has no such path: browsers do not accept
+  // image/svg+xml on the clipboard, which is why the SVG button copies code.
+  const copyPng = $('#copyPng');
+  copyPng?.addEventListener('click', async () => {
+    if (!svgEl) { setStatus(status, 'Render something first.', 'error'); return; }
+    const label = copyPng.textContent;
+    const ok = await copyImage(toPng());
+    copyPng.textContent = ok ? 'Copied' : 'Copy failed';
+    setStatus(status, ok ? '' : 'This browser cannot copy images to the clipboard. Download the PNG instead.', ok ? '' : 'error');
+    setTimeout(() => { copyPng.textContent = label; }, 1400);
+  });
 
   // The vendor script is async; poll briefly for it, then render the default.
   const waitStart = Date.now();

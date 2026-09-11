@@ -1421,6 +1421,17 @@ await page.evaluate(() => localStorage.clear());
   // a stylesheet a full typeset injects; a convert-only page showed it as a
   // second, native rendering under the SVG.
   check('the preview shows the equation once (no assistive MathML copy)', (await page.$$eval('#toolPreview svg, #toolPreview mjx-assistive-mml, #toolPreview math', (els) => els.map((e) => e.tagName.toLowerCase()).join(','))) === 'svg');
+  // The buttons save a file rather than opening the image as a page (the
+  // site's link handler once sent the host-less blob: URL to a new tab), and
+  // the PNG can go to the clipboard as an image.
+  const [pngDl] = await Promise.all([page.waitForEvent('download', { timeout: 8000 }), page.click('#dlPng')]);
+  check('Download PNG saves equation.png', pngDl.suggestedFilename() === 'equation.png', pngDl.suggestedFilename());
+  const [svgDl] = await Promise.all([page.waitForEvent('download', { timeout: 8000 }), page.click('#dlSvg')]);
+  check('Download SVG saves equation.svg', svgDl.suggestedFilename() === 'equation.svg', svgDl.suggestedFilename());
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(BASE).origin });
+  await page.click('#copyPng');
+  await page.waitForFunction(() => /Copied|Copy failed/.test(document.querySelector('#copyPng')?.textContent || ''), null, { timeout: 8000 });
+  check('Copy PNG puts an image on the clipboard', (await page.$eval('#copyPng', (b) => b.textContent)) === 'Copied' && (await page.evaluate(async () => (await navigator.clipboard.read()).some((item) => item.types.includes('image/png')))));
   await page.goto(`${BASE}/tools/aoe-time/`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => /^\d\d:\d\d:\d\d$/.test(document.querySelector('#aoeClockTime')?.textContent || ''), null, { timeout: 5000 });
   const aoe = await page.evaluate(() => {

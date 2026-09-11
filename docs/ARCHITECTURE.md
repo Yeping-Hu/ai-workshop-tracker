@@ -1151,7 +1151,10 @@ provider cutover — is in [ALERTS.md](ALERTS.md).
 ## External links open a new tab; internal navigation stays in place
 
 A single delegated, click-time handler in `site/src/components/Base.astro` decides link targets
-by **host**. A link to a different host (a workshop's own website, an arXiv or
+by **host**. A link carrying a `download` attribute (or a `blob:` / `data:`
+href, which has no host) is left to the browser: the tools' "Download SVG"
+and "Download PNG" once fell through to the new-tab branch and showed the
+equation as a page instead of saving it. A link to a different host (a workshop's own website, an arXiv or
 OpenReview PDF) opens in a **new tab**, so the tracker stays available behind it;
 a link within the site (a workshop page, a nested paper anchor, the saved list)
 navigates in the **same tab** — the standard expectation, and forcing new tabs

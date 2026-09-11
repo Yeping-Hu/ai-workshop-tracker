@@ -324,7 +324,7 @@ export const TOOLS = [
     howTo: [
       'Type or paste the LaTeX (math mode; use \\text{} for words).',
       'Pick the font size, the colour, a transparent or white background, and the scale (2x for retina screens, 4x or more for print).',
-      'Download the PNG, or copy the SVG code from the LaTeX to SVG page.',
+      'Download the PNG, or copy it to the clipboard and paste it straight into your slide or document.',
     ],
     why: [
       'Slides, Google Docs, Notion, a poster in PowerPoint, an issue on GitHub: none of them typeset LaTeX, and all of them take an image. Rendering an equation to PNG is the way math gets into every document that is not LaTeX.',
@@ -334,6 +334,7 @@ export const TOOLS = [
       { q: 'What resolution should I pick?', a: '1x matches a screen at 96 dpi. 2x for retina displays and slides, 4x for documents that will be printed, 8x for posters. The image scales without blurring because it is rasterised from vectors at the chosen size.' },
       { q: 'Can I get a transparent background?', a: 'Yes. Transparent is the default, so the equation sits on any slide colour. Choose white for documents that flatten transparency.' },
       { q: 'Which LaTeX is supported?', a: 'Everything MathJax\'s TeX input supports: AMS math, matrices, alignments, \\text, colours, and the common packages (amsmath, amssymb, bm, cancel, mathtools). Document-level commands and custom packages are not.' },
+      { q: 'Can I copy the image instead of downloading it?', a: 'Yes. Copy PNG puts the image on the clipboard, so it pastes into PowerPoint, Keynote, Google Docs, Notion or a chat window without a file. It works in current Chrome, Edge, Safari and Firefox 127 or later; older browsers get a message and the download instead.' },
       { q: 'Why not SVG?', a: 'SVG is better where it is supported (web pages, Inkscape, some slide tools). The LaTeX to SVG page gives the same rendering as vector output.' },
     ],
     related: ['latex-to-svg', 'markdown-to-latex', 'latex-word-count', 'excel-to-latex'],
@@ -350,7 +351,7 @@ export const TOOLS = [
     howTo: [
       'Type or paste the LaTeX (math mode; use \\text{} for words).',
       'Set the font size and colour.',
-      'Download the .svg file, or copy the SVG code to paste into a web page or a design tool.',
+      'Download the .svg file, copy the SVG code to paste into a web page or a design tool, or copy it as a PNG image for slides and documents.',
     ],
     why: [
       'A PNG has one resolution; an SVG has none. For a web page, a figure that will be resized, or a design tool such as Figma or Inkscape, vector output is what you want, and it stays crisp when the poster is printed at A0.',
@@ -360,6 +361,7 @@ export const TOOLS = [
       { q: 'Will the SVG look the same everywhere?', a: 'Yes. Glyphs are embedded as paths (MathJax\'s local font cache), so a browser, Inkscape, Illustrator or a PDF converter all draw the same shapes.' },
       { q: 'Can I change the colour later?', a: 'Yes. The SVG uses currentColor for its fills, so a CSS color rule, or a fill edit in a vector editor, recolours the whole equation.' },
       { q: 'How do I put it in a web page?', a: 'Paste the SVG code inline where the equation goes, or save the file and use it in an img tag. Inline SVG follows the surrounding text colour.' },
+      { q: 'Can I copy the SVG to the clipboard as an image?', a: 'Browsers do not accept SVG on the clipboard as an image, so Copy SVG code copies the markup, which design tools such as Figma and Inkscape paste as vector graphics. For slides and documents, Copy as PNG puts a bitmap on the clipboard instead.' },
       { q: 'Which LaTeX is supported?', a: 'The TeX input MathJax understands: AMS math, matrices, alignments, \\text, colours, and the common packages. Not full documents.' },
     ],
     related: ['latex-to-png', 'markdown-to-latex', 'excel-to-latex', 'latex-word-count'],

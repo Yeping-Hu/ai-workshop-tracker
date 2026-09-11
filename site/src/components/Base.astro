@@ -223,6 +223,12 @@ const ALERTS_BOOTSTRAP = `
         if (!a || a.closest('.site-header')) return;
         const href = a.getAttribute('href') || '';
         if (href.startsWith('javascript:')) return;
+        // A download link is neither internal nor external: a blob: or data:
+        // URL has no host, so it used to fall through to window.open and the
+        // tools' "Download SVG" showed the equation as a page in a new tab
+        // instead of saving a file. The browser's own download handling is
+        // what the `download` attribute asks for; leave it alone.
+        if (a.hasAttribute('download') || /^(blob|data):/i.test(href)) return;
         if (a.host === location.host) return; // internal link → same tab
         // External → new tab. Open programmatically instead of setting
         // a.target='_blank' on the element: mutating the DOM persists into the

@@ -67,16 +67,50 @@ export function bindCopy(button, getPayload, { html = false } = {}) {
   });
 }
 
+/**
+ * Save a generated file through a one-off `<a download>`. The site's link
+ * handler (Base.astro) opens any link whose host differs from the page's in
+ * a new tab, and a blob: URL has no host, so this anchor once ended up there
+ * with the equation shown as a page; the handler now leaves download links
+ * alone. The anchor stays in the document until the click has been handled.
+ */
 export function download(filename, content, type = 'text/plain;charset=utf-8') {
   const blob = content instanceof Blob ? content : new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
+  a.style.display = 'none';
   document.body.appendChild(a);
   a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  setTimeout(() => {
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, 2000);
+}
+
+/**
+ * Put a PNG on the clipboard. `blobPromise` is the image still being made:
+ * Safari only allows a clipboard write inside the click that asked for it,
+ * and a ClipboardItem built from a promise keeps that gesture alive while the
+ * canvas draws (Chrome accepts the same). Browsers that want a finished Blob
+ * get the second attempt. Returns false where images cannot be copied.
+ */
+export async function copyImage(blobPromise, mime = 'image/png') {
+  if (!window.ClipboardItem || !navigator.clipboard?.write) return false;
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ [mime]: blobPromise })]);
+    return true;
+  } catch {
+    try {
+      const blob = await blobPromise;
+      if (!blob) return false;
+      await navigator.clipboard.write([new ClipboardItem({ [mime]: blob })]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }
 
 /** A picked file's text, or null when nothing was picked. */
