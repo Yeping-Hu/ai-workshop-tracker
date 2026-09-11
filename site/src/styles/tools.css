@@ -20,6 +20,14 @@
 .tool-form textarea, .tool-form input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]), .tool-form select {
   font: inherit; color: var(--ink); background: var(--paper);
   border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.7rem; width: 100%;
+  /* One height for every full-size control, because the browser gives each type
+     its own: on the AoE row a select came out 36px next to 41px date and time
+     fields, and a plain text input elsewhere was 39px — three heights for
+     controls meant to read as one set. Padding and line-height cannot settle it,
+     since a select's content box is measured differently from an input's and
+     appearance:none changes an input's again. A floor does: select, text, date,
+     time and the submit button all land on 40px. */
+  min-height: 2.55rem;
 }
 /* iOS Safari sizes native date and time controls to their formatted value and
    ignores `width: 100%` while the native appearance is in force, so on a phone
@@ -62,10 +70,25 @@
 .tool-opts { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; font-size: 0.88rem; align-items: center; }
 .tool-opts label { display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; }
 .tool-opts input[type="checkbox"], .tool-opts input[type="radio"] { accent-color: var(--accent); width: 0.95rem; height: 0.95rem; }
+/* The compact option row opts out of the 2.55rem floor above: these sit inline
+   with their labels and are meant to be smaller than the full-size fields.
+   Without this they inflated from 28px to 41px and took the whole options block
+   with them. */
+/* The :not() chain mirrors the full-size rule on purpose. `.tool-opts
+   input[type="text"]` scores (0,2,1) against that rule's (0,5,1) and loses, which
+   is why the compact selects dropped back to 28px but the Caption and Label
+   fields on excel-to-latex stayed at 41. Matching its specificity and coming
+   later wins. */
+.tool-opts select,
+.tool-opts input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]) { min-height: 0; }
 .tool-opts select { font: inherit; font-size: 0.88rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 0.25rem 0.45rem; }
 .tool-opts input[type="number"], .tool-opts input[type="text"] { font: inherit; font-size: 0.88rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 0.25rem 0.45rem; width: 7rem; }
 .tool-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
 .tool-actions .btn { cursor: pointer; font: inherit; font-size: 0.92rem; font-weight: 600; line-height: 1.3; }
+/* A button in the same row as the fields matches their height. .tool-row aligns
+   on the baseline of the bottom edge, so a 37px button beside 41px fields read
+   as a slightly sunken control rather than part of the set. */
+.tool-row .tool-actions .btn { min-height: 2.55rem; }
 .tool-actions .btn[disabled] { opacity: 0.55; cursor: default; }
 .btn.small { font-size: 0.82rem; padding: 0.32rem 0.7rem; }
 .tool-status { font-size: 0.86rem; color: var(--muted); min-height: 1.3em; margin: 0; }
