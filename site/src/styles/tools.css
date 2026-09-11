@@ -202,12 +202,12 @@
 .tool-related ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; }
 
 /* The /tools/ index. */
-/* The index. One card per tool: a tile naming what you paste, the name and
-   a one-line blurb (the registry's `blurb`, not the page's lede). The tile
-   is what tells nine BibTeX cards apart at a glance; it reuses the chip
-   colours so it adds no colour of its own. Rows of chips were tried and
-   rejected: they demoted the most-searched tools to the smallest element on
-   the page and left two bars of white space. */
+/* The index. One card per tool: its icon in a tile, the name and a one-line
+   blurb (the registry's `blurb`, not the page's lede). The tile reuses the
+   chip colours so it adds no colour of its own, and the icon takes the
+   tile's colour (lib/icons.mjs). Rows of chips were tried and rejected:
+   they demoted the most-searched tools to the smallest element on the page
+   and left two bars of white space. */
 .tool-groups { display: grid; gap: 1.4rem; margin-top: 0.8rem; }
 .tool-group h2 { margin: 0 0 0.6rem; }
 .tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.7rem; }
@@ -218,11 +218,13 @@
 }
 .tool-card:hover { border-color: var(--accent); text-decoration: none; }
 .tool-glyph {
-  flex: 0 0 auto; width: 2.3rem; height: 2.3rem; border-radius: 8px;
+  flex: 0 0 auto; width: 2.6rem; height: 2.6rem; border-radius: 9px;
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--accent-soft); color: var(--accent);
-  font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.01em;
 }
+/* The icon is inline SVG painted in currentColor (lib/icons.mjs), so the
+   tile's `color` above is the icon's colour in both themes. */
+.tool-glyph svg { width: 1.7rem; height: 1.7rem; display: block; }
 .tool-card-text { min-width: 0; }
 .tool-card h3 { margin: 0 0 0.2rem; font-size: 1.02rem; font-family: var(--font-display); }
 .tool-card p { margin: 0; color: var(--muted); font-size: 0.86rem; line-height: 1.4; }

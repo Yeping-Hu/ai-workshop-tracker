@@ -3,14 +3,27 @@
  * The /tools/ index: every tool in the registry, grouped, one card each. It
  * is a list, not a landing page: the pages that rank are the tools
  * themselves, so the job here is to make seventeen of them scannable. A card
- * is a tile naming what you paste (the registry's `glyph`), the tool's name
- * and its one-line `blurb`; the tile is decorative to a screen reader, the
+ * is the tool's icon in a tile (site/src/assets/tools/<slug>.svg, inlined so
+ * it paints in the tile's colour; lib/icons.mjs says why), the tool's name
+ * and its one-line `blurb`; the icon is decorative to a screen reader, the
  * name says the same thing.
  */
 import Base from '../../components/Base.astro';
 import '../../styles/tools.css';
 import { href } from '../../lib/site';
 import { toolsByGroup, TOOLS } from '../../lib/tools.mjs';
+import { inlineIcon } from '../../lib/icons.mjs';
+
+// One icon per tool, keyed by slug, read at build time; lib/icons.mjs says why
+// they are inlined and how they take the theme's colour. A tool without an
+// icon fails the build here as well as the registry test, so the index never
+// ships a card with an empty tile.
+const iconFiles = import.meta.glob('../../assets/tools/*.svg', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const iconFor = (slug: string) => {
+  const key = Object.keys(iconFiles).find((k) => k.endsWith(`/${slug}.svg`));
+  if (!key) throw new Error(`No icon for tool "${slug}" (expected site/src/assets/tools/${slug}.svg)`);
+  return inlineIcon(iconFiles[key]);
+};
 
 const groups = toolsByGroup();
 const abs = (p: string) => (Astro.site ? new URL(href(p), Astro.site).href : href(p));
@@ -54,7 +67,7 @@ const breadcrumbLd = {
         <div class="tool-grid">
           {g.tools.map((t: any) => (
             <a class="tool-card" href={href(`/tools/${t.slug}/`)} data-tool={t.slug}>
-              <span class="tool-glyph" aria-hidden="true">{t.glyph}</span>
+              <span class="tool-glyph" aria-hidden="true" set:html={iconFor(t.slug)} />
               <span class="tool-card-text">
                 <h3>{t.name}</h3>
                 <p>{t.blurb}</p>

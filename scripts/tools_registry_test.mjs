@@ -9,7 +9,8 @@
  *   - each page has a how-to, a why, and a FAQ of real questions;
  *   - every registry entry has a page file and every page file an entry;
  *   - slugs, titles and descriptions are unique; related links resolve;
- *   - the index blurb is one short line and the index tile a short token.
+ *   - the index blurb is one short line, and every tool has an icon file
+ *     that inlines to a themed, decorative SVG (and every icon file a tool).
  *
  * Why a test rather than a checklist: seventeen pages were written in one
  * sitting, and the eighteenth will be written by someone who has not read
@@ -21,9 +22,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TOOLS, GROUPS, toolBySlug, toolsByGroup } from '../site/src/lib/tools.mjs';
+import { inlineIcon } from '../site/src/lib/icons.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PAGES = path.join(ROOT, 'site', 'src', 'pages', 'tools');
+const ICONS = path.join(ROOT, 'site', 'src', 'assets', 'tools');
 
 let pass = 0, fail = 0;
 function check(name, cond, extra = '') {
@@ -32,7 +35,7 @@ function check(name, cond, extra = '') {
 }
 
 const has = (hay, needle) => String(hay).toLowerCase().includes(String(needle).toLowerCase());
-const copyOf = (t) => [t.title, t.description, t.h1, t.lede, t.blurb, t.glyph, ...t.howTo, ...t.why, ...t.faqs.flatMap((f) => [f.q, f.a])].join('\n');
+const copyOf = (t) => [t.title, t.description, t.h1, t.lede, t.blurb, ...t.howTo, ...t.why, ...t.faqs.flatMap((f) => [f.q, f.a])].join('\n');
 const wordsOf = (s) => String(s || '').trim().split(/\s+/).filter(Boolean).length;
 
 console.log(`— ${TOOLS.length} tools —`);
@@ -55,9 +58,19 @@ for (const t of TOOLS) {
   // is the cap that kept seventeen cards on one screen; the lede is for the page.
   check(`${label}: blurb is 3 to 10 words ending in a full stop`, wordsOf(t.blurb) >= 3 && wordsOf(t.blurb) <= 10 && /\.$/.test(t.blurb), t.blurb);
   check(`${label}: blurb is not the lede`, t.blurb !== t.lede);
-  // The tile names what you paste in four characters at most, so it fits a
-  // 2.3rem square at the mono size the card uses; no spaces, one token.
-  check(`${label}: glyph is one token of 1 to 4 characters`, typeof t.glyph === 'string' && /^\S{1,4}$/.test(t.glyph), String(t.glyph));
+  // The card's icon: one file per tool, inlined by lib/icons.mjs. What the
+  // transform promises is checked on its output, not assumed: a viewBox to
+  // scale by, no <title> to double the heading, no fixed size, no fixed colour
+  // left to ignore the dark theme, and currentColor for the tile's colour to
+  // reach.
+  const iconFile = path.join(ICONS, `${t.slug}.svg`);
+  check(`${label}: icon file exists`, fs.existsSync(iconFile), iconFile);
+  const icon = fs.existsSync(iconFile) ? inlineIcon(fs.readFileSync(iconFile, 'utf8')) : '';
+  const svgTag = icon.slice(0, icon.indexOf('>') + 1);
+  check(`${label}: icon inlines to a themed, decorative SVG`,
+    /^<svg\b[^>]*\bviewBox="[^"]+"/.test(svgTag) && svgTag.includes('aria-hidden="true"') && !/\b(width|height)="/.test(svgTag)
+      && !/<title>/.test(icon) && !/#[0-9a-f]{3,8}/i.test(icon) && /fill="currentColor"/.test(icon),
+    icon.slice(0, 160));
   check(`${label}: related links resolve and exclude itself`, t.related.length >= 2 && t.related.every((s) => s !== t.slug && toolBySlug(s)));
   check(`${label}: page file exists`, fs.existsSync(path.join(PAGES, `${t.slug}.astro`)));
   const page = fs.existsSync(path.join(PAGES, `${t.slug}.astro`)) ? fs.readFileSync(path.join(PAGES, `${t.slug}.astro`), 'utf8') : '';
@@ -76,10 +89,10 @@ check('every page file has a registry entry', orphans.length === 0, orphans.join
 check('the index page exists', fs.existsSync(path.join(PAGES, 'index.astro')));
 check('every group has at least one tool', toolsByGroup().every((g) => g.tools.length > 0));
 check('blurbs unique', new Set(TOOLS.map((t) => t.blurb)).size === TOOLS.length);
-// One format, one spelling: a tile that differs only in case or a dot from
-// another ("BIB" beside ".bib") would read as two formats.
-const glyphKey = (g) => g.toLowerCase().replace(/^\./, '');
-check('glyphs spell each format one way', new Set(TOOLS.map((t) => t.glyph)).size === new Set(TOOLS.map((t) => glyphKey(t.glyph))).size, [...new Set(TOOLS.map((t) => t.glyph))].join(' '));
+// Every icon file belongs to a tool: a stray file is a renamed slug, or a tool
+// removed without its icon, and either is a mistake worth a red test.
+const iconSlugs = fs.existsSync(ICONS) ? fs.readdirSync(ICONS).filter((f) => f.endsWith('.svg')).map((f) => f.slice(0, -4)) : [];
+check('every icon file belongs to a registered tool', iconSlugs.length > 0 && iconSlugs.every((s) => toolBySlug(s)), iconSlugs.filter((s) => !toolBySlug(s)).join(' ') || `${iconSlugs.length} files`);
 check('grouping covers every tool exactly once', toolsByGroup().flatMap((g) => g.tools).map((t) => t.slug).sort().join() === TOOLS.map((t) => t.slug).sort().join());
 check('the index lists every tool (it iterates the registry)', fs.readFileSync(path.join(PAGES, 'index.astro'), 'utf8').includes('toolsByGroup()'));
 check('the Tools nav entry exists in Base.astro', fs.readFileSync(path.join(ROOT, 'site/src/components/Base.astro'), 'utf8').includes("{ label: 'Tools', path: '/tools/' }"));

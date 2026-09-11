@@ -1396,12 +1396,23 @@ await page.evaluate(() => localStorage.clear());
   console.log('— /tools/: index and frame —');
   const { TOOLS } = await import('../site/src/lib/tools.mjs');
   await page.goto(`${BASE}/tools/`, { waitUntil: 'networkidle' });
-  const cards = await page.$$eval('a.tool-card[data-tool]', (els) => els.map((e) => ({ href: e.getAttribute('href'), slug: e.dataset.tool, glyph: e.querySelector('.tool-glyph')?.textContent.trim(), hidden: e.querySelector('.tool-glyph')?.getAttribute('aria-hidden'), blurb: e.querySelector('p')?.textContent.trim() })));
+  const cards = await page.$$eval('a.tool-card[data-tool]', (els) => els.map((e) => {
+    const tile = e.querySelector('.tool-glyph');
+    const path = tile?.querySelector('svg[viewBox] path');
+    return {
+      href: e.getAttribute('href'), slug: e.dataset.tool, hidden: tile?.getAttribute('aria-hidden'),
+      icon: !!path, tileText: tile?.textContent.trim(),
+      // Inline SVG painted in currentColor: the path's computed fill is the
+      // tile's colour, which is how the dark theme reaches the icon.
+      themed: !!path && getComputedStyle(path).fill === getComputedStyle(tile).color,
+      blurb: e.querySelector('p')?.textContent.trim(),
+    };
+  }));
   check(`the index links every registered tool exactly once (${TOOLS.length})`, cards.length === TOOLS.length && TOOLS.every((t) => cards.some((c) => c.href.endsWith(`/tools/${t.slug}/`))), cards.map((c) => c.href).join(' '));
-  // A card is the registry's tile (decorative), name and one-line blurb,
-  // not the page's lede.
-  const off = cards.filter((c) => { const t = TOOLS.find((x) => x.slug === c.slug); return !t || c.glyph !== t.glyph || c.hidden !== 'true' || c.blurb !== t.blurb; });
-  check('every card shows its tile, hidden from screen readers, and its blurb', off.length === 0, JSON.stringify(off.slice(0, 2)));
+  // A card is the tool's icon (decorative, in the tile's colour), its name
+  // and its one-line blurb, not the page's lede.
+  const off = cards.filter((c) => { const t = TOOLS.find((x) => x.slug === c.slug); return !t || !c.icon || !c.themed || c.tileText !== '' || c.hidden !== 'true' || c.blurb !== t.blurb; });
+  check('every card shows its icon in the tile colour, hidden from screen readers, and its blurb', off.length === 0, JSON.stringify(off.slice(0, 2)));
   check('the header has a Tools entry, current on the index', (await page.$eval('.site-nav a[href$="/tools/"]', (a) => a.getAttribute('aria-current'))) === 'page');
   check('the index renders light unless the visitor chose otherwise', (await page.evaluate(() => document.documentElement.dataset.theme)) === 'light');
 

@@ -1609,18 +1609,25 @@ entry, and runs in `pr-build-check.yml` before the build.
 each page's lede on its card: two sentences, eleven of the seventeen
 starting "Paste ... and get ...", so the page read as one card repeated.
 Each entry now also has a `blurb`, one line in the shape "what you give it.
-what you get.", capped at ten words by the registry test, and a `glyph`: a
-tile naming what you paste (`DOI`, `.bib`, `math`, `.md`), four characters
-at most, spelled the way its users spell it. The tile is what tells nine
-BibTeX cards apart at a glance; the four style converters sharing `.bib`
-is a grouping cue, and the registry test insists one format is spelled one
-way. The lede stays the page's opening paragraph. Rows of chips (one row
-"Get BibTeX from DOI · RIS · ISBN ...") were tried in between and
-rejected: they demoted the most-searched tools to the smallest element on
-the page and left two bars of white space. `ui_test.mjs` checks every tool
-is linked exactly once and every card shows its tile (decorative to a
-screen reader) and its blurb. The tool pages themselves are untouched: the
-index is a list, the pages rank.
+what you get.", capped at ten words by the registry test, and each card
+carries the tool's icon: an SVG at `site/src/assets/tools/<slug>.svg`,
+inlined at build time by `lib/icons.mjs` so it paints in `currentColor` and
+follows the dark toggle (an `<img>` would stay the light theme's green on
+the dark tile). The files are committed exactly as exported and the
+transform is a rule, so a regenerated set drops in unchanged: the darkest
+fill becomes the accent, any paler fill the accent at 40%, and the `<title>`
+and the fixed size go. Keyed by slug rather than by a registry field, so
+the registry test can insist on one icon per tool and one tool per icon,
+and that no fixed colour survives the transform. (Before the icons, the
+tile was text naming what you paste, `DOI`, `.bib`, `math`, which did the
+same job of telling nine BibTeX cards apart at a glance.) The lede stays
+the page's opening paragraph. Rows of chips (one row "Get BibTeX from DOI ·
+RIS · ISBN ...") were tried in between and rejected: they demoted the
+most-searched tools to the smallest element on the page and left two bars
+of white space. `ui_test.mjs` checks every tool is linked exactly once and
+every card shows its icon (decorative to a screen reader, in the tile's
+colour) and its blurb. The tool pages themselves are untouched: the index
+is a list, the pages rank.
 
 **Light by default, toggle still wins.** `Base.astro` takes a `theme` prop,
 which the tool pages set to `light`. A tool is landed on from a search
