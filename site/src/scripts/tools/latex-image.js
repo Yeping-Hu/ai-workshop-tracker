@@ -47,6 +47,13 @@ if (form) {
       const node = await M.tex2svgPromise(tex, { display: !(inline && inline.checked) });
       const svg = node.querySelector('svg');
       if (!svg) throw new Error('Nothing was rendered.');
+      // MathJax adds a visually-hidden MathML copy of every equation for screen
+      // readers and hides it with a stylesheet that only a full typeset run
+      // injects. This page only converts, so the copy rendered natively under
+      // the SVG and the preview showed the equation twice. The bundle is now
+      // configured without it (enableAssistiveMml: false); this is the belt to
+      // that brace, for a cached older bundle.
+      for (const mml of node.querySelectorAll('mjx-assistive-mml')) mml.remove();
       preview.innerHTML = '';
       preview.classList.remove('is-empty');
       preview.style.fontSize = `${Number(size.value) || 24}px`;

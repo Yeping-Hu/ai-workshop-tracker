@@ -1416,6 +1416,10 @@ await page.evaluate(() => localStorage.clear());
   await page.goto(`${BASE}/tools/latex-to-png/`, { waitUntil: 'networkidle' });
   await page.waitForSelector('#toolPreview svg', { timeout: 20000 });
   check('MathJax renders the default equation from the vendored bundle', await page.$eval('#toolPreview svg', (svg) => svg.querySelector('defs path') !== null));
+  // The assistive MathML copy MathJax adds for screen readers is hidden only by
+  // a stylesheet a full typeset injects; a convert-only page showed it as a
+  // second, native rendering under the SVG.
+  check('the preview shows the equation once (no assistive MathML copy)', (await page.$$eval('#toolPreview svg, #toolPreview mjx-assistive-mml, #toolPreview math', (els) => els.map((e) => e.tagName.toLowerCase()).join(','))) === 'svg');
   await page.goto(`${BASE}/tools/aoe-time/`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => /^\d\d:\d\d:\d\d$/.test(document.querySelector('#aoeClockTime')?.textContent || ''), null, { timeout: 5000 });
   const aoe = await page.evaluate(() => {

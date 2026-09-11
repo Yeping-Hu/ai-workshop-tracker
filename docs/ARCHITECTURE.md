@@ -1565,7 +1565,11 @@ out of `node_modules` into `public/vendor/` before every `astro dev` and
 gitignored, so the repo carries no third-party artefact and the version is
 whatever `site/package.json` pins. Output uses `fontCache: 'local'`, so each
 SVG embeds the glyph paths it uses and is self-contained; the PNG is the
-same SVG drawn onto a canvas at the chosen scale.
+same SVG drawn onto a canvas at the chosen scale. The bundle is configured
+with `enableAssistiveMml: false`: MathJax otherwise attaches a hidden MathML
+copy of each equation for screen readers and hides it with a stylesheet that
+only a full typeset run injects, so on these convert-only pages the copy
+rendered natively under the SVG and the preview showed every equation twice.
 
 **What they deliberately do not do**, and say so in their FAQs: no tool
 calls an LLM; the word counter does not follow `\input`; the URL tool

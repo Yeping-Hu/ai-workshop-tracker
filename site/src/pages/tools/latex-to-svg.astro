@@ -5,7 +5,7 @@ import { href } from '../../lib/site';
 
 <ToolPage slug="latex-to-svg">
   <Fragment slot="head">
-    <script is:inline set:html={`window.MathJax = { svg: { fontCache: 'local' }, startup: { typeset: false }, options: { enableMenu: false } };`} />
+    <script is:inline set:html={`window.MathJax = { svg: { fontCache: 'local' }, startup: { typeset: false }, options: { enableMenu: false, enableAssistiveMml: false } };`} />
     <script is:inline src={href('/vendor/mathjax/tex-svg.js')} async></script>
   </Fragment>
   <form class="tool-form" id="toolForm" data-slug="latex-to-svg" data-mode="svg">
