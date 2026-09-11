@@ -28,7 +28,18 @@
 .tool-form input::placeholder, .tool-form textarea::placeholder { color: var(--muted); opacity: 0.8; }
 .tool-row { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; align-items: end; }
 .tool-row > * { flex: 1 1 12rem; }
-.tool-row > .tool-actions, .tool-row > .grow-0 { flex: 0 0 auto; }
+/* `0 1 auto`, not `0 0 auto`. Forbidding shrink kept the actions box as wide as
+   its unwrapped content, so its own flex-wrap never engaged and four buttons ran
+   275px past a 390px screen — the reader had to scroll sideways to reach
+   "Download PNG". Allowing it to shrink lets the buttons wrap instead. min-width
+   is the companion: a flex item's automatic minimum is its content size, which
+   would otherwise re-establish the same floor. */
+.tool-row > .tool-actions { flex: 0 1 auto; min-width: 0; }
+/* grow-0 means "do not grow", not "do not shrink". A file input reports an
+   intrinsic width of ~322px, so refusing to shrink pushed it 35px past a 320px
+   screen; max-width keeps the control inside whatever the label gets. */
+.tool-row > .grow-0 { flex: 0 1 auto; min-width: 0; }
+.tool-row > .grow-0 input[type="file"] { max-width: 100%; }
 .tool-opts { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; font-size: 0.88rem; align-items: center; }
 .tool-opts label { display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; }
 .tool-opts input[type="checkbox"], .tool-opts input[type="radio"] { accent-color: var(--accent); width: 0.95rem; height: 0.95rem; }
@@ -64,6 +75,17 @@
 .tool-stat span { font-size: 0.8rem; color: var(--muted); }
 .tool-stat.is-main b { color: var(--accent); }
 .tool-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+/* A table's minimum is its columns, so on a narrow screen it cannot shrink and
+   took the whole page sideways with it. Scrolling the table's own wrapper keeps
+   the spill inside one element instead of the document. */
+.tool-out { max-width: 100%; }
+.tool-out:has(> .tool-table) { overflow-x: auto; }
+/* Without :has(), scroll every .tool-out rather than none: a block with nothing
+   too wide in it simply never scrolls, so this costs nothing where it is not
+   needed and keeps old engines off the sideways-page behaviour. */
+@supports not selector(:has(*)) {
+  .tool-out { overflow-x: auto; }
+}
 .tool-table th, .tool-table td { text-align: left; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
 .tool-table th { font-weight: 600; color: var(--muted); font-size: 0.82rem; }
 .tool-table td.num, .tool-table th.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
