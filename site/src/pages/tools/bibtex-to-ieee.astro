@@ -1,0 +1,26 @@
+---
+import ToolPage from '../../components/ToolPage.astro';
+---
+
+<ToolPage slug="bibtex-to-ieee">
+  <form class="tool-form" id="toolForm" data-slug="bibtex-to-ieee" data-style="ieee">
+    <label>BibTeX entries, or a DOI, arXiv id or ISBN (one per line)
+      <textarea id="toolInput" rows="8" spellcheck="false" placeholder="@inproceedings&#123;vaswani2017attention,&#10;  title=&#123;Attention is all you need&#125;,&#10;  author=&#123;Vaswani, Ashish and Shazeer, Noam&#125;,&#10;  booktitle=&#123;Advances in Neural Information Processing Systems&#125;,&#10;  year=&#123;2017&#125;&#10;&#125;&#10;10.1038/nature14539"></textarea>
+    </label>
+    <div class="tool-row">
+      <div class="tool-actions"><button class="btn" type="submit" id="toolGo">Convert to IEEE</button></div>
+      <p class="tool-status" id="toolStatus" aria-live="polite"></p>
+    </div>
+  </form>
+  <div class="tool-out" id="toolOut" hidden>
+    <div class="tool-out-head">
+      <h2>IEEE references</h2>
+      <div class="tool-actions">
+        <button class="btn secondary small" type="button" id="copyFormatted">Copy with formatting</button>
+        <button class="btn secondary small" type="button" id="copyPlain">Copy as plain text</button>
+      </div>
+    </div>
+    <ul class="cite-list" id="toolList"></ul>
+  </div>
+  <script src="../../scripts/tools/to-style.js"></script>
+</ToolPage>

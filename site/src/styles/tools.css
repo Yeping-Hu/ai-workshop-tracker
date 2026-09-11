@@ -1,0 +1,121 @@
+/* ============================================================
+   /tools/ pages. Everything reuses the site's tokens (paper,
+   surface, ink, accent) and its type: the tool is a card on the
+   same quiet surface as the board, with the site's own inputs
+   and buttons. Nothing here defines a colour of its own.
+   ============================================================ */
+
+.tool-head { padding: 2.2rem 0 1rem; }
+.tool-head .eyebrow a { color: inherit; text-decoration: none; }
+.tool-head .eyebrow a:hover { text-decoration: underline; }
+.tool-head .lede { font-size: 1.06rem; color: var(--muted); max-width: 46rem; margin: 0.4rem 0 0; }
+
+/* The tool itself. */
+.tool-panel {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 1.2rem 1.3rem; box-shadow: var(--shadow); margin-top: 0.6rem;
+}
+.tool-form { display: grid; gap: 0.85rem; }
+.tool-form label, .tool-field { display: grid; gap: 0.3rem; font-size: 0.86rem; color: var(--muted); }
+.tool-form textarea, .tool-form input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]), .tool-form select {
+  font: inherit; color: var(--ink); background: var(--paper);
+  border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.7rem; width: 100%;
+}
+.tool-form textarea { min-height: 9rem; font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.5; resize: vertical; }
+.tool-form textarea:focus, .tool-form input:focus, .tool-form select:focus {
+  border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.tool-form input::placeholder, .tool-form textarea::placeholder { color: var(--muted); opacity: 0.8; }
+.tool-row { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; align-items: end; }
+.tool-row > * { flex: 1 1 12rem; }
+.tool-row > .tool-actions, .tool-row > .grow-0 { flex: 0 0 auto; }
+.tool-opts { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; font-size: 0.88rem; align-items: center; }
+.tool-opts label { display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; }
+.tool-opts input[type="checkbox"], .tool-opts input[type="radio"] { accent-color: var(--accent); width: 0.95rem; height: 0.95rem; }
+.tool-opts select { font: inherit; font-size: 0.88rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 0.25rem 0.45rem; }
+.tool-opts input[type="number"], .tool-opts input[type="text"] { font: inherit; font-size: 0.88rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 0.25rem 0.45rem; width: 7rem; }
+.tool-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+.tool-actions .btn { cursor: pointer; font: inherit; font-size: 0.92rem; font-weight: 600; line-height: 1.3; }
+.tool-actions .btn[disabled] { opacity: 0.55; cursor: default; }
+.btn.small { font-size: 0.82rem; padding: 0.32rem 0.7rem; }
+.tool-status { font-size: 0.86rem; color: var(--muted); min-height: 1.3em; margin: 0; }
+.tool-status.is-error { color: var(--urgent); }
+.tool-status.is-ok { color: var(--accent); }
+
+/* Output. */
+.tool-out { margin-top: 1rem; display: grid; gap: 0.6rem; }
+.tool-out[hidden] { display: none; }
+.tool-out-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem 1rem; }
+.tool-out-head h2 { margin: 0; font-size: 1.05rem; }
+.tool-out pre { margin: 0; white-space: pre-wrap; word-break: break-word; max-height: 30rem; overflow: auto; font-size: 0.84rem; line-height: 1.5; }
+.tool-out .cite-text { font-size: 0.98rem; line-height: 1.55; }
+.cite-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.cite-list > li { padding: 0.75rem 0; border-bottom: 1px solid var(--line); display: grid; gap: 0.35rem; }
+.cite-list > li:last-child { border-bottom: 0; }
+.cite-list .cite-meta { font-size: 0.84rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; }
+.cite-list .cite-title { font-family: var(--font-display); font-weight: 600; font-size: 1.02rem; }
+.cite-list code { font-size: 0.84rem; }
+.cite-list .cite-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+/* Statistics tiles (word counts, clocks). */
+.tool-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.7rem; }
+.tool-stat { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 0.7rem 0.85rem; }
+.tool-stat b { display: block; font-family: var(--font-mono); font-size: 1.5rem; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.tool-stat span { font-size: 0.8rem; color: var(--muted); }
+.tool-stat.is-main b { color: var(--accent); }
+.tool-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.tool-table th, .tool-table td { text-align: left; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+.tool-table th { font-weight: 600; color: var(--muted); font-size: 0.82rem; }
+.tool-table td.num, .tool-table th.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* Clocks on the AoE page. */
+.aoe-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.8rem; }
+.aoe-clock { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem 1rem; }
+.aoe-clock .aoe-time { font-family: var(--font-mono); font-size: clamp(1.5rem, 4.5vw, 2.3rem); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.aoe-clock .aoe-date { font-family: var(--font-mono); font-size: 0.86rem; color: var(--muted); margin-top: 0.2rem; }
+.aoe-clock .aoe-label { font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }
+.aoe-clock.is-aoe { border-color: var(--accent); }
+.aoe-clock.is-aoe .aoe-time { color: var(--accent); }
+
+/* LaTeX preview. */
+.latex-preview {
+  min-height: 6rem; display: flex; align-items: center; justify-content: center;
+  padding: 1.2rem; background: #ffffff; border: 1px dashed var(--line); border-radius: 10px; overflow: auto;
+}
+.latex-preview.is-empty { color: var(--muted); font-size: 0.9rem; }
+.latex-preview svg { max-width: 100%; height: auto; }
+
+/* Documentation under the tool. */
+.tool-doc { max-width: 46rem; }
+.tool-doc ol { padding-left: 1.3rem; }
+.tool-doc ol li { margin: 0.35rem 0; }
+.tool-faq-item h3 { margin: 1.3rem 0 0.3rem; font-size: 1.05rem; }
+.tool-faq-item p { margin: 0; }
+.tool-related { margin-top: 2.6rem; font-size: 0.92rem; display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem; align-items: baseline; }
+.tool-related ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; }
+
+/* The /tools/ index. */
+.tool-groups { display: grid; gap: 2rem; margin-top: 1rem; }
+.tool-group h2 { margin: 0 0 0.8rem; }
+.tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 0.8rem; }
+.tool-card {
+  display: block; border: 1px solid var(--line); border-radius: 12px; padding: 0.95rem 1.05rem;
+  background: var(--surface); color: inherit; text-decoration: none;
+}
+.tool-card:hover { border-color: var(--accent); text-decoration: none; }
+.tool-card h3 { margin: 0 0 0.3rem; font-size: 1.05rem; font-family: var(--font-display); }
+.tool-card p { margin: 0; color: var(--muted); font-size: 0.88rem; }
+
+@media (max-width: 600px) {
+  .tool-panel { padding: 0.9rem 0.9rem; border-radius: 10px; }
+  .tool-row > * { flex-basis: 100%; }
+}
+
+/* Formatted styles under a BibTeX result. */
+.cite-styles { margin: 0; display: grid; grid-template-columns: 4.5rem 1fr; gap: 0.5rem 0.8rem; align-items: baseline; }
+.cite-styles dt { font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.cite-styles dd { margin: 0; font-size: 0.95rem; line-height: 1.5; }
+@media (max-width: 600px) { .cite-styles { grid-template-columns: 1fr; gap: 0.15rem 0; } .cite-styles dd { margin-bottom: 0.6rem; } }
+.aoe-form { margin-top: 1.2rem; }
+.aoe-headline { font-family: var(--font-display); font-size: 1.15rem; margin: 0; }
+.tool-table tr.is-strong td { font-weight: 600; }

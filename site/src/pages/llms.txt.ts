@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { workshops, conferences, paperCount } from '../lib/data';
 import { href } from '../lib/site';
+import { TOOLS } from '../lib/tools.mjs';
 
 export const GET: APIRoute = ({ site }) => {
   const origin = site ?? new URL('https://ai-workshop-tracker.pages.dev');
@@ -32,6 +33,7 @@ The site tracks one entry per workshop *edition* (a workshop at a specific confe
 - Per-conference pages: \`${abs('/')}conference/<id>/\` — one conference's workshops across every tracked year (ids: ${ids}).
 - Per-edition pages: \`${abs('/')}conference/<id>/<year>/\` — one conference year: its workshops with deadlines, dates, paper counts, and a FAQ.
 - Workshop detail pages: \`${abs('/')}workshop/<slug>/\` — one per workshop edition, listing its deadline, dates, organizers, and accepted papers.
+- [Free tools for researchers](${abs('/tools/')}): ${TOOLS.map((t: any) => t.name).join(', ')}. Each is a single page that runs in the browser; the citation tools call Crossref, DataCite, Open Library and PubMed directly.
 
 ## Conferences covered
 ${covered}.

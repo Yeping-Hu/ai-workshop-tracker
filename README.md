@@ -20,6 +20,7 @@ A static website that aggregates **AI/ML/Robotics conference workshop** informat
 - ✉️ **Optional weekly email digest** of deadline changes and new calls in the conferences and topics you pick, plus opt-in alerts when a starred deadline is within 72 hours — no password, one-click unsubscribe that deletes your address
 - 📄 **Auto-generated accepted-paper listings** for OpenReview-hosted workshops on each workshop's page
 - 🗂️ **A page for each conference** (e.g. `/conference/neurips/`) listing its workshops by year — with schema.org structured data and an `/llms.txt` summary that make the dataset easy for search engines and AI assistants to cite
+- 🧰 **Free tools for researchers** at `/tools/`: a DOI finder, BibTeX from a DOI, RIS, ISBN, PubMed or URL, APA / MLA / IEEE / ACM references, LaTeX to PNG and SVG, Markdown and Excel to LaTeX, a LaTeX word count and an AoE time page, each a single page that runs in the browser and stores nothing
 - 🔗 **Tracks and past editions linked automatically** — workshops that split submissions across separate tracks, and series that return year after year, are cross-linked on every one of their pages, so landing on any single track shows the rest of the workshop and each track's own deadline
 
 Conference deadline trackers exist; *workshop* deadlines never had one. This fills that gap. Ships with 900+ real workshop editions (2024–2026, across all nine conferences) and 20,000+ accepted-paper titles imported from OpenReview venue records.
@@ -99,6 +100,7 @@ list, the "add a conference" procedure, and bulk-importing workshop lists are in
 - Machine-readable dump: `/api/workshops.json` (regenerated on every deploy; `submission_deadline` is always the paper deadline, with `abstract_deadline` alongside it for two-stage venues, and `short_name` / `track_label` for labelling a workshop unambiguously when a series splits across tracks; `moved_slugs` maps slugs that have left the dump to what they became, so a stored slug can follow a merge)
 - Markdown exports: `/exports/<conference>-<year>-workshops.md` — one file per conference edition, also regenerated on every deploy
 - Forum ids of papers with no PDF (supports saved-paper PDF links): `/api/papers-without-pdf.json`
+- Workshop papers by OpenReview forum id, with each paper's workshop, conference and year (lets the citation tools cite a workshop paper properly): `/api/openreview-papers.json`
 - New-workshop announcements: `/rss.xml`
 - What changed this week (the published edition of the weekly digest): `/changes/`
 - LLM-friendly site summary ([llms.txt](https://llmstxt.org/)): `/llms.txt`
@@ -115,7 +117,7 @@ Contributions are governed by lightweight [contributor terms](CONTRIBUTOR_TERMS.
 
 ## Scope (deliberately) excluded
 
-No accounts, no LLM pipelines, no PDF rehosting, and no scraping of submission portals or individual workshop sites. These are the things that make trackers expensive to run and easy to abandon.
+No accounts, no LLM pipelines, no PDF rehosting, and no scraping of submission portals or individual workshop sites. These are the things that make trackers expensive to run and easy to abandon. The free tools under `/tools/` keep to the same rule: they run in the browser, call the public registries directly, and add nothing to run.
 
 One narrow exception: the tracker reads each conference's **own published list of accepted workshops** to cross-check what OpenReview told it — one fetch per conference-year per week, reported for a human, never applied. See **[docs/AUTOMATION.md](docs/AUTOMATION.md)** for why that second opinion is needed.
 

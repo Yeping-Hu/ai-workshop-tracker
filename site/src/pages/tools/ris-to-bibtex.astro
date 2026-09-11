@@ -1,0 +1,29 @@
+---
+import ToolPage from '../../components/ToolPage.astro';
+---
+
+<ToolPage slug="ris-to-bibtex">
+  <form class="tool-form" id="toolForm" data-slug="ris-to-bibtex" data-format="ris">
+    <label>RIS text (from EndNote, Zotero, Mendeley, Scopus, Web of Science or a Cite button)
+      <textarea id="toolInput" rows="8" spellcheck="false" placeholder="TY  - JOUR&#10;AU  - Smith, John&#10;TI  - A study of things&#10;JO  - Journal of Stuff&#10;PY  - 2021&#10;ER  - "></textarea>
+    </label>
+    <div class="tool-row">
+      <label class="grow-0">Or pick a file
+        <input type="file" id="toolFile" accept=".ris,.txt" />
+      </label>
+      <div class="tool-actions"><button class="btn" type="submit" id="toolGo">Convert to BibTeX</button></div>
+      <p class="tool-status" id="toolStatus" aria-live="polite"></p>
+    </div>
+  </form>
+  <div class="tool-out" id="toolOut" hidden>
+    <div class="tool-out-head">
+      <h2>BibTeX</h2>
+      <div class="tool-actions">
+        <button class="btn secondary small" type="button" id="copyBib">Copy</button>
+        <button class="btn secondary small" type="button" id="dlBib">Download .bib</button>
+      </div>
+    </div>
+    <pre><code id="toolBib"></code></pre>
+  </div>
+  <script src="../../scripts/tools/file-to-bibtex.js"></script>
+</ToolPage>

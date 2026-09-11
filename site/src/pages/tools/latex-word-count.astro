@@ -1,0 +1,31 @@
+---
+import ToolPage from '../../components/ToolPage.astro';
+---
+
+<ToolPage slug="latex-word-count">
+  <form class="tool-form" id="toolForm" data-slug="latex-word-count">
+    <label>LaTeX source (.tex)
+      <textarea id="toolInput" rows="10" spellcheck="false" placeholder="\documentclass{article}&#10;\begin{document}&#10;\section{Introduction}&#10;We propose a method \cite{smith2020} that ...&#10;\end{document}"></textarea>
+    </label>
+    <div class="tool-row">
+      <label class="grow-0">Or pick a file
+        <input type="file" id="toolFile" accept=".tex,.txt" />
+      </label>
+      <div class="tool-opts">
+        <label><input type="checkbox" id="optAppendix" checked /> Count the appendix</label>
+      </div>
+      <div class="tool-actions"><button class="btn" type="submit" id="toolGo">Count words</button></div>
+      <p class="tool-status" id="toolStatus" aria-live="polite"></p>
+    </div>
+  </form>
+  <div class="tool-out" id="toolOut" hidden>
+    <div class="tool-stats" id="toolStats"></div>
+    <div class="tool-out-head"><h2>By section</h2></div>
+    <table class="tool-table" id="toolSections">
+      <thead><tr><th>Section</th><th class="num">Words</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="tool-status" id="toolNotes"></p>
+  </div>
+  <script src="../../scripts/tools/latex-word-count.js"></script>
+</ToolPage>

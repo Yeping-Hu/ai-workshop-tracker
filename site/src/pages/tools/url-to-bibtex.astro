@@ -1,0 +1,38 @@
+---
+import ToolPage from '../../components/ToolPage.astro';
+---
+
+<ToolPage slug="url-to-bibtex">
+  <form class="tool-form" id="toolForm" data-slug="url-to-bibtex" data-kinds="url,doi,arxiv,pmid,openreview" data-styles="1">
+    <label>URL (one per line)
+      <textarea id="toolInput" rows="3" spellcheck="false" placeholder="https://dl.acm.org/doi/10.1145/3292500.3330701&#10;https://arxiv.org/abs/2106.09685&#10;https://openreview.net/forum?id=..."></textarea>
+    </label>
+    <div class="tool-row">
+      <label>Title, for a plain web page (optional)
+        <input type="text" id="urlTitle" placeholder="The page's title" autocomplete="off" />
+      </label>
+      <label>Author (as Family, Given) or organisation (optional)
+        <input type="text" id="urlAuthor" placeholder="e.g. Hugging Face, or Doe, Jane" autocomplete="off" />
+      </label>
+    </div>
+    <div class="tool-row">
+      <div class="tool-actions"><button class="btn" type="submit" id="toolGo">Convert to BibTeX</button></div>
+      <p class="tool-status" id="toolStatus" aria-live="polite"></p>
+    </div>
+  </form>
+  <div class="tool-out" id="toolOut" hidden>
+    <div class="tool-out-head">
+      <h2>BibTeX</h2>
+      <div class="tool-actions">
+        <button class="btn secondary small" type="button" id="copyBib">Copy</button>
+        <button class="btn secondary small" type="button" id="dlBib">Download .bib</button>
+      </div>
+    </div>
+    <pre><code id="toolBib"></code></pre>
+    <div id="toolStyles" hidden>
+      <div class="tool-out-head"><h2>Formatted</h2></div>
+      <dl class="cite-styles"></dl>
+    </div>
+  </div>
+  <script src="../../scripts/tools/to-bibtex.js"></script>
+</ToolPage>

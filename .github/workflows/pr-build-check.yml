@@ -50,6 +50,11 @@ jobs:
         run: node scripts/lockfile_test.mjs
       - name: Validate data
         run: node scripts/validate.mjs
+      # The /tools/ pages are built from site/src/lib/tools.mjs; this checks the
+      # rules they live by (keyword in title, description and H1, a FAQ, a page
+      # per entry) before the build spends minutes rendering them.
+      - name: Check the /tools/ registry
+        run: node scripts/tools_registry_test.mjs
       - run: npm ci --prefix site
       - name: Build site
         env:

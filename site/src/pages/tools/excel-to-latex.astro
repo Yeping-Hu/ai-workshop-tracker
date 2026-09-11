@@ -1,0 +1,40 @@
+---
+import ToolPage from '../../components/ToolPage.astro';
+---
+
+<ToolPage slug="excel-to-latex">
+  <form class="tool-form" id="toolForm" data-slug="excel-to-latex">
+    <label>Cells copied from Excel, Google Sheets or Numbers, or CSV text
+      <textarea id="toolInput" rows="8" spellcheck="false" placeholder="Model,Params (M),Acc (%)&#10;BERT-base,110,92.1&#10;GPT-2,1500,95.0"></textarea>
+    </label>
+    <div class="tool-opts">
+      <label>Delimiter
+        <select id="optDelim"><option value="auto" selected>Auto-detect</option><option value="tab">Tab (pasted cells)</option><option value=",">Comma</option><option value=";">Semicolon</option></select>
+      </label>
+      <label><input type="checkbox" id="optHeader" checked /> First row is a header</label>
+      <label><input type="checkbox" id="optBold" /> Bold header</label>
+      <label><input type="checkbox" id="optBooktabs" checked /> booktabs rules</label>
+      <label>Alignment
+        <select id="optAlign"><option value="auto" selected>Auto (numbers right)</option><option value="l">All left</option><option value="c">All centred</option><option value="r">All right</option></select>
+      </label>
+      <label><input type="checkbox" id="optFloat" checked /> Wrap in a table float</label>
+      <label>Caption <input type="text" id="optCaption" placeholder="Results on the test set" /></label>
+      <label>Label <input type="text" id="optLabel" placeholder="tab:results" /></label>
+    </div>
+    <div class="tool-row">
+      <div class="tool-actions"><button class="btn" type="submit" id="toolGo">Convert to LaTeX</button></div>
+      <p class="tool-status" id="toolStatus" aria-live="polite"></p>
+    </div>
+  </form>
+  <div class="tool-out" id="toolOut" hidden>
+    <div class="tool-out-head">
+      <h2>LaTeX table</h2>
+      <div class="tool-actions">
+        <button class="btn secondary small" type="button" id="copyOut">Copy</button>
+        <button class="btn secondary small" type="button" id="dlOut">Download .tex</button>
+      </div>
+    </div>
+    <pre><code id="toolResult"></code></pre>
+  </div>
+  <script src="../../scripts/tools/excel-to-latex.js"></script>
+</ToolPage>

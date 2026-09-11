@@ -13,6 +13,8 @@ downstream of a reason recorded there.
 - `docs/ALERTS.md` — the email-alerts runbook (Worker, D1, secrets, dashboard).
 - `docs/DEPLOYING.md` — hosting and every environment variable.
 - `skills/add-conference/` — the procedure for adding a conference.
+- `site/src/lib/tools.mjs` — the registry behind every `/tools/` page; read the
+  "Free tools" section of `docs/ARCHITECTURE.md` before adding or changing one.
 
 ## Standing rules
 

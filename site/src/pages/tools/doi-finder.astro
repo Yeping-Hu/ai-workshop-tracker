@@ -1,0 +1,19 @@
+---
+import ToolPage from '../../components/ToolPage.astro';
+---
+
+<ToolPage slug="doi-finder">
+  <form class="tool-form" id="toolForm" data-slug="doi-finder">
+    <label>Paper title, a reference line, or a DOI to check
+      <input type="text" id="toolInput" placeholder="Attention is all you need" autocomplete="off" />
+    </label>
+    <div class="tool-row">
+      <div class="tool-actions"><button class="btn" type="submit" id="toolGo">Find DOI</button></div>
+      <p class="tool-status" id="toolStatus" aria-live="polite"></p>
+    </div>
+  </form>
+  <div class="tool-out" id="toolOut" hidden>
+    <ul class="cite-list" id="toolList"></ul>
+  </div>
+  <script src="../../scripts/tools/doi-finder.js"></script>
+</ToolPage>

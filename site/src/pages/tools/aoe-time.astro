@@ -1,0 +1,67 @@
+---
+import ToolPage from '../../components/ToolPage.astro';
+import { upcomingWithDeadline, conferenceById } from '../../lib/data';
+
+// The soonest open calls, for the "in your time" table. Read from the same
+// build-time data as the board, so the two never disagree; the client
+// renders the local time and the countdown.
+const calls = upcomingWithDeadline.slice(0, 10).map((w: any) => ({
+  slug: w.slug,
+  name: String(w.name),
+  conf: String(conferenceById.get(w.conference)?.name ?? w.conference),
+  ms: w.deadlineUtcMs,
+}));
+---
+
+<ToolPage slug="aoe-time">
+  <div class="aoe-grid" id="aoeClocks">
+    <div class="aoe-clock is-aoe">
+      <div class="aoe-label">AoE time now</div>
+      <div class="aoe-time" id="aoeClockTime">--:--:--</div>
+      <div class="aoe-date" id="aoeClockDate"></div>
+    </div>
+    <div class="aoe-clock">
+      <div class="aoe-label">UTC</div>
+      <div class="aoe-time" id="utcClockTime">--:--:--</div>
+      <div class="aoe-date" id="utcClockDate"></div>
+    </div>
+    <div class="aoe-clock">
+      <div class="aoe-label" id="localClockLabel">Your time</div>
+      <div class="aoe-time" id="localClockTime">--:--:--</div>
+      <div class="aoe-date" id="localClockDate"></div>
+    </div>
+  </div>
+
+  <form class="tool-form aoe-form" id="aoeForm">
+    <div class="tool-row">
+      <label>Convert
+        <select id="aoeDir">
+          <option value="aoe" selected>an AoE deadline to my time</option>
+          <option value="local">my local time to AoE</option>
+        </select>
+      </label>
+      <label>Date <input type="date" id="aoeDate" required /></label>
+      <label>Time <input type="time" id="aoeTime" required /></label>
+      <div class="tool-actions"><button class="btn" type="submit">Convert</button></div>
+    </div>
+    <p class="tool-status" id="aoeStatus" aria-live="polite"></p>
+  </form>
+  <div class="tool-out" id="aoeOut" hidden>
+    <p class="aoe-headline" id="aoeHeadline"></p>
+    <table class="tool-table" id="aoeTable">
+      <thead><tr><th>Zone</th><th class="num">Same instant</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="tool-out">
+    <div class="tool-out-head"><h2>Open workshop deadlines, in your time</h2></div>
+    <table class="tool-table" id="aoeCalls">
+      <thead><tr><th>Workshop</th><th class="num">Deadline (AoE)</th><th class="num">Your time</th><th class="num">Left</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="tool-status">From this site's tracker of workshop calls for papers. Always confirm the deadline on the workshop's own page.</p>
+  </div>
+  <script type="application/json" id="aoeCallsData" set:html={JSON.stringify(calls)} />
+  <script src="../../scripts/tools/aoe-time.js"></script>
+</ToolPage>

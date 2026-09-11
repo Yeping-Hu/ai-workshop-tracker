@@ -1,6 +1,9 @@
 node_modules/
 site/node_modules/
 site/dist/
+# Third-party browser bundles copied out of node_modules by site/vendor.mjs
+# before every build; never hand-edited, never committed.
+site/public/vendor/
 .DS_Store
 *.log
 

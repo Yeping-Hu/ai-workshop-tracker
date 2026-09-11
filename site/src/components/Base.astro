@@ -24,8 +24,16 @@ interface Props {
    * one-off. The same list keeps these URLs out of the sitemap.
    */
   noindex?: boolean;
+  /**
+   * Render the page in this theme unless the visitor has chosen one with the
+   * toggle. The /tools/ pages pass 'light': a free tool is used in a browser
+   * tab for thirty seconds, and a dark page from a light search result reads
+   * as the wrong site. The toggle still works there; an explicit choice
+   * stored in localStorage is applied by the inline script below and wins.
+   */
+  theme?: 'light' | 'dark';
 }
-const { title, description = SITE_TAGLINE, ogType = 'website', siteSuffix = true } = Astro.props;
+const { title, description = SITE_TAGLINE, ogType = 'website', siteSuffix = true, theme } = Astro.props;
 const noindex = Astro.props.noindex ?? isNoindex(Astro.url.pathname, import.meta.env.BASE_URL);
 const pageTitle = title
   ? (siteSuffix ? `${title} · ${SITE_NAME}` : title)
@@ -44,6 +52,7 @@ const canonical = Astro.site && !noindex ? new URL(Astro.url.pathname, Astro.sit
 // old by design.
 const nav = [
   { label: 'Home', path: '/' },
+  { label: 'Tools', path: '/tools/' },
   { label: 'Saved', path: '/saved/' },
   { label: 'About', path: '/about/' },
 ];
@@ -54,7 +63,9 @@ const CF_TOKEN = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN;
 const BUILD_ID = import.meta.env.PUBLIC_BUILD_ID;
 const current = (p: string) =>
   Astro.url.pathname.replace(/\/+$/, '/') === href(p).replace(/\/+$/, '/') ||
-  (p === '/' && Astro.url.pathname === href('/'));
+  (p === '/' && Astro.url.pathname === href('/')) ||
+  // The Tools entry stays lit on every tool page, not only on the index.
+  (p === '/tools/' && Astro.url.pathname.startsWith(href('/tools/')));
 
 /**
  * Creates `window.awtAlertsAdopt` in <head>, before anything can ask for it.
@@ -85,7 +96,7 @@ const ALERTS_BOOTSTRAP = `
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme={theme}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

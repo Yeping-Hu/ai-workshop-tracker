@@ -1,0 +1,29 @@
+---
+import ToolPage from '../../components/ToolPage.astro';
+---
+
+<ToolPage slug="nbib-to-bibtex">
+  <form class="tool-form" id="toolForm" data-slug="nbib-to-bibtex" data-format="nbib">
+    <label>NBIB text from PubMed, or PubMed ids one per line
+      <textarea id="toolInput" rows="8" spellcheck="false" placeholder="PMID- 31452104&#10;TI  - Deep learning in medicine.&#10;FAU - Smith, John&#10;JT  - Journal of Medical Systems&#10;DP  - 2019 Sep"></textarea>
+    </label>
+    <div class="tool-row">
+      <label class="grow-0">Or pick a file
+        <input type="file" id="toolFile" accept=".nbib,.txt" />
+      </label>
+      <div class="tool-actions"><button class="btn" type="submit" id="toolGo">Convert to BibTeX</button></div>
+      <p class="tool-status" id="toolStatus" aria-live="polite"></p>
+    </div>
+  </form>
+  <div class="tool-out" id="toolOut" hidden>
+    <div class="tool-out-head">
+      <h2>BibTeX</h2>
+      <div class="tool-actions">
+        <button class="btn secondary small" type="button" id="copyBib">Copy</button>
+        <button class="btn secondary small" type="button" id="dlBib">Download .bib</button>
+      </div>
+    </div>
+    <pre><code id="toolBib"></code></pre>
+  </div>
+  <script src="../../scripts/tools/file-to-bibtex.js"></script>
+</ToolPage>

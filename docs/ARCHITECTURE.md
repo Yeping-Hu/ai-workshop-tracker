@@ -1464,6 +1464,124 @@ footer link, breadcrumbs, and entries in the `Dataset` keywords and `llms.txt` o
 the next build. Because statuses are derived at build time (above), the daily
 rebuild keeps every derived value current.
 
+## Free tools (`/tools/`)
+
+Seventeen single-purpose pages under `/tools/`, each built for one search
+query a researcher types while writing a paper: a DOI finder; BibTeX from a
+DOI, an RIS file, an ISBN, a PubMed NBIB file or a URL (and a generator that
+takes any of them); the four reference styles (APA 7, MLA 9, IEEE, ACM);
+LaTeX to PNG and to SVG; Markdown to LaTeX; a spreadsheet to a LaTeX table;
+a LaTeX word count; and an AoE time page. They exist for search traffic. The
+tracker's own queries ("neurips workshops", "iclr 2026 workshops") are
+seasonal and small; these are year-round, and each page is a box that does
+the thing the query asks for, which is what ranks for a tool-shaped query.
+
+**Which tools, and why these.** Every page is a keyword with measured demand
+(Semrush, September 2026: "doi finder" 2.4K US and 13.8K global searches a
+month at difficulty 34; "ris to bibtex" 720 / 3.6K at difficulty 8; "aoe
+time" 1.9K / 6.7K at 34; "latex to png" 720 / 3.0K at 15; "markdown to latex"
+480 / 3.2K at 17), low difficulty, a job done while writing a paper, and no
+need for a server, an LLM or a paid API. That last rule is the site's own:
+the tools run entirely in the browser, so they add nothing to host, patch or
+pay for, and the static build is untouched. Larger keywords were skipped on
+purpose: "citation generator" and "bibliography generator" belong to the
+citation sites, "latex table generator" to tablesgenerator.com, "latex
+equation editor" to codecogs, and "token counter" is off the site's subject.
+The full research is in the session notes, not here; what matters for the
+code is the rule.
+
+**One registry, one frame.** `site/src/lib/tools.mjs` holds every page's
+copy: slug, keyword, `<title>`, meta description, H1, lede, the three
+sections under the tool (how to use it, why you would, a FAQ) and its
+related tools. `ToolPage.astro` renders that around the tool markup, and
+emits the FAQ twice: visibly, and as `FAQPage` JSON-LD, beside a
+`BreadcrumbList` and a `WebApplication` (free, browser-only). The rules the
+pages live by, which is the brief they were built to: the keyword is in the
+title, the description and the H1; no em dashes in the copy; a FAQ of real
+questions; light theme by default. `scripts/tools_registry_test.mjs` checks
+all of it, plus that every registry entry has a page and every page an
+entry, and runs in `pr-build-check.yml` before the build.
+
+**Light by default, toggle still wins.** `Base.astro` takes a `theme` prop,
+which the tool pages set to `light`. A tool is landed on from a search
+result and used for half a minute; a dark page there reads as the wrong
+site. The inline theme script still applies a choice stored by the header
+toggle, so a visitor who chose dark gets dark everywhere. (`ui_test.mjs`
+pins both directions.)
+
+**Pure libraries, tested under node.** The logic lives in `lib/`, plain ESM
+with no DOM, and the pages' scripts under `site/src/scripts/tools/` are thin
+wiring around it:
+
+- `citations.mjs`: the one reference model (a `Ref`), LaTeX to Unicode and
+  back, name parsing, BibTeX writing with a derived key
+  (`vaswani2017attention`) and capital-protecting braces, and the four
+  formatters. Not a CSL engine on purpose: a CSL processor is a large
+  dependency, and four styles over the entry types researchers cite is a
+  few hundred lines that are pinned line by line.
+- `bibtex_parse.mjs`, `ris.mjs`, `nbib.mjs`, `csl.mjs`: readers into that
+  model from pasted BibTeX (braces, quotes, `#`, `@string`), RIS and NBIB
+  exports, and the JSON the registries return (CSL-JSON from doi.org,
+  Crossref work items, DataCite, Open Library, Google Books, PubMed
+  esummary, and this site's own workshop-paper index).
+- `identifiers.mjs`: what was pasted (DOI, arXiv id or link, ISBN with its
+  checksum, PubMed id, OpenReview link, URL, or free text), in one place so
+  "DOI to BibTeX" and "URL to BibTeX" cannot disagree about what a DOI is.
+- `tex.mjs`, `csv2tex.mjs`, `md2tex.mjs`, `texcount.mjs`: the one LaTeX
+  escaping rule, the table converter (delimiter detection, RFC 4180
+  quoting, numeric columns right-aligned), the Markdown converter, and a
+  TeXcount-style word counter (text, headers, captions and footnotes
+  separately; math and floats as items; comments, commands, the preamble
+  and the bibliography left out). Pandoc and TeXcount cannot run in a
+  browser page; these are the parts of them people actually reach for.
+
+`scripts/citations_test.mjs`, `scripts/reference_parsers_test.mjs` and
+`scripts/latex_tools_test.mjs` pin them and run in `validate.yml`.
+
+**Fetching happens in the browser, from the registries themselves.** Nothing
+is proxied through this site and nothing is stored. Which endpoints a page
+can call was verified before it was built, because CORS decides it:
+doi.org content negotiation (`Accept: application/vnd.citationstyles.csl+json`)
+is answered by Crossref and DataCite with CORS headers, so one code path
+resolves journals, proceedings, books and arXiv (every arXiv paper has a
+DataCite DOI, `10.48550/arXiv.<id>`); `api.crossref.org` and
+`api.datacite.org` (the finder's search), Open Library, Google Books and
+NCBI's esummary all allow browser calls. arXiv's own API and the OpenReview
+API do not, which is why arXiv goes through DataCite and why OpenReview links
+are looked up in `/api/openreview-papers.json`: the tracker's own index of
+workshop papers by forum id, generated at build time from the committed
+caches, fetched only when an OpenReview link is pasted. That lookup is the
+one thing no registry can do: cite a workshop paper with the workshop's full
+name, conference and year as the booktitle. `site/src/scripts/tools/refs.js`
+is the only file that fetches.
+
+**MathJax is vendored at build time.** The two LaTeX image pages need a TeX
+engine in the browser; MathJax's `tex-svg` bundle is a 2 MB classic script
+that configures itself from `window.MathJax`, so it is served as a plain
+`<script>` on those two pages only, not bundled into any other page's
+JavaScript. `site/vendor.mjs` copies it (and the extensions it autoloads)
+out of `node_modules` into `public/vendor/` before every `astro dev` and
+`astro build` (the `predev` / `prebuild` scripts); the directory is
+gitignored, so the repo carries no third-party artefact and the version is
+whatever `site/package.json` pins. Output uses `fontCache: 'local'`, so each
+SVG embeds the glyph paths it uses and is self-contained; the PNG is the
+same SVG drawn onto a canvas at the chosen scale.
+
+**What they deliberately do not do**, and say so in their FAQs: no tool
+calls an LLM; the word counter does not follow `\input`; the URL tool
+cannot read another site's page metadata (a browser page cannot), so a plain
+web page gets an `@misc` with the fields to fill; the finder's first result
+is not assumed correct. The pages are not in the site search (Pagefind
+indexes only `[data-pf-ws]` roots), and their sitemap `lastmod` is the build
+date like the other corpus-wide pages.
+
+**Measuring.** GoatCounter counts pageviews on `/tools/<slug>/` like any
+page; each tool additionally sends one `tools/<slug>/used` event the first
+time it produces output on a page load (`used()` in `ui.js`, a no-op when
+analytics is off). Pageviews say which tools are found; the event says
+which are used. Search traffic for a new page takes months to arrive; judge
+the set on Search Console and those two numbers, not on the first weeks.
+
 ## The UI behavior suite runs on every PR and every push to main
 
 `scripts/ui_test.mjs` is a headless-browser suite that locks the homepage's

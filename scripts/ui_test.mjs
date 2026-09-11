@@ -1344,6 +1344,88 @@ await page.evaluate(() => localStorage.clear());
   await page.evaluate(() => localStorage.clear());
 }
 
+// --- /tools/ ---------------------------------------------------------------
+// The free-tool pages are static pages with client-side logic and, for the
+// citation tools, live calls to the DOI registries. Every registry call is
+// stubbed here so the suite never depends on the network; what is checked is
+// the page's own behaviour: the registry-driven frame (title, H1, FAQ markup,
+// light theme), each tool producing output from a paste, and the DOI finder
+// and BibTeX generator turning a registry answer into what the page promises.
+{
+  console.log('— /tools/: index and frame —');
+  const { TOOLS } = await import('../site/src/lib/tools.mjs');
+  await page.goto(`${BASE}/tools/`, { waitUntil: 'networkidle' });
+  const cards = await page.$$eval('.tool-card', (els) => els.map((e) => e.getAttribute('href')));
+  check(`the index lists every registered tool (${TOOLS.length})`, cards.length === TOOLS.length && TOOLS.every((t) => cards.some((h) => h.endsWith(`/tools/${t.slug}/`))), cards.join(' '));
+  check('the header has a Tools entry, current on the index', (await page.$eval('.site-nav a[href$="/tools/"]', (a) => a.getAttribute('aria-current'))) === 'page');
+  check('the index renders light unless the visitor chose otherwise', (await page.evaluate(() => document.documentElement.dataset.theme)) === 'light');
+
+  const t0 = TOOLS.find((t) => t.slug === 'doi-finder');
+  await page.goto(`${BASE}/tools/doi-finder/`, { waitUntil: 'networkidle' });
+  check('a tool page carries its registry title and H1', (await page.title()) === t0.title && (await page.$eval('h1', (h) => h.textContent.trim())) === t0.h1);
+  const ld = await page.$$eval('script[type="application/ld+json"]', (els) => els.map((e) => JSON.parse(e.textContent)['@type']));
+  check('FAQPage, BreadcrumbList and WebApplication JSON-LD are present', ['FAQPage', 'BreadcrumbList', 'WebApplication'].every((k) => ld.includes(k)), ld.join(','));
+  check('every FAQ question is visible on the page', (await page.$$eval('.tool-faq-item h3', (els) => els.map((e) => e.textContent.trim()))).join('|') === t0.faqs.map((f) => f.q).join('|'));
+  check('the Tools nav entry stays current on a tool page', (await page.$eval('.site-nav a[href$="/tools/"]', (a) => a.getAttribute('aria-current'))) === 'page');
+  await page.evaluate(() => localStorage.setItem('theme', 'dark'));
+  await page.reload({ waitUntil: 'networkidle' });
+  check('an explicit dark choice still wins on a tool page', (await page.evaluate(() => document.documentElement.dataset.theme)) === 'dark');
+  await page.evaluate(() => localStorage.removeItem('theme'));
+
+  console.log('— /tools/: DOI finder and BibTeX generator (registries stubbed) —');
+  const work = {
+    DOI: '10.1038/nature14539', type: 'journal-article', title: ['Deep learning'],
+    author: [{ given: 'Yann', family: 'LeCun' }, { given: 'Yoshua', family: 'Bengio' }, { given: 'Geoffrey', family: 'Hinton' }],
+    'container-title': ['Nature'], volume: '521', issue: '7553', page: '436-444', issued: { 'date-parts': [[2015, 5, 27]] }, publisher: 'Springer', score: 90,
+  };
+  await page.route('https://api.crossref.org/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ message: { items: [work] } }) }));
+  await page.route('https://api.datacite.org/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ data: [] }) }));
+  await page.route('https://doi.org/**', (r) => r.fulfill({ status: 200, contentType: 'application/vnd.citationstyles.csl+json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ ...work, type: 'article-journal', title: 'Deep learning', 'container-title': 'Nature' }) }));
+  await page.goto(`${BASE}/tools/doi-finder/`, { waitUntil: 'networkidle' });
+  await page.fill('#toolInput', 'deep learning lecun');
+  await page.click('#toolGo');
+  await page.waitForSelector('#toolList li', { timeout: 8000 });
+  check('the finder shows the DOI and a Cite link into the generator', await page.$eval('#toolList li', (li) => li.querySelector('code').textContent === '10.1038/nature14539' && li.querySelector('a.btn[href*="bibtex-citation-generator/?q=10.1038"]') !== null));
+  await page.goto(`${BASE}/tools/bibtex-citation-generator/?q=10.1038%2Fnature14539`, { waitUntil: 'networkidle' });
+  await page.waitForFunction(() => document.querySelector('#toolBib')?.textContent.includes('@article'), null, { timeout: 8000 });
+  const bib = await page.$eval('#toolBib', (el) => el.textContent);
+  check('a ?q= DOI is resolved into BibTeX with a derived key', bib.startsWith('@article{lecun2015deep,') && bib.includes('journal      = {Nature}') && bib.includes('pages        = {436--444}'), bib.slice(0, 120));
+  check('the four styles are shown under the entry', (await page.$$eval('#toolStyles dt', (els) => els.map((e) => e.textContent))).join(',') === 'APA,MLA,IEEE,ACM');
+  await page.goto(`${BASE}/tools/bibtex-to-apa/`, { waitUntil: 'networkidle' });
+  await page.fill('#toolInput', '@inproceedings{v, title={Attention is all you need}, author={Vaswani, Ashish and Shazeer, Noam}, booktitle={NeurIPS}, year={2017}}');
+  await page.click('#toolGo');
+  await page.waitForSelector('#toolList li', { timeout: 8000 });
+  check('BibTeX pasted into the APA page formats as APA 7', (await page.$eval('#toolList li', (li) => li.textContent.trim())) === 'Vaswani, A., & Shazeer, N. (2017). Attention is all you need. In NeurIPS.');
+  await page.unroute('https://api.crossref.org/**');
+  await page.unroute('https://api.datacite.org/**');
+  await page.unroute('https://doi.org/**');
+
+  console.log('— /tools/: LaTeX tools and AoE —');
+  await page.goto(`${BASE}/tools/excel-to-latex/`, { waitUntil: 'networkidle' });
+  await page.fill('#toolInput', 'Model,Acc\nBERT,92.1\nGPT,95.0');
+  await page.waitForFunction(() => document.querySelector('#toolResult')?.textContent.includes('tabular'), null, { timeout: 5000 });
+  check('CSV becomes a booktabs table with numbers right-aligned', (await page.$eval('#toolResult', (el) => el.textContent)).includes('\\begin{tabular}{lr}\n    \\toprule\n    Model & Acc \\\\'));
+  await page.goto(`${BASE}/tools/markdown-to-latex/`, { waitUntil: 'networkidle' });
+  await page.fill('#toolInput', '# Intro\n\nSome **bold** text with 5% and x_1.');
+  await page.waitForFunction(() => document.querySelector('#toolResult')?.textContent.includes('section'), null, { timeout: 5000 });
+  check('Markdown becomes escaped LaTeX', (await page.$eval('#toolResult', (el) => el.textContent)) === '\\section{Intro}\n\nSome \\textbf{bold} text with 5\\% and x\\_1.');
+  await page.goto(`${BASE}/tools/latex-word-count/`, { waitUntil: 'networkidle' });
+  await page.fill('#toolInput', '\\section{Intro}\nFour words are here \\cite{x}. $y$');
+  await page.waitForSelector('#toolStats .tool-stat', { timeout: 5000 });
+  check('the word counter reports text words, headers and math separately', (await page.$$eval('#toolStats .tool-stat b', (els) => els.map((e) => e.textContent))).slice(0, 2).join(',') === '4,1');
+  await page.goto(`${BASE}/tools/latex-to-png/`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('#toolPreview svg', { timeout: 20000 });
+  check('MathJax renders the default equation from the vendored bundle', await page.$eval('#toolPreview svg', (svg) => svg.querySelector('defs path') !== null));
+  await page.goto(`${BASE}/tools/aoe-time/`, { waitUntil: 'networkidle' });
+  await page.waitForFunction(() => /^\d\d:\d\d:\d\d$/.test(document.querySelector('#aoeClockTime')?.textContent || ''), null, { timeout: 5000 });
+  const aoe = await page.evaluate(() => {
+    const now = new Date(Date.now() - 12 * 3600 * 1000);
+    return { shown: document.querySelector('#aoeClockTime').textContent.slice(0, 5), want: `${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}` };
+  });
+  check('the AoE clock is UTC minus twelve hours', aoe.shown === aoe.want, `${aoe.shown} vs ${aoe.want}`);
+  check('the converter rendered a default result and the open-call table has rows', (await page.$$eval('#aoeTable tbody tr', (els) => els.length)) >= 10 && (await page.$$eval('#aoeCalls tbody tr', (els) => els.length)) >= 1);
+}
+
 check('no page/console errors during the whole run', errors.length === 0, errors.slice(0, 3).join(' | '));
 
 await browser.close();

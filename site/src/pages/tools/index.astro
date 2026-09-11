@@ -1,0 +1,64 @@
+---
+/**
+ * The /tools/ index: every tool in the registry, grouped, as cards. It is a
+ * list, not a landing page: the pages that rank are the tools themselves.
+ */
+import Base from '../../components/Base.astro';
+import '../../styles/tools.css';
+import { href } from '../../lib/site';
+import { toolsByGroup, TOOLS } from '../../lib/tools.mjs';
+
+const groups = toolsByGroup();
+const abs = (p: string) => (Astro.site ? new URL(href(p), Astro.site).href : href(p));
+const listLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Free tools for researchers',
+  itemListElement: TOOLS.map((t: any, i: number) => ({ '@type': 'ListItem', position: i + 1, name: t.name, url: abs(`/tools/${t.slug}/`) })),
+};
+const breadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: abs('/') },
+    { '@type': 'ListItem', position: 2, name: 'Free tools', item: abs('/tools/') },
+  ],
+};
+---
+
+<Base
+  title="Free Tools for Researchers: Citations, LaTeX and Deadlines"
+  description="Free single-purpose tools for researchers: a DOI finder, BibTeX converters for DOI, RIS, ISBN, PubMed and URLs, APA, MLA, IEEE and ACM references, LaTeX to PNG and SVG, Markdown and Excel to LaTeX, a LaTeX word count, and an AoE time converter."
+  siteSuffix={false}
+  theme="light"
+>
+  <Fragment slot="head">
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(listLd)} />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbLd)} />
+  </Fragment>
+
+  <section class="masthead tool-head">
+    <p class="eyebrow">Free tools</p>
+    <h1>Free tools for researchers</h1>
+    <p class="lede">
+      Small tools for the parts of research that are not research: citations, LaTeX and deadlines.
+      Each does one thing, runs in your browser, and stores nothing.
+    </p>
+  </section>
+
+  <div class="tool-groups">
+    {groups.map((g) => (
+      <section class="tool-group" data-group={g.id}>
+        <h2>{g.label}</h2>
+        <div class="tool-grid">
+          {g.tools.map((t: any) => (
+            <a class="tool-card" href={href(`/tools/${t.slug}/`)}>
+              <h3>{t.name}</h3>
+              <p>{t.lede}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+    ))}
+  </div>
+</Base>

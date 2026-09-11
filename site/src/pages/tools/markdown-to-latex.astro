@@ -1,0 +1,35 @@
+---
+import ToolPage from '../../components/ToolPage.astro';
+---
+
+<ToolPage slug="markdown-to-latex">
+  <form class="tool-form" id="toolForm" data-slug="markdown-to-latex">
+    <label>Markdown
+      <textarea id="toolInput" rows="10" spellcheck="false" placeholder="# Introduction&#10;&#10;Large language models **scale** with data [1](https://arxiv.org/abs/2001.08361).&#10;&#10;| Model | Params | Acc (%) |&#10;|---|---:|---:|&#10;| BERT | 110M | 92.1 |&#10;&#10;- bullet one&#10;- bullet two&#10;&#10;$$ E = mc^2 $$"></textarea>
+    </label>
+    <div class="tool-opts">
+      <label>Headings start at
+        <select id="optHeading"><option value="section" selected>\section (article)</option><option value="chapter">\chapter (report, book)</option></select>
+      </label>
+      <label><input type="checkbox" id="optWrap" /> Complete document with preamble</label>
+      <label><input type="checkbox" id="optBooktabs" checked /> booktabs tables</label>
+      <label><input type="checkbox" id="optListings" /> Code as lstlisting</label>
+    </div>
+    <div class="tool-row">
+      <div class="tool-actions"><button class="btn" type="submit" id="toolGo">Convert to LaTeX</button></div>
+      <p class="tool-status" id="toolStatus" aria-live="polite"></p>
+    </div>
+  </form>
+  <div class="tool-out" id="toolOut" hidden>
+    <div class="tool-out-head">
+      <h2>LaTeX</h2>
+      <div class="tool-actions">
+        <button class="btn secondary small" type="button" id="copyOut">Copy</button>
+        <button class="btn secondary small" type="button" id="dlOut">Download .tex</button>
+      </div>
+    </div>
+    <p class="tool-status" id="toolPackages"></p>
+    <pre><code id="toolResult"></code></pre>
+  </div>
+  <script src="../../scripts/tools/markdown-to-latex.js"></script>
+</ToolPage>

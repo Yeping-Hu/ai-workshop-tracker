@@ -1,0 +1,38 @@
+---
+import ToolPage from '../../components/ToolPage.astro';
+import { href } from '../../lib/site';
+---
+
+<ToolPage slug="latex-to-png">
+  <Fragment slot="head">
+    <script is:inline set:html={`window.MathJax = { svg: { fontCache: 'local' }, startup: { typeset: false }, options: { enableMenu: false } };`} />
+    <script is:inline src={href('/vendor/mathjax/tex-svg.js')} async></script>
+  </Fragment>
+  <form class="tool-form" id="toolForm" data-slug="latex-to-png" data-mode="png">
+    <label>LaTeX (math mode; use \text&#123;&#125; for words)
+      <textarea id="toolInput" rows="4" spellcheck="false">\int_0^\infty e^&#123;-x^2&#125;\,dx = \frac&#123;\sqrt&#123;\pi&#125;&#125;&#123;2&#125;</textarea>
+    </label>
+    <div class="tool-opts">
+      <label>Font size
+        <select id="optSize"><option value="16">16 px</option><option value="20">20 px</option><option value="24" selected>24 px</option><option value="32">32 px</option><option value="48">48 px</option><option value="64">64 px</option></select>
+      </label>
+      <label>Colour <input type="color" id="optColor" value="#161a16" /></label>
+      <label>Background
+        <select id="optBg"><option value="transparent" selected>Transparent</option><option value="white">White</option></select>
+      </label>
+      <label>Scale
+        <select id="optScale"><option value="1">1x (96 dpi)</option><option value="2" selected>2x</option><option value="4">4x (print)</option><option value="8">8x (poster)</option></select>
+      </label>
+      <label><input type="checkbox" id="optInline" /> Inline style (smaller operators)</label>
+    </div>
+    <div class="latex-preview is-empty" id="toolPreview" aria-live="polite">Loading the renderer…</div>
+    <div class="tool-row">
+      <div class="tool-actions">
+        <button class="btn" type="button" id="dlPng">Download PNG</button>
+        <button class="btn secondary" type="button" id="dlSvg">Download SVG</button>
+      </div>
+      <p class="tool-status" id="toolStatus" aria-live="polite"></p>
+    </div>
+  </form>
+  <script src="../../scripts/tools/latex-image.js"></script>
+</ToolPage>
