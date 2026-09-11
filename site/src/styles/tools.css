@@ -95,32 +95,30 @@
 .tool-related ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; }
 
 /* The /tools/ index. */
-/* The index. Sized so the whole set fits one laptop screen: cards carry a
-   one-line blurb (the registry's `blurb`, not the page's lede), tools that
-   differ only by a format share one row of chips, and the LaTeX group's five
-   cards fit a single row at 13rem each. */
+/* The index. One card per tool: a tile naming what you paste, the name and
+   a one-line blurb (the registry's `blurb`, not the page's lede). The tile
+   is what tells nine BibTeX cards apart at a glance; it reuses the chip
+   colours so it adds no colour of its own. Rows of chips were tried and
+   rejected: they demoted the most-searched tools to the smallest element on
+   the page and left two bars of white space. */
 .tool-groups { display: grid; gap: 1.4rem; margin-top: 0.8rem; }
 .tool-group h2 { margin: 0 0 0.6rem; }
-.tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: 0.7rem; }
+.tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.7rem; }
 .tool-card {
-  display: block; border: 1px solid var(--line); border-radius: 12px; padding: 0.8rem 0.95rem;
+  display: flex; align-items: flex-start; gap: 0.7rem;
+  border: 1px solid var(--line); border-radius: 12px; padding: 0.8rem 0.9rem;
   background: var(--surface); color: inherit; text-decoration: none;
 }
 .tool-card:hover { border-color: var(--accent); text-decoration: none; }
-.tool-card h3 { margin: 0 0 0.25rem; font-size: 1.02rem; font-family: var(--font-display); }
+.tool-glyph {
+  flex: 0 0 auto; width: 2.3rem; height: 2.3rem; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent-soft); color: var(--accent);
+  font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.01em;
+}
+.tool-card-text { min-width: 0; }
+.tool-card h3 { margin: 0 0 0.2rem; font-size: 1.02rem; font-family: var(--font-display); }
 .tool-card p { margin: 0; color: var(--muted); font-size: 0.86rem; line-height: 1.4; }
-.tool-family {
-  grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.5rem;
-  border: 1px solid var(--line); border-radius: 12px; padding: 0.6rem 0.95rem; background: var(--surface);
-}
-.tool-family-label { font-family: var(--font-display); font-size: 1.02rem; font-weight: 600; margin-right: 0.35rem; }
-/* Chips here are links, unlike the board's topic chips (`.chip`), so they
-   get a border on hover like the cards do. */
-.tool-chip {
-  font-size: 0.86rem; padding: 0.22rem 0.75rem; border-radius: 99px; text-decoration: none;
-  background: var(--accent-soft); color: var(--accent); border: 1px solid transparent;
-}
-.tool-chip:hover { border-color: var(--accent); text-decoration: none; }
 
 @media (max-width: 600px) {
   .tool-panel { padding: 0.9rem 0.9rem; border-radius: 10px; }

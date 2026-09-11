@@ -12,12 +12,12 @@
  * The /tools/ index shows `blurb`, not `lede`: one line in a fixed shape,
  * "what you give it. what you get.", ten words at most. The lede is the
  * tool page's opening paragraph, and seventeen of them stacked as cards made
- * the index a wall of near-identical "Paste ... and get ..." text. Tools that
- * differ only in their input or output format (five ways to get BibTeX, four
- * styles to turn it into) carry a `family` and a `chip`; the index shows
- * each family as one row of chips instead of a card per tool, so the shape
- * of the set is visible at a glance. The pages stay separate: the index is
- * a list, the pages are what rank.
+ * the index a wall of near-identical "Paste ... and get ..." text. Each card
+ * also carries `glyph`, a tile naming what you paste (DOI, .bib, math, .md),
+ * four characters at most, spelled the way its users spell it: the tile is
+ * what tells nine BibTeX cards apart at a glance, and a shared tile (the
+ * four style converters all take .bib) is a grouping cue, not a defect.
+ * The pages stay separate: the index is a list, the pages are what rank.
  *
  * Why these tools: they are the keywords with measured search demand, low
  * competition and a job a researcher does while writing a paper (the
@@ -31,18 +31,13 @@ export const GROUPS = {
   deadlines: 'Deadlines and time zones',
 };
 
-/** Rows on the index: tools that differ only in a format, one chip each. */
-export const FAMILIES = {
-  'to-bibtex': { group: 'citations', label: 'Get BibTeX from' },
-  'from-bibtex': { group: 'citations', label: 'Turn BibTeX into' },
-};
-
 export const TOOLS = [
   // ---------------------------------------------------------------- citations
   {
     slug: 'doi-finder',
     group: 'citations',
     blurb: 'A paper title or reference line. Its DOI.',
+    glyph: 'ref',
     name: 'DOI Finder',
     keyword: 'DOI finder',
     title: 'DOI Finder: Find the DOI of Any Paper or Article (Free)',
@@ -71,6 +66,7 @@ export const TOOLS = [
     slug: 'bibtex-citation-generator',
     group: 'citations',
     blurb: 'Any paper identifier or link. BibTeX.',
+    glyph: 'id',
     name: 'BibTeX Citation Generator',
     keyword: 'BibTeX citation generator',
     title: 'BibTeX Citation Generator: DOI, arXiv, ISBN or URL to BibTeX (Free)',
@@ -99,8 +95,7 @@ export const TOOLS = [
     slug: 'doi-to-bibtex',
     group: 'citations',
     blurb: 'A DOI or doi.org link. A clean BibTeX entry.',
-    family: 'to-bibtex',
-    chip: 'DOI',
+    glyph: 'DOI',
     name: 'DOI to BibTeX',
     keyword: 'DOI to BibTeX',
     title: 'DOI to BibTeX Converter (Free, No Sign-up)',
@@ -128,8 +123,7 @@ export const TOOLS = [
     slug: 'ris-to-bibtex',
     group: 'citations',
     blurb: 'An RIS export or .ris file. A .bib file.',
-    family: 'to-bibtex',
-    chip: 'RIS',
+    glyph: 'RIS',
     name: 'RIS to BibTeX',
     keyword: 'RIS to BibTeX',
     title: 'RIS to BibTeX Converter (Free, Works in Your Browser)',
@@ -157,8 +151,7 @@ export const TOOLS = [
     slug: 'isbn-to-bibtex',
     group: 'citations',
     blurb: 'An ISBN. A @book entry with publisher and year.',
-    family: 'to-bibtex',
-    chip: 'ISBN',
+    glyph: 'ISBN',
     name: 'ISBN to BibTeX',
     keyword: 'ISBN to BibTeX',
     title: 'ISBN to BibTeX: Cite a Book from Its ISBN (Free)',
@@ -186,8 +179,7 @@ export const TOOLS = [
     slug: 'nbib-to-bibtex',
     group: 'citations',
     blurb: 'PubMed\'s NBIB export or a PubMed id. @article entries.',
-    family: 'to-bibtex',
-    chip: 'PubMed',
+    glyph: 'NBIB',
     name: 'NBIB to BibTeX (PubMed)',
     keyword: 'NBIB to BibTeX',
     title: 'NBIB to BibTeX: Convert PubMed Citations to BibTeX (Free)',
@@ -215,8 +207,7 @@ export const TOOLS = [
     slug: 'url-to-bibtex',
     group: 'citations',
     blurb: 'A link to a paper or page. A BibTeX entry.',
-    family: 'to-bibtex',
-    chip: 'URL',
+    glyph: 'URL',
     name: 'URL to BibTeX',
     keyword: 'URL to BibTeX',
     title: 'URL to BibTeX: Cite a Web Page, arXiv Link or Paper URL (Free)',
@@ -244,8 +235,7 @@ export const TOOLS = [
     slug: 'bibtex-to-apa',
     group: 'citations',
     blurb: 'BibTeX or a DOI. APA 7 references, alphabetised.',
-    family: 'from-bibtex',
-    chip: 'APA',
+    glyph: '.bib',
     name: 'BibTeX to APA',
     keyword: 'BibTeX to APA',
     title: 'BibTeX to APA Converter: APA 7 References from a .bib File (Free)',
@@ -273,8 +263,7 @@ export const TOOLS = [
     slug: 'bibtex-to-mla',
     group: 'citations',
     blurb: 'BibTeX or a DOI. MLA 9 Works Cited entries.',
-    family: 'from-bibtex',
-    chip: 'MLA',
+    glyph: '.bib',
     name: 'BibTeX to MLA',
     keyword: 'BibTeX to MLA',
     title: 'BibTeX to MLA Converter: MLA 9 Works Cited from BibTeX (Free)',
@@ -302,8 +291,7 @@ export const TOOLS = [
     slug: 'bibtex-to-ieee',
     group: 'citations',
     blurb: 'BibTeX or a DOI. Numbered IEEE references.',
-    family: 'from-bibtex',
-    chip: 'IEEE',
+    glyph: '.bib',
     name: 'BibTeX to IEEE',
     keyword: 'BibTeX to IEEE',
     title: 'BibTeX to IEEE Converter: Numbered IEEE References (Free)',
@@ -331,8 +319,7 @@ export const TOOLS = [
     slug: 'acm-citation-generator',
     group: 'citations',
     blurb: 'BibTeX or a DOI. ACM Reference Format.',
-    family: 'from-bibtex',
-    chip: 'ACM',
+    glyph: '.bib',
     name: 'ACM Citation Generator',
     keyword: 'ACM citation generator',
     title: 'ACM Citation Generator: ACM Reference Format from BibTeX or DOI (Free)',
@@ -361,6 +348,7 @@ export const TOOLS = [
     slug: 'latex-to-png',
     group: 'latex',
     blurb: 'Type an equation. A sharp PNG at any resolution.',
+    glyph: 'math',
     name: 'LaTeX to PNG',
     keyword: 'LaTeX to PNG',
     title: 'LaTeX to PNG: Render an Equation to a PNG Image (Free, No Upload)',
@@ -389,6 +377,7 @@ export const TOOLS = [
     slug: 'latex-to-svg',
     group: 'latex',
     blurb: 'Type an equation. A self-contained SVG, fonts embedded.',
+    glyph: 'math',
     name: 'LaTeX to SVG',
     keyword: 'LaTeX to SVG',
     title: 'LaTeX to SVG: Render an Equation to a Vector SVG (Free, No Upload)',
@@ -417,6 +406,7 @@ export const TOOLS = [
     slug: 'markdown-to-latex',
     group: 'latex',
     blurb: 'Paste Markdown. LaTeX that compiles, special characters escaped.',
+    glyph: '.md',
     name: 'Markdown to LaTeX',
     keyword: 'Markdown to LaTeX',
     title: 'Markdown to LaTeX Converter (Free, Runs in Your Browser)',
@@ -445,6 +435,7 @@ export const TOOLS = [
     slug: 'excel-to-latex',
     group: 'latex',
     blurb: 'Paste cells or CSV. A booktabs table, numbers right-aligned.',
+    glyph: 'CSV',
     name: 'Excel to LaTeX Table',
     keyword: 'Excel to LaTeX',
     title: 'Excel to LaTeX Table Converter: Paste Cells or CSV (Free)',
@@ -473,6 +464,7 @@ export const TOOLS = [
     slug: 'latex-word-count',
     group: 'latex',
     blurb: 'Paste .tex source. Word counts the way Overleaf reports them.',
+    glyph: '.tex',
     name: 'LaTeX Word Count',
     keyword: 'LaTeX word count',
     title: 'LaTeX Word Count: Count Words in a .tex File (Overleaf Compatible)',
@@ -502,6 +494,7 @@ export const TOOLS = [
     slug: 'aoe-time',
     group: 'deadlines',
     blurb: 'AoE time now, and any AoE deadline in your zone.',
+    glyph: 'AoE',
     name: 'AoE Time Now',
     keyword: 'AoE time',
     title: 'AoE Time Now: Anywhere on Earth Time, Live Clock and Deadline Converter',
@@ -530,18 +523,7 @@ export const TOOLS = [
 
 export const toolBySlug = (slug) => TOOLS.find((t) => t.slug === slug) || null;
 
-/**
- * Tools grouped in the order of GROUPS, for the index page. `tools` is every
- * tool in the group; `families` are the chip rows (in FAMILIES order) and
- * `cards` the tools that belong to none, so the index can render rows and
- * cards without repeating a tool.
- */
+/** Tools grouped in the order of GROUPS, for the index page. */
 export function toolsByGroup() {
-  return Object.entries(GROUPS).map(([id, label]) => {
-    const tools = TOOLS.filter((t) => t.group === id);
-    const families = Object.entries(FAMILIES)
-      .filter(([, f]) => f.group === id)
-      .map(([fid, f]) => ({ id: fid, label: f.label, tools: tools.filter((t) => t.family === fid) }));
-    return { id, label, tools, families, cards: tools.filter((t) => !t.family) };
-  });
+  return Object.entries(GROUPS).map(([id, label]) => ({ id, label, tools: TOOLS.filter((t) => t.group === id) }));
 }

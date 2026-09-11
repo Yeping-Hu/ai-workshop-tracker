@@ -1,10 +1,11 @@
 ---
 /**
- * The /tools/ index: every tool in the registry, grouped. It is a list, not
- * a landing page: the pages that rank are the tools themselves, so the job
- * here is to show the whole set in one screen. A tool in a family (see
- * FAMILIES in tools.mjs) is a chip on its family's row; every other tool is
- * a card with its one-line blurb. Every tool is linked exactly once.
+ * The /tools/ index: every tool in the registry, grouped, one card each. It
+ * is a list, not a landing page: the pages that rank are the tools
+ * themselves, so the job here is to make seventeen of them scannable. A card
+ * is a tile naming what you paste (the registry's `glyph`), the tool's name
+ * and its one-line `blurb`; the tile is decorative to a screen reader, the
+ * name says the same thing.
  */
 import Base from '../../components/Base.astro';
 import '../../styles/tools.css';
@@ -51,18 +52,13 @@ const breadcrumbLd = {
       <section class="tool-group" data-group={g.id}>
         <h2>{g.label}</h2>
         <div class="tool-grid">
-          {g.families.map((f: any) => (
-            <div class="tool-family" data-family={f.id}>
-              <span class="tool-family-label">{f.label}</span>
-              {f.tools.map((t: any) => (
-                <a class="tool-chip" href={href(`/tools/${t.slug}/`)} data-tool={t.slug} title={t.name}>{t.chip}</a>
-              ))}
-            </div>
-          ))}
-          {g.cards.map((t: any) => (
+          {g.tools.map((t: any) => (
             <a class="tool-card" href={href(`/tools/${t.slug}/`)} data-tool={t.slug}>
-              <h3>{t.name}</h3>
-              <p>{t.blurb}</p>
+              <span class="tool-glyph" aria-hidden="true">{t.glyph}</span>
+              <span class="tool-card-text">
+                <h3>{t.name}</h3>
+                <p>{t.blurb}</p>
+              </span>
             </a>
           ))}
         </div>

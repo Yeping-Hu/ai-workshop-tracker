@@ -1589,19 +1589,22 @@ questions; light theme by default. `scripts/tools_registry_test.mjs` checks
 all of it, plus that every registry entry has a page and every page an
 entry, and runs in `pr-build-check.yml` before the build.
 
-**The index is one screen.** `/tools/` once showed each page's lede on its
-card: two sentences, eleven of the seventeen starting "Paste ... and get
-...", so the page read as one card repeated and the LaTeX tools sat below
-the fold. Each entry now also has a `blurb`, one line in the shape "what you
-give it. what you get.", capped at ten words by the registry test, and the
-card shows that; the lede stays the page's opening paragraph. Tools that
-differ only in a format carry a `family` and a `chip` (`FAMILIES` in
-`tools.mjs`: five ways to get BibTeX, four styles to turn it into), and the
-index draws each family as one row of chips in place of a card per tool.
-`toolsByGroup()` hands the page `cards` and `families` separately so no tool
-is linked twice; `ui_test.mjs` checks every tool is linked exactly once,
-each family row has its chips, and each card shows its blurb. The tool
-pages themselves are untouched: the index is a list, the pages rank.
+**The index is one card per tool, one line each.** `/tools/` once showed
+each page's lede on its card: two sentences, eleven of the seventeen
+starting "Paste ... and get ...", so the page read as one card repeated.
+Each entry now also has a `blurb`, one line in the shape "what you give it.
+what you get.", capped at ten words by the registry test, and a `glyph`: a
+tile naming what you paste (`DOI`, `.bib`, `math`, `.md`), four characters
+at most, spelled the way its users spell it. The tile is what tells nine
+BibTeX cards apart at a glance; the four style converters sharing `.bib`
+is a grouping cue, and the registry test insists one format is spelled one
+way. The lede stays the page's opening paragraph. Rows of chips (one row
+"Get BibTeX from DOI · RIS · ISBN ...") were tried in between and
+rejected: they demoted the most-searched tools to the smallest element on
+the page and left two bars of white space. `ui_test.mjs` checks every tool
+is linked exactly once and every card shows its tile (decorative to a
+screen reader) and its blurb. The tool pages themselves are untouched: the
+index is a list, the pages rank.
 
 **Light by default, toggle still wins.** `Base.astro` takes a `theme` prop,
 which the tool pages set to `light`. A tool is landed on from a search
