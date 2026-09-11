@@ -121,9 +121,25 @@ single guard:
    `runSearch()` (the 220ms `debouncedSearch`) rather than firing an immediate,
    uncoalesced `pf.search` per keystroke — so a multi-letter keyword no longer
    launches several heavy searches at once.
+7. **One refused fragment does not empty a search.** `fetchAllData` settles
+   every fragment fetch on its own (`Promise.allSettled`), keeps the ones that
+   loaded, drops the rest, and throws into the failure path only when nothing
+   loaded at all, which is the shape of a deploy having replaced every file.
+   It was `Promise.all`: a keyword search pulls one fragment per matched
+   result, five hundred at once for a common word, and the live smoke test
+   caught the host answering exactly one of 527 with a 503, a different
+   fragment on each attempt (issue #67). That one refusal rejected the whole
+   search, sent it through the heal (a fresh engine and every fragment again)
+   and, when a second refusal landed anywhere in that burst, left the reader
+   with "Reload the page" for a search that was 99.8% loaded. Pagefind caches
+   the rejected promise per fragment, so a retry of `data()` rethrows;
+   dropping is the only recovery short of a fresh engine. The count is short
+   by the dropped results and `fragmentsFailed` in the diagnostic below says
+   by how many. `ui_test.mjs` refuses one fragment and expects the rest to
+   render without a re-import.
 
 For field diagnosis, `buildState` writes `window.__aiwtSearchDiag`
-(`{query, rawResults, droppedNonWorkshop, distinctWorkshops, ts}`) on every
+(`{query, rawResults, fragmentsFailed, droppedNonWorkshop, distinctWorkshops, ts}`) on every
 search and logs a `[aiwt-search] merge anomaly` console warning whenever it has
 to drop artifacts or the workshop count looks impossibly high. A ui_test also
 probes the worker directly (total paper documents vs distinct paper pages, plus

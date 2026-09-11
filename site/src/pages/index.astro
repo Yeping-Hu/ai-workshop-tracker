@@ -599,14 +599,36 @@ const datasetLd: Record<string, any> = {
     // into handleSearchFailure (fresh engine + one retry, then reload-the-page),
     // while the background completion pass below keeps whatever first page is
     // already shown. The timer is cleared the moment the fetch settles.
+    //
+    // Settled one by one, never all-or-nothing. A keyword search pulls one
+    // fragment per matched result, five hundred at once for a common word, and
+    // the host will occasionally refuse one of them: the live smoke test caught
+    // a single 503 among 527 fragment requests, on a different fragment each
+    // attempt (#67). Promise.all turned that one refusal into a rejected
+    // search, which the heal path answered by throwing the engine away,
+    // re-importing it and fetching every fragment again, and a second refusal
+    // anywhere in that burst left the reader with "Reload the page" for a
+    // search that was 99.8% loaded. Pagefind caches the failed promise per
+    // fragment, so calling data() again rethrows; the fragment is dropped
+    // instead, the other results render, and the count is short by the dropped
+    // ones, which __aiwtSearchDiag.fragmentsFailed reports. Only a fetch in
+    // which nothing loaded still throws: that is the shape of a deploy having
+    // replaced every file, which is what the heal is for.
     const DATA_FETCH_TIMEOUT_MS = 45000;
-    function fetchAllData(rows) {
+    async function fetchAllData(rows) {
       let timer;
       const guard = new Promise((_, reject) => {
         timer = setTimeout(() => reject(new Error('search data fetch timed out')), DATA_FETCH_TIMEOUT_MS);
       });
-      const all = Promise.all(rows.map((r) => r.data())).finally(() => clearTimeout(timer));
-      return Promise.race([all, guard]);
+      const settled = Promise.allSettled(rows.map((r) => r.data())).finally(() => clearTimeout(timer));
+      const outcomes = await Promise.race([settled, guard]);
+      const data = outcomes.filter((o) => o.status === 'fulfilled').map((o) => o.value);
+      const failed = outcomes.length - data.length;
+      if (failed && data.length === 0) {
+        const reason = outcomes[0].reason;
+        throw reason instanceof Error ? reason : new Error('no search data could be loaded');
+      }
+      return { data, failed };
     }
 
     // Build rState (the model renderResultsPage draws) from a search result.
@@ -632,7 +654,7 @@ const datasetLd: Record<string, any> = {
       // count, flagged so the count line reads "counting…" until the full pass.
       const slice = (limit && limit < ordered.length) ? ordered.slice(0, limit) : ordered;
       const partial = slice.length < ordered.length;
-      const data = await fetchAllData(slice);
+      const { data, failed: fragmentsFailed } = await fetchAllData(slice);
       // Group by a STABLE workshop identity, not the raw result URL. Pagefind
       // can hand back the same workshop page under more than one URL — e.g.
       // when the papers index resolves its base differently from the workshops
@@ -673,9 +695,10 @@ const datasetLd: Record<string, any> = {
       // be confirmed from the field without it ever reaching the visible count.
       // Only on the full pass — a partial slice would report misleading totals.
       if (!partial) try {
-        const diag = { query, rawResults: data.length, droppedNonWorkshop: dropped, distinctWorkshops: groups.size, ts: new Date().toISOString() };
+        const diag = { query, rawResults: data.length, fragmentsFailed, droppedNonWorkshop: dropped, distinctWorkshops: groups.size, ts: new Date().toISOString() };
         window.__aiwtSearchDiag = diag;
         if (dropped > 0 || groups.size > 400) console.warn('[aiwt-search] merge anomaly (artifacts dropped from the count):', diag);
+        if (fragmentsFailed > 0) console.warn('[aiwt-search] search data partly unavailable (results dropped from the count):', diag);
       } catch {}
       // Headline counts describe exactly what's listed: distinct workshops, and
       // the individual papers matched inside them.

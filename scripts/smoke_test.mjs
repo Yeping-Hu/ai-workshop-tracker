@@ -34,6 +34,10 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 // "no .pf-paper appeared" — which is what sent the last investigation after the
 // wrong cause. Search pulls ~520 index chunks, so a single dropped or refused one
 // leaves the engine silently short. Record enough to tell those apart.
+// They did: the fourth failure (#67) showed exactly one 503 among 527 fragment
+// requests, a different fragment on each attempt, and 0 paper rows — the page
+// treated one refused fragment as a failed search. It now drops that fragment
+// and renders the rest (`fetchAllData` in site/src/pages/index.astro).
 const consoleErrors = [];
 const netProblems = [];
 const pagefind = { requests: 0, byStatus: {} };

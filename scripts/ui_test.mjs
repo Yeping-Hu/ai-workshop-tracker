@@ -945,6 +945,45 @@ await page.unroute('**/pagefind*/**');
 const addedErrs = errors.splice(errsBefore0);
 for (const e of addedErrs) if (!/pagefind|fetch|404|load/i.test(e)) errors.push(e);
 
+console.log('— one refused fragment does not empty a search —');
+// A keyword search pulls one data fragment per matched result, hundreds at
+// once for a common word, and the host occasionally answers one of them with
+// a 503: the live smoke test caught exactly one among 527, a different
+// fragment on each attempt (#67). Promise.all turned that into a rejected
+// search, a heal that refetched everything, and "Reload the page" for a
+// search that was 99.8% loaded. The rule now: settle each fragment, drop the
+// refused one, render the rest, count it in the diagnostic, and never throw
+// the engine away for it.
+{
+  const errsBefore = errors.length;
+  let refused = 0, reimports = 0;
+  const onReq = (r) => { if (/\/pagefind\/pagefind\.js\?v=/.test(r.url())) reimports++; };
+  page.on('request', onReq);
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  await page.route('**/pagefind*/fragment/**', (route) =>
+    refused++ === 0 ? route.fulfill({ status: 503, contentType: 'text/html', body: '503 Service Unavailable' }) : route.continue());
+  await page.fill('#q', 'diffusion');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.querySelectorAll('#results .pf-paper').length > 0, null, { timeout: 15000 }).catch(() => {});
+  // The diagnostic is written by the full grouping pass, which for a big
+  // result set runs after the first page has already painted.
+  await page.waitForFunction(() => window.__aiwtSearchDiag?.query === 'diffusion', null, { timeout: 20000 }).catch(() => {});
+  const shown = await page.evaluate(() => ({
+    ws: document.querySelectorAll('#results .pf-result').length,
+    papers: document.querySelectorAll('#results .pf-paper').length,
+    diag: window.__aiwtSearchDiag,
+    text: (document.querySelector('#results')?.textContent || '').replace(/\s+/g, ' ').slice(0, 80),
+  }));
+  check('one 503 fragment: the search still renders workshops and papers', refused >= 1 && shown.ws > 0 && shown.papers > 0, JSON.stringify({ refused, ws: shown.ws, papers: shown.papers, text: shown.text }));
+  check('the dropped fragment is counted in the diagnostic', shown.diag?.fragmentsFailed >= 1, JSON.stringify(shown.diag));
+  check('and the engine was not thrown away for it', reimports === 0, `${reimports} cache-busted re-import(s)`);
+  page.off('request', onReq);
+  await page.unroute('**/pagefind*/fragment/**');
+  // the refused fragment's 503 is the point of the block, not a regression
+  const added = errors.splice(errsBefore);
+  for (const e of added) if (!/pagefind|fetch|503|load|decompress/i.test(e)) errors.push(e);
+}
+
 /* ------------------------------------------------------------- /changes/ ---
  * The public weekly-changes page. It filters by the board's OWN facet URL
  * contract, so a link built on the board — or by the digest's "and N more →" —
