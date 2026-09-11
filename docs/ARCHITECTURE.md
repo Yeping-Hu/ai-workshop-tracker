@@ -1705,7 +1705,12 @@ placeholder's class rule, and so "Type some LaTeX above." once came back in
 the last equation's 24 px and picked colour after the box was emptied.
 Emptying the box is the resting state and puts the page back as it arrived,
 status line included; `ui_test.mjs` pins that for every tool that converts
-as you type. The bundle is configured
+as you type. A render is numbered and gives up after each await if a newer
+one has started: the renderer arrives on first use, so on a cold page the
+first render waits for the bundle, the box can be emptied in that time, and
+the equation for text no longer in the box used to land on top of the
+placeholder; `ui_test.mjs` holds the bundle back to pin it. The bundle is
+configured
 with `enableAssistiveMml: false`: MathJax otherwise attaches a hidden MathML
 copy of each equation for screen readers and hides it with a stylesheet that
 only a full typeset run injects, so on these convert-only pages the copy

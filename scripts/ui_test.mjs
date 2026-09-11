@@ -1500,6 +1500,17 @@ await page.evaluate(() => localStorage.clear());
   await page.waitForSelector('#toolStats .tool-stat', { timeout: 5000 });
   check('the word counter reports text words, headers and math separately', (await page.$$eval('#toolStats .tool-stat b', (els) => els.map((e) => e.textContent))).slice(0, 2).join(',') === '4,1');
   await backToArrival('latex-word-count', arrivedCount);
+  // A render that finishes after the box was emptied does not show. The
+  // renderer arrives on first use, so on a cold page the first render waits
+  // for the bundle; the box can be emptied in that time, and the empty branch
+  // is synchronous, so the equation for text no longer in the box used to
+  // land on top of the placeholder. The bundle is held here until the box has
+  // been emptied. The values are set without input events and the form
+  // submitted, which calls render() at once: no debounce timer to outwait, so
+  // the order of the two renders is certain.
+  let releaseBundle;
+  const bundleHeld = new Promise((r) => { releaseBundle = r; });
+  await page.route('**/vendor/mathjax/tex-svg.js', async (route) => { await bundleHeld; await route.continue(); });
   await page.goto(`${BASE}/tools/latex-to-png/`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => document.querySelector('#toolPreview')?.textContent === 'Type some LaTeX above.', null, { timeout: 5000 });
   const arrivedLatex = await toolState();
@@ -1508,6 +1519,18 @@ await page.evaluate(() => localStorage.clear());
   // nothing is fetched on an idle visit is what keeps that true.
   check('the renderer is not fetched on an idle visit',
     (await page.$$eval('script[src]', (els) => els.map((e) => e.src).filter((u) => u.includes('/vendor/mathjax/')))).length === 0);
+  const bundleRequested = page.waitForRequest((r) => r.url().includes('/vendor/mathjax/tex-svg.js'), { timeout: 8000 });
+  await page.evaluate(() => { document.querySelector('#toolInput').value = 'x'; document.querySelector('#toolForm').requestSubmit(); });
+  await bundleRequested;
+  await page.evaluate(() => { document.querySelector('#toolInput').value = ''; document.querySelector('#toolForm').requestSubmit(); });
+  releaseBundle();
+  await page.waitForFunction(() => typeof window.MathJax?.tex2svgPromise === 'function', null, { timeout: 25000 });
+  // The stale render resumes once the renderer is up. A conversion of the
+  // suite's own, queued behind it, and a moment for it to have appended.
+  await page.evaluate(async () => { await window.MathJax.startup.promise; await window.MathJax.tex2svgPromise('x'); });
+  await page.waitForTimeout(500);
+  check('a render that finishes after the box was emptied does not show', await page.$eval('#toolPreview', (el) => el.classList.contains('is-empty') && el.querySelector('svg') === null && el.textContent === 'Type some LaTeX above.'), await page.$eval('#toolPreview', (el) => `${el.className} / ${el.textContent.trim().slice(0, 30)} / svg:${el.querySelector('svg') !== null}`));
+  await page.unroute('**/vendor/mathjax/tex-svg.js');
   await page.type('#toolInput', 'e^{i\\pi}+1=0', { delay: 10 });
   await page.waitForSelector('#toolPreview svg', { timeout: 25000 });
   check('MathJax renders a typed equation from the vendored bundle', await page.$eval('#toolPreview svg', (svg) => svg.querySelector('defs path') !== null));

@@ -17,6 +17,13 @@
  * colour. Emptying the box is the resting state and puts the page back as it
  * arrived, status line included; ui_test.mjs pins that for every tool that
  * converts as you type.
+ *
+ * A render is numbered and gives up after each await if a newer one has
+ * started. The renderer arrives on first use, so on a cold page the first
+ * render waits for the bundle; the box can be emptied in that time, and the
+ * empty branch is synchronous, so the equation for text no longer in the box
+ * used to land on top of the placeholder. ui_test.mjs holds the bundle back
+ * to pin it.
  */
 import { $, setStatus, download, bindCopy, copyImage, used } from './ui.js';
 
@@ -34,6 +41,9 @@ if (form) {
   let svgEl = null;
   let timer = null;
   let ready = false;
+  // The number of the latest render (see the header): a render that finds a
+  // newer number after an await is about text no longer in the box.
+  let renders = 0;
 
   // The renderer is 686 KB over the wire (2.1 MB unzipped) and used to load on
   // every page view, whether or not the visitor typed anything. It now arrives on
@@ -74,6 +84,7 @@ if (form) {
   }
 
   async function render() {
+    const seq = ++renders;
     const tex = input.value.trim();
     if (!tex) {
       // Everything the last render wrote goes with it: the equation, the file
@@ -89,8 +100,10 @@ if (form) {
     }
     try {
       const M = await mathjax();
+      if (seq !== renders) return;
       if (M.texReset) M.texReset();
       const node = await M.tex2svgPromise(tex, { display: !(inline && inline.checked) });
+      if (seq !== renders) return;
       const svg = node.querySelector('svg');
       if (!svg) throw new Error('Nothing was rendered.');
       // MathJax adds a visually-hidden MathML copy of every equation for screen
@@ -118,6 +131,7 @@ if (form) {
       else setStatus(status, '');
       if (!err) used(slug);
     } catch (e) {
+      if (seq !== renders) return;
       setStatus(status, e.message || String(e), 'error');
     }
   }
