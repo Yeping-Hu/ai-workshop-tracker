@@ -24,6 +24,14 @@
  * empty branch is synchronous, so the equation for text no longer in the box
  * used to land on top of the placeholder. ui_test.mjs holds the bundle back
  * to pin it.
+ *
+ * A failed download of the renderer is forgotten, not cached. The load's
+ * promise was kept whatever its outcome, so one refused fetch (a flaky
+ * connection, an ad blocker) left every later keystroke failing at once with
+ * "The renderer failed to load." until a reload; the next use now appends a
+ * fresh <script>, and a bundle that loaded but never produced the API is
+ * forgotten the same way. ui_test.mjs refuses the bundle for one expression,
+ * serves it empty for the next, and lets the third through.
  */
 import { $, setStatus, download, bindCopy, copyImage, used } from './ui.js';
 
@@ -50,10 +58,15 @@ if (form) {
   // first use: focusing the box, typing, changing an option, or asking for a file.
   // Someone who lands here and leaves pays nothing, and the download overlaps
   // their first keystrokes.
-  let loader = null;
+  //
+  // `attempt` is the current load, `{ promise, el }`: shared by every caller
+  // while it is in flight and kept once it has succeeded. A failed one is
+  // forgotten (forget, below), so the next use starts afresh.
+  let attempt = null;
   function loadRenderer() {
-    if (loader) return loader;
-    loader = new Promise((resolve, reject) => {
+    if (attempt) return attempt;
+    const a = { promise: null, el: null };
+    a.promise = new Promise((resolve, reject) => {
       // Test for the API, not for window.MathJax: the page sets a CONFIG object
       // of that name in the head, and it has its own `startup` key, so checking
       // `MathJax.startup` sees the config and concludes the library is already
@@ -61,24 +74,43 @@ if (form) {
       if (typeof window.MathJax?.tex2svgPromise === 'function') { resolve(); return; }
       const src = form.dataset.mathjaxSrc;
       if (!src) { reject(new Error('The renderer URL is missing.')); return; }
-      const el = document.createElement('script');
-      el.src = src;
-      el.async = true;
-      el.addEventListener('load', () => resolve());
-      el.addEventListener('error', () => reject(new Error('The renderer failed to load.')));
-      document.head.appendChild(el);
+      a.el = document.createElement('script');
+      a.el.src = src;
+      a.el.async = true;
+      a.el.addEventListener('load', () => resolve());
+      a.el.addEventListener('error', () => { forget(a); reject(new Error('The renderer failed to load.')); });
+      document.head.appendChild(a.el);
     });
-    return loader;
+    attempt = a;
+    return a;
+  }
+
+  // A failed attempt is forgotten, so the next use appends a fresh <script>,
+  // and the dead one goes. The load's promise used to be kept whatever its
+  // outcome: one refused fetch (a flaky connection, an ad blocker) left every
+  // later keystroke failing at once with the same message until a reload, and
+  // the prefetch on focus swallows its failure, so nobody had seen why.
+  function forget(a) {
+    if (attempt === a) attempt = null;
+    a.el?.remove();
   }
 
   async function mathjax() {
-    await loadRenderer();
+    const a = loadRenderer();
+    await a.promise;
     // The bundle replaces the config object with the real one, and on a slow parse
     // the load event can land a tick early, so wait for the API to appear.
     for (let n = 0; typeof window.MathJax?.tex2svgPromise !== 'function' && n < 200; n += 1) {
       await new Promise((r) => setTimeout(r, 50));
     }
-    if (typeof window.MathJax?.tex2svgPromise !== 'function') throw new Error('The renderer did not initialise.');
+    if (typeof window.MathJax?.tex2svgPromise !== 'function') {
+      // The script loaded but the API never came: a captive portal or a proxy
+      // answering 200 with something else. Kept, this attempt would send every
+      // later render through the same wait; forgotten, the next use fetches
+      // again.
+      forget(a);
+      throw new Error('The renderer did not initialise.');
+    }
     await window.MathJax.startup.promise;
     return window.MathJax;
   }
@@ -234,7 +266,7 @@ if (form) {
 
   // Fetch the renderer at the first sign the tool will be used, so it is usually
   // there by the time an expression is complete. Focus alone is enough.
-  const warm = () => { loadRenderer().catch(() => {}); };
+  const warm = () => { loadRenderer().promise.catch(() => {}); };
   input.addEventListener('focus', warm, { once: true });
   for (const el of [size, color, bg, scale, inline]) {
     if (el) el.addEventListener('change', warm, { once: true });

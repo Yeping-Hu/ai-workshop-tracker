@@ -1604,6 +1604,35 @@ await page.evaluate(() => localStorage.clear());
   await page.fill('#toolInput', '\\frac{');
   await page.waitForFunction(() => document.querySelector('#toolStatus')?.classList.contains('is-error'), null, { timeout: 8000 });
   await backToArrival('latex-to-png after a LaTeX error', arrivedLatex);
+  // A failed download of the renderer is retried on the next use. The load's
+  // promise was cached whatever its outcome, so one refused fetch (a flaky
+  // connection, an ad blocker) left every later keystroke failing at once
+  // with "The renderer failed to load." until a reload. The bundle is refused
+  // for the first expression here, served empty for the second (a captive
+  // portal's 200), which loads but never yields the API, and let through for
+  // the third: each failure is reported, the next use fetches again and
+  // renders, and the dead script elements are gone. The refused download is
+  // logged by the browser as a resource error, which is the point of it.
+  const errsBeforeRetry = errors.length;
+  await page.route('**/vendor/mathjax/tex-svg.js', (route) => route.abort());
+  await page.goto(`${BASE}/tools/latex-to-svg/`, { waitUntil: 'networkidle' });
+  await page.waitForFunction(() => document.querySelector('#toolPreview')?.textContent === 'Type some LaTeX above.', null, { timeout: 5000 });
+  await page.fill('#toolInput', 'a^2+b^2=c^2');
+  const refused = await page.waitForFunction(() => document.querySelector('#toolStatus')?.textContent === 'The renderer failed to load.', null, { timeout: 8000 }).then(() => true, () => false);
+  check('a refused renderer download is reported on the status line', refused, await page.$eval('#toolStatus', (el) => el.textContent));
+  await page.unroute('**/vendor/mathjax/tex-svg.js');
+  await page.route('**/vendor/mathjax/tex-svg.js', (route) => route.fulfill({ status: 200, contentType: 'application/javascript', body: '/* not the renderer */' }));
+  await page.fill('#toolInput', 'a^2+b^2=c^2+1');
+  // The page gives the API ten seconds to appear after the load event.
+  const empty = await page.waitForFunction(() => document.querySelector('#toolStatus')?.textContent === 'The renderer did not initialise.', null, { timeout: 15000 }).then(() => true, () => false);
+  check('a bundle that loads but never initialises is reported too', empty, await page.$eval('#toolStatus', (el) => el.textContent));
+  await page.unroute('**/vendor/mathjax/tex-svg.js');
+  await page.fill('#toolInput', 'e^{i\\pi}+1=0');
+  const retried = await settledAt(24).then(() => true, () => false);
+  check('the next use fetches the renderer again and renders', retried && (await page.$eval('#toolStatus', (el) => el.textContent)) === '', await page.$eval('#toolStatus', (el) => el.textContent));
+  const rendererScripts = await page.$$eval('script[src*="/vendor/mathjax/tex-svg.js"]', (els) => els.length);
+  check('the dead script elements are gone: one renderer script in the page', rendererScripts === 1, String(rendererScripts));
+  for (const e of errors.splice(errsBeforeRetry)) if (!/tex-svg\.js|Failed to load resource/i.test(e)) errors.push(e);
   await page.goto(`${BASE}/tools/aoe-time/`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => /^\d\d:\d\d:\d\d$/.test(document.querySelector('#aoeClockTime')?.textContent || ''), null, { timeout: 5000 });
   const aoe = await page.evaluate(() => {

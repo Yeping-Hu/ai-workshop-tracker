@@ -1709,7 +1709,13 @@ as you type. A render is numbered and gives up after each await if a newer
 one has started: the renderer arrives on first use, so on a cold page the
 first render waits for the bundle, the box can be emptied in that time, and
 the equation for text no longer in the box used to land on top of the
-placeholder; `ui_test.mjs` holds the bundle back to pin it. The bundle is
+placeholder; `ui_test.mjs` holds the bundle back to pin it. A failed
+download is forgotten, not cached: the load's promise was kept whatever its
+outcome, so one refused fetch (a flaky connection, an ad blocker) left every
+later keystroke failing at once until a reload; the next use now appends a
+fresh script, and a bundle that loaded but never produced the API is
+forgotten the same way. `ui_test.mjs` refuses the bundle for one expression,
+serves it empty for the next, and lets the third through. The bundle is
 configured
 with `enableAssistiveMml: false`: MathJax otherwise attaches a hidden MathML
 copy of each equation for screen readers and hides it with a stylesheet that
