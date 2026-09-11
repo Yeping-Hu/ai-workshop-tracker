@@ -1589,6 +1589,20 @@ questions; light theme by default. `scripts/tools_registry_test.mjs` checks
 all of it, plus that every registry entry has a page and every page an
 entry, and runs in `pr-build-check.yml` before the build.
 
+**The index is one screen.** `/tools/` once showed each page's lede on its
+card: two sentences, eleven of the seventeen starting "Paste ... and get
+...", so the page read as one card repeated and the LaTeX tools sat below
+the fold. Each entry now also has a `blurb`, one line in the shape "what you
+give it. what you get.", capped at ten words by the registry test, and the
+card shows that; the lede stays the page's opening paragraph. Tools that
+differ only in a format carry a `family` and a `chip` (`FAMILIES` in
+`tools.mjs`: five ways to get BibTeX, four styles to turn it into), and the
+index draws each family as one row of chips in place of a card per tool.
+`toolsByGroup()` hands the page `cards` and `families` separately so no tool
+is linked twice; `ui_test.mjs` checks every tool is linked exactly once,
+each family row has its chips, and each card shows its blurb. The tool
+pages themselves are untouched: the index is a list, the pages rank.
+
 **Light by default, toggle still wins.** `Base.astro` takes a `theme` prop,
 which the tool pages set to `light`. A tool is landed on from a search
 result and used for half a minute; a dark page there reads as the wrong

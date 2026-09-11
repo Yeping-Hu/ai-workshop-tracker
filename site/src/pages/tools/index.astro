@@ -1,7 +1,10 @@
 ---
 /**
- * The /tools/ index: every tool in the registry, grouped, as cards. It is a
- * list, not a landing page: the pages that rank are the tools themselves.
+ * The /tools/ index: every tool in the registry, grouped. It is a list, not
+ * a landing page: the pages that rank are the tools themselves, so the job
+ * here is to show the whole set in one screen. A tool in a family (see
+ * FAMILIES in tools.mjs) is a chip on its family's row; every other tool is
+ * a card with its one-line blurb. Every tool is linked exactly once.
  */
 import Base from '../../components/Base.astro';
 import '../../styles/tools.css';
@@ -40,10 +43,7 @@ const breadcrumbLd = {
   <section class="masthead tool-head">
     <p class="eyebrow">Free tools</p>
     <h1>Free tools for researchers</h1>
-    <p class="lede">
-      Small tools for the parts of research that are not research: citations, LaTeX and deadlines.
-      Each does one thing, runs in your browser, and stores nothing.
-    </p>
+    <p class="lede">Each does one thing, runs in your browser, and stores nothing.</p>
   </section>
 
   <div class="tool-groups">
@@ -51,10 +51,18 @@ const breadcrumbLd = {
       <section class="tool-group" data-group={g.id}>
         <h2>{g.label}</h2>
         <div class="tool-grid">
-          {g.tools.map((t: any) => (
-            <a class="tool-card" href={href(`/tools/${t.slug}/`)}>
+          {g.families.map((f: any) => (
+            <div class="tool-family" data-family={f.id}>
+              <span class="tool-family-label">{f.label}</span>
+              {f.tools.map((t: any) => (
+                <a class="tool-chip" href={href(`/tools/${t.slug}/`)} data-tool={t.slug} title={t.name}>{t.chip}</a>
+              ))}
+            </div>
+          ))}
+          {g.cards.map((t: any) => (
+            <a class="tool-card" href={href(`/tools/${t.slug}/`)} data-tool={t.slug}>
               <h3>{t.name}</h3>
-              <p>{t.lede}</p>
+              <p>{t.blurb}</p>
             </a>
           ))}
         </div>

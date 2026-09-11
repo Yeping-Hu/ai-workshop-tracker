@@ -1357,8 +1357,14 @@ await page.evaluate(() => localStorage.clear());
   console.log('— /tools/: index and frame —');
   const { TOOLS } = await import('../site/src/lib/tools.mjs');
   await page.goto(`${BASE}/tools/`, { waitUntil: 'networkidle' });
-  const cards = await page.$$eval('.tool-card', (els) => els.map((e) => e.getAttribute('href')));
-  check(`the index lists every registered tool (${TOOLS.length})`, cards.length === TOOLS.length && TOOLS.every((t) => cards.some((h) => h.endsWith(`/tools/${t.slug}/`))), cards.join(' '));
+  const { FAMILIES } = await import('../site/src/lib/tools.mjs');
+  const cards = await page.$$eval('a[data-tool]', (els) => els.map((e) => e.getAttribute('href')));
+  check(`the index links every registered tool exactly once (${TOOLS.length})`, cards.length === TOOLS.length && TOOLS.every((t) => cards.some((h) => h.endsWith(`/tools/${t.slug}/`))), cards.join(' '));
+  // Format-only variants are one row of chips each, not a card apiece, and a
+  // card shows the registry's one-line blurb rather than the page's lede.
+  const fams = await page.$$eval('.tool-family', (els) => els.map((e) => ({ id: e.dataset.family, chips: e.querySelectorAll('a.tool-chip').length })));
+  check('each family is one row of two or more chips', fams.length === Object.keys(FAMILIES).length && fams.every((f) => f.chips >= 2 && f.chips === TOOLS.filter((t) => t.family === f.id).length), JSON.stringify(fams));
+  check('cards carry the one-line blurb, not the lede', (await page.$$eval('.tool-card', (els) => els.map((e) => ({ slug: e.dataset.tool, text: e.querySelector('p').textContent.trim() })))).every((c) => c.text === TOOLS.find((t) => t.slug === c.slug).blurb));
   check('the header has a Tools entry, current on the index', (await page.$eval('.site-nav a[href$="/tools/"]', (a) => a.getAttribute('aria-current'))) === 'page');
   check('the index renders light unless the visitor chose otherwise', (await page.evaluate(() => document.documentElement.dataset.theme)) === 'light');
 
