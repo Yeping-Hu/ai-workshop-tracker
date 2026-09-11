@@ -30,6 +30,7 @@ The site tracks one entry per workshop *edition* (a workshop at a specific confe
 ## Key pages
 - [Home / deadline board](${abs('/')}): Upcoming workshop submission deadlines with countdowns, plus full-text search across all workshops and papers.
 - [About](${abs('/about/')}): What the project is, how the data is sourced, and how to contribute.
+- [AI conference deadlines](${abs('/conference/')}): every tracked conference's current paper and abstract deadlines, notification and conference dates, one row each, open calls first.
 - Per-conference pages: \`${abs('/')}conference/<id>/\` — one conference's workshops across every tracked year, the main conference's next paper deadline and dates, and its acceptance-rate history (ids: ${ids}).
 - Per-edition pages: \`${abs('/')}conference/<id>/<year>/\` — one conference year: the main conference's paper and abstract deadlines, notification, dates and place, its acceptance rate, and its workshops with deadlines, paper counts, and a FAQ.
 - Workshop detail pages: \`${abs('/')}workshop/<slug>/\` — one per workshop edition, listing its deadline, dates, organizers, and accepted papers.

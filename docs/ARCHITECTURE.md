@@ -806,6 +806,18 @@ What the pages do with it:
   page, and tabulates the acceptance-rate history (twelve most recent years)
   under an anchor the head links to. Its title gains "Acceptance Rate" only
   when a table is actually there.
+- **The cross-conference page** (`/conference/`, `conference/index.astro`)
+  is one table of the editions the hubs headline — paper and abstract
+  deadlines with countdown and local time, notification, dates and place, a
+  link to each conference's workshops — ordered by `editionOrder` (open calls
+  first, soonest first, then the unannounced, then closed calls for a
+  conference still ahead, then conferences held), with a "when each call
+  usually closes" list derived from past editions (`typicalTiming`) and a
+  FAQ. It exists for "ai conference deadlines" (720 US searches a month,
+  difficulty 19), a query the small tracker sites hold with no other
+  content; the footer links it from every page and each hub from its
+  main-conference block. A conference the trackers do not know is named in a
+  footnote rather than shown with blanks.
 - A conference the trackers do not know shows none of this and keeps its old
   titles; nothing is per-conference.
 

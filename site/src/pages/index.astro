@@ -197,6 +197,9 @@ const datasetLd: Record<string, any> = {
   <!-- default mode -->
   <div id="homeDefault">
     <h2>Upcoming deadlines</h2>
+    {/* Workshop calls only. Readers who came for the main conference's date
+        get one line pointing at the page that has it. */}
+    <p class="muted small board-note">Workshop calls for papers. Main-conference paper deadlines are on the <a href={href('/conference/')}>AI conference deadlines</a> page.</p>
     {upcomingWithDeadline.length > 0 ? (
       <section class="board" aria-label="Workshop deadlines">
         {upcomingWithDeadline.map((w) => <WorkshopRow w={w} />)}

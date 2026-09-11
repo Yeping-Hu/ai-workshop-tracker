@@ -177,6 +177,7 @@ const ALERTS_BOOTSTRAP = `
         </div>
         <div class="footer-confs">
           Browse by conference:{' '}
+          <a href={href('/conference/')}>All deadlines</a>{' · '}
           {[...conferences]
             .sort((a, b) => a.name.localeCompare(b.name))
             .map((c, i) => (

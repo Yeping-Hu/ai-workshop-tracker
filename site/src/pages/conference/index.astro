@@ -1,0 +1,261 @@
+---
+import Base from '../../components/Base.astro';
+import { workshops, conferences, editions, acceptanceRates } from '../../lib/data';
+import { href } from '../../lib/site';
+import { featuredEdition, previousEdition, editionOrder, typicalTiming, latestAcceptanceRate, formatRate } from '../../../../lib/editions.mjs';
+
+// One page for "ai conference deadlines": every conference this site tracks,
+// one row each, with its current cycle's paper and abstract deadlines,
+// notification and conference dates, a countdown while the call is open and
+// the reader's local time under each. The query is searched 720 times a
+// month in the US (2,500 worldwide) at a difficulty of 19, its variants add
+// another thousand, and what ranks today are small trackers with no other
+// content; this page has the same data (the daily editions sync reads those
+// trackers) and, beneath every row, the workshop pages nobody else has.
+//
+// It is a table of the editions the hubs already headline (featuredEdition),
+// so it cannot say something a hub does not; a conference the trackers do not
+// know is named in a footnote rather than shown with blanks. Ordering is
+// editionOrder: open calls first, soonest first. No search-index attributes,
+// like the hubs. Joins the sitemap automatically; /conference/<id>/ pages
+// link back here, and the footer links it from every page.
+const rows = conferences
+  .map((c: any) => {
+    const ed = featuredEdition(editions, c.id);
+    const mine = workshops.filter((w: any) => w.conference === c.id);
+    return {
+      conf: c,
+      ed,
+      prev: ed && !ed.paper_deadline ? previousEdition(editions, c.id, ed.year) : null,
+      workshops: mine.length,
+      open: mine.filter((w: any) => w.statusLabel === 'Open call').length,
+      timing: typicalTiming(editions, c.id, c.typical_month),
+      rate: latestAcceptanceRate(acceptanceRates, c.id),
+    };
+  })
+  .filter((r) => r.ed)
+  .sort((a, b) => editionOrder(a.ed, b.ed));
+const unlisted = conferences.filter((c: any) => !rows.some((r) => r.conf.id === c.id));
+const openRows = rows.filter((r) => r.ed.paperOpen);
+const years = rows.map((r) => r.ed.year as number);
+const yearRange = years.length ? (Math.min(...years) === Math.max(...years) ? String(years[0]) : `${Math.min(...years)}–${Math.max(...years)}`) : '';
+// Conferences by tracked workshops, largest first: the three biggest name
+// the title, the description names them all (about 170 characters).
+const bySize = [...conferences]
+  .map((c: any) => ({ name: c.name as string, n: workshops.filter((w: any) => w.conference === c.id).length }))
+  .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name))
+  .map((c) => c.name);
+const names = bySize;
+const top = bySize.slice(0, 3);
+const listed = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names.join('');
+const title = `AI Conference Deadlines ${yearRange}: ${top.join(', ')} & More`;
+const description = `AI conference deadlines for ${listed}: paper deadlines, abstract deadlines and conference dates, with countdowns. Updated daily.`;
+const num = (n: number) => n.toLocaleString('en-US');
+const hostOf = (u: string) => {
+  try {
+    return new URL(u).host.replace(/^www\./, '');
+  } catch {
+    return u;
+  }
+};
+const nextList = openRows
+  .slice(0, 4)
+  .map((r) => `${r.conf.name} ${r.ed.year} (${r.ed.paperDeadlineWallClock})`)
+  .join(', ');
+
+const SITE = Astro.site;
+const abs = (p: string) => (SITE ? new URL(href(p), SITE).href : href(p));
+const faqs = [
+  {
+    q: 'When are the next AI conference deadlines?',
+    a: openRows.length
+      ? `${openRows.length === 1 ? 'One call is' : `${openRows.length} calls are`} open right now: ${nextList}. Each row above counts down to its deadline and shows it in your local time.`
+      : 'No main-conference call is open at the moment. The next cycle appears here the day its call is announced; the typical timing of each conference is listed above.',
+  },
+  {
+    q: 'Which conferences are on this list?',
+    a: `${names.join(', ')}: the AI, machine learning, computer vision, language modelling and robotics conferences whose workshops this site tracks. Each name links to the conference's own page, which lists its workshops with their deadlines, its acceptance-rate history and every year's key dates.`,
+  },
+  {
+    q: 'What timezone are the deadlines in?',
+    a: 'Each deadline is shown in the zone its call states, usually AoE (Anywhere on Earth, UTC−12), with your local time underneath. An AoE deadline passes when the last timezone on Earth reaches it, so it is the most generous reading of the date; a call stated in another zone is shown in UTC.',
+  },
+  {
+    q: 'Are these workshop deadlines?',
+    a: 'No. These are the main conference\'s paper deadlines. Workshop calls open after the main-conference decisions and close a few months before the conference; every tracked workshop, with its own deadline and countdown, is on the conference pages and the homepage board.',
+  },
+  {
+    q: 'How current are these dates?',
+    a: 'They are refreshed daily from the community-maintained deadline trackers ccfddl and ai-deadlines, and an extension is applied automatically. Trackers can lag or err, so confirm the date on the conference\'s official site before you plan around it.',
+  },
+];
+const faqLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+};
+const breadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: abs('/') },
+    { '@type': 'ListItem', position: 2, name: 'AI conference deadlines', item: abs('/conference/') },
+  ],
+};
+const listLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'AI conference deadlines',
+  itemListElement: rows.map((r, i) => ({ '@type': 'ListItem', position: i + 1, name: `${r.conf.name} ${r.ed.year}`, url: abs(`/conference/${r.conf.id}/${r.ed.year}/`) })),
+};
+---
+
+<Base title={title} description={description} siteSuffix={false}>
+  <Fragment slot="head">
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(faqLd)} />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbLd)} />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(listLd)} />
+  </Fragment>
+
+  <section class="detail-head">
+    <p class="eyebrow">{rows.length} conferences · {openRows.length} open call{openRows.length === 1 ? '' : 's'}</p>
+    <h1>AI conference deadlines</h1>
+    <p class="conf-intro">
+      Paper submission deadlines, abstract deadlines, notification and conference dates for the AI, machine learning and
+      robotics conferences tracked here, each in the zone its call states and in your local time, with a countdown while the
+      call is open. Workshop deadlines are separate: every conference name links to its page of workshops.
+    </p>
+  </section>
+
+  <div class="dl-wrap">
+    <table class="dl-table">
+      <caption class="visually-hidden">Main-conference deadlines, open calls first</caption>
+      <thead>
+        <tr><th>Conference</th><th>Paper deadline</th><th>Countdown</th><th>Notification</th><th>Conference</th><th>Workshops</th></tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr class={r.ed.paperOpen ? 'is-open' : 'is-past'}>
+            <td class="dl-conf">
+              <i class="pt-dot" style={`background:${r.conf.color ?? '#888'}`} aria-hidden="true"></i>
+              <b><a href={href(`/conference/${r.conf.id}/`)}>{r.conf.name}</a> {r.ed.year}</b>
+              <div class="muted small">{r.conf.full_name}</div>
+              <div class="small"><a href={href(`/conference/${r.conf.id}/${r.ed.year}/`)}>{r.conf.name} {r.ed.year}: deadline, dates and workshops →</a></div>
+            </td>
+            <td class="dl-when">
+              {r.ed.paperDeadlineWallClock ? (
+                <Fragment>
+                  <div class="mono">{r.ed.paperDeadlineWallClock}</div>
+                  <div class="js-local local" data-iso={r.ed.paperDeadlineIso}></div>
+                  {r.ed.abstractDeadlineWallClock && (
+                    <div class={`small ${r.ed.abstractOpen ? 'abs-open' : 'muted'}`}>abstract {r.ed.abstractOpen ? 'by' : 'closed'} {r.ed.abstractDeadlineWallClock}</div>
+                  )}
+                </Fragment>
+              ) : (
+                <span class="muted">Not announced yet{r.prev ? `; ${r.conf.name} ${r.prev.year}'s was ${r.prev.paperDeadlineWallClock}` : ''}</span>
+              )}
+            </td>
+            <td class="dl-state">
+              {r.ed.paperOpen ? (
+                <span class="countdown" data-deadline-ms={r.ed.paperDeadlineUtcMs}>—</span>
+              ) : r.ed.paper_deadline ? (
+                <span class="pill past">Closed</span>
+              ) : (
+                <span class="pill unknown">TBA</span>
+              )}
+            </td>
+            <td class="dl-notify">{r.ed.notificationLabel ? <Fragment><span class="dl-label">Notification</span>{r.ed.notificationLabel}</Fragment> : <span class="muted dl-dash">—</span>}</td>
+            <td class="dl-dates">
+              {r.ed.dateSpan ?? <span class="muted">Dates TBA</span>}
+              {r.ed.place && <div class="muted small">{r.ed.place}</div>}
+              {r.ed.url && <div class="small"><a href={r.ed.url} rel="noopener">{hostOf(r.ed.url)} ↗</a></div>}
+            </td>
+            <td class="dl-ws">
+              <a href={href(`/conference/${r.conf.id}/`)}>{num(r.workshops)} workshops</a>
+              {r.open > 0 && <div class="small abs-open">{r.open} open call{r.open === 1 ? '' : 's'}</div>}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted small dl-note">
+    Main-conference dates via the community-maintained <a href="https://github.com/ccfddl/ccf-deadlines" rel="noopener">ccfddl</a> and{' '}
+    <a href="https://github.com/huggingface/ai-deadlines" rel="noopener">ai-deadlines</a> trackers, refreshed daily; confirm them on the official site before you plan around them.
+    {unlisted.length > 0 && <Fragment>{' '}Not listed yet: {unlisted.map((c: any) => c.name).join(', ')}, whose next cycle the trackers have not recorded.</Fragment>}
+    {' '}Times in AoE follow the <a href={href('/tools/aoe-time/')}>Anywhere on Earth</a> convention.
+  </p>
+
+  <section class="dl-timing">
+    <h2>When each call usually closes</h2>
+    <dl>
+      {rows
+        .filter((r) => r.timing)
+        .sort((a, b) => a.conf.name.localeCompare(b.conf.name))
+        .map((r) => (
+          <Fragment>
+            <dt><a href={href(`/conference/${r.conf.id}/`)}>{r.conf.name}</a></dt>
+            <dd>
+              Paper deadline {r.timing.deadline}{r.timing.conference ? `; the conference meets in ${r.timing.conference}` : ''}
+              {r.rate ? `; acceptance rate ${formatRate(r.rate.rate)} in ${r.rate.year}` : ''}.
+            </dd>
+          </Fragment>
+        ))}
+    </dl>
+  </section>
+
+  <section class="conf-faq">
+    <h2>Frequently asked questions</h2>
+    <dl>
+      {faqs.map((f) => (
+        <Fragment>
+          <dt>{f.q}</dt>
+          <dd>{f.a}</dd>
+        </Fragment>
+      ))}
+    </dl>
+  </section>
+
+  {/* Countdowns and "Your time" conversion; the board pagination in the same
+      script finds no .board here and does nothing. */}
+  <script src="../../scripts/board.js"></script>
+
+  <style>
+    .conf-intro { font-size: 1.04rem; line-height: 1.55; color: var(--muted); max-width: 48rem; margin: 0.4rem 0 1rem; }
+    .dl-wrap { overflow-x: auto; margin-top: 1.2rem; }
+    .dl-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-size: 0.9rem; }
+    .dl-table th, .dl-table td { padding: 0.65rem 0.8rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .dl-table th { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); font-weight: 600; white-space: nowrap; }
+    .dl-table tr:last-child td { border-bottom: 0; }
+    .dl-table tr.is-open td { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+    .dl-table tr.is-past .dl-when, .dl-table tr.is-past .dl-notify, .dl-table tr.is-past .dl-dates { color: var(--muted); }
+    .dl-table .pt-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 0.45rem; vertical-align: baseline; }
+    .dl-table .dl-conf b a { color: inherit; text-decoration: none; }
+    .dl-table .dl-conf b a:hover { text-decoration: underline; }
+    .dl-table .mono { font-family: var(--font-mono); font-size: 0.86rem; white-space: nowrap; }
+    .dl-table .local { color: var(--muted); font-size: 0.76rem; }
+    .dl-table .abs-open { color: var(--warn); }
+    .dl-table .dl-state { white-space: nowrap; }
+    .dl-table .countdown { font-size: 0.9rem; }
+    /* Column headers vanish in the stacked layout, so the one cell that is a
+       bare date gets its own label there, and an empty one shows nothing. */
+    .dl-label { display: none; }
+    .dl-note { margin: 0.8rem 0 0; max-width: 60rem; }
+    .dl-timing { margin: 2.4rem 0; max-width: 48rem; }
+    .dl-timing dt { font-weight: 600; margin-top: 0.8rem; }
+    .dl-timing dd { margin: 0.15rem 0 0; color: var(--muted); }
+    .conf-faq { margin: 2.4rem 0; max-width: 48rem; }
+    .conf-faq dt { font-weight: 600; margin-top: 1rem; }
+    .conf-faq dd { margin: 0.3rem 0 0; color: var(--muted); }
+    @media (max-width: 760px) {
+      .dl-table thead { display: none; }
+      .dl-table, .dl-table tbody, .dl-table tr, .dl-table td { display: block; width: auto; }
+      .dl-table tr { padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--line); }
+      .dl-table tr:last-child { border-bottom: 0; }
+      .dl-table td { border-bottom: 0; padding: 0.15rem 0; }
+      .dl-table .dl-state { padding-top: 0.3rem; }
+      .dl-label { display: inline; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); margin-right: 0.5rem; }
+      .dl-dash { display: none; }
+    }
+  </style>
+</Base>

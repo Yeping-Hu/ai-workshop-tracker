@@ -295,6 +295,7 @@ const hostOf = (u: string) => {
       <p class="muted small">
         <a href={href(`/conference/${conf.id}/${main.year}/`)}>{confName} {main.year}: deadline, dates and workshops →</a>
         {main.url && <Fragment>{' · '}<a href={main.url} rel="noopener">{hostOf(main.url)} ↗</a></Fragment>}
+        {' · '}<a href={href('/conference/')}>All AI conference deadlines →</a>
       </p>
     </section>
   )}

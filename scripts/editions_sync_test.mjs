@@ -26,7 +26,7 @@ import {
   sourceId,
   ACCEPTANCE_SOURCE,
 } from './sync_editions.mjs';
-import { resolveEdition, featuredEdition, previousEdition, hasMainConference, acceptanceHistory, latestAcceptanceRate, formatRate } from '../lib/editions.mjs';
+import { resolveEdition, featuredEdition, previousEdition, hasMainConference, acceptanceHistory, latestAcceptanceRate, formatRate, editionOrder, typicalTiming } from '../lib/editions.mjs';
 import { utcMsToWallClock, zonedToUtcMs } from '../lib/dates.mjs';
 
 let failed = 0;
@@ -349,6 +349,21 @@ const rates = parsed.rows;
 check('history is newest first', acceptanceHistory(rates, 'neurips').map((r) => r.year), [2025, 2022, 2017]);
 check('the latest rate', latestAcceptanceRate(rates, 'iclr').year, 2025);
 check('rates print with the precision the source gave', [formatRate(24.5), formatRate(30.81), formatRate(22)], ['24.5%', '30.81%', '22.0%']);
+
+console.log('— the cross-conference deadlines page —');
+const tba27 = resolveEdition({ conference: 'neurips', year: 2027, start: '2027-12-05', end: '2027-12-11', place: 'Somewhere' }, NOW);
+const cvprEd27 = resolveEdition({ conference: 'cvpr', year: 2027, start: '2027-06-19', end: '2027-06-26', paper_deadline: '2026-11-16 23:59', timezone: 'AoE' }, NOW);
+const ordered = [eds[3], eds[0], tba27, eds[2], cvprEd27, eds[1], eds[5]].sort(editionOrder);
+check('open calls first (soonest), then unannounced, then closed-but-ahead, then held', ordered.map((e) => `${e.conference}-${e.year}`), ['iclr-2027', 'cvpr-2027', 'neurips-2027', 'eccv-2026', 'neurips-2026', 'icml-2026', 'iclr-2026']);
+check('typical timing from the past calls (one month, by the latest day)', typicalTiming(eds, 'iclr'), { deadline: 'late September', conference: 'April' });
+const spread = [
+  resolveEdition({ conference: 'x', year: 2025, end: '2025-07-19', paper_deadline: '2025-01-30 23:59', timezone: 'AoE' }, NOW),
+  resolveEdition({ conference: 'x', year: 2026, end: '2026-07-11', paper_deadline: '2026-02-04 23:59', timezone: 'AoE' }, NOW),
+];
+check('… or a spread of months', typicalTiming(spread, 'x'), { deadline: 'January to February', conference: 'July' });
+check('… mid-month reads as a compound', typicalTiming([resolveEdition({ conference: 'y', year: 2026, end: '2026-06-05', paper_deadline: '2025-09-15 23:59', timezone: 'AoE' }, NOW)], 'y', 6).deadline, 'mid-September');
+check('… the configured month when no edition has dates', typicalTiming([resolveEdition({ conference: 'z', year: 2026, paper_deadline: '2025-11-13 23:59', timezone: 'AoE' }, NOW)], 'z', 6).conference, 'June');
+check('… and nothing without a past call', typicalTiming(eds, 'corl'), null);
 
 console.log(failed ? `\n${failed} check(s) failed` : '\nall checks passed');
 process.exit(failed ? 1 : 0);

@@ -4,6 +4,7 @@
  */
 import { chromium } from 'playwright';
 import { loadEditions, loadAcceptanceRates } from '../lib/editions.mjs';
+import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
 
 const BASE = process.argv[2] || 'http://localhost:4321';
 let pass = 0, fail = 0;
@@ -1470,6 +1471,15 @@ await page.evaluate(() => localStorage.clear());
     check(`the hub tabulates the ${n} most recent acceptance rates`, (await page.$$eval('.rate-table tbody tr', (els) => els.length)) === n);
     check('the hub headlines a main-conference edition with a link to its year page', (await page.$('.conf-main a[href*="/conference/"]')) !== null);
   }
+  // The cross-conference page: one row per headlined edition, open calls first.
+  await page.goto(`${BASE}/conference/`, { waitUntil: 'networkidle' });
+  check('the AI conference deadlines page carries its query in title and H1', /^AI Conference Deadlines/.test(await page.title()) && (await page.$eval('h1', (h) => h.textContent.trim())) === 'AI conference deadlines', await page.title());
+  const dlRows = await page.$$eval('.dl-table tbody tr', (trs) => trs.map((tr) => ({ open: tr.classList.contains('is-open'), counting: /\d+[dhm]/.test(tr.querySelector('.countdown')?.textContent || ''), local: /Your time/.test(tr.querySelector('.js-local')?.textContent || '') })));
+  const anyOpen = eds.some((e) => e.paper_deadline && resolveDeadlineUtcMs(String(e.paper_deadline), e.timezone || 'AoE') > Date.now());
+  check(`it lists one row per conference with tracker data (${dlRows.length})`, dlRows.length >= 5 && dlRows.length <= expectedConfs, String(dlRows.length));
+  check('open calls come first, each with a ticking countdown', dlRows.every((r, i) => !r.open || (r.counting && dlRows.slice(0, i).every((p) => p.open))) && (!anyOpen || dlRows[0].open));
+  check('deadlines are converted to the reader\'s local time', dlRows.filter((r) => r.local).length >= dlRows.filter((r) => r.open).length && dlRows.some((r) => r.local));
+  check('the footer links the page from every page', (await page.$('.footer-confs a[href$="/conference/"]')) !== null);
   // An edition the trackers know but no workshop does yet still has a page.
   const wsYears = new Set(apiTop.map((w) => `${w.conference}-${w.year}`));
   const only = eds.find((e) => e.paper_deadline && !wsYears.has(`${e.conference}-${e.year}`));

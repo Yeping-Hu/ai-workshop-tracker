@@ -1,6 +1,7 @@
 ---
 import ToolPage from '../../components/ToolPage.astro';
 import { upcomingWithDeadline, conferenceById } from '../../lib/data';
+import { href } from '../../lib/site';
 
 // The soonest open calls, for the "in your time" table. Read from the same
 // build-time data as the board, so the two never disagree; the client
@@ -60,7 +61,7 @@ const calls = upcomingWithDeadline.slice(0, 10).map((w: any) => ({
       <thead><tr><th>Workshop</th><th class="num">Deadline (AoE)</th><th class="num">Your time</th><th class="num">Left</th></tr></thead>
       <tbody></tbody>
     </table>
-    <p class="tool-status">From this site's tracker of workshop calls for papers. Always confirm the deadline on the workshop's own page.</p>
+    <p class="tool-status">From this site's tracker of workshop calls for papers. Always confirm the deadline on the workshop's own page. Main-conference deadlines are on the <a href={href('/conference/')}>AI conference deadlines</a> page.</p>
   </div>
   <script type="application/json" id="aoeCallsData" set:html={JSON.stringify(calls)} />
   <script src="../../scripts/tools/aoe-time.js"></script>
