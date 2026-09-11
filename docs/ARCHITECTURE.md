@@ -1652,7 +1652,13 @@ out of `node_modules` into `public/vendor/` before every `astro dev` and
 gitignored, so the repo carries no third-party artefact and the version is
 whatever `site/package.json` pins. Output uses `fontCache: 'local'`, so each
 SVG embeds the glyph paths it uses and is self-contained; the PNG is the
-same SVG drawn onto a canvas at the chosen scale. The bundle is configured
+same SVG drawn onto a canvas at the chosen scale. MathJax paints with
+`currentColor`, so the exporter sets the picked colour as a `color`
+attribute on the root `<svg>`: a standalone file then has its own default
+(the browser's rasteriser honours it for the PNG) while an inline copy still
+follows a CSS `color` rule, as the SVG page's FAQ promises. Without it every
+saved file was black whatever the picker showed, because the preview's
+colour came from the page container. The bundle is configured
 with `enableAssistiveMml: false`: MathJax otherwise attaches a hidden MathML
 copy of each equation for screen readers and hides it with a stylesheet that
 only a full typeset run injects, so on these convert-only pages the copy

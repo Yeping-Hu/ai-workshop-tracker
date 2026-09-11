@@ -1433,6 +1433,32 @@ await page.evaluate(() => localStorage.clear());
   await page.click('#copyPng');
   await page.waitForFunction(() => /Copied|Copy failed/.test(document.querySelector('#copyPng')?.textContent || ''), null, { timeout: 8000 });
   check('Copy PNG puts an image on the clipboard', (await page.$eval('#copyPng', (b) => b.textContent)) === 'Copied' && (await page.evaluate(async () => (await navigator.clipboard.read()).some((item) => item.types.includes('image/png')))));
+  // The picked colour reaches the files. MathJax fills with `currentColor`,
+  // which resolved to black in a standalone SVG (and so in every PNG drawn
+  // from it) until the exporter set `color` on the root element.
+  await page.fill('#optColor', '#ff0000');
+  await page.waitForFunction(() => document.querySelector('#toolPreview')?.style.color === 'rgb(255, 0, 0)', null, { timeout: 5000 });
+  const [redSvgDl] = await Promise.all([page.waitForEvent('download', { timeout: 8000 }), page.click('#dlSvg')]);
+  const redSvg = readFileSync(await redSvgDl.path(), 'utf8');
+  check('the downloaded SVG carries the picked colour as its own default', /<svg[^>]* color="#ff0000"/.test(redSvg) && redSvg.includes('fill="currentColor"'), redSvg.slice(0, 300));
+  // The button flashes "Copied" for 1.4 s after the first copy; wait for it
+  // to reset so the second "Copied" is this click's, not a stale label.
+  await page.waitForFunction(() => document.querySelector('#copyPng')?.textContent === 'Copy PNG', null, { timeout: 8000 });
+  await page.click('#copyPng');
+  await page.waitForFunction(() => document.querySelector('#copyPng')?.textContent === 'Copied', null, { timeout: 8000 });
+  const pngColour = await page.evaluate(async () => {
+    const item = (await navigator.clipboard.read()).find((i) => i.types.includes('image/png'));
+    const bmp = await createImageBitmap(await item.getType('image/png'));
+    const canvas = document.createElement('canvas');
+    canvas.width = bmp.width; canvas.height = bmp.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bmp, 0, 0);
+    const d = ctx.getImageData(0, 0, bmp.width, bmp.height).data;
+    const seen = new Set();
+    for (let i = 0; i < d.length; i += 4) if (d[i + 3] === 255) seen.add(`${d[i]},${d[i + 1]},${d[i + 2]}`);
+    return [...seen];
+  });
+  check('the copied PNG is drawn in the picked colour, not black', pngColour.length > 0 && pngColour.every((c) => c === '255,0,0'), pngColour.slice(0, 5).join(' | '));
   await page.goto(`${BASE}/tools/aoe-time/`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => /^\d\d:\d\d:\d\d$/.test(document.querySelector('#aoeClockTime')?.textContent || ''), null, { timeout: 5000 });
   const aoe = await page.evaluate(() => {

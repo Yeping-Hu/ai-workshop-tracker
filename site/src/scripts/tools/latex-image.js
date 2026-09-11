@@ -80,8 +80,16 @@ if (form) {
     c.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
     c.setAttribute('width', `${w}px`);
     c.setAttribute('height', `${h}px`);
-    c.setAttribute('fill', color.value);
-    c.setAttribute('stroke', color.value);
+    // MathJax paints every glyph and rule with `currentColor`, which is the
+    // CSS `color` of the nearest ancestor. In the preview that is the page's
+    // container; in a standalone file there is no ancestor, so the colour
+    // fell back to black whatever was picked. `color` is an SVG presentation
+    // attribute, so setting it on the root gives the file its own default,
+    // the browser's rasteriser honours it for the PNG, and the fills stay
+    // `currentColor` as the SVG page's FAQ promises: a CSS `color` rule on an
+    // inline copy still recolours the whole equation. (Root `fill`/`stroke`
+    // attributes did nothing: MathJax's own group overrides them.)
+    c.setAttribute('color', color.value);
     c.removeAttribute('style');
     c.removeAttribute('role');
     c.removeAttribute('focusable');
