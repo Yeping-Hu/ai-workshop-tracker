@@ -25,9 +25,9 @@
  */
 
 export const GROUPS = {
-  citations: 'Citations & references',
+  citations: 'Citations & References',
   latex: 'LaTeX',
-  deadlines: 'Deadlines & time zones',
+  deadlines: 'Deadlines & Time Zones',
 };
 
 export const TOOLS = [
