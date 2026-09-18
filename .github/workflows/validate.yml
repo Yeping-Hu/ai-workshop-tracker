@@ -118,6 +118,8 @@ jobs:
         run: node scripts/latex_tools_test.mjs
       - name: Test the Jev client contract (null on failure, bounded retries, pinned model)
         run: node scripts/jev_client_test.mjs
+      - name: Test topic tagging with Jev (questions, policy, recorded answers, fallback)
+        run: node scripts/jev_topics_test.mjs
       - name: Validate workshop data
         id: validate
         run: node scripts/validate.mjs --report validation-report.md

@@ -3,8 +3,11 @@
  * Discovers ALL workshop venues for a conference-year from OpenReview and
  * creates a YAML entry for each one that we don't already track.
  *
- * Everything written is taken from official OpenReview records: title,
- * acronym (subtitle), website, and the real submission deadline — parsed
+ * Everything written is taken from official OpenReview records — title,
+ * acronym (subtitle), website, and the real submission deadline — except the
+ * one inferred field, `topics`: Jev judges those from the title, acronym and
+ * host conference (lib/jev_topics.mjs), and the keyword table below stands in
+ * when no judgment can be had. The deadline is parsed
  * from the venue's human-written `date` line or, when that is blank, from
  * the submission invitation's machine-readable `duedate` (expired
  * invitations included; it's the value shown next to the Submission button
@@ -42,6 +45,8 @@ import * as yaml from 'js-yaml';
 import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, loadConferences, stripVenueFromName, normalizeAcronym, isNotRunning, slugify, slugOfFile } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs, plausibleDeadline } from '../lib/dates.mjs';
 import { unwrap, openreviewFetch, recordUnverified, getUnverified, writeUnverified } from '../lib/openreview.mjs';
+import { suggestTopics } from '../lib/jev_topics.mjs';
+import { jevUsageLine } from '../lib/jev.mjs';
 
 // Prepended to new entries that lack a deadline, so anyone editing the raw YAML
 // directly (e.g. via the raw-YAML link in the edit form's intro) sees exactly
@@ -828,7 +833,10 @@ async function main({ conf, year, dryRun }) {
     if (website) record.website = website;
     const loc = locationFromContent(g.content ?? {});
     if (loc) record.location = loc;
-    record.topics = guessTopics(`${title} ${acronym}`);
+    // Jev first; the keyword table when it has no answer — no key (every fork),
+    // an outage, or nothing cleared the bar. lib/jev_topics.mjs has the why and
+    // the numbers; ARCHITECTURE.md, "Typed judgments from Jev", the rules.
+    record.topics = (await suggestTopics({ name: title, acronym, conference: conf, year })) ?? guessTopics(`${title} ${acronym}`);
     if (deadline) {
       record.submission_deadline = deadline.submission_deadline;
       record.timezone = deadline.timezone;
@@ -875,6 +883,10 @@ async function main({ conf, year, dryRun }) {
     `${missed.length ? `, ${missed.length} UNVERIFIED (see warnings)` : ''}.`,
   );
   for (const c of changes) console.log(`    ↳ ${c}`);
+  // What the topic judgments cost this cycle (input tokens; output is free).
+  // Absent when nothing was asked — a cycle with no new venue, or no key.
+  const jev = jevUsageLine();
+  if (jev) console.log(`    ${jev}`);
   // Named on stdout and appended to $OPENREVIEW_UNVERIFIED through the shared
   // writer — the same TSV the workflow turns into the "venues not verified"
   // issue, so discovery feeds one report like every other OpenReview job.

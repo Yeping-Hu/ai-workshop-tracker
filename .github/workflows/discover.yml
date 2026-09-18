@@ -44,6 +44,11 @@ jobs:
   discover:
     runs-on: ubuntu-latest
     timeout-minutes: 150
+    env:
+      # Jev judges each new venue's topics (lib/jev_topics.mjs). Unset — every
+      # fork — and the importer uses the keyword table exactly as it always has;
+      # an outage mid-run does the same for that venue and warns once.
+      TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

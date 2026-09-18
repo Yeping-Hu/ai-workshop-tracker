@@ -1462,7 +1462,8 @@ into a `YYYY-MM-DD HH:MM` string (defaulting a missing time to 23:59 and
 rejecting impossible dates like Feb 30); the existing timezone→UTC conversion is
 unchanged, so there's still one source of truth for deadline math.
 
-A bot-imported entry has its topics keyword-guessed from the venue title, so it
+A bot-imported entry has its topics machine-judged from the venue title — by
+Jev, or by the keyword table when no key is set (next paragraph) — so it
 carries a short `notes` flag (`AUTO_TOPICS_NOTE` in `discover_openreview.mjs`:
 "topics were auto-suggested — edits welcome"). It's deliberately topic-only (the
 deadline has its own `deadline_notes` provenance) and carries no import date,
@@ -1472,17 +1473,33 @@ moment a human changes the topics through the picker. So it can't go stale: it's
 shown exactly while the topics are still machine-guessed, and disappears once
 they're curated.
 
-The guesser (`guessTopics`) is purely keyword-based: OpenReview exposes no venue
-description, so it regex-matches the title + acronym against a broad pattern table
+The first guess is Jev's (`lib/jev_topics.mjs`; the rules it runs under are in
+"Typed judgments from Jev" above). OpenReview exposes no venue description, so
+the title and acronym are the whole signal, and the importer asks one yes/no
+question per topic over them plus the host conference — its `full_name` from
+`conferences.yml`, which is what lets "Learning from Corrections and
+Interventions" at CoRL come out as robotics (0.93) rather than nothing. Each
+topic's row in `data/topics.yml` carries a one-line `description` the question
+quotes, because a label like "Efficiency" is too terse for a literal reader.
+Code applies the policy: topics at or above `TOPIC_MIN` (0.5), strongest first,
+at most three; `other` is never asked and is what gets written when nothing
+clears the bar. `scripts/jev_topics_test.mjs` replays answers recorded from the
+pinned model, so the thresholds are pinned against what it actually says.
+
+The keyword table (`guessTopics`) is the fallback, and still the whole answer on
+a fork: it regex-matches the title + acronym against a broad pattern table
 (mapping only to `data/topics.yml` ids) and keeps up to three hits, falling back
-to `['other']` when nothing matches. Because the title is the only signal, the
-patterns are intentionally generous (e.g. "manipulation"/"humanoid" → robotics,
-"visual"/"camera"/"perception" → vision); `scripts/topics_guess_test.mjs` locks in
-the tricky cases. The patterns can be re-run over already-imported entries with
-`scripts/retag_topics.mjs`, which re-guesses **only** entries still tagged
-`['other']` with the auto-suggested note — so a human-curated topic set is never
-overwritten — and rewrites just the topics. That's how a one-off matcher
-improvement reclassifies the back catalogue without disturbing curated entries.
+to `['other']` when nothing matches. It runs whenever Jev has no answer — no
+key, an outage, or no topic over the bar. Because the title is the only signal,
+the patterns are intentionally generous (e.g. "manipulation"/"humanoid" →
+robotics, "visual"/"camera"/"perception" → vision); `scripts/topics_guess_test.mjs`
+locks in the tricky cases. Measured on the corpus it is why the model is here:
+the table alone sent 157 of 944 entries to `other`, and an `other`-only entry
+matches no topic-filtered alerts subscription at all. Both guesses can be re-run
+over already-imported entries with `scripts/retag_topics.mjs`, which re-tags
+**only** entries still tagged `['other']` with the auto-suggested note — so a
+human-curated topic set is never overwritten — and rewrites just the topics.
+That's how the back catalogue is reclassified without disturbing curated entries.
 
 ## The sitemap dates each page from git, not from the build
 

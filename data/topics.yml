@@ -1,37 +1,42 @@
 # Controlled topic vocabulary. Workshops reference these by `id`.
 # Keep this list small and broad; propose additions via PR.
-- { id: agents,                label: "Agents" }
-- { id: causality,             label: "Causality" }
-- { id: climate,               label: "Climate & sustainability" }
-- { id: datasets,              label: "Datasets" }
-- { id: diffusion,             label: "Diffusion models" }
-- { id: education,             label: "Education" }
-- { id: efficiency,            label: "Efficiency" }
-- { id: evaluation-benchmarks, label: "Evaluation & benchmarks" }
-- { id: fairness,              label: "Fairness & ethics" }
-- { id: federated-learning,    label: "Federated learning" }
-- { id: generative-models,     label: "Generative models" }
-- { id: genomics,              label: "Genomics" }
-- { id: graphs,                label: "Graphs" }
-- { id: healthcare-bio,        label: "Healthcare & biology" }
-- { id: interpretability,      label: "Interpretability" }
-- { id: llms,                  label: "Large language models" }
-- { id: math-reasoning,        label: "Math & reasoning" }
-- { id: multimodal,            label: "Multimodal" }
-- { id: neuroscience,          label: "Neuroscience" }
-- { id: nlp,                   label: "NLP" }
-- { id: optimization,          label: "Optimization" }
-- { id: physics,               label: "Physical sciences" }
-- { id: privacy,               label: "Privacy & security" }
-- { id: reinforcement-learning, label: "Reinforcement learning" }
-- { id: robotics,              label: "Robotics" }
-- { id: robustness,            label: "Robustness" }
-- { id: safety-alignment,      label: "Safety & alignment" }
-- { id: science-applications,  label: "AI for science" }
-- { id: speech-audio,          label: "Speech & audio" }
-- { id: systems,               label: "ML systems" }
-- { id: tabular,               label: "Tabular & structured data" }
-- { id: theory,                label: "Theory" }
-- { id: time-series,           label: "Time series" }
-- { id: vision,                label: "Computer vision" }
-- { id: other,                 label: "Other" }
+#
+# `description` is what Jev reads when it tags an imported workshop
+# (lib/jev_topics.mjs). The label alone is too terse for a literal reader —
+# "Efficiency" or "ML systems" says little about what counts — so each one
+# names the concrete subjects it covers. Not shown on the site; the labels are.
+- { id: agents,                 label: "Agents",                    description: "AI agents: agentic systems, tool use, planning, multi-agent interaction" }
+- { id: causality,              label: "Causality",                 description: "causal inference, treatment effects, counterfactual reasoning" }
+- { id: climate,                label: "Climate & sustainability",  description: "climate, sustainability, weather, earth systems, energy" }
+- { id: datasets,               label: "Datasets",                  description: "datasets, data-centric AI, data curation and data quality" }
+- { id: diffusion,              label: "Diffusion models",          description: "diffusion and score-based generative models" }
+- { id: education,              label: "Education",                 description: "AI in education, teaching and tutoring" }
+- { id: efficiency,             label: "Efficiency",                description: "efficient models: compression, quantization, distillation, on-device and low-resource settings" }
+- { id: evaluation-benchmarks,  label: "Evaluation & benchmarks",   description: "evaluation, benchmarks, leaderboards, competitions and challenges" }
+- { id: fairness,               label: "Fairness & ethics",         description: "fairness, ethics, societal impact, responsible AI and governance" }
+- { id: federated-learning,     label: "Federated learning",        description: "federated and decentralized learning" }
+- { id: generative-models,      label: "Generative models",         description: "generative models: image, video, audio or text synthesis, GANs, VAEs, flows" }
+- { id: genomics,               label: "Genomics",                  description: "genomics and molecular biology: DNA, RNA, proteins, drug discovery" }
+- { id: graphs,                 label: "Graphs",                    description: "graphs and geometric deep learning, graph neural networks, knowledge graphs" }
+- { id: healthcare-bio,         label: "Healthcare & biology",      description: "healthcare and biomedical applications: clinical, medical imaging, biology" }
+- { id: interpretability,       label: "Interpretability",          description: "interpretability and explainability, mechanistic understanding of models" }
+- { id: llms,                   label: "Large language models",     description: "large language models and foundation models" }
+- { id: math-reasoning,         label: "Math & reasoning",          description: "mathematics, reasoning, theorem proving, formal methods" }
+- { id: multimodal,             label: "Multimodal",                description: "multimodal learning: vision-language and other cross-modal models" }
+- { id: neuroscience,           label: "Neuroscience",              description: "neuroscience, cognition, brain-inspired AI" }
+- { id: nlp,                    label: "NLP",                       description: "natural language processing: text, dialogue, translation, tokenization" }
+- { id: optimization,           label: "Optimization",              description: "optimization methods, including architecture and hyperparameter search" }
+- { id: physics,                label: "Physical sciences",         description: "physical sciences: physics, astrophysics, quantum" }
+- { id: privacy,                label: "Privacy & security",        description: "privacy and security: attacks, defenses, forensics, misuse detection" }
+- { id: reinforcement-learning, label: "Reinforcement learning",    description: "reinforcement learning, sequential decision making, reward design" }
+- { id: robotics,               label: "Robotics",                  description: "robotics: robot learning, manipulation, locomotion, embodied agents, human-robot interaction, autonomous driving" }
+- { id: robustness,             label: "Robustness",                description: "robustness: distribution shift, out-of-distribution data, domain adaptation, reliability" }
+- { id: safety-alignment,       label: "Safety & alignment",        description: "AI safety and alignment, red teaming, trustworthiness" }
+- { id: science-applications,   label: "AI for science",            description: "AI for science and engineering: materials, chemistry, astronomy, space, earth observation, scientific discovery" }
+- { id: speech-audio,           label: "Speech & audio",            description: "speech, audio and music" }
+- { id: systems,                label: "ML systems",                description: "ML systems: infrastructure, serving, distributed training, compilers, MLOps" }
+- { id: tabular,                label: "Tabular & structured data", description: "tabular and structured data" }
+- { id: theory,                 label: "Theory",                    description: "learning theory and theoretical foundations" }
+- { id: time-series,            label: "Time series",               description: "time series, forecasting, temporal data, anomaly detection" }
+- { id: vision,                 label: "Computer vision",           description: "computer vision: images, video, 3D, perception" }
+- { id: other,                  label: "Other" }
