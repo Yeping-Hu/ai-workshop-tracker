@@ -1233,6 +1233,66 @@ out — no scraping of other portals. (CVPR workshops use OpenReview for reviewi
 only; their accepted papers live on CVF Open Access, so those entries track
 deadlines and links rather than inline paper lists.)
 
+## Typed judgments from Jev (TypeSafe)
+
+Two pipeline jobs ask a model a question and consume the answer as data:
+topic tagging, when discovery creates an entry and in the retag sweep (the
+topic mechanics are under "Contributors are validated by CI" below), and the
+weekly series-identity audit ("Related entries", signal 5). The model is
+TypeSafe's Jev, reached through `lib/jev.mjs` — plain `fetch`, because the API
+is one POST and an SDK would be a dependency to track for a forty-line
+function. It is the scope exception the README describes, and four rules keep
+it an exception.
+
+**It judges; it never authors.** Every question is typed — the probability that
+a yes/no holds, or a score over named levels — and Jev returns probabilities,
+not text. Nothing it produces is prose on the site, and nothing it produces
+lacks a fallback. What it does produce is a proposal a person can read and
+overrule: a topic list under the same "auto-suggested" note the keyword table
+leaves, or a series link recorded with its probability in
+`data/series_links.yml`. Freeze-on-touch keeps a curated topic set out of its
+reach, and a recorded decision outranks any probability.
+
+**The build never calls it.** Jobs write data; the build reads data. A site
+built from a checkout is reproducible with no key and no network, exactly as
+before — which is also why the series audit writes a file instead of linking
+at build time.
+
+**Unavailable means fall back, never fail.** `askJev()` returns `null` — it
+does not throw — when there is no judgment to be had: no `TYPESAFE_API_KEY`
+(every fork, every PR preview), an auth failure, a request the API rejected,
+or the service throttled or down past a three-retry budget with `retry-after`
+honoured. Each caller then does what the pipeline did before Jev: the keyword
+table tags the entry; the audit records nothing that week. The job prints one
+`::warning::` annotation and stays green, and whatever else it computed still
+publishes (AUTOMATION.md, "A partial crawl fails loudly", is the model). A
+twenty-second request timeout keeps a hung socket from holding the
+`data-write` lock.
+
+**The model is pinned.** `JEV_MODEL` is `jev-1.13.0`, not `jev-latest`: the
+alias moves on every TypeSafe release, and the thresholds the callers apply
+(`TOPIC_MIN`, `LINK_MIN`) were tuned on this version's probabilities over the
+real corpus. Moving the pin is a deliberate change — re-run the corpus, read
+what moved, then land it — never something a Sunday cron does on its own. The
+thresholds live in code and are pinned by tests that replay recorded answers,
+so every suite runs offline.
+
+Two properties of the model shape how the questions are written, and both are
+documented by TypeSafe rather than discovered here. Jev reads literally:
+"judging only from the name" made it ignore that a CoRL workshop is about
+robots, so the state carries the host conference's `full_name` — "Conference on
+Robot Learning" — and the instruction says to use it. Nothing is
+per-conference: a new row in `conferences.yml` describes itself. And Jev does
+not do arithmetic or compare dates, so it is never asked to: thresholds,
+ordering and every date stay in code.
+
+What it costs is not the constraint. Input tokens are billed ($0.042 per
+million) and output is free; tagging the whole corpus is about $0.20, the full
+series backfill about $0.05, and a typical week of new entries under a cent.
+The published rate limit (1,200 requests a minute) is above anything the jobs
+do. The real cost is the human one — reading what the audit puts in its review
+band — and the rules above are what keep that small.
+
 ## Calendar feeds instead of email
 
 Static `.ics` feeds (all / per-conference / per-topic / per-workshop) with

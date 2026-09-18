@@ -15,6 +15,9 @@ downstream of a reason recorded there.
 - `skills/add-conference/` — the procedure for adding a conference.
 - `site/src/lib/tools.mjs` — the registry behind every `/tools/` page; read the
   "Free tools" section of `docs/ARCHITECTURE.md` before adding or changing one.
+- `lib/jev.mjs` — the one client for TypeSafe's Jev, behind topic tagging and
+  the series audit; read "Typed judgments from Jev" in `docs/ARCHITECTURE.md`
+  before adding a question (judge, never author; fall back, never fail; pinned).
 - `scripts/sync_editions.mjs` and `lib/editions.mjs` — the main conference's
   deadlines, dates and acceptance rates (`data/editions.yml`,
   `data/acceptance_rates.yml`) and how the conference pages read them; read

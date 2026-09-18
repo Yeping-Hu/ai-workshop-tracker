@@ -31,6 +31,7 @@ Forking without the custom domain? In `deploy.yml`, set `SITE_URL` to `https://<
 | `BUILD_ID` | site build | Stamped into every page and `/version.json`; a back/forward-cache page from an older build reloads itself once when they differ | `dev` — CI passes the commit SHA |
 | `PUBLIC_GOATCOUNTER` | site build | Enables [GoatCounter](https://www.goatcounter.com) analytics (set to your site code; repo Action variable `GOATCOUNTER_CODE` — currently enabled as `aiworkshoptracker`) | off |
 | `PUBLIC_CF_ANALYTICS_TOKEN` | site build | Enables Cloudflare Web Analytics (repo Action variable `CF_ANALYTICS_TOKEN`) | off |
+| `TYPESAFE_API_KEY` | pipeline jobs that ask Jev (`lib/jev.mjs`) | TypeSafe API key for the typed judgments — topic tags when an entry is imported, the weekly series-identity audit. A repo Action **secret**; the same variable locally for the sweeps. **Unset ⇒ every job falls back to its pre-Jev rule** (the keyword table tags topics; the audit records nothing). The site build never reads it — see ARCHITECTURE.md, "Typed judgments from Jev" | off |
 | `PUBLIC_ALERTS_API` | site build | Base URL of the alerts Worker. **Empty ⇒ every email-alerts UI element is absent from the build** | off |
 | `PUBLIC_TURNSTILE_SITE_KEY` | site build | Cloudflare Turnstile site key (public half) for the signup form | off |
 

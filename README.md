@@ -118,7 +118,9 @@ Contributions are governed by lightweight [contributor terms](CONTRIBUTOR_TERMS.
 
 ## Scope (deliberately) excluded
 
-No accounts, no LLM pipelines, no PDF rehosting, and no scraping of submission portals or individual workshop sites. These are the things that make trackers expensive to run and easy to abandon. The free tools under `/tools/` keep to the same rule: they run in the browser, call the public registries directly, and add nothing to run.
+No accounts, no LLM text generation, no PDF rehosting, and no scraping of submission portals or individual workshop sites. These are the things that make trackers expensive to run and easy to abandon. The free tools under `/tools/` keep to the same rule: they run in the browser, call the public registries directly, and add nothing to run.
+
+The one model in the pipeline is a judge, not a writer. TypeSafe's Jev answers typed yes/no and scoring questions in two scheduled jobs — which topics a newly imported workshop is about, and whether two entries are editions of one series — and every answer lands as data a person can read and overrule. Both jobs fall back to their pre-Jev rules when no key is set, so a fork behaves exactly as before, and the site build never calls it. See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**, "Typed judgments from Jev".
 
 One narrow exception: the tracker reads each conference's **own published list of accepted workshops** to cross-check what OpenReview told it — one fetch per conference-year per week, reported for a human, never applied. See **[docs/AUTOMATION.md](docs/AUTOMATION.md)** for why that second opinion is needed.
 
