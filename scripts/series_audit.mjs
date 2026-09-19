@@ -37,7 +37,8 @@ import {
   LINK_MIN,
 } from '../lib/workshops.mjs';
 import { auditSeries, decide, renderReport, serializeSeriesLinks } from '../lib/series_links.mjs';
-import { jevUsageLine, recordJevStatus } from '../lib/jev.mjs';
+import { jevUsageLine } from '../lib/jev.mjs';
+import { recordJevStatus } from '../lib/jev_status.mjs';
 
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');

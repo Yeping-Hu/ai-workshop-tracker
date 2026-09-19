@@ -11,7 +11,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { askJev, jevAvailable, jevUsage, jevUsageLine, recordJevStatus, JEV_MODEL, JEV_ENDPOINT } from '../lib/jev.mjs';
+import { askJev, jevAvailable, jevUsage, jevUsageLine, JEV_MODEL, JEV_ENDPOINT } from '../lib/jev.mjs';
+import { recordJevStatus } from '../lib/jev_status.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -153,7 +154,10 @@ console.warn = realWarn;
   const ci = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'validate.yml'), 'utf8');
   check('CI runs this test', /jev_client_test\.mjs/.test(ci), 'the workflow lists tests by hand');
   const src = fs.readFileSync(path.join(ROOT, 'lib', 'jev.mjs'), 'utf8');
-  check('the client imports no SDK — node built-ins only', !/^import .* from '(?!node:)/m.test(src));
+  check('the client imports nothing at all (no SDK, no node:fs) — the alerts Worker bundles it', !/^import /m.test(src));
+  const status = fs.readFileSync(path.join(ROOT, 'lib', 'jev_status.mjs'), 'utf8');
+  check('...and the filesystem lives in jev_status.mjs, which the Worker never imports',
+    /from 'node:fs'/.test(status) && !/jev_status/.test(fs.readFileSync(path.join(ROOT, 'alerts', 'worker', 'src', 'index.mjs'), 'utf8')));
   for (const wf of ['discover.yml', 'series-audit.yml']) {
     const text = fs.readFileSync(path.join(ROOT, '.github', 'workflows', wf), 'utf8');
     check(`${wf} collects the status line and maintains the "Jev did not answer" issue`,

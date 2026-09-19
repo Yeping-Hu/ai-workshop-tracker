@@ -46,7 +46,8 @@ import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObser
 import { resolveDeadlineUtcMs, plausibleDeadline } from '../lib/dates.mjs';
 import { unwrap, openreviewFetch, recordUnverified, getUnverified, writeUnverified } from '../lib/openreview.mjs';
 import { suggestTopics } from '../lib/jev_topics.mjs';
-import { jevUsageLine, recordJevStatus } from '../lib/jev.mjs';
+import { jevUsageLine } from '../lib/jev.mjs';
+import { recordJevStatus } from '../lib/jev_status.mjs';
 
 // Prepended to new entries that lack a deadline, so anyone editing the raw YAML
 // directly (e.g. via the raw-YAML link in the edit form's intro) sees exactly
