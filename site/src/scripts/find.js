@@ -12,6 +12,8 @@
  * handleMatch), so each has its own sentence here; anything else shows the
  * status code rather than a guess.
  */
+import { arxivIdFrom, paperDoiUrl, paperFromCsl } from '../../../lib/paper_meta.mjs';
+
 const api = () => document.querySelector('meta[name="alerts-api"]')?.content || null;
 const $ = (id) => document.getElementById(id);
 
@@ -124,3 +126,52 @@ async function submit(e) {
 }
 
 if (form) form.addEventListener('submit', submit);
+
+/**
+ * The prefill: an arXiv id or link becomes a title and abstract through
+ * doi.org's CSL-JSON for the paper's DataCite DOI — the route the citation
+ * tools already use, and one whose CORS they have proven. lib/paper_meta.mjs
+ * says why arXiv's own API is not used. Fills the fields and stops; the reader
+ * still reviews and presses "Find workshops".
+ */
+async function prefill() {
+  const status = $('findStatus');
+  const id = arxivIdFrom($('findArxiv').value);
+  if (!id) {
+    status.textContent = 'That does not look like an arXiv id or link (for example 2106.09685).';
+    return;
+  }
+  const btn = $('findPrefill');
+  btn.disabled = true;
+  status.textContent = `Fetching arXiv:${id}…`;
+  try {
+    const res = await fetch(paperDoiUrl(id), { headers: { Accept: 'application/vnd.citationstyles.csl+json' } });
+    if (!res.ok) {
+      status.textContent = res.status === 404
+        ? `No record for arXiv:${id} yet — paste the title and abstract instead.`
+        : `doi.org answered ${res.status} — paste the title and abstract instead.`;
+      return;
+    }
+    const paper = paperFromCsl(await res.json());
+    if (!paper) {
+      status.textContent = 'That record has no title — paste it instead.';
+      return;
+    }
+    $('findTitle').value = paper.title;
+    $('findAbstract').value = paper.abstract;
+    status.textContent = paper.abstract
+      ? 'Filled in from arXiv. Check it, then find workshops.'
+      : 'Filled in the title from arXiv; the record carries no abstract.';
+  } catch {
+    status.textContent = 'Could not reach doi.org. Check your connection, or an ad blocker that blocks it.';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+$('findPrefill')?.addEventListener('click', prefill);
+$('findArxiv')?.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  prefill();
+});

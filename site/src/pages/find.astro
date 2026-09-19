@@ -39,6 +39,18 @@ const enabled = !!ALERTS_API;
   {enabled && (
     <>
       <form class="find-form" id="findForm" novalidate>
+        {/* A div with an explicit label, not a wrapping <label>: a button inside
+            a label is its own activation target, and the pairing would read
+            oddly to a screen reader. */}
+        <div class="find-field">
+          <label class="find-label" for="findArxiv">
+            arXiv link or id <span class="muted">(optional — fills in the title and abstract)</span>
+          </label>
+          <div class="find-row">
+            <input id="findArxiv" type="text" placeholder="2106.09685 or https://arxiv.org/abs/2106.09685" autocomplete="off" />
+            <button class="btn secondary" type="button" id="findPrefill">Fill in</button>
+          </div>
+        </div>
         <label class="find-field">
           <span class="find-label">Title</span>
           <input id="findTitle" type="text" maxlength="300" autocomplete="off" required />
@@ -86,6 +98,7 @@ const enabled = !!ALERTS_API;
   .find-form textarea { resize: vertical; line-height: 1.45; }
   .find-form input:focus, .find-form textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .find-row { display: flex; gap: 0.9rem; align-items: center; flex-wrap: wrap; }
+  .find-row > input { flex: 1 1 18rem; width: auto; }
   .find-status { margin: 0; color: var(--muted); }
   .find-privacy { margin: 0; max-width: 46rem; }
   .find-list { list-style: none; padding: 0; margin: 0.6rem 0 2rem; display: grid; gap: 0.75rem; max-width: 46rem; }

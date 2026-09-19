@@ -124,6 +124,8 @@ jobs:
         run: node scripts/series_audit_test.mjs
       - name: Test the matcher's candidate feed (open calls, past titles from the series)
         run: node scripts/match_candidates_test.mjs
+      - name: Test the matcher's arXiv prefill helper (ids, the doi.org record)
+        run: node scripts/paper_meta_test.mjs
       - name: Validate workshop data
         id: validate
         run: node scripts/validate.mjs --report validation-report.md

@@ -1292,9 +1292,15 @@ response's fields alone: a fit label, the workshop's page, its deadline or
 "not announced yet", its website when it has one, and the line that says what
 the judgment stood on — "judged from 57 past papers" or "judged from the name
 and topics". The Worker's error codes are a closed set, and each has its own
-sentence on the page. `scripts/find_ui_test.mjs` drives the configured build
-against a stubbed Worker; `ui_test.mjs` checks the fork build says off and
-links nothing.
+sentence on the page. An arXiv id or link fills the two fields in: the page
+fetches the paper's DataCite DOI (`10.48550/arXiv.<id>`) from doi.org as
+CSL-JSON, which carries the abstract — the same content negotiation the
+citation tools rely on, from a host whose CORS they have proven — rather than
+arXiv's own API, which answered 429 to a single request from a shared address
+while this was built (`lib/paper_meta.mjs`, pinned by
+`scripts/paper_meta_test.mjs`). `scripts/find_ui_test.mjs` drives the
+configured build against a stubbed Worker and a stubbed doi.org; `ui_test.mjs`
+checks the fork build says off and links nothing.
 
 ## External links open a new tab; internal navigation stays in place
 

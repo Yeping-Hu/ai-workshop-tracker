@@ -54,6 +54,17 @@ await page.route('**/match', async (r) => {
   r.fulfill({ status: matchResponse.status, contentType: 'application/json', body: JSON.stringify(matchResponse.body) });
 });
 
+// doi.org, stubbed: the DataCite CSL-JSON record the prefill reads.
+const doiRequests = [];
+await page.route('**doi.org/**', (r) => {
+  doiRequests.push({ url: r.request().url(), accept: r.request().headers().accept });
+  r.fulfill({
+    status: 200,
+    contentType: 'application/vnd.citationstyles.csl+json',
+    body: JSON.stringify({ type: 'article', title: 'LoRA: Low-Rank Adaptation of Large Language Models', abstract: 'An important paradigm of natural language processing consists of large-scale pre-training.' }),
+  });
+});
+
 console.log('— the page —');
 const res = await page.goto(`${BASE}/find/`, { waitUntil: 'domcontentloaded' });
 check('the page exists', res.status() === 200);
@@ -61,6 +72,21 @@ check('the title carries the query', /^Find Workshops for Your Paper/.test(await
 check('the form is there', await page.locator('#findForm').isVisible());
 const privacy = await page.locator('.find-privacy').innerText();
 check('the privacy line says what happens to the text', /nothing is stored/.test(privacy) && /TypeSafe/.test(privacy), privacy);
+
+console.log('— the arXiv prefill —');
+await page.fill('#findArxiv', 'https://arxiv.org/abs/2106.09685v2');
+await page.click('#findPrefill');
+await page.waitForFunction(() => document.getElementById('findTitle').value.length > 0);
+check('an arXiv link fills the title and abstract from the doi.org record',
+  (await page.locator('#findTitle').inputValue()) === 'LoRA: Low-Rank Adaptation of Large Language Models'
+    && (await page.locator('#findAbstract').inputValue()).startsWith('An important paradigm'));
+check('...asked doi.org for the DataCite DOI as CSL-JSON, version stripped',
+  doiRequests.length === 1 && /10\.48550\/arXiv\.2106\.09685$/.test(doiRequests[0].url) && /csl\+json/.test(doiRequests[0].accept), JSON.stringify(doiRequests));
+check('...and says so', /Filled in from arXiv/.test(await page.locator('#findStatus').innerText()));
+await page.fill('#findArxiv', 'not an id');
+await page.click('#findPrefill');
+check('something that is not an arXiv id is refused without a request',
+  /does not look like an arXiv/.test(await page.locator('#findStatus').innerText()) && doiRequests.length === 1);
 
 console.log('— a result —');
 await page.fill('#findTitle', 'Learning dexterous grasps from tactile feedback');
