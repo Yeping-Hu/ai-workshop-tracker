@@ -31,7 +31,8 @@ import { REPO_ROOT,
   readWorkshopFile,
   loadConferences,
   loadTopics,
-  loadEditions, loadProposalCallRows, slugOfFile, SERIES_LINKS_FILE } from '../lib/workshops.mjs';
+  loadEditions, loadProposalCallRows, slugOfFile, SERIES_LINKS_FILE, loadWorkshops } from '../lib/workshops.mjs';
+import { thinTopics, TOPIC_MIN_WORKSHOPS } from '../lib/topic_usage.mjs';
 import { loadAcceptanceRates, EDITION_FIELDS, SYNCED_FIELDS } from '../lib/editions.mjs';
 import { resolveDeadlineUtcMs, parseDateUtcMs, parseDeadlineString, isValidTimezone, DAY_MS, TWO_YEARS_MS } from '../lib/dates.mjs';
 import { validateChangesFeed } from './validate_changes_feed.mjs';
@@ -492,6 +493,24 @@ for (const filePath of listWorkshopFiles()) {
   }
   // Absent is fine: a fork, a fresh clone, or the period before the alerts
   // pipeline has run once. /changes/ renders its empty state.
+}
+
+// ---- data/topics.yml: a topic earns its place with three workshops ----
+// A WARNING, never an error (lib/topic_usage.mjs has why): the count moves with
+// ordinary edits, and a contributor whose correction takes a topic from three
+// workshops to two has done nothing wrong. Skipped when the corpus itself does
+// not load — those errors are already reported above, by file.
+if (errors.length === 0) {
+  try {
+    for (const t of thinTopics(await loadWorkshops(), loadTopics())) {
+      warnings.push({
+        file: 'data/topics.yml',
+        msg: `Topic \`${t.id}\` ("${t.label}") is carried by ${t.workshops} workshop(s); a topic needs ${TOPIC_MIN_WORKSHOPS}. Fold it into a wider topic's description, or run \`node scripts/retag_topics.mjs --all\` if it was just added.`,
+      });
+    }
+  } catch {
+    // An unloadable corpus is an error somewhere else; this check has nothing to add.
+  }
 }
 
 // ---- data/series_links.yml: the weekly series audit's record ----

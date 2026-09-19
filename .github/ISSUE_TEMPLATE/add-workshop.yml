@@ -55,11 +55,17 @@ body:
       description: "Tick 1–5 topics that best fit. This is the full controlled vocabulary (from data/topics.yml); choosing from the list keeps topic ids consistent — no typos, no unknown ids."
       options:
         # topic-options:start — generated from data/topics.yml by scripts/gen_topic_options.mjs (do not edit by hand)
+        - label: affinity
         - label: agents
+        - label: autonomous-driving
         - label: causality
         - label: climate
+        - label: code
+        - label: continual-learning
+        - label: creative-ai
         - label: datasets
         - label: diffusion
+        - label: economics
         - label: education
         - label: efficiency
         - label: evaluation-benchmarks
@@ -69,6 +75,7 @@ body:
         - label: genomics
         - label: graphs
         - label: healthcare-bio
+        - label: human-ai
         - label: interpretability
         - label: llms
         - label: math-reasoning
@@ -78,7 +85,10 @@ body:
         - label: optimization
         - label: physics
         - label: privacy
+        - label: probabilistic
         - label: reinforcement-learning
+        - label: representation-learning
+        - label: research-practice
         - label: robotics
         - label: robustness
         - label: safety-alignment
@@ -88,7 +98,11 @@ body:
         - label: tabular
         - label: theory
         - label: time-series
+        - label: video
         - label: vision
+        - label: vision-3d
+        - label: vision-humans
+        - label: world-models
         - label: other
         # topic-options:end
   - type: markdown

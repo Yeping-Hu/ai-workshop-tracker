@@ -8,7 +8,8 @@
  *
  * Run: node scripts/topics_guess_test.mjs
  */
-import { guessTopics } from './discover_openreview.mjs';
+import { guessTopics, TOPIC_KEYWORDS } from './discover_openreview.mjs';
+import { loadTopics } from '../lib/workshops.mjs';
 
 let failed = 0;
 function has(label, title, expected) {
@@ -49,6 +50,34 @@ has('challenge -> evaluation-benchmarks', 'Autonomous Grand Challenge 2024', 'ev
 // regressions: core mappings still work
 has('llm still maps', 'Workshop on Large Language Models', 'llms');
 has('robot still maps', 'Workshop on Robot Learning', 'robotics');
+
+// the topics added 2026-09-19: the table is the fallback for the WHOLE vocabulary
+has('autonomous driving -> its own topic too', '8th Workshop on Autonomous Driving', 'autonomous-driving');
+has('world models', 'Bringing Physics Simulation and World Models Together for Robotics', 'world-models');
+has('gaussian splatting -> 3D vision', 'Workshop on Gaussian Splatting and Neural Rendering', 'vision-3d');
+has('faces and biometrics', 'Workshop on Face Anti-Spoofing and Biometrics', 'vision-humans');
+has('video', 'Long-Form Video Understanding', 'video');
+has('creative AI', 'The 4th AI for Visual Arts Workshop', 'creative-ai');
+has('code', 'Third Workshop on Deep Learning for Code', 'code');
+has('economics', 'AI for Mechanism Design and Strategic Decision Making', 'economics');
+has('affinity', 'LatinX in AI Workshop', 'affinity');
+has('probabilistic', 'Bayesian Decision-making and Uncertainty', 'probabilistic');
+has('representation learning', 'Unifying Representations in Neural Models', 'representation-learning');
+has('continual learning', 'Workshop on Continual Learning in Computer Vision', 'continual-learning');
+has('human-AI interaction', 'Human-AI Coevolution', 'human-ai');
+has('research practice', 'Championing Open-source Development in ML', 'research-practice');
+
+// the table and the vocabulary cover each other, so a topic added to one and
+// not the other fails here rather than silently never being assigned
+{
+  const vocab = new Set(loadTopics().map((t) => t.id).filter((id) => id !== 'other'));
+  const table = new Set(TOPIC_KEYWORDS.map(([, id]) => id));
+  const noLine = [...vocab].filter((id) => !table.has(id));
+  const noTopic = [...table].filter((id) => !vocab.has(id));
+  const ok = noLine.length === 0 && noTopic.length === 0;
+  if (!ok) failed++;
+  console.log(`${ok ? '✓' : '✗'} every topic has a keyword line, and every line names a topic${ok ? '' : `  (no line: ${noLine.join(', ') || '-'}; no topic: ${noTopic.join(', ') || '-'})`}`);
+}
 
 // genuinely opaque -> still other
 eq('opaque acronym -> other', 'MARINE', ['other']);

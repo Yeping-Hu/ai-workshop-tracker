@@ -49,8 +49,16 @@
   ],
   "topics": [
     {
+      "id": "affinity",
+      "label": "Affinity & community"
+    },
+    {
       "id": "agents",
       "label": "Agents"
+    },
+    {
+      "id": "autonomous-driving",
+      "label": "Autonomous driving"
     },
     {
       "id": "causality",
@@ -58,7 +66,19 @@
     },
     {
       "id": "climate",
-      "label": "Climate & sustainability"
+      "label": "Climate & environment"
+    },
+    {
+      "id": "code",
+      "label": "Code & software"
+    },
+    {
+      "id": "continual-learning",
+      "label": "Continual learning"
+    },
+    {
+      "id": "creative-ai",
+      "label": "Creative AI"
     },
     {
       "id": "datasets",
@@ -67,6 +87,10 @@
     {
       "id": "diffusion",
       "label": "Diffusion models"
+    },
+    {
+      "id": "economics",
+      "label": "Economics, finance & games"
     },
     {
       "id": "education",
@@ -98,11 +122,15 @@
     },
     {
       "id": "graphs",
-      "label": "Graphs"
+      "label": "Graphs & geometry"
     },
     {
       "id": "healthcare-bio",
       "label": "Healthcare & biology"
+    },
+    {
+      "id": "human-ai",
+      "label": "Human-AI interaction"
     },
     {
       "id": "interpretability",
@@ -141,8 +169,20 @@
       "label": "Privacy & security"
     },
     {
+      "id": "probabilistic",
+      "label": "Probabilistic methods"
+    },
+    {
       "id": "reinforcement-learning",
       "label": "Reinforcement learning"
+    },
+    {
+      "id": "representation-learning",
+      "label": "Representation learning"
+    },
+    {
+      "id": "research-practice",
+      "label": "Research practice"
     },
     {
       "id": "robotics",
@@ -162,7 +202,7 @@
     },
     {
       "id": "speech-audio",
-      "label": "Speech & audio"
+      "label": "Speech, audio & signals"
     },
     {
       "id": "systems",
@@ -181,8 +221,24 @@
       "label": "Time series"
     },
     {
+      "id": "video",
+      "label": "Video"
+    },
+    {
       "id": "vision",
       "label": "Computer vision"
+    },
+    {
+      "id": "vision-3d",
+      "label": "3D vision"
+    },
+    {
+      "id": "vision-humans",
+      "label": "Humans, faces & biometrics"
+    },
+    {
+      "id": "world-models",
+      "label": "World models"
     },
     {
       "id": "other",

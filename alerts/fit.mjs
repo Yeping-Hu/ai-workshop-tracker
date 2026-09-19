@@ -46,7 +46,12 @@ export const CANDIDATES_MIN = 8;
 export const BATCH = 10;
 /** Matches returned. Beyond the tenth the fit is noise and the list is a wall. */
 export const MATCHES_SHOWN = 10;
-/** A paper topic counts at this probability — the same bar lib/jev_topics.mjs uses for a workshop. */
+/**
+ * A paper topic counts at this probability. Deliberately lower than the 0.6 a
+ * workshop's tag needs (lib/jev_topics.mjs): there a wrong tag files a workshop
+ * under the wrong filter for good, here a marginal topic only widens the set of
+ * calls that get scored, and the Score is what decides.
+ */
 export const TOPIC_MIN = 0.5;
 /** In order: the Score's levels, and what the page calls them. */
 export const FIT_LEVELS = ['poor', 'possible', 'good', 'strong'];

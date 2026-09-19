@@ -120,6 +120,8 @@ jobs:
         run: node scripts/jev_client_test.mjs
       - name: Test topic tagging with Jev (questions, policy, recorded answers, fallback)
         run: node scripts/jev_topics_test.mjs
+      - name: Test the vocabulary's size rule (three workshops a topic, tracks count once, a warning)
+        run: node scripts/topic_usage_test.mjs
       - name: Test the series audit (candidates, one question per pair, hashes, decisions, file)
         run: node scripts/series_audit_test.mjs
       - name: Test the matcher's candidate feed (open calls, past titles from the series)

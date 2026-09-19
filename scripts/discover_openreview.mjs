@@ -236,8 +236,11 @@ export function websiteFromContent(content) {
  *  signal — hence the patterns are deliberately broad (e.g. "manipulation" and
  *  "humanoid" -> robotics, "visual"/"camera"/"perception" -> vision). Ordered
  *  so distinctive domains win the 3-slot budget over generic tags like
- *  evaluation/datasets. Maps only to ids in data/topics.yml. */
-const TOPIC_KEYWORDS = [
+ *  evaluation/datasets. Maps only to ids in data/topics.yml, and to every one
+ *  of them: a topic the table cannot produce is a topic no fork, and no run
+ *  during a Jev outage, can ever assign (topics_guess_test.mjs checks both
+ *  directions against the vocabulary). Exported for that test. */
+export const TOPIC_KEYWORDS = [
   // Distinctive domains first.
   [/language model|\bllms?\b|foundation model|\bgpt\b|in.?context learning|instruction.?tun|prompt(ing|s)?\b/i, 'llms'],
   [/\bnlp\b|natural language|tokeniz|multilingual|machine translation|summariz|dialogue|linguistic|named entity|sentiment/i, 'nlp'],
@@ -253,6 +256,15 @@ const TOPIC_KEYWORDS = [
   [/\bgraphs?\b|\bgnn\b|geometric deep|knowledge graph|node classif|non.?euclidean|topolog/i, 'graphs'],
   [/time.?series|temporal|forecast|anomaly detection/i, 'time-series'],
   [/tabular|\btables?\b|structured data/i, 'tabular'],
+  [/autonomous (driv|vehicle)|self.?driv|\bdriving\b|\bv2x\b|intelligent transport/i, 'autonomous-driving'],
+  [/world.?model/i, 'world-models'],
+  [/\b[346]d\b|\bnerf\b|gaussian splat|point clou|neural (field|render)|\bslam\b|visual odometry|\bar\/vr\b|\bxr\b/i, 'vision-3d'],
+  [/\bfac(e|es|ial)\b|biometric|gesture|human (pose|motion|body)|deepfake|forensic|affective|sign language|\bavatar/i, 'vision-humans'],
+  [/\bvideos?\b|action recognition|egocentric/i, 'video'],
+  [/\barts?\b|creativ|fashion|co.?creation|\bdesign\b.*\b(art|fashion)|content creation/i, 'creative-ai'],
+  [/\bcod(e|ing)\b|program synthesis|software engineering/i, 'code'],
+  [/econom|financ|\bmarkets?\b|mechanism design|game.?theor|\bauctions?\b/i, 'economics'],
+  [/women in|latinx|black in ai|queer in|muslims in|indigenous in|global ?south|affinity|\bwiml\b|africa in ai/i, 'affinity'],
   // Methods.
   [/\bmath|reasoning|theorem|\bproof|formal (verif|method)|\blogic\b/i, 'math-reasoning'],
   [/diffusion|score.?based|denoising/i, 'diffusion'],
@@ -261,6 +273,9 @@ const TOPIC_KEYWORDS = [
   [/optimi|gradient descent|\bconvex|\bsgd\b|second.?order method|minimax/i, 'optimization'],
   [/theor(y|etical)|generalization bound|pac.?learning|learning theory|statistical learning/i, 'theory'],
   [/causal|treatment effect|counterfactual|confound/i, 'causality'],
+  [/bayesian|probabilistic|uncertainty|gaussian process|conformal|\bsampling\b/i, 'probabilistic'],
+  [/representation|self.?supervis|contrastive|embedding/i, 'representation-learning'],
+  [/continual|lifelong|incremental learning|catastrophic forgetting/i, 'continual-learning'],
   [/federat|decentralized learning/i, 'federated-learning'],
   // Cross-cutting concerns.
   [/\bagent|agentic|multi.?agent|tool.?use|\bplanning\b|decision.?making/i, 'agents'],
@@ -271,6 +286,8 @@ const TOPIC_KEYWORDS = [
   [/privacy|\bsecur|differential privacy|membership inference|adversarial attack|cryptograph|encrypt/i, 'privacy'],
   [/robust|distribution shift|out.?of.?distribution|\bood\b|domain (shift|adaptation|generaliz)|test.?time (adaptation|training)|corruption|covariate shift|reliab/i, 'robustness'],
   [/\bfair|ethic|societ|responsib|govern|\bbias\b|discrimination|accountab|human.?centered|\bhci\b/i, 'fairness'],
+  [/human.?ai\b|human.?computer|human.?in.?the.?loop|human feedback|human.?centered|\bhci\b|co.?creat/i, 'human-ai'],
+  [/reproducib|open.?source|open science|peer review|meta.?science|negative results/i, 'research-practice'],
   // Generic / application tags last so they don't crowd out a domain tag.
   [/\bai for science|scientific (discovery|machine|comput)|physics.?inform|materials (science|discovery)|chemistr|astronom|aerospace|remote sensing|earth observ|geospatial|satellite|scientific/i, 'science-applications'],
   [/benchmark|evaluat|leaderboard|\bchallenge\b|competition|\bmetrics?\b/i, 'evaluation-benchmarks'],

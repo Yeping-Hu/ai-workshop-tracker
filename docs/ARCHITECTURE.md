@@ -1452,8 +1452,11 @@ not do arithmetic or compare dates, so it is never asked to: thresholds,
 ordering and every date stay in code.
 
 What it costs is not the constraint. Input tokens are billed ($0.042 per
-million) and output is free; tagging the whole corpus is about $0.20, the full
-series backfill about $0.05, and a typical week of new entries under a cent.
+million) and output is free; tagging the whole corpus is about $0.25 at 48
+topics, the full series backfill about $0.05, and a typical week of new entries
+under a cent. The whole 2026-09-19 vocabulary study — a full dry pass, 23
+candidate or reworded topics asked corpus-wide, and the written pass — was
+$0.63.
 The published rate limit (1,200 requests a minute) is above anything the jobs
 do. The real cost is the human one — reading what the audit puts in its review
 band — and the rules above are what keep that small.
@@ -1646,10 +1649,65 @@ question per topic over them plus the host conference — its `full_name` from
 Interventions" at CoRL come out as robotics (0.93) rather than nothing. Each
 topic's row in `data/topics.yml` carries a one-line `description` the question
 quotes, because a label like "Efficiency" is too terse for a literal reader.
-Code applies the policy: topics at or above `TOPIC_MIN` (0.5), strongest first,
-at most three; `other` is never asked and is what gets written when nothing
-clears the bar. `scripts/jev_topics_test.mjs` replays answers recorded from the
-pinned model, so the thresholds are pinned against what it actually says.
+Code applies the policy: topics at or above `TOPIC_MIN` (0.6), strongest first,
+at most five (what the schema allows); when none clears the bar, the single
+best if it reaches `TOPIC_FLOOR` (0.5); `other` is never asked and is what gets
+written when not even that does. `scripts/jev_topics_test.mjs` replays answers
+recorded from the pinned model, so the thresholds are pinned against what it
+actually says.
+
+Those numbers were read off the whole corpus, not chosen (2026-09-19, all 944
+entries judged with every probability kept). The bar was 0.5 and the cap three.
+Between 0.5 and 0.6 sat one tag in six, and a sample of them was right about
+half the time — "privacy" on a safe-world-models workshop, "time series" on a
+challenge track — while a wrong tag costs more than a missing one, since it
+files the workshop under a filter, a calendar feed and a subscriber's alerts
+where it does not belong. The floor keeps the bar from creating `other`s: an
+entry with nothing over 0.6 still takes its one best topic at even odds or
+better. And the cap of three cut a real topic on 180 entries, because every
+COLM workshop spends two on language and every CVPR one on vision before its
+actual subject; at five it binds on 13.
+
+**The vocabulary is tuned the same way, and cheaply, because Jev judges each
+question on its own.** The same probability comes back for a topic asked alone,
+among four, or among all of them, and a request bills about 350 input tokens
+plus 125 a question. So a new topic, or a reworded description, is one question
+asked over the corpus — two cents — and what it attracts can be read before it
+is adopted. That is how the list went from 34 topics to 48, and how three
+things that were wrong with it were found:
+
+- *A conference's name read as a topic.* "Conference on Robot Learning" read as
+  reinforcement learning: 36 of the 48 CoRL workshops whose titles never
+  mention it were tagged with it, against 4 of 44 at ICRA. The description now
+  says what does not count ("robot learning, imitation learning, agents or
+  alignment in general… unless reinforcement learning is named"): 3 of 51 at
+  CoRL, and every real RL workshop still above 0.9. "Math & reasoning" had the
+  same fault with anything mathematical — Bayesian inference, optimal
+  transport, "Mathematics of Modern Machine Learning" — and was fixed the same
+  way, which is also why "Probabilistic methods" exists.
+- *Subjects with nowhere to go.* Sixty entries cleared no topic at all, and
+  they clustered: twenty affinity workshops (LatinX in AI, WiML, Muslims in
+  ML), representation learning, probabilistic inference, human-AI interaction.
+  Each cluster of at least five workshops across three series became a topic;
+  twenty entries remain `other`, and they are genuinely one-offs.
+- *One topic swallowing a conference.* "Computer vision" is true of all 278
+  CVPR and ECCV entries and therefore distinguishes none of them, so vision
+  gained the subjects people actually browse by: 3D, video, people and faces,
+  autonomous driving, creative work.
+
+Three rules keep it that way (`data/topics.yml` states them where an editor
+will see them). **A topic earns its place with three workshops** —
+`lib/topic_usage.mjs`, counting the tracks of one workshop once; fewer than
+that is one series' private label, and belongs in a wider topic's description,
+which is how "Graphs" (two workshops, once the titles were actually read)
+became "Graphs & geometry" (twelve). `validate.mjs` warns and never fails,
+because the count moves with ordinary edits and a contributor whose correction
+takes a topic from three to two has done nothing wrong. **An id is forever**: it
+is in `/feeds/topic-<id>.ics` URLs and in subscribers' saved choices. **A label
+is in shared filter links** (`?topic=<label>`), so it is renamed only when the
+old name has become wrong; three were ("Graphs & geometry", "Climate &
+environment", "Speech, audio & signals"), and a link carrying an old one
+filters to nothing rather than breaking.
 
 The keyword table (`guessTopics`) is the fallback, and still the whole answer on
 a fork: it regex-matches the title + acronym against a broad pattern table
@@ -1660,11 +1718,31 @@ the patterns are intentionally generous (e.g. "manipulation"/"humanoid" →
 robotics, "visual"/"camera"/"perception" → vision); `scripts/topics_guess_test.mjs`
 locks in the tricky cases. Measured on the corpus it is why the model is here:
 the table alone sent 157 of 944 entries to `other`, and an `other`-only entry
-matches no topic-filtered alerts subscription at all. Both guesses can be re-run
-over already-imported entries with `scripts/retag_topics.mjs`, which re-tags
-**only** entries still tagged `['other']` with the auto-suggested note — so a
-human-curated topic set is never overwritten — and rewrites just the topics.
-That's how the back catalogue is reclassified without disturbing curated entries.
+matches no topic-filtered alerts subscription at all. The table covers the
+whole vocabulary — a topic it cannot produce is one no fork, and no run during
+an outage, could ever assign — and the test checks that in both directions.
+
+Both guesses can be re-run over already-imported entries with
+`scripts/retag_topics.mjs`, which by default re-tags **only** entries still
+tagged `['other']` with the auto-suggested note. `--all` widens it to every
+entry carrying that note and re-derives each as a fresh import would — Jev's
+list, the table's when Jev answers and nothing fits — because a vocabulary or
+threshold change is a rule change, and a rule is applied to the whole corpus or
+it is not a rule. It was first run on 2026-09-19, when the paper matcher was
+found skipping four CoRL workshops the keyword table had never tagged
+`robotics` and 933 of 944 entries still carried that table's tags: 746 entries
+changed, `other` fell from 53 to 20, and on a sample of twelve published papers
+scored against all 31 open calls the matcher's topic gate went from skipping a
+good-or-strong call on three of them — the best match, once — to skipping
+none. Two guards make it
+safe to run unattended. An entry Jev cannot be asked about is left exactly as
+it is (`retagDecision()`), so an outage or a missing key never trades a judged
+list for a keyword guess — without a key `--all` writes nothing. And a
+human-curated topic set is never overwritten, which takes two halves: the
+sweep keys on the auto-suggested sentence even when a later job has appended to
+it ("… edits welcome. Website removed on review — …", 28 entries), and the
+edit form takes that sentence out the moment a person changes the topics,
+keeping whatever followed it (`hasAutoTopicsNote` / `withoutAutoTopicsNote`).
 
 ## The sitemap dates each page from git, not from the build
 
