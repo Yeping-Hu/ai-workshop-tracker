@@ -102,6 +102,7 @@ list, the "add a conference" procedure, and bulk-importing workshop lists are in
 - Machine-readable dump: `/api/workshops.json` (regenerated on every deploy; `submission_deadline` is always the paper deadline, with `abstract_deadline` alongside it for two-stage venues, and `short_name` / `track_label` for labelling a workshop unambiguously when a series splits across tracks; `moved_slugs` maps slugs that have left the dump to what they became, so a stored slug can follow a merge)
 - Markdown exports: `/exports/<conference>-<year>-workshops.md` — one file per conference edition, also regenerated on every deploy
 - Forum ids of papers with no PDF (supports saved-paper PDF links): `/api/papers-without-pdf.json`
+- The paper matcher's candidate set — every open call with its topics, deadline and a sample of the titles its series accepted before, plus the topic vocabulary; read by the alerts Worker's `/match`, regenerated on every deploy: `/api/match-candidates.json`
 - Workshop papers by OpenReview forum id, with each paper's workshop, conference and year (lets the citation tools cite a workshop paper properly): `/api/openreview-papers.json`
 - New-workshop announcements: `/rss.xml`
 - What changed this week (the published edition of the weekly digest): `/changes/`

@@ -122,6 +122,8 @@ jobs:
         run: node scripts/jev_topics_test.mjs
       - name: Test the series audit (candidates, one question per pair, hashes, decisions, file)
         run: node scripts/series_audit_test.mjs
+      - name: Test the matcher's candidate feed (open calls, past titles from the series)
+        run: node scripts/match_candidates_test.mjs
       - name: Validate workshop data
         id: validate
         run: node scripts/validate.mjs --report validation-report.md
