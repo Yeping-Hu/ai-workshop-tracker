@@ -1259,7 +1259,16 @@ the Score's expected value and shows ten.
 (`lib/match_candidates.mjs`) is generated on every deploy: every open call
 with its identity, topics, deadline and up to twelve titles from the editions
 `computeRelations()` links it to — which is why the series audit's links
-matter here too. An open call has no papers of its own yet; its series does. A
+matter here too. An open call has no papers of its own yet; its series does.
+The twelve are the first twelve met walking the series newest edition first,
+in the order the paper cache stores them, which is alphabetical by title
+(`fetch_openreview.mjs`). So a series whose latest edition took twelve papers
+or more is represented by that edition alone, from the head of its alphabet;
+the sample is fixed at build time and the same for every visitor, never chosen
+for the paper in hand. Twelve, not all of them, because Jev reads its state
+literally and ten candidates share one request (`PAST_TITLES_MAX`).
+`past_paper_count` is the series' whole count, not the sample's, and it is the
+number the page quotes in "judged from 57 past papers". A
 first edition has none, and the response says so (`basis: name_topics`, shown
 on the page as "judged from the name and topics"), rather than implying
 evidence it lacks; once its own papers arrive through the monthly refresh,
@@ -1418,6 +1427,20 @@ real corpus. Moving the pin is a deliberate change — re-run the corpus, read
 what moved, then land it — never something a Sunday cron does on its own. The
 thresholds live in code and are pinned by tests that replay recorded answers,
 so every suite runs offline.
+
+**An answer is read by index, and anything else is no answer.** A yes/no
+answer carries one number, the probability that the statement holds
+(`answers.<key>.noul`). A score answer carries `probabilities` as an object
+keyed by level *index* — `{"0": 0, "1": 0, "2": 0.09, "3": 0.91}` — beside a
+`legend` mapping each index to its level; not an array, and not keyed by level
+name. Both score readers — `pSame()` in `lib/series_links.mjs` and
+`fitFromAnswer()` in `alerts/fit.mjs` — read the index, accept the other two
+shapes as well, and return null for anything else, so a change upstream
+degrades to "no answer" rather than to a wrong number. The matcher first
+shipped reading only the other two shapes: every candidate parsed as unjudged
+and the endpoint called the model unavailable while every request had
+succeeded — which logs nothing, because nothing failed. So each reader's test
+replays the API's real answer verbatim, and a new score question does the same.
 
 Two properties of the model shape how the questions are written, and both are
 documented by TypeSafe rather than discovered here. Jev reads literally:

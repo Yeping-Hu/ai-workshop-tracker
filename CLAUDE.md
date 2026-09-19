@@ -15,9 +15,15 @@ downstream of a reason recorded there.
 - `skills/add-conference/` — the procedure for adding a conference.
 - `site/src/lib/tools.mjs` — the registry behind every `/tools/` page; read the
   "Free tools" section of `docs/ARCHITECTURE.md` before adding or changing one.
-- `lib/jev.mjs` — the one client for TypeSafe's Jev, behind topic tagging and
-  the series audit; read "Typed judgments from Jev" in `docs/ARCHITECTURE.md`
-  before adding a question (judge, never author; fall back, never fail; pinned).
+- `lib/jev.mjs` — the one client for TypeSafe's Jev, behind topic tagging, the
+  series audit and the paper matcher; read "Typed judgments from Jev" in
+  `docs/ARCHITECTURE.md` before adding a question (judge, never author; fall
+  back, never fail; pinned; read a score by level index).
+- `alerts/fit.mjs`, `lib/match_candidates.mjs` and `site/src/pages/find.astro` —
+  "Find workshops for your paper": the Worker's `/match`, the candidates feed
+  the build writes for it, and the page. Read "Find workshops for your paper"
+  in `docs/ARCHITECTURE.md` first; `docs/ALERTS.md` has what to do when it
+  answers "unavailable".
 - `scripts/sync_editions.mjs` and `lib/editions.mjs` — the main conference's
   deadlines, dates and acceptance rates (`data/editions.yml`,
   `data/acceptance_rates.yml`) and how the conference pages read them; read

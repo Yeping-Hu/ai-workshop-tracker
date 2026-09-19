@@ -507,6 +507,7 @@ takes `--dry-run` (or prints a preview by default) and writes only what changed.
 - `scripts/fetch_openreview.mjs [--slug <slug> | --recent | --all] [--abstracts]` — the workflow passes `--recent`.
 - `scripts/official_list_check.mjs [--conf <id>] [--year <y>] [--slug <slug>] [--report <path>|-]`, plus `--field name|website --adopt|--decline` on one slug, which `official-list-decision.yml` wraps.
 - `scripts/alerts_stats.mjs [--days N] [--json]`.
+- `scripts/series_audit.mjs --dry-run` — asks and prints what would be recorded and linked, writes nothing (it still spends Jev requests). `--report <path>` and `--decide <slug-a> <slug-b> same|different` are the two the workflow does use.
 
 ### The one remaining manual step
 

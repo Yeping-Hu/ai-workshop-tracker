@@ -2,7 +2,9 @@
 # Keep this list small and broad; propose additions via PR.
 #
 # `description` is what Jev reads when it tags an imported workshop
-# (lib/jev_topics.mjs). The label alone is too terse for a literal reader —
+# (lib/jev_topics.mjs) and when the paper matcher asks which topics a pasted
+# paper is about (alerts/fit.mjs; it travels in /api/match-candidates.json).
+# The label alone is too terse for a literal reader —
 # "Efficiency" or "ML systems" says little about what counts — so each one
 # names the concrete subjects it covers. Not shown on the site; the labels are.
 - { id: agents,                 label: "Agents",                    description: "AI agents: agentic systems, tool use, planning, multi-agent interaction" }

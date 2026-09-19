@@ -616,6 +616,41 @@ can only alert once — an *extension* changes the value and deliberately re-arm
 it. Two alerts for the same workshop within days is usually two real deadline
 values, not a bug.
 
+### The paper matcher says it is unavailable
+
+`/find/` shows "unavailable" with a cause in parentheses; that cause is the
+`detail` of the Worker's 503, and it is one of four:
+
+| `detail` | Cause | Fix |
+|---|---|---|
+| `no TYPESAFE_API_KEY on the Worker` | the secret was never set, or was lost in an account move | `npx wrangler secret put TYPESAFE_API_KEY` from `alerts/worker/` — no redeploy needed |
+| `the candidates feed could not be read` | `/api/match-candidates.json` is missing or malformed on `SITE_ORIGIN` — a deploy that failed, or a site built without the route | open the URL; redeploy the site. The Worker keeps serving a feed it already holds, so this only shows on a fresh isolate |
+| `the model answered HTTP 401 (…)` (or another status) | TypeSafe rejected the request: a revoked key, a key pasted with a stray character, an exhausted balance | set the secret again, or top up; the text in parentheses is the API's own message |
+| `the model did not answer` | every request succeeded but no answer could be read — the response shape changed upstream | see ARCHITECTURE.md, "An answer is read by index"; fix the reader and pin the new shape in `scripts/alerts_fit_test.mjs` |
+
+The other answers are not faults: `captcha` (403) is Turnstile declining the
+visitor, `rate_limited` (429) is one address past twenty requests in an hour,
+and `busy` (429) is the day's five hundred spent (`alerts/config.mjs`) — it
+resets at 00:00 UTC, and raising it is a decision about money, not a fix.
+
+To reproduce the production path without touching the deployed Worker, run
+the same code on Cloudflare's edge with Turnstile's always-passes test secret
+(from the Cloudflare page linked under "Local development") and the key from
+your shell:
+
+```bash
+npx wrangler dev --remote --env dev --port 8799 --var TURNSTILE_SECRET:<always-passes secret> --var TYPESAFE_API_KEY:"$TYPESAFE_API_KEY"
+```
+
+then `POST http://127.0.0.1:8799/match` with a `title`, an `abstract` and any
+non-empty `turnstile_token`. It answers in under a second when healthy. The
+`dev` environment binds the production D1, and `/match` writes only its
+rate-limit counters there. `wrangler tail` on the deployed Worker shows the
+client's `::warning::` line for every failed request to Jev and Turnstile's
+rejection codes — never a token, an address or the paper. Nothing opens an
+issue for this: the "Jev did not answer" issue belongs to the scheduled jobs,
+and the matcher's failures are visible to whoever is using it.
+
 ## Manual operations
 
 **Delete one subscriber** (a support request, or a GDPR erasure by hand):

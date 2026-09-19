@@ -220,6 +220,28 @@ row per conference-year with `rate`, `accepted`, `submitted`, an optional
 the bot's for that year. `validate.mjs` checks both files (known conference,
 real dates, a rate that agrees with its counts).
 
+## Series links
+
+`data/series_links.yml` records which pairs of entries are editions of one
+workshop series when nothing in their addresses says so — a series that moved
+conference, changed its acronym, or started a new website. The weekly
+`series-audit` workflow writes it: it asks Jev about each candidate pair,
+records the probability (`same`), and the build links the pairs at 0.9 or
+above on both workshops' pages under "Other editions". **Do not edit the file
+by hand**; `validate.mjs` checks it, and the audit rewrites it.
+
+If two workshops are wrongly linked, or a series is missing a link, record a
+verdict instead — it outranks the model in either direction and survives
+re-judging:
+
+```bash
+node scripts/series_audit.mjs --decide <slug-a> <slug-b> same|different
+```
+
+or Actions → **Audit workshop series** → enter the two slugs and the verdict.
+Not a maintainer? Open an issue naming the two workshop pages. The reasoning is
+in docs/ARCHITECTURE.md, "Related entries", signal 5.
+
 ## Paper lists
 
 Don't paste papers by hand. Set `openreview_venue_id` and the monthly `openreview-refresh` workflow fetches the accepted papers into `cache/openreview/<slug>.json` (a maintainer can also run `node scripts/fetch_openreview.mjs --slug <slug>` immediately). For workshops elsewhere, set `proceedings_url`.
