@@ -141,6 +141,19 @@ throws('topics: unchanged set throws (order-insensitive)',
   check('auto-note: topics still recorded', changes.includes('topics'));
 }
 
+// 18b) A later job appends to the note rather than replacing it ("… edits
+// welcome. Website removed on review — …"). Curating the topics takes the
+// auto-suggested sentence out and leaves the rest, because the retag sweep reads
+// that sentence as "machine-made, re-judge me" — left behind, it would hand a
+// person's topics back to the model.
+{
+  const appended = `${AUTO_TOPICS_NOTE} Website removed on review — host stopped serving the page.`;
+  const { record } = applyWorkshopEdit({ ...base(), notes: appended }, { topics: ['llms', 'vision'] });
+  check('auto-note: the sentence goes and what followed it stays', record.notes === 'Website removed on review — host stopped serving the page.', record.notes);
+  const kept = applyWorkshopEdit({ ...base(), notes: appended }, { deadline: '2026-06-01 09:00', timezone: 'UTC' }).record;
+  check('auto-note: an appended note is untouched while the topics are', kept.notes === appended);
+}
+
 // 19) The historical "Auto-imported … (topics are keyword-guessed)" wording is recognized and cleared too.
 {
   const legacy = 'Auto-imported from the OpenReview venue record on 2026-06-11 — please verify and enrich (topics are keyword-guessed).';

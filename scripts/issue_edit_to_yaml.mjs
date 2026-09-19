@@ -18,7 +18,7 @@ import * as yaml from 'js-yaml';
 import { WORKSHOPS_DIR, recordDeadlineObservation } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs, isValidTimezone, assembleDeadline } from '../lib/dates.mjs';
 import { parseTopics, parseSections } from '../lib/issue_form.mjs';
-import { syncedValue, LEGACY_IMPORT_NOTE, isAutoTopicsNote } from './discover_openreview.mjs';
+import { syncedValue, LEGACY_IMPORT_NOTE, hasAutoTopicsNote, withoutAutoTopicsNote } from './discover_openreview.mjs';
 
 /**
  * Pure transform: apply the filled-in edit fields to an existing record.
@@ -93,8 +93,15 @@ export function applyWorkshopEdit(existing, fields) {
       r.topics = topics;
       changes.push('topics');
       // The topics are now human-curated, so the bot's "topics were auto-suggested"
-      // note no longer applies — drop it (a contributor's own note wouldn't match).
-      if (isAutoTopicsNote(r.notes)) delete r.notes;
+      // sentence no longer applies — drop it (a contributor's own note wouldn't
+      // match), and keep anything a later job appended after it. The retag sweep
+      // reads that sentence as "machine-made, re-judge me", so leaving it behind
+      // would hand a person's topics back to the model.
+      if (hasAutoTopicsNote(r.notes)) {
+        const rest = withoutAutoTopicsNote(r.notes);
+        if (rest) r.notes = rest;
+        else delete r.notes;
+      }
     }
   }
 

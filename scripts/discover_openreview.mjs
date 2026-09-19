@@ -127,6 +127,31 @@ export function isAutoTopicsNote(notes) {
 }
 
 /**
+ * True while `notes` still says the topics are machine-suggested: the note on
+ * its own (isAutoTopicsNote), or that sentence with others after it. Later jobs
+ * append to the note rather than replace it — "… edits welcome. Website removed
+ * on review — host stopped serving the page" — and 28 entries read that way on
+ * 2026-09-19. Their topics were as machine-made as anyone's, and an exact match
+ * hid them from the retag sweep.
+ */
+export function hasAutoTopicsNote(notes) {
+  return isAutoTopicsNote(notes) || (typeof notes === 'string' && notes.startsWith(`${AUTO_TOPICS_NOTE} `));
+}
+
+/**
+ * `notes` with the auto-suggested sentence taken out — what the edit form
+ * leaves once a person has chosen the topics. Whatever followed the sentence
+ * is someone else's and stays; undefined when nothing else was there. This is
+ * the other half of hasAutoTopicsNote(): if the sentence survived a human
+ * edit, the sweep would read curated topics as machine-made and overwrite them.
+ */
+export function withoutAutoTopicsNote(notes) {
+  if (!hasAutoTopicsNote(notes)) return notes;
+  if (isAutoTopicsNote(notes)) return undefined;
+  return notes.slice(AUTO_TOPICS_NOTE.length).trim() || undefined;
+}
+
+/**
  * Decide whether a freshly fetched deadline should replace the stored one.
  * Pure value judgment over UTC instants (ms): the caller owns the separate
  * "is this entry bot-managed / human-untouched" gate and the plausibility
