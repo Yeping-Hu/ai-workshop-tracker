@@ -8,9 +8,10 @@
  * Run: node scripts/jev_client_test.mjs
  */
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { askJev, jevAvailable, jevUsage, jevUsageLine, JEV_MODEL, JEV_ENDPOINT } from '../lib/jev.mjs';
+import { askJev, jevAvailable, jevUsage, jevUsageLine, recordJevStatus, JEV_MODEL, JEV_ENDPOINT } from '../lib/jev.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -115,6 +116,24 @@ check('the endpoint is the documented evaluation endpoint',
   const s = stub([response(401), response(200, ANSWER)]);
   const r = await askJev({}, {}, { fetchImpl: s.fetchImpl, env: ENV, sleep: s.sleep });
   check('a 401 is not retried either', r === null && s.calls.length === 1);
+  check('the last failure is kept, with its status, for the status line', /^HTTP 401/.test(jevUsage().lastError ?? ''));
+}
+
+/* ------------------------------------------------- the status line -------- */
+// What the workflows read to open or close the "Jev did not answer" issue: a
+// green job with a silent fallback would otherwise hide a dead key for good.
+{
+  const tmp = path.join(os.tmpdir(), `jev-status-${process.pid}.jsonl`);
+  try { fs.unlinkSync(tmp); } catch { /* absent is the point */ }
+  recordJevStatus('test', {});
+  check('no JEV_STATUS in the environment, no file written', !fs.existsSync(tmp));
+  recordJevStatus('test', { JEV_STATUS: tmp });
+  recordJevStatus('test again', { JEV_STATUS: tmp });
+  const lines = fs.readFileSync(tmp, 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  check('each call appends one JSON line with the job, the counts and the last error',
+    lines.length === 2 && lines[0].job === 'test' && lines[1].job === 'test again'
+      && lines[0].requests === jevUsage().requests && lines[0].failures === jevUsage().failures && /^HTTP 401/.test(lines[0].error));
+  fs.unlinkSync(tmp);
 }
 {
   const s = stub([response(429, {}, { 'retry-after': '3600' }), response(200, ANSWER)]);
@@ -134,7 +153,12 @@ console.warn = realWarn;
   const ci = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'validate.yml'), 'utf8');
   check('CI runs this test', /jev_client_test\.mjs/.test(ci), 'the workflow lists tests by hand');
   const src = fs.readFileSync(path.join(ROOT, 'lib', 'jev.mjs'), 'utf8');
-  check('the client imports nothing (no SDK, no filesystem)', !/^import /m.test(src));
+  check('the client imports no SDK — node built-ins only', !/^import .* from '(?!node:)/m.test(src));
+  for (const wf of ['discover.yml', 'series-audit.yml']) {
+    const text = fs.readFileSync(path.join(ROOT, '.github', 'workflows', wf), 'utf8');
+    check(`${wf} collects the status line and maintains the "Jev did not answer" issue`,
+      /JEV_STATUS:\s*\$\{\{\s*github\.workspace\s*\}\}/.test(text) && /Data health: Jev did not answer/.test(text));
+  }
 }
 
 console.log(failed === 0 ? '\nJev client OK.' : `\n${failed} check(s) failed.`);

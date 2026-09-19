@@ -1307,7 +1307,15 @@ table tags the entry; the audit records nothing that week. The job prints one
 `::warning::` annotation and stays green, and whatever else it computed still
 publishes (AUTOMATION.md, "A partial crawl fails loudly", is the model). A
 twenty-second request timeout keeps a hung socket from holding the
-`data-write` lock.
+`data-write` lock. The one thing a green fallback would hide is a failure
+that does not heal — a revoked key, an exhausted balance — so each job also
+leaves its Jev totals in `$JEV_STATUS` (`recordJevStatus`), and the workflow
+opens one data-health issue, "Jev did not answer", when any request failed,
+quoting the error. It closes itself after the next run in which every request
+succeeded; a quiet run that asked nothing leaves it open, since it has learned
+nothing. Discovery and the audit share the title on purpose: both mean "the
+latest run that asked got no answer", and whichever asks next and succeeds is
+the right one to close it.
 
 **The model is pinned.** `JEV_MODEL` is `jev-1.13.0`, not `jev-latest`: the
 alias moves on every TypeSafe release, and the thresholds the callers apply

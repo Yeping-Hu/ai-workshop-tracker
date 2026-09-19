@@ -19,7 +19,10 @@
  * the file is at most pruned; a pair Jev could not answer is left unrecorded
  * and asked again next week; the exit code is 0 unless the script itself is
  * broken. Newly linked pairs go to $SERIES_CHANGELOG so the commit message
- * says what changed, as every deadline write does.
+ * says what changed, as every deadline write does, and the run's Jev totals go
+ * to $JEV_STATUS so the workflow can open the "Jev did not answer" issue when
+ * requests failed — a green job with a silent fallback would otherwise hide a
+ * revoked key or an exhausted balance indefinitely.
  *
  * Usage:
  *   node scripts/series_audit.mjs [--dry-run] [--report <path>]
@@ -34,7 +37,7 @@ import {
   LINK_MIN,
 } from '../lib/workshops.mjs';
 import { auditSeries, decide, renderReport, serializeSeriesLinks } from '../lib/series_links.mjs';
-import { jevUsageLine } from '../lib/jev.mjs';
+import { jevUsageLine, recordJevStatus } from '../lib/jev.mjs';
 
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
@@ -99,3 +102,6 @@ console.log(
 for (const p of result.linkedNow) console.log(`    ↳ linked ${p.a} ~ ${p.b} (${p.same.toFixed(2)}, ${p.via})`);
 const usage = jevUsageLine();
 if (usage) console.log(`  ${usage}`);
+// For the workflow's "Jev did not answer" issue: an unanswered pair is asked
+// again next week, but a dead key or an empty balance needs a person.
+recordJevStatus('series audit');

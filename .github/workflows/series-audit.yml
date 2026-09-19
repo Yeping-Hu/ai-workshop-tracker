@@ -58,6 +58,8 @@ jobs:
     env:
       TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
       SERIES_CHANGELOG: ${{ github.workspace }}/.series-changes.md
+      # The audit's Jev totals, for the "Jev did not answer" issue below.
+      JEV_STATUS: ${{ github.workspace }}/.jev-status.jsonl
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -125,5 +127,60 @@ jobs:
               await github.rest.issues.create({
                 owner: context.repo.owner, repo: context.repo.repo,
                 title, body: report, labels: ['data-health'],
+              });
+            }
+
+      # A pair Jev could not answer is simply asked again next week, so this
+      # job never goes red over it — which is why a revoked key or an empty
+      # balance needs its own signal. Same issue and title as discovery's, on
+      # purpose: both mean "the latest run that asked Jev got no answer", and
+      # whichever job asks next and succeeds closes it. A run that asked
+      # nothing leaves it as it is.
+      - name: Open or close the "Jev did not answer" issue
+        if: always()
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const f = process.env.JEV_STATUS;
+            const lines = fs.existsSync(f)
+              ? fs.readFileSync(f, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l))
+              : [];
+            const failures = lines.reduce((n, l) => n + (l.failures || 0), 0);
+            const requests = lines.reduce((n, l) => n + (l.requests || 0), 0);
+            const errors = [...new Set(lines.map((l) => l.error).filter(Boolean))];
+            const title = 'Data health: Jev did not answer';
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'data-health', per_page: 100,
+            });
+            const existing = open.find((i) => i.title === title);
+            if (!failures) {
+              if (existing && requests > 0) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: existing.number, state: 'closed',
+                });
+              }
+              return;
+            }
+            const body = [
+              `During the **${context.workflow}** run on ${new Date().toISOString().slice(0, 10)}, ${failures} request(s) to TypeSafe's Jev failed and ${requests} succeeded.`,
+              '',
+              ...errors.map((e) => `- \`${e}\``),
+              '',
+              'The candidate pairs that got no answer were left unrecorded and are asked again next Sunday, so nothing is lost.',
+              '',
+              'The job stayed green, but a revoked key or an exhausted balance does not fix itself: check the TypeSafe account (https://typesafe.ai) and the `TYPESAFE_API_KEY` secret. This issue closes itself after the next run in which every request succeeded.',
+            ].join('\n');
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body, labels: ['data-health'],
               });
             }

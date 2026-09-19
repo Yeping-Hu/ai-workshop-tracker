@@ -46,7 +46,7 @@ import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObser
 import { resolveDeadlineUtcMs, plausibleDeadline } from '../lib/dates.mjs';
 import { unwrap, openreviewFetch, recordUnverified, getUnverified, writeUnverified } from '../lib/openreview.mjs';
 import { suggestTopics } from '../lib/jev_topics.mjs';
-import { jevUsageLine } from '../lib/jev.mjs';
+import { jevUsageLine, recordJevStatus } from '../lib/jev.mjs';
 
 // Prepended to new entries that lack a deadline, so anyone editing the raw YAML
 // directly (e.g. via the raw-YAML link in the edit form's intro) sees exactly
@@ -887,6 +887,9 @@ async function main({ conf, year, dryRun }) {
   // Absent when nothing was asked — a cycle with no new venue, or no key.
   const jev = jevUsageLine();
   if (jev) console.log(`    ${jev}`);
+  // One line per cycle in $JEV_STATUS, for the workflow's "Jev did not answer"
+  // issue — the fallback keeps this run green, so this is how a person hears.
+  recordJevStatus(`discovery ${conf} ${year}`);
   // Named on stdout and appended to $OPENREVIEW_UNVERIFIED through the shared
   // writer — the same TSV the workflow turns into the "venues not verified"
   // issue, so discovery feeds one report like every other OpenReview job.
