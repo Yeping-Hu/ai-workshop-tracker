@@ -4,11 +4,12 @@ conference: neurips
 year: 2024
 website: https://advml-frontier.github.io/
 topics:
-  - other
+  - privacy
+  - robustness
 submission_deadline: 2024-08-31 13:05
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2024/Workshop/AdvML-Frontiers
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

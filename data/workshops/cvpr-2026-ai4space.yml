@@ -4,7 +4,7 @@ conference: cvpr
 year: 2026
 website: https://ai4space.space/
 topics:
-  - other
+  - vision
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/AI4Space
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

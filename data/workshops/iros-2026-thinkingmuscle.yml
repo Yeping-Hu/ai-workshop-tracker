@@ -4,7 +4,8 @@ conference: iros
 year: 2026
 website: https://sites.google.com/ucsd.edu/iros26-ws/home
 topics:
-  - other
+  - robotics
+  - neuroscience
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/ThinkingMuscle
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

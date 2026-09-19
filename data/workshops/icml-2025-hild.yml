@@ -4,7 +4,8 @@ conference: icml
 year: 2025
 website: https://sites.google.com/corp/view/hidimlearning/home
 topics:
-  - other
+  - theory
+  - optimization
 submission_deadline: 2025-05-22 15:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

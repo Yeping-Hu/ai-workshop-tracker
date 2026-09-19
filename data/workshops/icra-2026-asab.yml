@@ -4,7 +4,8 @@ conference: icra
 year: 2026
 website: https://active-perception-workshop.github.io/
 topics:
-  - other
+  - robotics
+  - reinforcement-learning
 openreview_venue_id: IEEE.org/ICRA/2026/Workshop/ASAB
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

@@ -4,7 +4,8 @@ conference: icml
 year: 2026
 website: https://www.weightsymmetry.com/
 topics:
-  - other
+  - theory
+  - math-reasoning
 openreview_venue_id: ICML.cc/2026/Workshop/WSS
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

@@ -4,7 +4,8 @@ conference: iclr
 year: 2025
 website: https://scslworkshop.github.io/
 topics:
-  - other
+  - robustness
+  - theory
 submission_deadline: 2025-02-17 12:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

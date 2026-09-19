@@ -4,7 +4,8 @@ conference: cvpr
 year: 2026
 website: https://cvpr-nas.gitlab.io/workshop/website/
 topics:
-  - other
+  - optimization
+  - vision
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/NAS
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

@@ -4,7 +4,8 @@ conference: icml
 year: 2026
 website: https://sites.google.com/view/hidimlearning/home
 topics:
-  - other
+  - theory
+  - optimization
 openreview_venue_id: ICML.cc/2026/Workshop/HiLD
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

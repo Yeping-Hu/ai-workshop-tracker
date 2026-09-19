@@ -4,11 +4,13 @@ conference: corl
 year: 2025
 website: https://rememberl-corl25.github.io/
 topics:
-  - other
+  - robotics
+  - reinforcement-learning
+  - llms
 submission_deadline: 2025-09-06 14:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: robot-learning.org/CoRL/2025/Workshop/RemembeRL
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

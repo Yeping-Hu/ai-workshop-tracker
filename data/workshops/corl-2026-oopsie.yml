@@ -5,7 +5,9 @@ year: 2026
 website: https://workshop.oopsie-data.com/
 location: Austin
 topics:
-  - other
+  - datasets
+  - robotics
+  - robustness
 openreview_venue_id: robot-learning.org/CoRL/2026/Workshop/Oopsie
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

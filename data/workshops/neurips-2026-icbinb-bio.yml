@@ -3,7 +3,9 @@ acronym: ICBINB-BIO
 conference: neurips
 year: 2026
 topics:
-  - other
+  - healthcare-bio
+  - genomics
+  - robustness
 openreview_venue_id: NeurIPS.cc/2026/Workshop/ICBINB-BIO
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

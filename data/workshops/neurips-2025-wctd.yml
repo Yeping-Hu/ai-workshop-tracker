@@ -4,11 +4,13 @@ conference: neurips
 year: 2025
 website: https://transformerstheory.github.io/
 topics:
-  - other
+  - llms
+  - nlp
+  - theory
 submission_deadline: 2025-08-30 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/WCTD
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

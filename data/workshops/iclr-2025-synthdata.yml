@@ -4,7 +4,8 @@ conference: iclr
 year: 2025
 website: https://synthetic-data-iclr.github.io/
 topics:
-  - other
+  - generative-models
+  - datasets
 submission_deadline: 2025-02-06 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

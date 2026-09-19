@@ -4,11 +4,13 @@ conference: neurips
 year: 2025
 website: https://mozhgan91.github.io/vlm4rwd-neurips25-ws/
 topics:
-  - other
+  - reinforcement-learning
+  - multimodal
+  - vision
 submission_deadline: 2025-11-05 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/VLM4RWD
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

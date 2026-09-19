@@ -4,7 +4,7 @@ conference: iclr
 year: 2026
 website: https://aiforpeaceworkshop.github.io/
 topics:
-  - other
+  - fairness
 openreview_venue_id: ICLR.cc/2026/Workshop/AI4Peace
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
