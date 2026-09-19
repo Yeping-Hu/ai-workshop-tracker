@@ -13,7 +13,7 @@ import {
   conferenceById,
   loadPaperCache,
 } from '../lib/data';
-import { href, REPO_URL } from '../lib/site';
+import { href, REPO_URL, ALERTS_API } from '../lib/site';
 // The sort picker's options and the count line's phrases come from the one
 // module that also orders the results (bridged onto window further down).
 import { SORTS } from '../scripts/result-sort.js';
@@ -131,6 +131,14 @@ const datasetLd: Record<string, any> = {
       Deadlines, past editions, and accepted papers for AI/ML/Robotics conference
       workshops.
     </p>
+    {/* The matcher lives on the alerts satellite, so the way in appears only
+        in a build that has one — a fork's build shows nothing here, and its
+        /find/ page says the matcher is off. */}
+    {ALERTS_API && (
+      <p class="muted small">
+        Have a paper? <a href={href('/find/')}>Find the open calls it fits →</a>
+      </p>
+    )}
     <div class="kw-box hero-box" onclick="document.getElementById('q')?.focus()">
       <span id="kwChips"></span>
       <input id="q" type="search" placeholder="Search workshops & papers… (Enter adds a keyword)" aria-label="Search workshops and papers" />

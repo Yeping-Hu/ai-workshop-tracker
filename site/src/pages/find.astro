@@ -1,0 +1,104 @@
+---
+/**
+ * /find/ — "Find workshops for your paper": the page half of the matcher.
+ * The Worker's /match does the judging (alerts/fit.mjs); this page posts a
+ * title and abstract and renders the typed answer, every sentence a template
+ * over the response's fields (ARCHITECTURE.md, "Find workshops for your
+ * paper"). Not a /tools/ page on purpose — those are browser-only and call no
+ * paid API — and, like every alerts page, reachable when PUBLIC_ALERTS_API is
+ * empty but honest about it, so a fork never ships a form that posts nowhere.
+ */
+import Base from '../components/Base.astro';
+import { ALERTS_API, TURNSTILE_SITE_KEY, href } from '../lib/site';
+
+const enabled = !!ALERTS_API;
+---
+
+<Base
+  title="Find Workshops for Your Paper"
+  description="Paste a paper's title and abstract and get the open AI, ML and robotics workshop calls it fits, each with its deadline — judged against every workshop's topics and past accepted papers. Nothing is stored."
+>
+  <section class="masthead">
+    <p class="eyebrow">Open calls, matched</p>
+    <h1>Find workshops for your paper</h1>
+    <p class="lede">
+      Paste a title and abstract and get the open calls it fits, each with its deadline. A first
+      edition is judged from its name and topics; a returning workshop from the papers its earlier
+      editions accepted.
+    </p>
+  </section>
+
+  {!enabled && (
+    <p class="muted">
+      The matcher is not enabled on this build of the site. The tracker itself works exactly the
+      same without it: every open call is on the <a href={href('/')}>deadline board</a>, and search
+      covers every workshop and paper.
+    </p>
+  )}
+
+  {enabled && (
+    <>
+      <form class="find-form" id="findForm" novalidate>
+        <label class="find-field">
+          <span class="find-label">Title</span>
+          <input id="findTitle" type="text" maxlength="300" autocomplete="off" required />
+        </label>
+        <label class="find-field">
+          <span class="find-label">Abstract <span class="muted">(optional, but it sharpens the match)</span></span>
+          <textarea id="findAbstract" rows="8" maxlength="4000"></textarea>
+        </label>
+        {TURNSTILE_SITE_KEY && (
+          <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} data-appearance="interaction-only"></div>
+        )}
+        <div class="find-row">
+          <button class="btn" type="submit" id="findGo">Find workshops</button>
+          <p class="find-status" id="findStatus" role="status" aria-live="polite"></p>
+        </div>
+        <p class="find-privacy muted small">
+          Your title and abstract go to this site's own server, are judged once by TypeSafe's Jev model
+          and discarded: nothing is stored or logged, and TypeSafe does not train on requests. Each
+          result says what the judgment stood on.
+        </p>
+      </form>
+      <section id="findOut" hidden aria-live="polite">
+        <p class="muted small" id="findSummary"></p>
+        <ol class="find-list" id="findList"></ol>
+      </section>
+      {TURNSTILE_SITE_KEY && (
+        <script is:inline async defer src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
+      )}
+      <script src="../scripts/find.js"></script>
+    </>
+  )}
+</Base>
+
+{/* `is:inline`, not a scoped <style>: the result rows are created by find.js,
+    and Astro's scoping attribute is only on markup it rendered itself. */}
+<style is:inline>
+  .find-form { display: grid; gap: 1rem; max-width: 46rem; margin-top: 0.4rem; }
+  .find-field { display: grid; gap: 0.35rem; }
+  .find-label { font-weight: 600; font-size: 0.95rem; }
+  .find-label .muted { font-weight: 400; }
+  .find-form input, .find-form textarea {
+    width: 100%; box-sizing: border-box; font: inherit; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 8px; padding: 0.55rem 0.7rem;
+  }
+  .find-form textarea { resize: vertical; line-height: 1.45; }
+  .find-form input:focus, .find-form textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .find-row { display: flex; gap: 0.9rem; align-items: center; flex-wrap: wrap; }
+  .find-status { margin: 0; color: var(--muted); }
+  .find-privacy { margin: 0; max-width: 46rem; }
+  .find-list { list-style: none; padding: 0; margin: 0.6rem 0 2rem; display: grid; gap: 0.75rem; max-width: 46rem; }
+  .find-match { border: 1px solid var(--line); border-radius: 10px; padding: 0.85rem 1.05rem; background: var(--surface); box-shadow: var(--shadow); }
+  .find-head { display: flex; gap: 0.7rem; align-items: baseline; flex-wrap: wrap; }
+  .find-fit {
+    font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.15rem 0.55rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent);
+  }
+  .find-match[data-fit="possible"] .find-fit { background: var(--warn-soft); color: var(--warn); }
+  .find-match[data-fit="poor"] .find-fit { background: var(--paper); color: var(--muted); border: 1px solid var(--line); }
+  .find-title { font-weight: 600; font-size: 1.05rem; }
+  .find-conf { color: var(--muted); font-family: var(--font-mono); font-size: 0.8rem; }
+  .find-name { margin: 0.25rem 0 0; }
+  .find-meta { margin: 0.4rem 0 0; }
+</style>

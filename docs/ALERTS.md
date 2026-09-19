@@ -78,7 +78,7 @@ reports "unverified".
 | Id allowlist | `alerts/ids.json` | Generated — `node scripts/gen_alerts_ids.mjs` |
 | Worker | `alerts/worker/` | Cloudflare Worker `aiwt-alerts` + D1 database `aiwt-alerts` |
 | Pipeline | `scripts/alerts_run.mjs` | Run daily by `.github/workflows/alerts.yml` |
-| Site UI | `site/src/components/AlertsSignup.astro`, `site/src/pages/alerts/` | All hidden when `PUBLIC_ALERTS_API` is empty |
+| Site UI | `site/src/components/AlertsSignup.astro`, `site/src/pages/alerts/`, `site/src/pages/find.astro` + `site/src/scripts/find.js` (the paper matcher's page) | All hidden when `PUBLIC_ALERTS_API` is empty; `/find/` stays reachable and says the matcher is off |
 | Paper matcher | `alerts/fit.mjs` + `/match` in the Worker | "Find workshops for your paper": the endpoint reads the site's `/api/match-candidates.json`, asks Jev two typed questions (`lib/jev.mjs`, bundled), stores and logs nothing of the paper. Needs the `TYPESAFE_API_KEY` Worker secret; answers 503 without it. ARCHITECTURE.md, "Find workshops for your paper" |
 | Tests | `scripts/alerts_*_test.mjs` | The pure-logic suites run in `.github/workflows/alerts-ci.yml`; `alerts_ui_test.mjs` needs a built site and runs in `pr-build-check.yml` |
 
@@ -734,7 +734,11 @@ backstop against a signup flood; it is not the provider limit.
 4. Delete `alerts/`, `scripts/alerts_*`, `scripts/gen_alerts_ids.mjs`,
    `site/src/components/AlertsSignup.astro`, `site/src/pages/alerts/`,
    `site/src/scripts/alerts-session.js`, `site/src/scripts/star-merge.js`, and
-   the sync block in `site/src/scripts/favorites.js`.
+   the sync block in `site/src/scripts/favorites.js`. The paper matcher goes
+   with it: `site/src/pages/find.astro`, `site/src/scripts/find.js`,
+   `scripts/find_ui_test.mjs`, the `/find/` link in `site/src/pages/index.astro`,
+   `site/src/pages/api/match-candidates.json.ts` with `lib/match_candidates.mjs`
+   and its test, and `lib/paper_meta.mjs` with its test.
 5. Decide about `/changes/`. `site/src/pages/changes.astro` renders
    `data/changes.json`, which only this job writes; with the job gone the page
    shows its empty state forever. Either delete the page together with

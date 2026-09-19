@@ -1284,6 +1284,18 @@ without a Turnstile secret refuses to send. Forty candidates is four Jev calls,
 so a request stays well inside the fifty outbound calls a free-plan Worker may
 make. A typical query costs about $0.0006.
 
+**The page** (`site/src/pages/find.astro`, `site/src/scripts/find.js`) is
+reachable on every build and honest on a fork: with no `PUBLIC_ALERTS_API` it
+says the matcher is off and renders no form, and the homepage shows no way in.
+Results are built with `createElement` and text nodes, never markup, from the
+response's fields alone: a fit label, the workshop's page, its deadline or
+"not announced yet", its website when it has one, and the line that says what
+the judgment stood on — "judged from 57 past papers" or "judged from the name
+and topics". The Worker's error codes are a closed set, and each has its own
+sentence on the page. `scripts/find_ui_test.mjs` drives the configured build
+against a stubbed Worker; `ui_test.mjs` checks the fork build says off and
+links nothing.
+
 ## External links open a new tab; internal navigation stays in place
 
 A single delegated, click-time handler in `site/src/components/Base.astro` decides link targets

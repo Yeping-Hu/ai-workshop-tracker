@@ -24,7 +24,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const NEEDS_A_SERVER = new Set(['ui_test.mjs', 'alerts_ui_test.mjs', 'shipped_ui_test.mjs', 'smoke_test.mjs', 'pagefind_index_test.mjs']);
+const NEEDS_A_SERVER = new Set(['ui_test.mjs', 'alerts_ui_test.mjs', 'shipped_ui_test.mjs', 'find_ui_test.mjs', 'smoke_test.mjs', 'pagefind_index_test.mjs']);
 const only = process.argv.slice(2);
 
 const files = fs

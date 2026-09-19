@@ -167,6 +167,11 @@ jobs:
           done
       - name: Test the alerts signup's sent state (headless Chromium)
         run: node scripts/alerts_ui_test.mjs http://localhost:4321
+      # The paper matcher's page exists only in this build too: it posts to the
+      # Worker, which is stubbed here, and every sentence it shows is a template
+      # over the response — a contract only a browser can check.
+      - name: Test the paper matcher page (headless Chromium)
+        run: node scripts/find_ui_test.mjs http://localhost:4321
       # Everything ui_test.mjs structurally cannot see. It drives the fork build,
       # where PUBLIC_ALERTS_API is empty and Base.astro therefore emits none of
       # the alerts scripts — so a <head> script that breaks every page on the

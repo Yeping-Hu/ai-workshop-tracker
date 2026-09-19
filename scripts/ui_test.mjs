@@ -1724,6 +1724,17 @@ await page.evaluate(() => localStorage.clear());
   }
 }
 
+// The paper matcher lives on the alerts satellite. In this build — a fork's —
+// PUBLIC_ALERTS_API is empty, so the page must exist and say the matcher is
+// off, and nothing may link to it as if it worked.
+{
+  const res = await page.goto(`${BASE}/find/`, { waitUntil: 'networkidle' });
+  check('/find/ exists on a fork build and says the matcher is not enabled', res.status() === 200 && /not enabled/.test(await page.textContent('body')));
+  check('...with no form to post nowhere', (await page.$('#findForm')) === null);
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  check('the homepage does not link a matcher this build lacks', (await page.$('a[href$="/find/"]')) === null);
+}
+
 check('no page/console errors during the whole run', errors.length === 0, errors.slice(0, 3).join(' | '));
 
 await browser.close();
