@@ -109,6 +109,11 @@ const cand = (slug, topics, deadline, extra = {}) => ({
   check('a Score answer becomes a level and an expected value',
     JSON.stringify(fitFromAnswer({ probabilities: [0, 0.1, 0.3, 0.6] })) === JSON.stringify({ level: 'strong', score: 0.83 })
       && fitFromAnswer({ probabilities: { poor: 1, possible: 0, good: 0, strong: 0 } }).level === 'poor');
+  // Verbatim from jev-1.13.0 on 2026-09-19: probabilities keyed by level index,
+  // with a legend beside them. The shape the matcher first shipped without.
+  const real = { type: 'score', score: 2.9, confidence: 0.9, legend: { 0: { level: 'poor' }, 1: { level: 'possible' }, 2: { level: 'good' }, 3: { level: 'strong' } }, probabilities: { 0: 0, 1: 0, 2: 0.09, 3: 0.91 } };
+  check('...and the API\'s real shape — probabilities keyed by level index — reads as strong, 0.97',
+    JSON.stringify(fitFromAnswer(real)) === JSON.stringify({ level: 'strong', score: 0.97 }), JSON.stringify(fitFromAnswer(real)));
   check('a shape the API does not document is unjudged, not a wrong number',
     fitFromAnswer({ probabilities: [0.5, 0.5] }) === null && fitFromAnswer({}) === null && fitFromAnswer({ probabilities: [0, 0, 0, 1.5] }) === null);
 }

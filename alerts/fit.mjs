@@ -153,11 +153,23 @@ export function fitQuestions(batch) {
 /**
  * A Score answer as `{ level, score }`: `level` the most probable of FIT_LEVELS,
  * `score` the expected value on 0–1 for ordering. Null when the shape is not
- * the one the API documents, so a change upstream degrades to "unjudged".
+ * one this reads, so a change upstream degrades to "unjudged".
+ *
+ * What the API actually returns (jev-1.13.0, 2026-09-19) is an object keyed by
+ * level INDEX — `{"0": 0, "1": 0, "2": 0.09, "3": 0.91}` — beside a `legend`
+ * mapping each index to its level. An array and an object keyed by level name
+ * are accepted too. Reading only the latter two is how the matcher shipped
+ * judging every candidate as "unjudged" and calling the model unavailable
+ * while both requests had succeeded; the series audit's reader had the index
+ * case, this one did not.
  */
 export function fitFromAnswer(answer) {
-  const p = answer?.probabilities;
-  const probs = Array.isArray(p) ? p : p && typeof p === 'object' ? FIT_LEVELS.map((l) => p[l]) : null;
+  const raw = answer?.probabilities;
+  const probs = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === 'object'
+      ? FIT_LEVELS.map((level, i) => raw[level] ?? raw[i] ?? raw[String(i)])
+      : null;
   if (!probs || probs.length !== FIT_LEVELS.length || !probs.every((x) => typeof x === 'number' && x >= 0 && x <= 1)) return null;
   let top = 0;
   let expected = 0;
