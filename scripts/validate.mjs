@@ -25,12 +25,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
+import * as yaml from 'js-yaml';
 import { REPO_ROOT,
   listWorkshopFiles,
   readWorkshopFile,
   loadConferences,
   loadTopics,
-  loadEditions, loadProposalCallRows, slugOfFile } from '../lib/workshops.mjs';
+  loadEditions, loadProposalCallRows, slugOfFile, SERIES_LINKS_FILE } from '../lib/workshops.mjs';
 import { loadAcceptanceRates, EDITION_FIELDS, SYNCED_FIELDS } from '../lib/editions.mjs';
 import { resolveDeadlineUtcMs, parseDateUtcMs, parseDeadlineString, isValidTimezone, DAY_MS, TWO_YEARS_MS } from '../lib/dates.mjs';
 import { validateChangesFeed } from './validate_changes_feed.mjs';
@@ -491,6 +492,59 @@ for (const filePath of listWorkshopFiles()) {
   }
   // Absent is fine: a fork, a fresh clone, or the period before the alerts
   // pipeline has run once. /changes/ renders its empty state.
+}
+
+// ---- data/series_links.yml: the weekly series audit's record ----
+// Written only by scripts/series_audit.mjs and read by the build (Tier 5 of
+// computeRelations), so a shape the build would misread is an error, whoever
+// produced it — a bug in the writer or a hand edit. A slug that has left the
+// dataset is only a warning: the next audit prunes it, and until then
+// linkedPairs() ignores it.
+{
+  if (fs.existsSync(SERIES_LINKS_FILE)) {
+    const rel = path.relative(REPO_ROOT, SERIES_LINKS_FILE);
+    let raw = null;
+    try {
+      raw = yaml.load(fs.readFileSync(SERIES_LINKS_FILE, 'utf8'));
+    } catch (e) {
+      errors.push({ file: rel, msg: `YAML does not parse: ${e.message.split('\n')[0]}` });
+    }
+    if (raw != null) {
+      const slugs = new Set(listWorkshopFiles().map(slugOfFile));
+      const isDate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+      const checkPair = (ref, r, seen) => {
+        if (typeof r?.a !== 'string' || typeof r?.b !== 'string' || !(r.a < r.b)) {
+          errors.push({ file: ref, msg: '`a` and `b` must be two slugs in sorted order.' });
+          return;
+        }
+        const k = `${r.a}|${r.b}`;
+        if (seen.has(k)) errors.push({ file: ref, msg: `Duplicate record for ${r.a} ~ ${r.b}.` });
+        seen.add(k);
+        for (const s of [r.a, r.b]) {
+          if (!slugs.has(s)) warnings.push({ file: ref, msg: `\`${s}\` is no longer in the dataset; the next audit prunes this record.` });
+        }
+      };
+      if (!Array.isArray(raw.pairs) || !Array.isArray(raw.decisions)) {
+        errors.push({ file: rel, msg: '`pairs` and `decisions` must both be lists.' });
+      }
+      const seenPairs = new Set();
+      for (const [i, p] of (Array.isArray(raw.pairs) ? raw.pairs : []).entries()) {
+        const ref = `${rel} pairs[${i}]`;
+        checkPair(ref, p, seenPairs);
+        if (!(typeof p?.same === 'number' && p.same >= 0 && p.same <= 1)) errors.push({ file: ref, msg: '`same` must be a probability from 0 to 1.' });
+        if (!isDate(p?.judged)) errors.push({ file: ref, msg: '`judged` must be a YYYY-MM-DD date.' });
+        if (!/^[0-9a-f]{12}$/.test(String(p?.hash ?? ''))) errors.push({ file: ref, msg: '`hash` must be the 12-hex identity hash the audit writes.' });
+      }
+      const seenDecisions = new Set();
+      for (const [i, d] of (Array.isArray(raw.decisions) ? raw.decisions : []).entries()) {
+        const ref = `${rel} decisions[${i}]`;
+        checkPair(ref, d, seenDecisions);
+        if (!['same', 'different'].includes(d?.verdict)) errors.push({ file: ref, msg: '`verdict` must be `same` or `different`.' });
+        if (!isDate(d?.recorded)) errors.push({ file: ref, msg: '`recorded` must be a YYYY-MM-DD date.' });
+      }
+    }
+  }
+  // Absent is fine: a fork, or a checkout from before the audit first ran.
 }
 
 // ---- Report ----

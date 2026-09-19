@@ -34,6 +34,7 @@ GitHub repo (single source of truth)
  ├── data/editions.yml         per-edition conference dates, the main conference's deadlines, place and site (synced daily from the community trackers), and each edition's official accepted-workshop list
  ├── data/acceptance_rates.yml main-conference acceptance rates per year, synced daily, shown on each conference page
  ├── data/topics.yml           controlled topic vocabulary
+ ├── data/series_links.yml     pairs the weekly audit judged to be one workshop series (Jev), read by the build to link their editions
  ├── data/proposal_calls.yml   call-for-workshop-proposals deadlines, synced daily from OpenReview, shown on the homepage
  ├── data/changes.json         this week's dataset changes, written by the alerts job for /changes/
  ├── schema/                   JSON Schema for a workshop file (validate.mjs enforces it)

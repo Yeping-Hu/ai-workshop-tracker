@@ -22,6 +22,8 @@ import {
   nameTokens,
   computeRelations,
   loadWorkshops,
+  pairHash,
+  LINK_MIN,
 } from '../lib/workshops.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -432,6 +434,79 @@ function check(label, ok, detail = '') {
       && ed(rel5, 'neurips-2026-tstem').join(',') === 'neurips-2024-tstem');
   check('...and the older edition sees both of that year\'s tracks',
     ed(rel5, 'neurips-2024-tstem').sort().join(',') === 'neurips-2026-tstem,neurips-2026-tstem-np');
+}
+
+/* ------------------------------ Tier 5: pairs the weekly audit judged ----- */
+// The two shapes "What still does not link" measured and left: a stem renamed
+// year to year (ICLR's DPFM / Data_Problems / DATA-FM — one name, three sites,
+// three stems) and a series that moved conference AND domain (FM4LS). No
+// address tier can see either. The audit's file is the only signal, and it is
+// trusted only while both entries still hash as they did when judged, and
+// never over a person's recorded decision. Every record is real, and the
+// probabilities are what jev-1.13.0 returned on 2026-09-18.
+{
+  const DPFM = [
+    { slug: 'iclr-2024-dpfm', name: 'Navigating and Addressing Data Problems for Foundation Models', acronym: 'DPFM 2024', conference: 'iclr', year: 2024, website: 'https://sites.google.com/view/dpfm-iclr24/', openreview_venue_id: 'ICLR.cc/2024/Workshop/DPFM', statusLabel: 'Past' },
+    { slug: 'iclr-2025-data-problems', name: 'Navigating and Addressing Data Problems for Foundation Models', acronym: 'Data Problems', conference: 'iclr', year: 2025, website: 'https://datafm.github.io/', openreview_venue_id: 'ICLR.cc/2025/Workshop/Data_Problems', statusLabel: 'Past' },
+    { slug: 'iclr-2026-data-fm', name: 'Navigating and Addressing Data Problems for Foundation Models', acronym: 'DATA-FM', conference: 'iclr', year: 2026, website: 'https://data-fm-iclr2026.github.io/', openreview_venue_id: 'ICLR.cc/2026/Workshop/DATA-FM', statusLabel: 'Open call' },
+  ];
+  const FM4LS = [
+    { slug: 'icml-2025-fm4ls', name: 'Multi-modal Foundation Models and Large Language Models for Life Sciences', acronym: 'FM4LS 2025', conference: 'icml', year: 2025, website: 'https://fm4ls.github.io', openreview_venue_id: 'ICML.cc/2025/Workshop/FM4LS', statusLabel: 'Past' },
+    { slug: 'neurips-2025-fm4ls', name: '2nd Workshop on Multi-modal Foundation Models and Large Language Models for Life Sciences', acronym: '2nd Workshop FM4LS', conference: 'neurips', year: 2025, website: 'https://nips2025fm4ls.github.io', openreview_venue_id: 'NeurIPS.cc/2025/Workshop/FM4LS', statusLabel: 'Past' },
+  ];
+  // The corpus's own cross-conference collision: one stem, two workshops.
+  const AIMS = [
+    { slug: 'colm-2026-aims', name: 'First Workshop in AI Measurement Science: Toward Rigorous AI Evaluation', acronym: 'AIMS', conference: 'colm', year: 2026, website: 'https://aimslab.stanford.edu/workshop', openreview_venue_id: 'colmweb.org/COLM/2026/Workshop/AIMS', statusLabel: 'Open call' },
+    { slug: 'iclr-2026-aims', name: 'The First Workshop on AI for Mechanism Design and Strategic Decision Making', acronym: 'AIMS', conference: 'iclr', year: 2026, website: 'https://alimama-tech.github.io/aims-2026/#', openreview_venue_id: 'ICLR.cc/2026/Workshop/AIMS', statusLabel: 'Past' },
+  ];
+  const ALL = [...DPFM, ...FM4LS, ...AIMS];
+  const by = new Map(ALL.map((e) => [e.slug, e]));
+  const ed = (rel, s) => rel.get(s).relatedEditions.map((e) => e.slug).sort();
+  const rec = (a, b, same, via = 'names') => ({ a, b, same, judged: '2026-09-18', hash: pairHash(by.get(a), by.get(b)), via });
+
+  const none = computeRelations(ALL);
+  check('the premise holds: no address tier links a renamed stem or a moved conference',
+    ALL.every((w) => ed(none, w.slug).length === 0));
+
+  const links = {
+    model: 'jev-1.13.0',
+    pairs: [
+      rec('iclr-2024-dpfm', 'iclr-2025-data-problems', 0.99),
+      rec('iclr-2025-data-problems', 'iclr-2026-data-fm', 0.99),
+      rec('icml-2025-fm4ls', 'neurips-2025-fm4ls', 0.9, 'stem'),
+      rec('colm-2026-aims', 'iclr-2026-aims', 0.0, 'stem'),
+    ],
+    decisions: [],
+  };
+  const rel = computeRelations(ALL, { seriesLinks: links });
+  check('a judged pair at or above LINK_MIN links, and union-find carries it across the series',
+    ed(rel, 'iclr-2024-dpfm').join(',') === 'iclr-2025-data-problems,iclr-2026-data-fm', ed(rel, 'iclr-2024-dpfm').join(','));
+  check('...across conferences too, exactly at the bar',
+    LINK_MIN === 0.9 && ed(rel, 'icml-2025-fm4ls').join(',') === 'neurips-2025-fm4ls');
+  check('a pair judged different stays apart', ed(rel, 'colm-2026-aims').length === 0 && ed(rel, 'iclr-2026-aims').length === 0);
+  check('...and every link is an edition, none a sibling track',
+    ALL.every((w) => rel.get(w.slug).relatedTracks.length === 0));
+
+  const under = { ...links, pairs: [rec('icml-2025-fm4ls', 'neurips-2025-fm4ls', 0.89, 'stem')] };
+  check('a hair under the bar links nothing — the review band is a person\'s, not the build\'s',
+    ed(computeRelations(ALL, { seriesLinks: under }), 'icml-2025-fm4ls').length === 0);
+
+  const renamed = ALL.map((e) => (e.slug === 'iclr-2026-data-fm' ? { ...e, name: 'Something Else Entirely' } : e));
+  const rel2 = computeRelations(renamed, { seriesLinks: links });
+  check('a renamed entry is a new question: its stale record links nothing, the rest still link',
+    ed(rel2, 'iclr-2026-data-fm').length === 0 && ed(rel2, 'iclr-2024-dpfm').join(',') === 'iclr-2025-data-problems');
+
+  const veto = { ...links, decisions: [{ a: 'iclr-2025-data-problems', b: 'iclr-2026-data-fm', verdict: 'different', recorded: '2026-09-18' }] };
+  check('a recorded `different` outranks a 0.99',
+    !ed(computeRelations(ALL, { seriesLinks: veto }), 'iclr-2024-dpfm').includes('iclr-2026-data-fm'));
+  const insist = { model: 'jev-1.13.0', pairs: [], decisions: [{ a: 'colm-2026-aims', b: 'iclr-2026-aims', verdict: 'same', recorded: '2026-09-18' }] };
+  check('a recorded `same` links with no probability at all',
+    ed(computeRelations(ALL, { seriesLinks: insist }), 'colm-2026-aims').join(',') === 'iclr-2026-aims');
+
+  check('a record naming a slug that has left the dataset is ignored, not fatal',
+    ed(computeRelations(DPFM, { seriesLinks: links }), 'iclr-2024-dpfm').join(',') === 'iclr-2025-data-problems,iclr-2026-data-fm');
+  check('no file, no links — a fork behaves as before',
+    ALL.every((w) => ed(computeRelations(ALL, { seriesLinks: null }), w.slug).length === 0));
 }
 
 /* ------------------------------------------ the whole corpus, for real ---- */

@@ -1,0 +1,129 @@
+# Weekly: ask Jev whether candidate pairs of workshop entries are editions of
+# one series — the two shapes no address-based signal can see (a series that
+# moved conference and domain at once; a series that renamed its OpenReview
+# stem) — record every answer in data/series_links.yml, and keep ONE issue of
+# the pairs it could not settle. The build reads the file (Tier 5 of
+# computeRelations) and links what cleared the bar; nothing is asked at build
+# time. See docs/ARCHITECTURE.md, "Related entries" and "Typed judgments from
+# Jev"; lib/series_links.mjs has the candidate rules and the question.
+#
+# Also the way a person records a verdict: dispatch with the two slugs and
+# `same` or `different`, and the decision is written before the audit runs, so
+# it publishes in the same commit. A decision outranks the model in either
+# direction and a later one supersedes the earlier.
+#
+# Without a TYPESAFE_API_KEY the audit asks nothing and the file is at most
+# pruned — a fork's Sunday is a no-op, not a failure.
+name: Audit workshop series
+
+on:
+  schedule:
+    # Sundays 04:09 UTC — after the 03:19 discovery, whose new entries are what
+    # this judges. Discovery can run ~35 minutes, so on a slow day this queues
+    # behind it in the data-write group rather than racing it.
+    - cron: '9 4 * * 0'
+  workflow_dispatch:
+    inputs:
+      slug_a:
+        description: 'To record a verdict: first workshop slug (data/workshops filename without .yml). Leave blank to just run the audit.'
+        required: false
+        type: string
+      slug_b:
+        description: 'Second workshop slug'
+        required: false
+        type: string
+      verdict:
+        description: 'same = one series, link them; different = keep them apart'
+        required: false
+        type: choice
+        default: same
+        options:
+          - same
+          - different
+
+concurrency:
+  # Serialise every workflow that commits to `main` — see discover.yml.
+  group: data-write
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+      SERIES_CHANGELOG: ${{ github.workspace }}/.series-changes.md
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Record a decision (dispatch with slugs only)
+        if: inputs.slug_a != '' && inputs.slug_b != ''
+        env:
+          SLUG_A: ${{ inputs.slug_a }}
+          SLUG_B: ${{ inputs.slug_b }}
+          VERDICT: ${{ inputs.verdict }}
+        run: node scripts/series_audit.mjs --decide "$SLUG_A" "$SLUG_B" "$VERDICT"
+      - name: Judge the candidate pairs
+        run: node scripts/series_audit.mjs --report series-review.md
+      - name: Validate
+        run: node scripts/validate.mjs
+      # Validation passed — publish directly. The changelog names each pair
+      # that linked this run, so the commit says what changed on the site.
+      - name: Publish the record (if changed)
+        uses: ./.github/actions/publish-data
+        with:
+          paths: data/series_links.yml
+          subject: 'data: weekly series audit (auto-published after validation)'
+          changelog: ${{ github.workspace }}/.series-changes.md
+          changelog-heading: 'Editions linked by the series audit (same-series ≥ 0.9):'
+          nothing-message: 'No series judgments changed this week.'
+          token: ${{ github.token }}
+
+      # One consolidated issue, rewritten in place and CLOSED when the report
+      # comes back empty — the same shape as deadline-review.yml, and for the
+      # same reason: a stale issue every Sunday is worse than none.
+      - name: Keep the "series to confirm" issue current
+        if: always()
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.existsSync('series-review.md') ? fs.readFileSync('series-review.md', 'utf8').trim() : '';
+            const title = 'Data health: workshop series to confirm';
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'data-health', per_page: 100,
+            });
+            const existing = open.find((i) => i.title === title);
+            // Only the review band keeps the issue open; a report that lists
+            // nothing but this run's links is news for the log, not a task.
+            const needsPerson = /## Workshop series to confirm/.test(report);
+            if (!needsPerson) {
+              if (existing) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: existing.number, state: 'closed',
+                });
+              }
+              return;
+            }
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.number, body: report,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body: report, labels: ['data-health'],
+              });
+            }

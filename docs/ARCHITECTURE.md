@@ -488,8 +488,9 @@ one OpenReview venue. Some workshops instead publish each track as its own
 / `_Findings` / `_Proceedings`), and every workshop series returns each year as
 a fresh venue — so related entries end up as independent YAML files with nothing
 linking them. `computeRelations()` (lib/workshops.mjs) derives the links at
-build time from the whole corpus — nothing is stored, so a new crawl needs no
-human to wire anything up. Four signals, in decreasing strength:
+build time from the whole corpus — nothing is hand-maintained, so a new crawl
+needs no human to wire anything up (signal 5 reads a file, but one the weekly
+audit writes). Five signals, in decreasing strength:
 
 1. **Same website** (after folding scheme/`www.`/fragment/query/trailing-slash
    variants, plus Google Sites' `/corp/` and `/home` spellings) — the same site
@@ -620,6 +621,39 @@ human to wire anything up. Four signals, in decreasing strength:
    than a one-line change. Counting buckets that hold a name-disagreeing pair,
    widening it naively goes from 5 of 95 conference-scoped to 10 of 124 global.
 
+5. **A pair the weekly audit judged the same series, or a person recorded as
+   such** — `data/series_links.yml`, applied through `linkedPairs()`.
+
+   Signals 1–4 all key on an address a series keeps, and the two shapes they
+   cannot reach are measured under "What the address signals do not link"
+   below. Both are visible only to a reader of the names, so a reader is what
+   this signal is: `scripts/series_audit.mjs` generates candidate pairs in
+   code — a shared stem across conferences, or agreeing names across years
+   within one conference, minus anything already linked — and asks Jev one
+   Score question per pair, whose three levels are the three things one can do
+   with a pair: different, unclear, same series (`lib/series_links.mjs`; "Typed
+   judgments from Jev" has the rules the model runs under). Code applies the
+   policy: at or above `LINK_MIN` (0.9) the pair links; from `REVIEW_MIN` (0.4)
+   up to it, it is listed in the "workshop series to confirm" issue for a
+   person; below, nothing. A record applies only while both entries still hash
+   as they did when judged (name, acronym, website, stem, conference, year), so
+   a renamed entry is re-asked rather than trusted, and a recorded decision
+   outranks any probability in either direction. The build asks nothing — it
+   reads the file — and with no file the signal is a no-op, which is what every
+   fork gets.
+
+   Measured on the backfill (2026-09-18, jev-1.13.0, 1,818 candidate pairs for
+   $0.06): 1,755 pairs under 0.1; 12 at or above 0.9, every one a real series
+   on reading (SoLaR, NFBCC, LoViF, R2-FM, TS4H, FM-Wild, SPIGM, FM4LS, and
+   DPFM's three editions); 17 in the review band; and the two named collisions
+   at 0.00 (AIMS) and 0.13 (H2R). The 0.8–0.9 band was all true series as well,
+   so the bar could come down once a few weeks of decisions agree with the
+   model; it starts at 0.9 because an unlinked series is the safe failure, as
+   everywhere in this section. Fixtures: the Tier 5 block of
+   `scripts/relations_test.mjs` (real records, checked to fail without the
+   tier) and `scripts/series_audit_test.mjs` (the audit itself, replaying the
+   model's recorded answers).
+
 Each entry gets `relatedTracks` (same conference-year siblings, labeled by
 their venue-id suffix, shown with their own deadlines) and `relatedEditions`
 (the rest of the series, newest first). Only the workshop page renders them;
@@ -638,33 +672,39 @@ key, adding a name guard, restricting to adjacent years, and keying on the raw
 last path segment must each turn the suite red, and the last three did not until
 the fixtures were rewritten.
 
-### What still does not link
+### What the address signals do not link — and what signal 5 does about it
 
-Both are known, measured, and left for a change with its own fixtures — recorded
-here so the next person does not rediscover them as bugs:
+Both shapes below were measured and left unlinked for a long time, recorded
+here so nobody rediscovers them as bugs. They are now the candidate set signal
+5 judges; what signals 1–4 still cannot reach on their own:
 
 - **A series that changes conference _and_ address.** Changing conference alone
   is fine — MusIML runs across ICML and NeurIPS and links, because every edition
   lives on `musiml.org` and signals 1 and 3 see it; 75 cross-conference pairs
-  link today for that reason. The gap is a series that moves conference *and*
-  registers a new domain, so no address signal can see it and signal 4's
-  conference scoping declines it. 21 stems / 49 entries share a stem and
-  some name tokens across venues and stay unlinked — SPIGM, FM4LS, AI4VA and
-  SoLaR are genuine series among them, and three of those are *worse* than
-  unlinked, showing the partial list described under signal 4. But the candidate
-  set is not a work list: `aims` pairs COLM's "AI Measurement Science" with
-  ICLR's "AI for Mechanism Design", and `h2r` is one of the four stems that name
-  different workshops outright. Any widening needs a pair-by-pair audit, which
-  is most of why it has not been done.
+  link that way. The gap is a series that moves conference *and* registers a
+  new domain, so no address signal can see it and signal 4's conference scoping
+  declines it. 21 stems / 49 entries shared a stem and some name tokens across
+  venues and stayed unlinked — SPIGM, FM4LS, AI4VA and SoLaR are genuine series
+  among them, and three of those were *worse* than unlinked, showing the partial
+  list described under signal 4. The candidate set was never a work list:
+  `aims` pairs COLM's "AI Measurement Science" with ICLR's "AI for Mechanism
+  Design", and `h2r` is one of the four stems that name different workshops
+  outright. That is the shared-stem rule of the audit, and it is exactly why
+  the audit asks rather than links: SPIGM, FM4LS and SoLaR link at 0.96–0.99,
+  AIMS came back 0.00 and H2R 0.13, and AI4VA sits in the review band at 0.86.
 - **A series that renames its venue stem.** ICLR's `DPFM` / `Data_Problems` /
   `DATA-FM` are three character-identical names on three different websites, and
   ICML has `MI` / `Mech_Interp` and `TAIG` / `TAIGR`. No address- or stem-based
   rule reaches these; only the name does, and no signal compares names across
-  years unless the site root already matches.
+  years unless the site root already matches. That is the agreeing-names rule
+  of the audit: DPFM's three editions link at 0.96–0.99; MI and TAIG wait in the
+  review band at 0.83 and 0.75.
 
-Of the 674 entries with no edition link, 629 are the sole holder of their
-`(conference, stem)` — genuinely nothing to link to. The reachable gap is the
-two cases above, not the 674.
+Of the 674 entries with no edition link before the audit, 629 were the sole
+holder of their `(conference, stem)` — genuinely nothing to link to. What no
+signal generates a candidate for, still: a series that moves conference,
+renames its stem *and* rewrites its name past the name guard, all at once.
+Nothing with that shape has been seen.
 
 **Changing any of this is a guard-loosening change**, so it follows a fixed
 procedure: enumerate the old rule against the new over the whole corpus, diff
