@@ -53,7 +53,7 @@ import { jevUsageLine } from '../lib/jev.mjs';
 // what to type. The weekly backfill rewrites the file (yaml.dump) when it
 // finds the real deadline, which removes this hint exactly when it becomes
 // obsolete.
-const DEADLINE_HINT = `# --- Missing: submission deadline -----------------------------------------
+export const DEADLINE_HINT = `# --- Missing: submission deadline -----------------------------------------
 # Know it? Add two lines anywhere below, for example:
 #   submission_deadline: 2026-09-15 23:59    # or just a date: 2026-09-15
 #   timezone: AoE                            # AoE / UTC / America/Los_Angeles

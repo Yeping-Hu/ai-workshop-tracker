@@ -24,7 +24,7 @@
 import fs from 'node:fs';
 import * as yaml from 'js-yaml';
 import { listWorkshopFiles, readWorkshopFile, loadTopics, loadConferences } from '../lib/workshops.mjs';
-import { guessTopics, isAutoTopicsNote } from './discover_openreview.mjs';
+import { guessTopics, isAutoTopicsNote, DEADLINE_HINT } from './discover_openreview.mjs';
 import { suggestTopics } from '../lib/jev_topics.mjs';
 import { jevUsageLine } from '../lib/jev.mjs';
 
@@ -42,7 +42,10 @@ for (const f of listWorkshopFiles()) {
   const t = Array.isArray(raw.topics) ? raw.topics : [];
   if (!(t.length === 1 && t[0] === 'other')) continue; // only the 'other' bucket
   if (!isAutoTopicsNote(raw.notes)) continue;          // never touch human-curated
-  candidates.push({ f, raw });
+  // yaml.dump drops comments, and a deadline-less entry carries the importer's
+  // "know the deadline?" hint as one; keep it exactly as the importer would.
+  const hint = !raw.submission_deadline && fs.readFileSync(f, 'utf8').startsWith(DEADLINE_HINT);
+  candidates.push({ f, raw, hint });
 }
 
 const rows = [];
@@ -51,7 +54,7 @@ const via = { jev: 0, keywords: 0 };
 for (let i = 0; i < candidates.length; i += CONCURRENCY) {
   const chunk = candidates.slice(i, i + CONCURRENCY);
   const guesses = await Promise.all(chunk.map(({ raw }) => suggestTopics(raw, { topics, conferences })));
-  chunk.forEach(({ f, raw }, j) => {
+  chunk.forEach(({ f, raw, hint }, j) => {
     const jev = guesses[j];
     const guess = jev ?? guessTopics(`${raw.name || ''} ${raw.acronym || ''}`);
     if (guess.length === 1 && guess[0] === 'other') return;      // still nothing to say
@@ -59,7 +62,7 @@ for (let i = 0; i < candidates.length; i += CONCURRENCY) {
     rows.push({ to: guess.join('+'), name: raw.name, via: jev ? 'jev' : 'kw' });
     if (!dryRun) {
       raw.topics = guess;
-      fs.writeFileSync(f, yaml.dump(raw, { lineWidth: 200, quotingType: '"' }));
+      fs.writeFileSync(f, (hint ? DEADLINE_HINT : '') + yaml.dump(raw, { lineWidth: 200, quotingType: '"' }));
     }
     changed++;
   });
