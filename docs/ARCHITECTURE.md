@@ -1292,7 +1292,10 @@ response's fields alone: a fit label, the workshop's page, its deadline or
 "not announced yet", its website when it has one, and the line that says what
 the judgment stood on — "judged from 57 past papers" or "judged from the name
 and topics". The Worker's error codes are a closed set, and each has its own
-sentence on the page. Turnstile decides per visitor whether to show a "Verify
+sentence on the page; a 503 also carries a `detail` naming its cause — no key
+on the Worker, a feed that could not be read, or what the model answered
+("HTTP 401 (…)") — which the page shows in parentheses, so the person who can
+fix it reads the cause where the failure is. Turnstile decides per visitor whether to show a "Verify
 you are human" box, and a rendered widget with no token is that box unticked:
 the page says so and scrolls to it rather than sending a request the Worker
 can only answer with a 403 (whose message cannot know why). The widget's
@@ -1392,9 +1395,11 @@ does not throw — when there is no judgment to be had: no `TYPESAFE_API_KEY`
 (every fork, every PR preview), an auth failure, a request the API rejected,
 or the service throttled or down past a three-retry budget with `retry-after`
 honoured. Each caller then does what the pipeline did before Jev: the keyword
-table tags the entry; the audit records nothing that week. The job prints one
-`::warning::` annotation and stays green, and whatever else it computed still
-publishes (AUTOMATION.md, "A partial crawl fails loudly", is the model). A
+table tags the entry; the audit records nothing that week. The job prints a
+`::warning::` annotation — once for a missing key, and once per failed request,
+because the Worker is one process serving requests for hours and a once-only
+warning there hid every failure after the first — and stays green, and
+whatever else it computed still publishes (AUTOMATION.md, "A partial crawl fails loudly", is the model). A
 twenty-second request timeout keeps a hung socket from holding the
 `data-write` lock. The one thing a green fallback would hide is a failure
 that does not heal — a revoked key, an exhausted balance — so each job also

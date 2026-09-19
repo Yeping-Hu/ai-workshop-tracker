@@ -142,11 +142,15 @@ check('the endpoint is the documented evaluation endpoint',
   check('an hour-long retry-after is capped (an outage is not a queue)', s.sleeps[0] <= 30_000);
 }
 
-/* --------------------------------------------------------- warn once ------ */
-check('every failure above produced exactly one warning for the whole process',
-  warnings.length === 1, `${warnings.length} warnings`);
-check('...as a GitHub Actions annotation naming the fallback',
-  /^::warning::jev: .*falling back/.test(warnings[0] ?? ''), warnings[0]);
+/* ------------------------------------------------------------ warnings ---- */
+// The missing key is said once; every failed request is said every time — the
+// Worker is one process serving many requests, and a once-only warning there
+// hid every failure after the first.
+check('the missing key was warned about once, and each of the four failures once',
+  warnings.length === 5 && warnings.filter((w) => /not set/.test(w)).length === 1, `${warnings.length} warnings`);
+check('...each as a GitHub Actions annotation naming the fallback',
+  warnings.every((w) => /^::warning::jev: .*falling back/.test(w)), warnings[0]);
+check('...and the last names the status the API answered', /HTTP 401/.test(warnings.at(-1) ?? ''), warnings.at(-1));
 console.warn = realWarn;
 
 /* ---------------------------------------------------------- plumbing ------ */

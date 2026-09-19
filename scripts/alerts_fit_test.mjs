@@ -177,7 +177,7 @@ const cand = (slug, topics, deadline, extra = {}) => ({
   check('the Worker routes POST /match through this module and the pure Jev client',
     /path === '\/match' && method === 'POST'/.test(worker) && /from '\.\.\/\.\.\/fit\.mjs'/.test(worker) && /from '\.\.\/\.\.\/\.\.\/lib\/jev\.mjs'/.test(worker));
   check('...behind Turnstile, a per-IP limit and a daily brake, and 503 without the key',
-    /handleMatch/.test(worker) && /RL_MATCH_PER_IP_HOUR/.test(worker) && /RL_MATCH_PER_DAY/.test(worker) && /TYPESAFE_API_KEY\) return fail\(request, env, 503/.test(worker));
+    /handleMatch/.test(worker) && /RL_MATCH_PER_IP_HOUR/.test(worker) && /RL_MATCH_PER_DAY/.test(worker) && /!env\.TYPESAFE_API_KEY\) return unavailable\(/.test(worker) && /error: 'unavailable', detail/.test(worker));
   const fit = fs.readFileSync(path.join(ROOT, 'alerts', 'fit.mjs'), 'utf8');
   check('fit.mjs imports nothing but the Jev client (it runs in the Worker)',
     (fit.match(/^import /gm) ?? []).length === 1 && /from '\.\.\/lib\/jev\.mjs'/.test(fit));

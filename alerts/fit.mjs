@@ -27,7 +27,7 @@
  * Runs in the Worker and under Node (scripts/alerts_fit_test.mjs). Imports only
  * the Jev client, which stays free of Node-only modules for exactly this reason.
  */
-import { askJev } from '../lib/jev.mjs';
+import { askJev, jevUsage } from '../lib/jev.mjs';
 
 /** A title longer than this is a paragraph pasted in the wrong box. */
 export const TITLE_MAX = 300;
@@ -181,8 +181,12 @@ const chunk = (arr, n) => Array.from({ length: Math.ceil(arr.length / n) }, (_, 
 export async function matchPaper(paper, feed, { ask = askJev, batch = BATCH, shown = MATCHES_SHOWN } = {}) {
   const state = paperState(paper);
   const topics = Array.isArray(feed?.topics) ? feed.topics : [];
+  // `detail` is the client's last error — "HTTP 401 (…)", "unreachable after
+  // 4 attempts" — so an unavailable answer says why, to the page and to
+  // whoever reads it. Never a token or the paper; the client keeps only the
+  // status and the API's own message.
   const first = await ask(state, paperTopicQuestions(topics));
-  if (!first) return { ok: false, error: 'unavailable' };
+  if (!first) return { ok: false, error: 'unavailable', detail: jevUsage().lastError ?? null };
   const probs = paperTopics(first.answers, topics);
 
   const selected = selectCandidates(Array.isArray(feed?.candidates) ? feed.candidates : [], probs);
@@ -203,7 +207,7 @@ export async function matchPaper(paper, feed, { ask = askJev, batch = BATCH, sho
       if (fit) judged.push({ c, ...fit });
     });
   });
-  if (selected.length && !judged.length) return { ok: false, error: 'unavailable' };
+  if (selected.length && !judged.length) return { ok: false, error: 'unavailable', detail: jevUsage().lastError ?? null };
 
   judged.sort((a, b) => b.score - a.score || soonest(a.c, b.c));
   const matches = judged.slice(0, shown).map(({ c, level, score }) => ({

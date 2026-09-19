@@ -124,7 +124,10 @@ async function submit(e) {
     });
     const data = await res.json().catch(() => null);
     if (!res.ok || !data?.ok) {
-      status.textContent = ERROR_TEXT[data?.error] ?? `The matcher answered ${res.status}. Please try again.`;
+      // A 503 says why in `detail` (no key, no feed, what the model answered);
+      // shown verbatim so the person who can fix it reads the cause here.
+      const detail = typeof data?.detail === 'string' && data.detail ? ` (${data.detail})` : '';
+      status.textContent = (ERROR_TEXT[data?.error] ?? `The matcher answered ${res.status}. Please try again.`) + detail;
       return;
     }
     render(data);

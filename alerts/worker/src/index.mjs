@@ -189,7 +189,12 @@ async function loadMatchFeed(env) {
  * no Turnstile secret refusing to send.
  */
 async function handleMatch(request, env) {
-  if (!env.TYPESAFE_API_KEY) return fail(request, env, 503, 'unavailable');
+  // An unavailable answer names its cause in `detail` — no key, no feed, or
+  // what the model answered — because "switched off" on the page was, for an
+  // afternoon, a rejected key that nothing named (2026-09-19).
+  const unavailable = (detail) =>
+    json({ ok: false, error: 'unavailable', detail: detail ? String(detail).slice(0, 160) : null }, { status: 503, request, env });
+  if (!env.TYPESAFE_API_KEY) return unavailable('no TYPESAFE_API_KEY on the Worker');
   const body = await readJson(request);
   if (!body) return fail(request, env, 400, 'bad_request');
   const ip = request.headers.get('CF-Connecting-IP') || '';
@@ -201,11 +206,11 @@ async function handleMatch(request, env) {
   const input = validateInput(body);
   if (!input.ok) return fail(request, env, 400, input.error);
   const feed = await loadMatchFeed(env);
-  if (!feed) return fail(request, env, 503, 'unavailable');
+  if (!feed) return unavailable('the candidates feed could not be read');
   const result = await matchPaper(input, feed, {
     ask: (state, questions) => askJev(state, questions, { env: { TYPESAFE_API_KEY: env.TYPESAFE_API_KEY } }),
   });
-  if (!result.ok) return fail(request, env, 503, result.error);
+  if (!result.ok) return unavailable(result.detail ? `the model answered ${result.detail}` : 'the model did not answer');
   return json(result, { request, env });
 }
 
