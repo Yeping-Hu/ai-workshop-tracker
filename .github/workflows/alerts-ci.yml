@@ -19,6 +19,8 @@ on:
       - 'lib/identity.mjs'
       - 'lib/events.mjs'
       - 'lib/dates.mjs'
+      # fit.mjs imports the Jev client for /match — same reason.
+      - 'lib/jev.mjs'
       - 'site/src/scripts/star-merge.js'
       - 'site/src/scripts/alerts-session.js'
       - 'data/conferences.yml'
@@ -35,6 +37,8 @@ on:
       - 'lib/identity.mjs'
       - 'lib/events.mjs'
       - 'lib/dates.mjs'
+      # fit.mjs imports the Jev client for /match — same reason.
+      - 'lib/jev.mjs'
       - 'site/src/scripts/star-merge.js'
       - 'site/src/scripts/alerts-session.js'
       - 'data/conferences.yml'
@@ -77,6 +81,8 @@ jobs:
         run: node scripts/alerts_dashboard_test.mjs
       - name: Test the alerts log
         run: node scripts/alerts_log_test.mjs
+      - name: Test the paper matcher (input bounds, topic and fit questions, selection, batches, ranking)
+        run: node scripts/alerts_fit_test.mjs
 
       # scripts/alerts_ui_test.mjs is deliberately NOT run here, though the path
       # filter above matches its name. It drives a real browser against a built

@@ -1226,6 +1226,64 @@ The decisions worth knowing before changing anything here:
 The full operational picture — setup, secrets, dry runs, manual deletion,
 provider cutover — is in [ALERTS.md](ALERTS.md).
 
+## Find workshops for your paper (the matcher)
+
+The question every visitor with a paper actually has, answered by the one
+interactive use of Jev: paste a title and abstract, get the open calls it fits,
+each with its deadline. It lives on the alerts satellite — a `/match` endpoint
+on the Worker and a `/find/` page — and inherits the satellite's contract:
+absent from every build without `PUBLIC_ALERTS_API`, no accounts, nothing
+stored, and deleting the satellite leaves the tracker unchanged.
+
+**Not a tool page, on purpose.** The `/tools/` rule is browser-only, no
+server, no paid API, and the registry test stamps every tool with that promise
+in its structured data. The matcher is the opposite on all three counts, and
+its audience is not a search query but the people already on the board. So it
+is a page of its own, linked from the homepage, and never a registry entry.
+
+**Two judgments, both bounded by code** (`alerts/fit.mjs`, pure; pinned by
+`scripts/alerts_fit_test.mjs`). First, which topics is the paper about — one
+yes/no per topic over the title and abstract, the same vocabulary and
+descriptions the workshops carry. Code then picks the candidates: open calls
+sharing a topic the paper clears 0.5 on, strongest overlap then soonest
+deadline, backfilled to eight from the nearest calls so an unusual paper still
+gets an answer, capped at forty. Second, how well the paper fits each of them —
+a Score over four named levels (poor / possible / good / strong), asked over
+the paper plus ten candidates at a time, each candidate described by its name,
+conference, topics and a sample of the titles its series accepted before. A
+Score rather than a Choice because fit is absolute: several calls can all be
+strong, and a paper that fits nothing must be able to say so. Code ranks by
+the Score's expected value and shows ten.
+
+**The evidence comes from the build, not the Worker.** `/api/match-candidates.json`
+(`lib/match_candidates.mjs`) is generated on every deploy: every open call
+with its identity, topics, deadline and up to twelve titles from the editions
+`computeRelations()` links it to — which is why the series audit's links
+matter here too. An open call has no papers of its own yet; its series does. A
+first edition has none, and the response says so (`basis: name_topics`, shown
+on the page as "judged from the name and topics"), rather than implying
+evidence it lacks; once its own papers arrive through the monthly refresh,
+next year's call is matched on them with no change anywhere. The Worker reads
+the feed and caches it for half an hour; it holds no copy of the corpus, in
+the same direction as everything else on the satellite.
+
+**Nothing generated, nothing kept.** Jev returns probabilities, and every
+sentence on the page is a template over the fields the response carries, so
+nothing can be invented about a workshop. The abstract is unpublished work: the
+handler judges it and discards it, stores nothing, and logs nothing of the body
+(the Worker's catch-all logs a stack, never a request); TypeSafe does not train
+on requests. The page says all of this above the form.
+
+**Gated like the mail endpoints, because it spends money.** Turnstile,
+fail-closed as everywhere; twenty requests an address an hour; and a global
+brake of five hundred a day (`alerts/config.mjs`), which caps the worst day —
+a crawler, a classroom, a bug in the page — at about thirty cents of input
+tokens rather than the balance. Without a `TYPESAFE_API_KEY` Worker secret the
+endpoint answers 503 and the page says the matcher is off, exactly as a Worker
+without a Turnstile secret refuses to send. Forty candidates is four Jev calls,
+so a request stays well inside the fifty outbound calls a free-plan Worker may
+make. A typical query costs about $0.0006.
+
 ## External links open a new tab; internal navigation stays in place
 
 A single delegated, click-time handler in `site/src/components/Base.astro` decides link targets
@@ -1278,11 +1336,15 @@ deadlines and links rather than inline paper lists.)
 Two pipeline jobs ask a model a question and consume the answer as data:
 topic tagging, when discovery creates an entry and in the retag sweep (the
 topic mechanics are under "Contributors are validated by CI" below), and the
-weekly series-identity audit ("Related entries", signal 5). The model is
-TypeSafe's Jev, reached through `lib/jev.mjs` — plain `fetch`, because the API
-is one POST and an SDK would be a dependency to track for a forty-line
-function. It is the scope exception the README describes, and four rules keep
-it an exception.
+weekly series-identity audit ("Related entries", signal 5). A third caller is
+the one interactive one: the alerts Worker's `/match`, behind "Find workshops
+for your paper" (its own section below). The model is TypeSafe's Jev, reached
+through `lib/jev.mjs` — plain `fetch`, because the API is one POST and an SDK
+would be a dependency to track for a forty-line function, and free of any
+Node-only import so the Worker can bundle it exactly as it bundles
+`lib/identity.mjs` (the status line a job leaves for its workflow, which needs
+`node:fs`, lives in `lib/jev_status.mjs` for that reason). It is the scope
+exception the README describes, and four rules keep it an exception.
 
 **It judges; it never authors.** Every question is typed — the probability that
 a yes/no holds, or a score over named levels — and Jev returns probabilities,

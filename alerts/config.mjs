@@ -10,6 +10,19 @@
 /** Hard cap on stored subscribers, enforced at /subscribe. Beyond it, new
  *  signups get a friendly "the list is full" message rather than an error. */
 export const MAX_SUBSCRIBERS = 5000;
+/** /match (the paper matcher): requests one address may make in an hour. A
+ *  person iterating on an abstract makes a handful; twenty is generous, and
+ *  each costs about $0.0006 of Jev input tokens. */
+export const RL_MATCH_PER_IP_HOUR = 20;
+/** /match: the global daily brake. The endpoint spends real money per call, so
+ *  a burst — a crawler, a class of students, a bug in the page — is capped at a
+ *  bill of about thirty cents a day rather than left to the balance. The page
+ *  says "busy today" past it; nothing is stored, so nothing is lost. */
+export const RL_MATCH_PER_DAY = 500;
+/** How long the Worker keeps /api/match-candidates.json before re-reading it.
+ *  The feed changes when the site deploys — daily, plus data pushes — so half an
+ *  hour of staleness is at most a deadline that moved this morning. */
+export const MATCH_FEED_TTL_MS = 30 * 60_000;
 
 /** A starred workshop whose next stage lands inside this window triggers the
  *  opt-in urgent alert. */

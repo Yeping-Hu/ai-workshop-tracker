@@ -12,6 +12,9 @@
  *            CORS-locked to SITE_ORIGIN, Turnstile-gated where they can send
  *            mail, and deliberately **neutral** in their responses — no
  *            endpoint ever reveals whether an address is on the list.
+ *            /match — "find workshops for your paper": Turnstile-gated and
+ *            rate-limited because each call spends money (Jev input tokens),
+ *            stores nothing, and logs nothing of the paper. alerts/fit.mjs.
  *   webhook  /webhooks/resend — bounces and complaints suppress or delete.
  *   admin    /admin/* — bearer ADMIN_TOKEN, called only by the GitHub Action.
  *
@@ -30,6 +33,9 @@ import {
   RL_SUBSCRIBE_PER_IP_HOUR,
   RL_MAGIC_PER_EMAIL_HOUR,
   RL_NEW_SUBS_PER_DAY,
+  RL_MATCH_PER_IP_HOUR,
+  RL_MATCH_PER_DAY,
+  MATCH_FEED_TTL_MS,
   SEND_CHUNK,
   EVENT_RETENTION_DAYS,
 } from '../../config.mjs';
@@ -50,6 +56,9 @@ import { SQL as STATS_SQL, foldCadence, foldRegions, fillDays } from '../../stat
 import { sendEmail, sendBatch } from './mail.mjs';
 import { verifyAccessJwt } from './access.mjs';
 import { renderDashboard } from './dashboard.mjs';
+import { matchPaper, validateInput } from '../../fit.mjs';
+// The same client the pipeline jobs use — pure on purpose, so it bundles here.
+import { askJev } from '../../../lib/jev.mjs';
 
 const CONF_IDS = new Set(ids.conferences.map((c) => c.id));
 const TOPIC_IDS = new Set(ids.topics.map((t) => t.id));
@@ -142,6 +151,62 @@ async function ipBucket(request, env, prefix) {
   const ip = request.headers.get('CF-Connecting-IP') || '0.0.0.0';
   const hash = (await sha256Hex(`${ip}|${env.HMAC_SECRET}`)).slice(0, 32);
   return `${prefix}:${hash}:${Math.floor(Date.now() / 3_600_000)}`;
+}
+
+/* ------------------------------------------------------------------ Matcher */
+
+// The candidate feed, held per isolate. Isolates are short-lived, so this is a
+// convenience, not a cache the design leans on; a fresh isolate fetches once.
+let matchFeed = { at: 0, feed: null };
+
+/** /api/match-candidates.json from the site — the open calls and the vocabulary. */
+async function loadMatchFeed(env) {
+  if (matchFeed.feed && Date.now() - matchFeed.at < MATCH_FEED_TTL_MS) return matchFeed.feed;
+  try {
+    const res = await fetch(`${env.SITE_ORIGIN}/api/match-candidates.json`, {
+      cf: { cacheTtl: Math.floor(MATCH_FEED_TTL_MS / 1000), cacheEverything: true },
+    });
+    if (!res.ok) throw new Error(`feed ${res.status}`);
+    const feed = await res.json();
+    if (!Array.isArray(feed?.candidates)) throw new Error('feed shape');
+    matchFeed = { at: Date.now(), feed };
+    return feed;
+  } catch (err) {
+    console.error('match feed', err?.message);
+    // A stale feed beats no answer: the worst case is a call that closed today.
+    return matchFeed.feed;
+  }
+}
+
+/**
+ * POST /match — "find workshops for your paper". The body is a title and an
+ * optional abstract, which is unpublished work: it is judged and discarded,
+ * never stored, never logged (this handler logs nothing; the catch-all below
+ * logs a stack, not a body). Gated like the mail endpoints, because each call
+ * spends money rather than sending mail: Turnstile, a per-address hourly
+ * limit, and a global daily brake. Without a TYPESAFE_API_KEY the endpoint is
+ * simply absent (503), and the page says so — the same shape as a Worker with
+ * no Turnstile secret refusing to send.
+ */
+async function handleMatch(request, env) {
+  if (!env.TYPESAFE_API_KEY) return fail(request, env, 503, 'unavailable');
+  const body = await readJson(request);
+  if (!body) return fail(request, env, 400, 'bad_request');
+  const ip = request.headers.get('CF-Connecting-IP') || '';
+  if (!(await verifyTurnstile(env, body.turnstile_token, ip))) return fail(request, env, 403, 'captcha');
+  if (!(await rateLimit(env, await ipBucket(request, env, 'match'), RL_MATCH_PER_IP_HOUR, 3600))) {
+    return fail(request, env, 429, 'rate_limited');
+  }
+  if (!(await rateLimit(env, `matchday:${today()}`, RL_MATCH_PER_DAY, 86_400))) return fail(request, env, 429, 'busy');
+  const input = validateInput(body);
+  if (!input.ok) return fail(request, env, 400, input.error);
+  const feed = await loadMatchFeed(env);
+  if (!feed) return fail(request, env, 503, 'unavailable');
+  const result = await matchPaper(input, feed, {
+    ask: (state, questions) => askJev(state, questions, { env: { TYPESAFE_API_KEY: env.TYPESAFE_API_KEY } }),
+  });
+  if (!result.ok) return fail(request, env, 503, result.error);
+  return json(result, { request, env });
 }
 
 /* ---------------------------------------------------------------- Turnstile */
@@ -1146,6 +1211,7 @@ export default {
       if (path === '/me' && method === 'GET') return await handleMe(request, env);
       if (path === '/update' && method === 'POST') return await handleUpdate(request, env);
       if (path === '/sync' && method === 'POST') return await handleSync(request, env);
+      if (path === '/match' && method === 'POST') return await handleMatch(request, env);
       if (path === '/unsubscribe' && (method === 'GET' || method === 'POST')) {
         return await handleUnsubscribe(request, env);
       }

@@ -38,8 +38,8 @@ for human review, as do dependency updates.
 | `stale-check.yml` | weekly | One consolidated issue listing entries needing follow-up |
 | `link-check.yml` | monthly | One consolidated issue listing broken URLs Before running, `scripts/lychee_exclusions.mjs` appends every `review_ack.website` to `.lycheeignore`, so a URL deliberately removed as dead is not re-reported each month. |
 | `alerts.yml` | daily, manual | `scripts/alerts_run.mjs` — diffs `/api/workshops.json` against yesterday's snapshot, records events, sends urgent starred-deadline alerts, and the week's digest — an edition closes each Monday and is mailed to each subscriber once, on the first run on or after it — committing that edition's `data/changes.json` for the `/changes/` page. |
-| `alerts-worker-deploy.yml` | push touching `alerts/**`, `lib/identity.mjs` or `lib/events.mjs`; manual | `wrangler deploy` of the alerts Worker, after checking `alerts/ids.json` is in sync with the data vocabulary. The two `lib/` files are inside the Worker bundle |
-| `alerts-ci.yml` | PRs & pushes touching `alerts/**`, `scripts/alerts_*`, the `lib/` files the Worker bundles, the two site sync scripts, or the conference/topic vocabularies | The eleven pure-logic alerts suites (tokens, diff, matching, rendering, sending, rate limits, mail, star-merge, session, dashboard, log hygiene) plus the ids sync check |
+| `alerts-worker-deploy.yml` | push touching `alerts/**`, `lib/identity.mjs`, `lib/events.mjs` or `lib/jev.mjs`; manual | `wrangler deploy` of the alerts Worker, after checking `alerts/ids.json` is in sync with the data vocabulary. The three `lib/` files are inside the Worker bundle (`lib/jev.mjs` for the paper matcher's `/match`) |
+| `alerts-ci.yml` | PRs & pushes touching `alerts/**`, `scripts/alerts_*`, the `lib/` files the Worker bundles, the two site sync scripts, or the conference/topic vocabularies | The twelve pure-logic alerts suites (tokens, diff, matching, rendering, sending, rate limits, mail, star-merge, session, dashboard, log hygiene, the paper matcher) plus the ids sync check |
 
 ## An OpenReview venue is not proof a workshop was accepted
 

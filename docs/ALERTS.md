@@ -79,6 +79,7 @@ reports "unverified".
 | Worker | `alerts/worker/` | Cloudflare Worker `aiwt-alerts` + D1 database `aiwt-alerts` |
 | Pipeline | `scripts/alerts_run.mjs` | Run daily by `.github/workflows/alerts.yml` |
 | Site UI | `site/src/components/AlertsSignup.astro`, `site/src/pages/alerts/` | All hidden when `PUBLIC_ALERTS_API` is empty |
+| Paper matcher | `alerts/fit.mjs` + `/match` in the Worker | "Find workshops for your paper": the endpoint reads the site's `/api/match-candidates.json`, asks Jev two typed questions (`lib/jev.mjs`, bundled), stores and logs nothing of the paper. Needs the `TYPESAFE_API_KEY` Worker secret; answers 503 without it. ARCHITECTURE.md, "Find workshops for your paper" |
 | Tests | `scripts/alerts_*_test.mjs` | The pure-logic suites run in `.github/workflows/alerts-ci.yml`; `alerts_ui_test.mjs` needs a built site and runs in `pr-build-check.yml` |
 
 ## First-time setup
@@ -103,6 +104,7 @@ repo needs editing except `database_id`.
    | `TURNSTILE_SECRET` | from the Turnstile widget |
    | `RESEND_API_KEY` | from Resend |
    | `RESEND_WEBHOOK_SECRET` | from the Resend webhook (`whsec_…`) |
+   | `TYPESAFE_API_KEY` | the TypeSafe key, for `/match` (the paper matcher). Optional: without it the endpoint answers 503 and the `/find/` page says the matcher is off. The same key the repo secret holds for the pipeline jobs |
 
 3. **Domain + mail.** Verify `mail.aiworkshoptracker.com` in Resend and publish
    the DKIM/SPF/return-path records it gives you, plus a DMARC TXT starting at
