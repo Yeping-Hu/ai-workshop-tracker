@@ -1827,4 +1827,21 @@ pairs:
   - {a: neurips-2025-wiml, b: neurips-2026-satquml, same: 0, judged: '2026-09-19', hash: 518a28f18833, via: names}
   - {a: neurips-2025-wiml, b: neurips-2026-tccml, same: 0, judged: '2026-09-19', hash: ba65da0e463b, via: names}
   - {a: neurips-2025-wiml, b: neurips-2026-tccml-tutorials-track, same: 0, judged: '2026-09-19', hash: 902fe6324a0c, via: names}
-decisions: []
+decisions:
+  - {a: colm-2026-sci-fm, b: iclr-2025-sci-fm, verdict: different, recorded: '2026-09-19'}
+  - {a: cvpr-2026-ai4va, b: eccv-2024-ai4va, verdict: same, recorded: '2026-09-19'}
+  - {a: cvpr-2026-ai4va, b: eccv-2026-ai4va, verdict: same, recorded: '2026-09-19'}
+  - {a: iclr-2025-financial-ai, b: iclr-2026-afa, verdict: same, recorded: '2026-09-19'}
+  - {a: iclr-2025-fpi, b: neurips-2025-fpi, verdict: same, recorded: '2026-09-19'}
+  - {a: iclr-2025-haic, b: neurips-2026-haic, verdict: same, recorded: '2026-09-19'}
+  - {a: iclr-2025-sci-fm, b: iclr-2026-fm4science, verdict: different, recorded: '2026-09-19'}
+  - {a: iclr-2026-tsalm, b: neurips-2024-tsalm, verdict: same, recorded: '2026-09-19'}
+  - {a: icml-2024-mi, b: icml-2026-mech-interp, verdict: same, recorded: '2026-09-19'}
+  - {a: icml-2025-fm4ls, b: neurips-2025-fm4ls, verdict: same, recorded: '2026-09-19'}
+  - {a: icml-2025-taig, b: icml-2026-taigr, verdict: same, recorded: '2026-09-19'}
+  - {a: icml-2026-eiml, b: neurips-2026-eiml, verdict: same, recorded: '2026-09-19'}
+  - {a: icra-2025-dexterity, b: icra-2026-dex, verdict: same, recorded: '2026-09-19'}
+  - {a: icra-2025-elsr, b: iros-2026-elsr, verdict: same, recorded: '2026-09-19'}
+  - {a: icra-2025-r4r, b: iros-2026-r4r, verdict: same, recorded: '2026-09-19'}
+  - {a: iros-2025-bm-h2ic, b: iros-2026-bimanual-manipulation, verdict: different, recorded: '2026-09-19'}
+  - {a: iros-2025-tactile-sensing, b: iros-2026-scalable-tactile-manipulation, verdict: different, recorded: '2026-09-19'}
