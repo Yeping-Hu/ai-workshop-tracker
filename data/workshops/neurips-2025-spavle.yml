@@ -4,12 +4,14 @@ conference: neurips
 year: 2025
 website: https://space-in-vision-language-embodied-ai.github.io/
 topics:
-  - robotics
   - vision
+  - multimodal
+  - vision-3d
+  - nlp
 submission_deadline: 2025-09-03 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/SpaVLE
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

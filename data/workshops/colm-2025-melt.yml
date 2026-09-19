@@ -4,7 +4,9 @@ conference: colm
 year: 2025
 website: https://melt-workshop.github.io
 topics:
-  - tabular
+  - nlp
+  - fairness
+  - llms
 submission_deadline: 2025-07-26 12:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

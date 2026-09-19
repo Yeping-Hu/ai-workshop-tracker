@@ -4,7 +4,7 @@ conference: iclr
 year: 2026
 website: https://latent-implicit-thinking.github.io/
 topics:
-  - math-reasoning
+  - llms
 submission_deadline: 2026-02-09 12:00
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-02-09 12:00 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.

@@ -4,8 +4,7 @@ conference: icra
 year: 2025
 website: https://saferobotics.princeton.edu/ptas-icra25
 topics:
-  - systems
-  - robotics
+  - fairness
 submission_deadline: 2025-05-18 00:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

@@ -4,12 +4,12 @@ conference: neurips
 year: 2024
 website: https://federated-learning.org/fl@fm-neurips-2024/
 topics:
-  - llms
   - federated-learning
+  - llms
 submission_deadline: 2024-10-17 12:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2024/Workshop/Federated_Learning
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

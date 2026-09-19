@@ -6,6 +6,8 @@ website: https://awesomedigitaltwin.github.io/2026_ICRA.html
 topics:
   - robotics
   - generative-models
+  - robustness
+  - world-models
 openreview_venue_id: IEEE.org/ICRA/2026/Workshop/Real2Sim2Real
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

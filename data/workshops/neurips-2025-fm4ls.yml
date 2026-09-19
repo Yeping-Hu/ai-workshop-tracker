@@ -5,8 +5,10 @@ year: 2025
 website: https://nips2025fm4ls.github.io
 topics:
   - llms
-  - science-applications
   - multimodal
+  - healthcare-bio
+  - genomics
+  - vision
 submission_deadline: 2025-09-07 12:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

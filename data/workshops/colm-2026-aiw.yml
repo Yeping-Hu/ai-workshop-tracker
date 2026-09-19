@@ -5,6 +5,8 @@ year: 2026
 website: https://actionable-interpretability.github.io/
 topics:
   - interpretability
+  - llms
+  - nlp
 openreview_venue_id: colmweb.org/COLM/2026/Workshop/AIW
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

@@ -4,6 +4,7 @@ conference: iclr
 year: 2026
 website: https://sites.google.com/view/iclr-2026-workshop-world-model/home
 topics:
+  - world-models
   - generative-models
 submission_deadline: 2026-02-08 11:59
 timezone: UTC

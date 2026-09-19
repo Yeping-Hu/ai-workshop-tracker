@@ -5,6 +5,8 @@ year: 2026
 website: https://scale-infra.github.io/iros2026/
 topics:
   - robotics
+  - systems
+  - datasets
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/ScaleInfra
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

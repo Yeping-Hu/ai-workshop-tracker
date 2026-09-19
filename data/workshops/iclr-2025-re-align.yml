@@ -4,7 +4,7 @@ conference: iclr
 year: 2025
 website: https://representational-alignment.github.io
 topics:
-  - safety-alignment
+  - representation-learning
 submission_deadline: 2025-02-06 12:30
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

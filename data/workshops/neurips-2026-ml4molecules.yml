@@ -4,9 +4,9 @@ conference: neurips
 year: 2026
 website: https://moleculediscovery.github.io/workshop2026/
 topics:
-  - genomics
   - agents
-  - systems
+  - science-applications
+  - genomics
 openreview_venue_id: NeurIPS.cc/2026/Workshop/ML4Molecules
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

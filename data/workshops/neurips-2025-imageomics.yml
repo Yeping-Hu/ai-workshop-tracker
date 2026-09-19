@@ -5,6 +5,8 @@ year: 2025
 website: https://imageomics.github.io/Imageomics-NeurIPS-2025/
 topics:
   - vision
+  - healthcare-bio
+  - science-applications
 submission_deadline: 2025-09-29 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

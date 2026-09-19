@@ -5,8 +5,6 @@ year: 2026
 website: https://verifai-workshop.github.io/
 topics:
   - robustness
-  - math-reasoning
-  - safety-alignment
 submission_deadline: 2026-02-09 11:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-02-09 11:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.

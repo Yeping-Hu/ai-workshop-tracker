@@ -1,14 +1,18 @@
-name: "The Second Workshop on GenAI for Health: Potential, Trust, and Policy Compliance"
+name: 'The Second Workshop on GenAI for Health: Potential, Trust, and Policy Compliance'
 acronym: GenAI4Health 2025
 conference: neurips
 year: 2025
 website: https://aihealth.ischool.utexas.edu/GenAI4HealthNeurips2025/
 topics:
   - healthcare-bio
+  - llms
+  - generative-models
+  - fairness
+  - safety-alignment
 submission_deadline: 2025-09-06 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/GenAI4Health
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

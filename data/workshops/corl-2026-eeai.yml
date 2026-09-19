@@ -5,9 +5,10 @@ year: 2026
 website: https://efficient-embodied-ai.github.io
 location: Austin, USA
 topics:
-  - llms
-  - robotics
   - efficiency
+  - robotics
+  - optimization
+  - llms
 openreview_venue_id: robot-learning.org/CoRL/2026/Workshop/EEAI
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

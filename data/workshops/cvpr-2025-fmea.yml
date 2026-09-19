@@ -4,9 +4,11 @@ conference: cvpr
 year: 2025
 website: https://foundation-models-meet-embodied-agents.github.io/cvpr2025
 topics:
-  - llms
   - agents
   - robotics
+  - vision
+  - llms
+  - multimodal
 submission_deadline: 2025-05-26 19:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

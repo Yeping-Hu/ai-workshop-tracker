@@ -1,14 +1,14 @@
-name: "UniReps: 3rd Edition of the Workshop on Unifying Representations in Neural Models"
+name: 'UniReps: 3rd Edition of the Workshop on Unifying Representations in Neural Models'
 acronym: UniReps2025
 conference: neurips
 year: 2025
 website: https://unireps.org/2025/
 topics:
-  - other
+  - representation-learning
 submission_deadline: 2025-08-30 14:20
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/UniReps
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

@@ -6,6 +6,8 @@ website: https://learn-at-deploy.github.io/
 location: Austin, USA
 topics:
   - robotics
+  - continual-learning
+  - robustness
 openreview_venue_id: robot-learning.org/CoRL/2026/Workshop/Learn_Deploy
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

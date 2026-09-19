@@ -4,7 +4,8 @@ conference: neurips
 year: 2026
 website: https://palm-neurips-2026.github.io/
 topics:
-  - systems
+  - llms
+  - continual-learning
 openreview_venue_id: NeurIPS.cc/2026/Workshop/PALM
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

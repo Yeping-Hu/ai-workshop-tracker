@@ -4,8 +4,9 @@ conference: icml
 year: 2024
 website: https://autorlworkshop.github.io/
 topics:
-  - llms
   - reinforcement-learning
+  - llms
+  - optimization
 submission_deadline: 2024-06-01 12:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

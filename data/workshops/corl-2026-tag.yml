@@ -4,7 +4,8 @@ conference: corl
 year: 2026
 website: https://actiongapworkshop.github.io
 topics:
-  - generative-models
+  - robotics
+  - agents
 openreview_venue_id: robot-learning.org/CoRL/2026/Workshop/TAG
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

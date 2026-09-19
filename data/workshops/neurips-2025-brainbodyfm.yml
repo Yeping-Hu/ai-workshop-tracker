@@ -4,8 +4,9 @@ conference: neurips
 year: 2025
 website: https://brainbodyfm-workshop.github.io
 topics:
-  - llms
   - neuroscience
+  - healthcare-bio
+  - llms
 submission_deadline: 2025-08-30 12:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

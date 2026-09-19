@@ -4,8 +4,10 @@ conference: cvpr
 year: 2024
 website: https://corrworkshop.github.io/
 topics:
-  - robotics
   - causality
+  - vision
+  - robotics
+  - representation-learning
 submission_deadline: 2024-05-11 00:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

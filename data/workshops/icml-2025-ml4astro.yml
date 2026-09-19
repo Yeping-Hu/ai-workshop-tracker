@@ -5,10 +5,11 @@ year: 2025
 website: https://ml4astro.github.io/icml2025/
 topics:
   - physics
+  - science-applications
 submission_deadline: 2025-06-10 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICML.cc/2025/Workshop/ML4Astro
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

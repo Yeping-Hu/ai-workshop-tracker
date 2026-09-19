@@ -5,6 +5,9 @@ year: 2026
 website: https://foundgen-bio.github.io/cvpr2026/
 topics:
   - generative-models
+  - vision
+  - vision-humans
+  - diffusion
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/FoundGen-Bio
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

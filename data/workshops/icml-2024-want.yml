@@ -6,6 +6,7 @@ website: https://want-ai-hpc.github.io/
 topics:
   - efficiency
   - optimization
+  - systems
 submission_deadline: 2024-06-03 12:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

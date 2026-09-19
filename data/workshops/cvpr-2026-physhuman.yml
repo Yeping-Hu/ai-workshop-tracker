@@ -4,7 +4,9 @@ conference: cvpr
 year: 2026
 website: https://physhuman.github.io/
 topics:
-  - physics
+  - vision
+  - vision-humans
+  - vision-3d
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/PhysHuman
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

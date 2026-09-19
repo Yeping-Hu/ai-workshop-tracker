@@ -3,8 +3,9 @@ acronym: TS4H
 conference: iclr
 year: 2024
 topics:
-  - healthcare-bio
   - time-series
+  - healthcare-bio
+  - representation-learning
 submission_deadline: 2024-02-17 12:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

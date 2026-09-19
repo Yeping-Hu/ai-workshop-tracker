@@ -4,7 +4,9 @@ conference: icra
 year: 2026
 website: https://uncertainty-in-robotics.github.io/
 topics:
+  - probabilistic
   - robotics
+  - robustness
 openreview_venue_id: IEEE.org/ICRA/2026/Workshop/Uncertainty_in_Robotics
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

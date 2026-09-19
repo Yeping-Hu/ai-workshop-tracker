@@ -4,6 +4,7 @@ conference: eccv
 year: 2026
 website: https://timengelbracht.github.io/Hoi-Dataset-Website/workshop.html
 topics:
+  - vision
   - robotics
 submission_deadline: 2026-08-31 11:59
 timezone: UTC

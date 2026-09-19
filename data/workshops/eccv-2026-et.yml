@@ -4,6 +4,8 @@ conference: eccv
 year: 2026
 website: https://empiricaltheory.github.io
 topics:
+  - representation-learning
+  - vision
   - theory
 submission_deadline: 2026-08-02 12:00
 timezone: UTC

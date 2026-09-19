@@ -5,6 +5,9 @@ year: 2026
 website: https://foundgen-bio.github.io/eccv2026/
 topics:
   - generative-models
+  - vision
+  - vision-humans
+  - diffusion
 submission_deadline: 2026-07-16 11:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-07-16 11:59 UTC (as of 2026-07-11) — extensions on OpenReview are applied automatically; verify on the website.

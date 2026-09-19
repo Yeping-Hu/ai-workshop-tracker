@@ -4,7 +4,9 @@ conference: colm
 year: 2026
 website: https://re-data-colm2026.github.io/
 topics:
+  - datasets
   - llms
+  - nlp
   - fairness
 openreview_venue_id: colmweb.org/COLM/2026/Workshop/Re-Data
 submission_portal: openreview

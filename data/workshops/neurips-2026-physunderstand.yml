@@ -3,9 +3,9 @@ acronym: PhysUnderstand
 conference: neurips
 year: 2026
 topics:
-  - llms
-  - physics
   - agents
+  - llms
+  - robotics
 openreview_venue_id: NeurIPS.cc/2026/Workshop/PhysUnderstand
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

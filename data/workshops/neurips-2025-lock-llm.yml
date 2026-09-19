@@ -1,14 +1,16 @@
-name: "Lock-LLM Workshop: Prevent Unauthorized Knowledge Use from Large Language Models"
+name: 'Lock-LLM Workshop: Prevent Unauthorized Knowledge Use from Large Language Models'
 acronym: NeurIPS Lock-LLM Workshop 2025
 conference: neurips
 year: 2025
 website: https://lock-llm.github.io/
 topics:
   - llms
+  - privacy
+  - safety-alignment
 submission_deadline: 2025-09-18 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/Lock-LLM
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

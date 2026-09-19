@@ -4,7 +4,7 @@ conference: cvpr
 year: 2026
 website: https://marworkshop.github.io/cvpr26/
 topics:
-  - math-reasoning
+  - vision
   - multimodal
 submission_deadline: 2026-03-05 08:15
 timezone: UTC

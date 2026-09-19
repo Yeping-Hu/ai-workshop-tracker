@@ -4,8 +4,10 @@ conference: cvpr
 year: 2026
 website: https://cvpr26-j2a.github.io/
 topics:
-  - vision
   - generative-models
+  - vision
+  - video
+  - diffusion
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/J2A
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

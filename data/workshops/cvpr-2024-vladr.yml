@@ -4,12 +4,14 @@ conference: cvpr
 year: 2024
 website: https://vision-language-adr.github.io/
 topics:
-  - robotics
   - vision
+  - autonomous-driving
+  - robotics
+  - multimodal
 submission_deadline: 2024-04-14 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: thecvf.com/CVPR/2024/Workshop/VLADR
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

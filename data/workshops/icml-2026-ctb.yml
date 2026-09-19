@@ -4,9 +4,9 @@ conference: icml
 year: 2026
 website: https://sites.google.com/view/icml-ctb/home
 topics:
-  - llms
   - theory
   - evaluation-benchmarks
+  - llms
 openreview_venue_id: ICML.cc/2026/Workshop/CTB
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

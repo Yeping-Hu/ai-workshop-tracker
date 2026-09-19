@@ -5,6 +5,10 @@ year: 2026
 website: https://mmintelligence.github.io/
 topics:
   - multimodal
+  - llms
+  - generative-models
+  - vision
+  - nlp
 openreview_venue_id: ICLR.cc/2026/Workshop/MM_Intelligence
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

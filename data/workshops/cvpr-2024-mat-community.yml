@@ -5,6 +5,8 @@ year: 2024
 website: https://tta-cvpr2024.github.io/#
 topics:
   - robustness
+  - continual-learning
+  - vision
 submission_deadline: 2024-04-13 12:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

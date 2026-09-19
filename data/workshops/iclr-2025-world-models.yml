@@ -4,7 +4,7 @@ conference: iclr
 year: 2025
 website: https://sites.google.com/view/worldmodel-iclr2025/
 topics:
-  - generative-models
+  - world-models
 submission_deadline: 2025-02-27 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

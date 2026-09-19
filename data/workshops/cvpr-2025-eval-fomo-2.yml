@@ -4,7 +4,8 @@ conference: cvpr
 year: 2025
 website: https://sites.google.com/view/eval-fomo-2-cvpr/home
 topics:
-  - llms
+  - vision
+  - evaluation-benchmarks
 submission_deadline: 2025-03-19 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

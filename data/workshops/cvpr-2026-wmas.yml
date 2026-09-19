@@ -4,6 +4,8 @@ conference: cvpr
 year: 2026
 website: https://cvpr26wmas.github.io/
 topics:
+  - world-models
+  - vision
   - agents
 submission_deadline: 2026-05-25 00:00
 timezone: UTC

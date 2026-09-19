@@ -5,7 +5,10 @@ year: 2026
 website: https://verify-agents-workshop.github.io/
 topics:
   - agents
+  - safety-alignment
   - robustness
+  - code
+  - evaluation-benchmarks
 openreview_venue_id: NeurIPS.cc/2026/Workshop/Verify-Agents
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

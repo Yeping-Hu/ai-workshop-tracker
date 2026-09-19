@@ -4,9 +4,8 @@ conference: neurips
 year: 2026
 website: https://satquml.github.io/
 topics:
-  - physics
-  - safety-alignment
   - privacy
+  - safety-alignment
 openreview_venue_id: NeurIPS.cc/2026/Workshop/SaTQuML
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

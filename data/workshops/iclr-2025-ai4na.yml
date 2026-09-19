@@ -6,7 +6,6 @@ website: https://ai4na-workshop.github.io/
 topics:
   - genomics
   - healthcare-bio
-  - llms
 submission_deadline: 2025-02-14 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

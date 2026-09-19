@@ -4,6 +4,8 @@ conference: eccv
 year: 2026
 website: https://s3dsgr.github.io/
 topics:
+  - vision
+  - vision-3d
   - generative-models
 submission_deadline: 2026-07-15 23:59
 timezone: UTC

@@ -4,9 +4,10 @@ conference: iros
 year: 2026
 website: https://worldmodelworkshop.github.io/
 topics:
+  - world-models
   - robotics
-  - math-reasoning
   - agents
+  - math-reasoning
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/RoBoWoMo
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

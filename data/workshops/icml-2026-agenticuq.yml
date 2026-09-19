@@ -4,7 +4,7 @@ conference: icml
 year: 2026
 website: https://agentic-uncertainty-icml2026.github.io/
 topics:
-  - systems
+  - probabilistic
   - agents
 openreview_venue_id: ICML.cc/2026/Workshop/AgenticUQ
 submission_portal: openreview

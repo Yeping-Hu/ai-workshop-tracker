@@ -4,7 +4,7 @@ conference: icml
 year: 2026
 website: https://www.musiml.org/events/2026-ICML/index.html
 topics:
-  - other
+  - affinity
 openreview_venue_id: ICML.cc/2026/Workshop/MusIML
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

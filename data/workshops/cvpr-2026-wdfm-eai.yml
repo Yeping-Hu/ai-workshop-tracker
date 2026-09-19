@@ -4,8 +4,9 @@ conference: cvpr
 year: 2026
 website: https://wdfm-eai.github.io/CVPR26/
 topics:
-  - llms
   - robotics
+  - vision
+  - llms
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/WDFM-EAI
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

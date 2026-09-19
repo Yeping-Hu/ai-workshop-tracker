@@ -5,6 +5,7 @@ year: 2026
 website: https://sites.google.com/view/social-sims-with-llms/social-sim26
 topics:
   - llms
+  - nlp
 openreview_venue_id: colmweb.org/COLM/2026/Workshop/Social_Sim
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

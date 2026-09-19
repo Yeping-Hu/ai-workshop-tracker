@@ -4,8 +4,8 @@ conference: eccv
 year: 2026
 website: https://emr-workshop.github.io/
 topics:
-  - math-reasoning
-  - physics
+  - multimodal
+  - vision
   - robotics
 submission_deadline: 2026-07-25 11:59
 timezone: UTC

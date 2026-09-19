@@ -5,6 +5,7 @@ year: 2026
 website: https://sites.google.com/view/aim-ctrl/home-page?authuser=0
 topics:
   - robotics
+  - robustness
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/AIM-Ctrl
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

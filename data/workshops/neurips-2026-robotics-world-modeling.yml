@@ -4,6 +4,7 @@ conference: neurips
 year: 2026
 website: https://robowm-ws.github.io/
 topics:
+  - world-models
   - robotics
 submission_deadline: 2026-09-03 11:59
 timezone: UTC

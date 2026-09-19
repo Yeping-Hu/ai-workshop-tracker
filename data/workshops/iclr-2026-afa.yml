@@ -4,9 +4,11 @@ conference: iclr
 year: 2026
 website: https://sites.google.com/view/iclr2026finai/home
 topics:
-  - systems
   - agents
   - fairness
+  - economics
+  - safety-alignment
+  - llms
 submission_deadline: 2026-02-05 23:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-02-05 23:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.

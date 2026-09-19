@@ -1,4 +1,4 @@
-name: "Adaptive Foundation Models: Evolving AI for Personalized and Efficient Learning"
+name: 'Adaptive Foundation Models: Evolving AI for Personalized and Efficient Learning'
 acronym: AFM 2024
 conference: neurips
 year: 2024
@@ -6,10 +6,12 @@ website: https://adaptive-foundation-models.org/
 topics:
   - llms
   - efficiency
+  - continual-learning
+  - education
 submission_deadline: 2024-10-05 12:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2024/Workshop/AFM
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

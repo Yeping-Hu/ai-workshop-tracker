@@ -5,6 +5,7 @@ year: 2025
 website: https://bialign-workshop.github.io/
 topics:
   - safety-alignment
+  - human-ai
 submission_deadline: 2025-02-16 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

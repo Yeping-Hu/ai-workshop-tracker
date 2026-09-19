@@ -4,9 +4,10 @@ conference: neurips
 year: 2026
 website: https://neurips26-cl4fmagents.github.io
 topics:
-  - llms
-  - robotics
+  - continual-learning
   - agents
+  - robotics
+  - llms
 openreview_venue_id: NeurIPS.cc/2026/Workshop/CL4FMAgents
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

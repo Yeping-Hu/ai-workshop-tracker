@@ -5,7 +5,9 @@ year: 2026
 website: https://science-ai-2026.github.io/
 topics:
   - llms
-  - science-applications
+  - nlp
+  - theory
+  - interpretability
 openreview_venue_id: colmweb.org/COLM/2026/Workshop/Sci-FM
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

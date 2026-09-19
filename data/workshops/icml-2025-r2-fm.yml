@@ -4,6 +4,8 @@ conference: icml
 year: 2025
 website: https://r2-fm.github.io/
 topics:
+  - robustness
+  - safety-alignment
   - llms
   - fairness
 submission_deadline: 2025-05-31 12:01

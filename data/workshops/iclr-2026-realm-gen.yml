@@ -4,8 +4,9 @@ conference: iclr
 year: 2026
 website: https://realm-gen-workshop.github.io
 topics:
-  - safety-alignment
   - diffusion
+  - generative-models
+  - safety-alignment
 openreview_venue_id: ICLR.cc/2026/Workshop/ReALM-GEN
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

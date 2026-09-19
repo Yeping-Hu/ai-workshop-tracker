@@ -4,8 +4,8 @@ conference: iros
 year: 2026
 website: https://sites.google.com/asu.edu/bemhat-iros26/
 topics:
-  - systems
-  - theory
+  - human-ai
+  - robotics
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/BEMHAT
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome. Kept our name over OpenReview's on review — The workshop site carries the full subtitle; OpenReview truncates it.

@@ -6,6 +6,7 @@ website: https://daih2026.github.io
 topics:
   - llms
   - healthcare-bio
+  - nlp
 openreview_venue_id: colmweb.org/COLM/2026/Workshop/DAIH
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

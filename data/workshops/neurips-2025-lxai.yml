@@ -4,11 +4,11 @@ conference: neurips
 year: 2025
 website: http://latinxinai.org/neurips-2025
 topics:
-  - other
+  - affinity
 submission_deadline: 2025-09-09 13:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/LXAI
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

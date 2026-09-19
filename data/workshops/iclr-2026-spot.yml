@@ -5,6 +5,8 @@ year: 2026
 website: https://spoticlr.github.io/
 topics:
   - llms
+  - nlp
+  - optimization
 submission_deadline: 2026-02-07 11:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-02-07 11:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.

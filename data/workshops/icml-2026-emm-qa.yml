@@ -4,12 +4,15 @@ conference: icml
 year: 2026
 website: https://qanta-org.github.io/competition/2026/
 topics:
-  - efficiency
   - multimodal
+  - efficiency
+  - nlp
+  - vision
+  - optimization
 submission_deadline: 2026-05-30 12:30
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-05-30 12:30 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.
 openreview_venue_id: ICML.cc/2026/Workshop/EMM-QA
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

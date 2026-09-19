@@ -4,6 +4,7 @@ conference: eccv
 year: 2026
 website: https://hands-workshop.org/workshop2026.html
 topics:
+  - vision
   - robotics
 submission_deadline: 2026-07-16 23:59
 timezone: UTC

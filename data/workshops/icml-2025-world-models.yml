@@ -4,8 +4,8 @@ conference: icml
 year: 2025
 website: https://sites.google.com/view/assessingworldmodels/home
 topics:
+  - world-models
   - evaluation-benchmarks
-  - generative-models
 submission_deadline: 2025-05-22 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

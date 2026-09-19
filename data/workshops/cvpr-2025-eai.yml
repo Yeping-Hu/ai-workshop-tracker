@@ -5,6 +5,7 @@ year: 2025
 website: https://embodied-ai.org/
 topics:
   - robotics
+  - vision
 submission_deadline: 2025-05-27 00:01
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

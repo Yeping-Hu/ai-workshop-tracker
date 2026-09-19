@@ -1,15 +1,14 @@
-name: "Brain Over Brawn: Workshop on Label Efficient Learning Paradigms for Autonomy at Scale"
+name: 'Brain Over Brawn: Workshop on Label Efficient Learning Paradigms for Autonomy at Scale'
 acronym: BoB Workshop 2024
 conference: iros
 year: 2024
 website: https://bob-workshop.github.io/
 topics:
-  - efficiency
-  - neuroscience
+  - robotics
 submission_deadline: 2024-09-29 06:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: IEEE.org/IROS/2024/Workshop/BoB
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

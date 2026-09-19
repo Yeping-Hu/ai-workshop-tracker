@@ -5,8 +5,9 @@ year: 2026
 website: https://flmsec.github.io/
 topics:
   - llms
-  - theory
   - privacy
+  - safety-alignment
+  - nlp
 submission_deadline: 2026-08-28 12:00
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-08-28 12:00 UTC (as of 2026-08-22) — extensions on OpenReview are applied automatically; verify on the website.

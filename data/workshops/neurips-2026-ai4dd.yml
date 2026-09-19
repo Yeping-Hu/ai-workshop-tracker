@@ -4,6 +4,7 @@ conference: neurips
 year: 2026
 website: https://ai4dd-neurips2026.github.io/
 topics:
+  - healthcare-bio
   - genomics
 submission_deadline: 2026-09-06 11:59
 timezone: UTC

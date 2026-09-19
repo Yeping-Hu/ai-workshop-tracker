@@ -5,6 +5,9 @@ year: 2026
 website: https://bilibili.github.io/Index-anisora/cvpr_2026_workshop/index.html
 topics:
   - vision
+  - video
+  - generative-models
+  - diffusion
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/AILiVE
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

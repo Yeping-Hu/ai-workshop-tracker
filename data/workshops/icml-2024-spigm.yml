@@ -4,6 +4,7 @@ conference: icml
 year: 2024
 website: https://spigmworkshop2024.github.io/
 topics:
+  - probabilistic
   - generative-models
 submission_deadline: 2024-05-28 11:59
 timezone: UTC
@@ -11,4 +12,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICML.cc/2024/Workshop/SPIGM
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

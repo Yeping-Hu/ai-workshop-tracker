@@ -4,11 +4,14 @@ conference: cvpr
 year: 2025
 website: https://cvpr2025.wad.vision/
 topics:
+  - autonomous-driving
+  - vision
   - robotics
+  - robustness
 submission_deadline: 2025-03-14 00:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: thecvf.com/CVPR/2025/Workshop/WAD
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

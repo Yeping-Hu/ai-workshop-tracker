@@ -5,7 +5,8 @@ year: 2026
 website: https://mit-spark.github.io/Longterm-Perception-WS/#
 topics:
   - vision
-  - physics
+  - robotics
+  - vision-3d
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/LTP
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

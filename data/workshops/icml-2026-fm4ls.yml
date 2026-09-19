@@ -5,8 +5,10 @@ year: 2026
 website: https://icml2026fm4ls.github.io
 topics:
   - llms
-  - science-applications
   - multimodal
+  - healthcare-bio
+  - genomics
+  - nlp
 openreview_venue_id: ICML.cc/2026/Workshop/FM4LS
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

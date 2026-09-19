@@ -4,6 +4,8 @@ conference: corl
 year: 2026
 website: https://uncertainwm2026.github.io/
 topics:
+  - world-models
+  - probabilistic
   - robotics
 submission_deadline: 2026-09-24 11:59
 timezone: UTC

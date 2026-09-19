@@ -4,6 +4,7 @@ conference: eccv
 year: 2026
 website: https://interactive-intelligence-lab.github.io/eccv26-aiw-page/
 topics:
+  - vision
   - agents
 submission_deadline: 2026-08-02 11:59
 timezone: UTC

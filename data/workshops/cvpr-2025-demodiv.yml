@@ -4,8 +4,8 @@ conference: cvpr
 year: 2025
 website: https://sites.google.com/view/cvpr-2025-demodiv/
 topics:
-  - graphs
   - vision
+  - fairness
 submission_deadline: 2025-05-21 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

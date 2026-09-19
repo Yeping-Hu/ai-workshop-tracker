@@ -5,6 +5,7 @@ year: 2026
 website: https://rl-experimental-sciences-workshop.github.io/
 topics:
   - reinforcement-learning
+  - science-applications
 openreview_venue_id: NeurIPS.cc/2026/Workshop/RL4XS
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

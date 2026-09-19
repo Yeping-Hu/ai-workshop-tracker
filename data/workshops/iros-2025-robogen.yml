@@ -4,8 +4,9 @@ conference: iros
 year: 2025
 website: https://robogen-iros.github.io/
 topics:
-  - systems
   - robotics
+  - vision-3d
+  - vision
   - generative-models
 submission_deadline: 2025-10-02 11:59
 timezone: UTC

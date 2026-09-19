@@ -1,15 +1,15 @@
-name: "5th Workshop on CV4Animals: Computer Vision for Animal Behavior Tracking and Modeling, In conjunction with Computer Vision and Pattern Recognition 2025"
+name: '5th Workshop on CV4Animals: Computer Vision for Animal Behavior Tracking and Modeling, In conjunction with Computer Vision and Pattern Recognition 2025'
 acronym: CV4Animals 2025
 conference: cvpr
 year: 2025
 website: https://www.cv4animals.com/
 topics:
   - vision
-  - neuroscience
+  - video
 submission_deadline: 2025-04-05 17:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: thecvf.com/CVPR/2025/Workshop/CV4Animals
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

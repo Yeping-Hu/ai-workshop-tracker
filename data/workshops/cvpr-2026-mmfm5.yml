@@ -4,8 +4,9 @@ conference: cvpr
 year: 2026
 website: https://mmfm-workshop.github.io/
 topics:
-  - llms
   - multimodal
+  - vision
+  - generative-models
 submission_deadline: 2026-03-15 12:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-03-15 12:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.

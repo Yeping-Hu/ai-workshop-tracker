@@ -4,6 +4,7 @@ conference: neurips
 year: 2026
 website: https://clea-neurips.github.io/
 topics:
+  - continual-learning
   - agents
 openreview_venue_id: NeurIPS.cc/2026/Workshop/CLEA
 submission_portal: openreview

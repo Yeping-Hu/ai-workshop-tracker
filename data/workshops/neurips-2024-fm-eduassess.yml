@@ -6,10 +6,11 @@ website: https://neurips2024edu.github.io/
 topics:
   - llms
   - education
+  - evaluation-benchmarks
 submission_deadline: 2024-09-17 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2024/Workshop/FM-EduAssess
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

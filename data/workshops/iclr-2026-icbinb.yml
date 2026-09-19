@@ -5,6 +5,7 @@ year: 2026
 website: https://sites.google.com/view/icbinb-2026/home
 topics:
   - llms
+  - nlp
 openreview_venue_id: ICLR.cc/2026/Workshop/ICBINB
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

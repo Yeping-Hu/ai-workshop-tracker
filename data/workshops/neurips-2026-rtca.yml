@@ -5,6 +5,9 @@ year: 2026
 website: https://rtcaneurips26.github.io/
 topics:
   - multimodal
+  - nlp
+  - human-ai
+  - llms
   - agents
 openreview_venue_id: NeurIPS.cc/2026/Workshop/RTCA
 submission_portal: openreview

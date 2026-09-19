@@ -5,6 +5,10 @@ year: 2026
 website: https://agenticls.github.io
 topics:
   - agents
+  - science-applications
+  - healthcare-bio
+  - genomics
+  - llms
 openreview_venue_id: NeurIPS.cc/2026/Workshop/AgenticLS
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

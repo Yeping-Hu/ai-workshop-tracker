@@ -4,8 +4,11 @@ conference: eccv
 year: 2026
 website: https://gen4avc.github.io/eccv2026/
 topics:
-  - speech-audio
   - generative-models
+  - vision
+  - video
+  - creative-ai
+  - multimodal
 submission_deadline: 2026-07-10 12:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-07-10 12:59 UTC (as of 2026-07-03) — extensions on OpenReview are applied automatically; verify on the website.

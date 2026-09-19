@@ -4,6 +4,7 @@ conference: colm
 year: 2026
 website: https://context-beyond-window.github.io/
 topics:
+  - nlp
   - llms
 openreview_venue_id: colmweb.org/COLM/2026/Workshop/CBW
 submission_portal: openreview

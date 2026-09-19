@@ -1,14 +1,15 @@
-name: "CoRL Workshop on Learning Robot Fine and Dexterous Manipulation: Perception and Control"
+name: 'CoRL Workshop on Learning Robot Fine and Dexterous Manipulation: Perception and Control'
 acronym: LFDM
 conference: corl
 year: 2024
 website: https://dex-manipulation.github.io/corl2024/
 topics:
   - robotics
+  - vision
 submission_deadline: 2024-10-08 08:30
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: robot-learning.org/CoRL/2024/Workshop/LFDM
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

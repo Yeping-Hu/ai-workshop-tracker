@@ -4,6 +4,10 @@ conference: icra
 year: 2026
 website: https://icra2026-rigorous-perception.github.io/
 topics:
+  - vision
+  - evaluation-benchmarks
+  - robustness
+  - probabilistic
   - robotics
 openreview_venue_id: IEEE.org/ICRA/2026/Workshop/Robot_Perception
 submission_portal: openreview

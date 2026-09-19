@@ -4,7 +4,7 @@ conference: iros
 year: 2026
 topics:
   - robotics
-  - theory
+  - robustness
 submission_deadline: 2026-09-10 04:00
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-09-10 04:00 UTC (as of 2026-09-02) — extensions on OpenReview are applied automatically; verify on the website.

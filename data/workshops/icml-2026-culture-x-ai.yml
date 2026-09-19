@@ -4,7 +4,7 @@ conference: icml
 year: 2026
 website: https://www.doingaidifferently.org/culturexaiworkshop
 topics:
-  - evaluation-benchmarks
+  - fairness
 openreview_venue_id: ICML.cc/2026/Workshop/Culture_x_AI
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

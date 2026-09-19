@@ -5,7 +5,7 @@ year: 2026
 website: https://unireps.org/2026/
 location: Paris, France
 topics:
-  - other
+  - representation-learning
 openreview_venue_id: NeurIPS.cc/2026/Workshop/UniReps
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

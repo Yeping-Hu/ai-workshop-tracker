@@ -4,7 +4,6 @@ conference: icra
 year: 2026
 website: https://connected-robots.com/
 topics:
-  - systems
   - robotics
 openreview_venue_id: IEEE.org/ICRA/2026/Workshop/connected-robots
 submission_portal: openreview

@@ -1,10 +1,9 @@
-name: "Evaluating Evaluations: Examining Best Practices for Measuring Broader Impacts of Generative AI"
+name: 'Evaluating Evaluations: Examining Best Practices for Measuring Broader Impacts of Generative AI'
 acronym: EvalEval 2024
 conference: neurips
 year: 2024
 website: https://evaleval.github.io/
 topics:
-  - generative-models
   - evaluation-benchmarks
 submission_deadline: 2024-09-25 11:59
 timezone: UTC
@@ -12,4 +11,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2024/Workshop/EvalEval
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

@@ -4,8 +4,10 @@ conference: neurips
 year: 2026
 website: https://liuj-2023.github.io/EvoRobust-NeurIPS2026/
 topics:
-  - systems
   - robustness
+  - optimization
+  - privacy
+  - safety-alignment
 submission_deadline: 2026-09-13 12:29
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-09-13 12:29 UTC (as of 2026-08-24) — extensions on OpenReview are applied automatically; verify on the website.

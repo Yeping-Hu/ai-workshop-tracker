@@ -5,6 +5,9 @@ year: 2026
 website: https://sites.google.com/view/icra-2026-s2s-perception/home
 topics:
   - vision
+  - robustness
+  - vision-3d
+  - robotics
 openreview_venue_id: IEEE.org/ICRA/2026/Workshop/S2S
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

@@ -4,9 +4,9 @@ conference: colm
 year: 2026
 website: https://sites.google.com/view/genai4world/home
 topics:
-  - systems
-  - generative-models
+  - nlp
   - evaluation-benchmarks
+  - llms
 openreview_venue_id: colmweb.org/COLM/2026/Workshop/GenAI4World
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

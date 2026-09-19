@@ -4,6 +4,8 @@ conference: cvpr
 year: 2024
 website: https://agents4ad.github.io/
 topics:
+  - autonomous-driving
+  - vision
   - robotics
 submission_deadline: 2024-04-05 23:59
 timezone: UTC
@@ -11,4 +13,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: thecvf.com/CVPR/2024/Workshop/DDADS
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

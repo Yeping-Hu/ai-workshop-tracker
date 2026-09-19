@@ -4,9 +4,10 @@ conference: cvpr
 year: 2026
 website: https://med-reasoner.github.io/cvpr2026/
 topics:
-  - math-reasoning
-  - llms
   - healthcare-bio
+  - multimodal
+  - vision
+  - llms
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/Med-Reasoner
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

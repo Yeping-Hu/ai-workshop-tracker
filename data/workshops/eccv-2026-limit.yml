@@ -4,6 +4,8 @@ conference: eccv
 year: 2026
 website: https://eccv2026-limit-workshop.limitlab.xyz/
 topics:
+  - representation-learning
+  - vision
   - efficiency
 submission_deadline: 2026-07-11 11:59
 timezone: UTC

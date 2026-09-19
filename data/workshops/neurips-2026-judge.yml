@@ -4,9 +4,10 @@ conference: neurips
 year: 2026
 website: https://judge2026.github.io
 topics:
+  - evaluation-benchmarks
   - llms
   - robustness
-  - evaluation-benchmarks
+  - nlp
 openreview_venue_id: NeurIPS.cc/2026/Workshop/JUDGe
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

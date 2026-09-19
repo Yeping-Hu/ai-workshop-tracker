@@ -4,7 +4,7 @@ conference: iclr
 year: 2025
 website: https://iclr.cc/virtual/2025/workshop/23999
 topics:
-  - other
+  - representation-learning
 submission_deadline: 2025-02-13 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

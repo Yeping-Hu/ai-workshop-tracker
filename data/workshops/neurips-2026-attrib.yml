@@ -4,7 +4,7 @@ conference: neurips
 year: 2026
 website: https://attrib-workshop.cc/
 topics:
-  - interpretability
+  - datasets
 openreview_venue_id: NeurIPS.cc/2026/Workshop/ATTRIB
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

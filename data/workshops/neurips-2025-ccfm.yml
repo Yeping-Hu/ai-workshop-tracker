@@ -1,9 +1,10 @@
-name: "AI That Keeps Up: NeurIPS 2025 Workshop on Continual and Compatible Foundation Model Updates"
+name: 'AI That Keeps Up: NeurIPS 2025 Workshop on Continual and Compatible Foundation Model Updates'
 acronym: CCFM
 conference: neurips
 year: 2025
 website: https://sites.google.com/view/ccfm-neurips2025
 topics:
+  - continual-learning
   - llms
 submission_deadline: 2025-09-03 16:00
 timezone: UTC
@@ -11,4 +12,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/CCFM
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

@@ -5,6 +5,10 @@ year: 2026
 website: https://sites.google.com/view/remucai
 topics:
   - multimodal
+  - nlp
+  - llms
+  - speech-audio
+  - vision
 openreview_venue_id: NeurIPS.cc/2026/Workshop/ReMuCAI
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

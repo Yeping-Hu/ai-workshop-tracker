@@ -6,6 +6,7 @@ website: https://human-robot-dialogue.github.io
 topics:
   - nlp
   - robotics
+  - human-ai
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/HRD
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

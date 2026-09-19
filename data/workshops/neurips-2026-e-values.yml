@@ -4,7 +4,7 @@ conference: neurips
 year: 2026
 website: https://e-values-workshop.github.io/
 topics:
-  - math-reasoning
+  - probabilistic
 openreview_venue_id: NeurIPS.cc/2026/Workshop/E-values
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

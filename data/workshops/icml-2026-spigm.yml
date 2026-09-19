@@ -4,6 +4,7 @@ conference: icml
 year: 2026
 website: https://spigmworkshop2026.github.io/
 topics:
+  - probabilistic
   - generative-models
 openreview_venue_id: ICML.cc/2026/Workshop/SPIGM
 submission_portal: openreview

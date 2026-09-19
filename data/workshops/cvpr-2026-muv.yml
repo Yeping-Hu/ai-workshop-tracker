@@ -5,6 +5,7 @@ year: 2026
 website: https://machine-unlearning-for-vision.github.io
 topics:
   - vision
+  - privacy
 submission_deadline: 2026-03-17 11:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-03-17 11:59 UTC (as of 2026-06-30) — extensions on OpenReview are applied automatically; verify on the website.

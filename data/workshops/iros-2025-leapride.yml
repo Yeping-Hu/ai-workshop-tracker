@@ -4,7 +4,8 @@ conference: iros
 year: 2025
 website: https://leapride.robot-learning.net/
 topics:
-  - math-reasoning
+  - robotics
+  - agents
 submission_deadline: 2025-09-28 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

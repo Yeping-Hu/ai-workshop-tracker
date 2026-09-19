@@ -4,6 +4,10 @@ conference: icml
 year: 2024
 website: https://icml-tifa.github.io/challenges/track1/
 topics:
+  - llms
+  - safety-alignment
+  - privacy
+  - multimodal
   - evaluation-benchmarks
 submission_deadline: 2024-07-10 00:00
 timezone: UTC
@@ -11,4 +15,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICML.cc/2024/Workshop/TiFA_Attack_Challenge
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

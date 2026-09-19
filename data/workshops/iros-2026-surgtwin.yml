@@ -5,7 +5,10 @@ year: 2026
 website: https://utkauraslab.github.io/surgtwin-workshop.github.io/
 topics:
   - robotics
+  - healthcare-bio
+  - vision
   - generative-models
+  - vision-3d
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/SurgTwin
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

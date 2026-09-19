@@ -3,9 +3,9 @@ acronym: MACRAI 2025
 conference: iros
 year: 2025
 topics:
-  - systems
   - agents
   - robotics
+  - llms
 submission_deadline: 2025-10-20 10:20
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

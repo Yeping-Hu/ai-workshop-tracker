@@ -4,7 +4,6 @@ conference: icml
 year: 2026
 website: https://sites.google.com/view/gfmicml-2026
 topics:
-  - llms
   - graphs
 submission_deadline: 2026-05-09 11:59
 timezone: UTC

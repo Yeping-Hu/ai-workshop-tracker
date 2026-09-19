@@ -4,7 +4,6 @@ conference: icra
 year: 2025
 website: https://icra25.rust-for-robotics.com/
 topics:
-  - systems
   - robotics
 submission_deadline: 2025-04-21 23:59
 timezone: UTC

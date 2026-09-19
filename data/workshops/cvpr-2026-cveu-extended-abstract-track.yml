@@ -4,7 +4,11 @@ conference: cvpr
 year: 2026
 website: https://cveu.github.io/
 topics:
+  - vision
   - generative-models
+  - creative-ai
+  - diffusion
+  - multimodal
 submission_deadline: 2026-04-22 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

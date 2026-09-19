@@ -4,7 +4,9 @@ conference: cvpr
 year: 2025
 website: https://drivex-workshop.github.io/
 topics:
-  - llms
+  - autonomous-driving
+  - vision
+  - robotics
 submission_deadline: 2025-03-25 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

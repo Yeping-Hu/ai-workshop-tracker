@@ -5,6 +5,7 @@ year: 2026
 website: https://aistory2026.github.io/
 topics:
   - generative-models
+  - multimodal
 submission_deadline: 2026-03-16 21:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-03-16 21:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.

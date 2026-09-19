@@ -4,9 +4,11 @@ conference: neurips
 year: 2025
 website: https://mozhgan91.github.io/vlm4rwd-neurips25-ws/
 topics:
-  - reinforcement-learning
   - multimodal
   - vision
+  - robotics
+  - autonomous-driving
+  - reinforcement-learning
 submission_deadline: 2025-11-05 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

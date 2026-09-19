@@ -4,7 +4,9 @@ conference: neurips
 year: 2026
 website: https://vericodegen.github.io/index.html#challenge
 topics:
+  - code
   - evaluation-benchmarks
+  - llms
 openreview_venue_id: NeurIPS.cc/2026/Workshop/VERICODEGEN_Competition
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

@@ -6,7 +6,7 @@ website: https://r2rl-workshop.github.io/
 location: Austin, TX
 topics:
   - reinforcement-learning
-  - efficiency
+  - robotics
 openreview_venue_id: robot-learning.org/CoRL/2026/Workshop/R2RL
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

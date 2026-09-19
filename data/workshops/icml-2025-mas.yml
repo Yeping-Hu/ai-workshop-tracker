@@ -1,16 +1,15 @@
-name: "Multi-Agent Systems in the Era of Foundation Models: Opportunities, Challenges and Futures"
+name: 'Multi-Agent Systems in the Era of Foundation Models: Opportunities, Challenges and Futures'
 acronym: MAS-2025
 conference: icml
 year: 2025
 website: https://mas-2025.github.io/MAS-2025/
 topics:
-  - llms
-  - systems
   - agents
+  - llms
 submission_deadline: 2025-05-28 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICML.cc/2025/Workshop/MAS
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

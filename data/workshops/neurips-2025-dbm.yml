@@ -11,7 +11,6 @@ conference: neurips
 year: 2025
 topics:
   - diffusion
-  - generative-models
 openreview_venue_id: NeurIPS.cc/2025/Workshop/DBM
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

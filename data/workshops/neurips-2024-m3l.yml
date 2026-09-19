@@ -4,11 +4,12 @@ conference: neurips
 year: 2024
 website: https://sites.google.com/view/m3l-2024/
 topics:
-  - math-reasoning
+  - theory
+  - optimization
 submission_deadline: 2024-10-02 19:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2024/Workshop/M3L
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

@@ -4,7 +4,8 @@ conference: icml
 year: 2026
 website: https://cats-icml.github.io
 topics:
-  - climate
+  - continual-learning
+  - robustness
 openreview_venue_id: ICML.cc/2026/Workshop/CATS
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

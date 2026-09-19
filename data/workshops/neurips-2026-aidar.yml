@@ -4,6 +4,7 @@ conference: neurips
 year: 2026
 website: https://aidar-workshop.github.io/2026/
 topics:
+  - datasets
   - science-applications
 submission_deadline: 2026-09-06 11:59
 timezone: UTC

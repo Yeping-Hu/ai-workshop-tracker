@@ -5,7 +5,10 @@ year: 2026
 website: https://trustworthy-world-models.github.io/ECCV2026/
 topics:
   - safety-alignment
+  - world-models
+  - vision
   - robotics
+  - fairness
 submission_deadline: 2026-07-15 23:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-07-15 23:59 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.

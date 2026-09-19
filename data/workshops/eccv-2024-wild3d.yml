@@ -4,6 +4,8 @@ conference: eccv
 year: 2024
 website: https://3d-in-the-wild.github.io/
 topics:
+  - vision
+  - vision-3d
   - generative-models
 submission_deadline: 2024-08-25 00:00
 timezone: UTC

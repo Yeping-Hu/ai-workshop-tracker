@@ -4,7 +4,9 @@ conference: iros
 year: 2026
 website: https://worlds-iros2026.github.io/
 topics:
-  - physics
+  - world-models
+  - robotics
+  - vision
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/WORLDS
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

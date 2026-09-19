@@ -4,7 +4,6 @@ conference: icra
 year: 2026
 website: https://sites.google.com/robotics.utias.utoronto.ca/icra26-frontiers-optimization/home
 topics:
-  - robotics
   - optimization
 submission_deadline: 2026-04-13 13:00
 timezone: UTC

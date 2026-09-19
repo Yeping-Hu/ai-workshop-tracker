@@ -5,10 +5,11 @@ year: 2024
 website: https://mlforsystems.org/
 topics:
   - systems
+  - efficiency
 submission_deadline: 2024-09-23 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2024/Workshop/MLforSys
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

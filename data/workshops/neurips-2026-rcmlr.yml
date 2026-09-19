@@ -4,8 +4,8 @@ conference: neurips
 year: 2026
 website: https://translatingmlresearch.github.io/RCMLR/
 topics:
-  - healthcare-bio
   - fairness
+  - healthcare-bio
 openreview_venue_id: NeurIPS.cc/2026/Workshop/RCMLR
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

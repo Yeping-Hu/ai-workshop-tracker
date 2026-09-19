@@ -4,7 +4,8 @@ conference: iclr
 year: 2026
 website: https://scienceofdlworkshop.github.io/
 topics:
-  - science-applications
+  - theory
+  - research-practice
 submission_deadline: 2026-02-05 12:10
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-02-05 12:10 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.

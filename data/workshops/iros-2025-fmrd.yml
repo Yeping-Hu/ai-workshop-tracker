@@ -4,8 +4,8 @@ conference: iros
 year: 2025
 website: https://sites.google.com/g.ecc.u-tokyo.ac.jp/iros2025-ws-roboticdesign/
 topics:
-  - llms
   - robotics
+  - llms
 submission_deadline: 2025-09-22 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

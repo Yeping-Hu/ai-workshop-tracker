@@ -4,7 +4,7 @@ conference: neurips
 year: 2026
 website: https://ai4metascience.org/
 topics:
-  - other
+  - research-practice
 openreview_venue_id: NeurIPS.cc/2026/Workshop/AI4MetaScience
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome. Kept our name over OpenReview's on review — The workshop site says "…Age of AI Scientists"; OpenReview truncates it.

@@ -4,8 +4,8 @@ conference: neurips
 year: 2026
 website: https://eethanshi.github.io/stochastic-dynamics-2026/
 topics:
-  - theory
-  - science-applications
+  - physics
+  - probabilistic
 submission_deadline: 2026-09-06 23:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-09-06 23:59 UTC (as of 2026-09-07) — extensions on OpenReview are applied automatically; verify on the website.

@@ -4,8 +4,8 @@ conference: eccv
 year: 2026
 website: https://ilr-workshop.github.io/ECCVW2026/
 topics:
+  - vision
   - generative-models
-  - neuroscience
 submission_deadline: 2026-07-04 23:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-07-04 23:59 UTC (as of 2026-07-05) — extensions on OpenReview are applied automatically; verify on the website.

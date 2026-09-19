@@ -4,6 +4,7 @@ conference: cvpr
 year: 2026
 website: https://embodied-ai.org/
 topics:
+  - vision
   - robotics
 submission_deadline: 2026-05-16 11:59
 timezone: UTC

@@ -4,6 +4,7 @@ conference: neurips
 year: 2024
 website: https://crl-community.github.io/neurips24.html
 topics:
+  - representation-learning
   - causality
 submission_deadline: 2024-10-02 23:59
 timezone: UTC

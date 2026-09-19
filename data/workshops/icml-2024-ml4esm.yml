@@ -4,8 +4,8 @@ conference: icml
 year: 2024
 website: https://leap-stc.github.io/ml4esm-workshop/
 topics:
-  - systems
   - climate
+  - science-applications
 submission_deadline: 2024-05-24 00:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

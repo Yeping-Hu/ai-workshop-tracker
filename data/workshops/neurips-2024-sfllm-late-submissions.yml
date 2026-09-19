@@ -6,7 +6,6 @@ website: https://sites.google.com/berkeley.edu/bb-stat/home
 topics:
   - llms
   - safety-alignment
-  - nlp
 submission_deadline: 2024-10-30 00:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

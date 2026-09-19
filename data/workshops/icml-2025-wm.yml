@@ -4,7 +4,8 @@ conference: icml
 year: 2025
 website: https://physical-world-modeling.github.io/
 topics:
-  - physics
+  - world-models
+  - vision
 submission_deadline: 2025-05-26 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

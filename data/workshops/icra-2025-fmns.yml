@@ -4,9 +4,9 @@ conference: icra
 year: 2025
 website: https://sairlab.org/icra25/
 topics:
-  - llms
   - robotics
-  - neuroscience
+  - llms
+  - math-reasoning
 submission_deadline: 2025-05-19 06:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

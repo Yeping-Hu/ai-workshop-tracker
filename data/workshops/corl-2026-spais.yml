@@ -4,7 +4,7 @@ conference: corl
 year: 2026
 website: https://spais-ws.org
 topics:
-  - physics
+  - robotics
   - safety-alignment
 openreview_venue_id: robot-learning.org/CoRL/2026/Workshop/SPAIS
 submission_portal: openreview

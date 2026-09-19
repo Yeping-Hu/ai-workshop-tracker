@@ -3,6 +3,8 @@ acronym: R2-FM
 conference: iclr
 year: 2024
 topics:
+  - robustness
+  - safety-alignment
   - llms
   - fairness
 submission_deadline: 2024-02-11 12:59

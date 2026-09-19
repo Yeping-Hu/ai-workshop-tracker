@@ -4,8 +4,9 @@ conference: neurips
 year: 2026
 website: https://continual-world-models-workshop.github.io
 topics:
+  - world-models
+  - continual-learning
   - generative-models
-  - vision
 submission_deadline: 2026-09-07 11:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-09-07 11:59 UTC (as of 2026-09-07) — extensions on OpenReview are applied automatically; verify on the website.

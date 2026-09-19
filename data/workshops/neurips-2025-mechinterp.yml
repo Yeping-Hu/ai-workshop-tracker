@@ -5,6 +5,7 @@ year: 2025
 website: https://mechinterpworkshop.com
 topics:
   - interpretability
+  - llms
 submission_deadline: 2025-08-23 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

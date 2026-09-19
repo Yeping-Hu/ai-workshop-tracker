@@ -1,16 +1,16 @@
-name: "The First Workshop on Multimodal Foundation Models for Biomedicine: Challenges and Opportunities"
+name: 'The First Workshop on Multimodal Foundation Models for Biomedicine: Challenges and Opportunities'
 acronym: MMFM-BIOMED 2025
 conference: cvpr
 year: 2025
 website: https://sites.google.com/view/mmfm-biomed-2025/
 topics:
-  - llms
-  - healthcare-bio
   - multimodal
+  - healthcare-bio
+  - vision
 submission_deadline: 2025-05-08 06:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: thecvf.com/CVPR/2025/Workshop/MMFM-BIOMED
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

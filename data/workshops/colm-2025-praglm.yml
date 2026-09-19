@@ -4,7 +4,7 @@ conference: colm
 year: 2025
 website: https://sites.google.com/berkeley.edu/praglm/
 topics:
-  - math-reasoning
+  - nlp
   - llms
 submission_deadline: 2025-06-28 14:00
 timezone: UTC

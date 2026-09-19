@@ -4,7 +4,7 @@ conference: colm
 year: 2026
 website: https://pengzhangzhi.github.io/NonAR-LM/
 topics:
-  - llms
+  - nlp
   - generative-models
 submission_deadline: 2026-07-02 12:00
 timezone: UTC

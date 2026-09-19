@@ -4,12 +4,12 @@ conference: cvpr
 year: 2026
 website: https://knowledgemr-workshop.github.io/
 topics:
-  - math-reasoning
   - multimodal
+  - vision
 submission_deadline: 2026-04-17 13:00
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-04-17 13:00 UTC (as of 2026-06-23) — extensions on OpenReview are applied automatically; verify on the website.
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/KnowledgeMR
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

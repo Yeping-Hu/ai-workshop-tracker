@@ -5,7 +5,7 @@ year: 2026
 website: https://slmw2026.github.io/
 topics:
   - agents
-  - systems
+  - llms
 openreview_venue_id: NeurIPS.cc/2026/Workshop/SLM-Agents
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

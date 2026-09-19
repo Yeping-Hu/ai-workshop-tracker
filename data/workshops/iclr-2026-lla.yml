@@ -5,6 +5,7 @@ year: 2026
 website: https://lifelongagent.github.io
 topics:
   - agents
+  - continual-learning
   - safety-alignment
 submission_deadline: 2026-02-16 23:59
 timezone: UTC

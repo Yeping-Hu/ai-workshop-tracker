@@ -4,8 +4,9 @@ conference: cvpr
 year: 2026
 website: https://generative-vision.github.io/workshop-CVPR-26/
 topics:
-  - vision
   - generative-models
+  - vision
+  - diffusion
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/GCV
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

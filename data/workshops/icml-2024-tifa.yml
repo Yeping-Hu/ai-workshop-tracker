@@ -4,9 +4,11 @@ conference: icml
 year: 2024
 website: https://icml-tifa.github.io/
 topics:
-  - llms
+  - multimodal
   - agents
   - safety-alignment
+  - llms
+  - vision
 submission_deadline: 2024-05-31 12:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

@@ -4,6 +4,8 @@ conference: icra
 year: 2025
 website: https://sites.google.com/view/roboacoustics
 topics:
+  - representation-learning
+  - speech-audio
   - robotics
 submission_deadline: 2025-04-11 05:00
 timezone: UTC
@@ -11,4 +13,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: IEEE.org/ICRA/2025/Workshop/RoboAcoustics
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

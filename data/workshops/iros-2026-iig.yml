@@ -4,9 +4,8 @@ conference: iros
 year: 2026
 website: https://frostlab.byu.edu/IIG-workshop/
 topics:
-  - robotics
-  - systems
   - evaluation-benchmarks
+  - robotics
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/IIG
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

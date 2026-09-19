@@ -4,9 +4,10 @@ conference: eccv
 year: 2026
 website: https://mllm-mucg.github.io/ECCV2026/
 topics:
-  - llms
-  - generative-models
   - multimodal
+  - llms
+  - vision
+  - generative-models
 submission_deadline: 2026-07-26 11:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-07-26 11:59 UTC (as of 2026-07-11) — extensions on OpenReview are applied automatically; verify on the website.

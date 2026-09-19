@@ -5,6 +5,8 @@ year: 2026
 website: https://www.sim2science.com/
 topics:
   - science-applications
+  - physics
+  - robustness
 openreview_venue_id: NeurIPS.cc/2026/Workshop/Sim2Sci
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

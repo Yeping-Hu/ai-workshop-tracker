@@ -4,7 +4,9 @@ conference: neurips
 year: 2026
 website: https://trustworthy-ai-for-good.github.io/
 topics:
+  - fairness
   - safety-alignment
+  - robustness
 openreview_venue_id: NeurIPS.cc/2026/Workshop/AI4GOOD
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

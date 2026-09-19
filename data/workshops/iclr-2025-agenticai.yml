@@ -4,9 +4,9 @@ conference: iclr
 year: 2025
 website: https://iclragenticai.github.io/
 topics:
-  - agents
   - science-applications
-  - generative-models
+  - agents
+  - llms
 submission_deadline: 2025-02-24 16:10
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

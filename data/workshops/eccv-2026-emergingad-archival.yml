@@ -4,6 +4,7 @@ conference: eccv
 year: 2026
 website: https://emerging-ad.github.io/
 topics:
+  - vision
   - robustness
 submission_deadline: 2026-07-27 21:00
 timezone: UTC

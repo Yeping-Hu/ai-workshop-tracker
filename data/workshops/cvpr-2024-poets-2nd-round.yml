@@ -4,7 +4,10 @@ conference: cvpr
 year: 2024
 website: https://poets2024.github.io/
 topics:
+  - vision
   - robotics
+  - autonomous-driving
+  - generative-models
 submission_deadline: 2024-06-04 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

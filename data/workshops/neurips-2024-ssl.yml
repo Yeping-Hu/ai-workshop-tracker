@@ -4,6 +4,7 @@ conference: neurips
 year: 2024
 website: https://sslneurips2024.github.io/
 topics:
+  - representation-learning
   - theory
 submission_deadline: 2024-09-20 11:59
 timezone: UTC

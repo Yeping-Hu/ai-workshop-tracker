@@ -4,8 +4,9 @@ conference: icra
 year: 2025
 website: https://iscicra25.github.io/
 topics:
-  - safety-alignment
+  - probabilistic
   - robotics
+  - robustness
 submission_deadline: 2025-04-16 08:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

@@ -4,6 +4,7 @@ conference: cvpr
 year: 2025
 website: https://sites.google.com/view/emacs2025/
 topics:
+  - vision
   - generative-models
 submission_deadline: 2025-05-04 23:59
 timezone: UTC

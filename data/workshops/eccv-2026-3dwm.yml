@@ -5,6 +5,9 @@ year: 2026
 website: https://eccv2026-3d-world-models.github.io/
 topics:
   - vision
+  - world-models
+  - vision-3d
+  - generative-models
 submission_deadline: 2026-08-16 11:59
 timezone: UTC
 deadline_notes: OpenReview-synced 2026-08-16 11:59 UTC (as of 2026-07-28) — extensions on OpenReview are applied automatically; verify on the website.

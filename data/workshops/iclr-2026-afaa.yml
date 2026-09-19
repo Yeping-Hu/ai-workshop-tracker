@@ -4,7 +4,7 @@ conference: iclr
 year: 2026
 website: https://www.afciworkshop.org/
 topics:
-  - systems
+  - fairness
   - agents
   - safety-alignment
 submission_deadline: 2026-02-06 11:59

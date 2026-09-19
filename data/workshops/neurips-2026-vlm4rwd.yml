@@ -4,7 +4,6 @@ conference: neurips
 year: 2026
 website: https://vlm4rwd.github.io
 topics:
-  - llms
   - vision
   - multimodal
 submission_deadline: 2026-09-06 12:59

@@ -4,8 +4,9 @@ conference: neurips
 year: 2026
 website: https://roco-spring.github.io/
 topics:
-  - robustness
   - evaluation-benchmarks
+  - vision
+  - robustness
 openreview_venue_id: NeurIPS.cc/2026/Workshop/RoCo-Spring
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

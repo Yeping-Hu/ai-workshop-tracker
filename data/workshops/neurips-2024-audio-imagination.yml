@@ -4,8 +4,10 @@ conference: neurips
 year: 2024
 website: https://www.audio-imagination.com/
 topics:
-  - speech-audio
   - generative-models
+  - speech-audio
+  - creative-ai
+  - diffusion
 submission_deadline: 2024-09-21 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

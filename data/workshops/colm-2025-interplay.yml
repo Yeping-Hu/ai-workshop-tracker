@@ -5,10 +5,12 @@ year: 2025
 website: https://interplay-workshop.github.io
 topics:
   - interpretability
+  - llms
+  - nlp
 submission_deadline: 2025-07-11 07:55
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: colmweb.org/COLM/2025/Workshop/INTERPLAY
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-11"
+added: '2026-06-11'

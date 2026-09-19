@@ -1,15 +1,16 @@
-name: "ICML'24 Workshop ML for Life and Material Science: From Theory to Industry Applications"
+name: 'ICML''24 Workshop ML for Life and Material Science: From Theory to Industry Applications'
 acronym: ML4LMS
 conference: icml
 year: 2024
 website: https://www.ml4lms.bio
 topics:
+  - healthcare-bio
   - science-applications
-  - theory
+  - genomics
 submission_deadline: 2024-05-23 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICML.cc/2024/Workshop/ML4LMS
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

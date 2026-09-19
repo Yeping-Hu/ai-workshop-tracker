@@ -5,7 +5,6 @@ year: 2024
 website: https://sites.google.com/view/neurips2024-ftw/home
 topics:
   - llms
-  - optimization
 submission_deadline: 2024-10-01 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

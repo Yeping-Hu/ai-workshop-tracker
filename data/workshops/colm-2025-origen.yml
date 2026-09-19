@@ -5,11 +5,11 @@ year: 2025
 website: https://origen-workshop.github.io
 topics:
   - llms
-  - generative-models
+  - nlp
 submission_deadline: 2025-07-03 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: colmweb.org/COLM/2025/Workshop/ORIGen
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-11"
+added: '2026-06-11'

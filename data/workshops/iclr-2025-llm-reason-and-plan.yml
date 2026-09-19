@@ -4,12 +4,13 @@ conference: iclr
 year: 2025
 website: https://workshop-llm-reasoning-planning.github.io/
 topics:
-  - math-reasoning
   - llms
+  - agents
+  - math-reasoning
 submission_deadline: 2025-02-09 21:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICLR.cc/2025/Workshop/LLM_Reason_and_Plan
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

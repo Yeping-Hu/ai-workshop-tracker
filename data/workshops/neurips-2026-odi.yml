@@ -4,8 +4,8 @@ conference: neurips
 year: 2026
 website: https://odi2026.github.io/
 topics:
-  - llms
   - efficiency
+  - llms
 openreview_venue_id: NeurIPS.cc/2026/Workshop/ODI
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

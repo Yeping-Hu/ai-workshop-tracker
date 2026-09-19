@@ -6,7 +6,9 @@ website: https://www.ai-meets-autonomy.com/
 topics:
   - vision
   - robotics
-  - systems
+  - multimodal
+  - nlp
+  - llms
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/AI_Meets_Autonomy
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

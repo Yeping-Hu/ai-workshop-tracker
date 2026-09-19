@@ -4,9 +4,10 @@ conference: neurips
 year: 2025
 website: https://neurips.cc/virtual/2025/loc/san-diego/competition/127732
 topics:
-  - llms
   - agents
   - robotics
+  - llms
+  - evaluation-benchmarks
 submission_deadline: 2025-12-08 00:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

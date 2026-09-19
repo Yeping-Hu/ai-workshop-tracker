@@ -5,6 +5,9 @@ year: 2026
 website: https://bmdj-vt.github.io/workshops/cvpr_2026
 topics:
   - generative-models
+  - vision
+  - vision-humans
+  - vision-3d
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/GenXR-ID
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

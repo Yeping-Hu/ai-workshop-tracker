@@ -1,15 +1,16 @@
-name: "WorldModelBench: The First Workshop on Benchmarking World Foundation Models"
+name: 'WorldModelBench: The First Workshop on Benchmarking World Foundation Models'
 acronym: WorldModelBench CVPR 2025
 conference: cvpr
 year: 2025
 website: https://worldmodelbench.github.io/
 topics:
-  - llms
   - evaluation-benchmarks
+  - world-models
+  - vision
 submission_deadline: 2025-04-18 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: thecvf.com/CVPR/2025/Workshop/WorldModelBench
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

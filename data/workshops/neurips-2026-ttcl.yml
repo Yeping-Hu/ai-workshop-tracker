@@ -3,6 +3,7 @@ acronym: TTCL
 conference: neurips
 year: 2026
 topics:
+  - continual-learning
   - agents
 submission_deadline: 2026-09-06 11:59
 timezone: UTC

@@ -6,6 +6,8 @@ website: http://genai-in-genomics.github.io/
 topics:
   - genomics
   - generative-models
+  - healthcare-bio
+  - llms
 openreview_venue_id: ICLR.cc/2026/Workshop/Gen2
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

@@ -5,6 +5,7 @@ year: 2026
 website: https://sites.google.com/view/vand4-cvpr2026
 topics:
   - vision
+  - robustness
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/VAND
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

@@ -5,6 +5,8 @@ year: 2026
 website: https://agentic-visual-media.github.io/index.html
 topics:
   - agents
+  - vision
+  - video
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/AAVM
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

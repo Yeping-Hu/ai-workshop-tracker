@@ -1,16 +1,18 @@
-name: "1st Workshop on Safely Leveraging Vision-Language Foundation Models in Robotics: Challenges and Opportunities"
+name: '1st Workshop on Safely Leveraging Vision-Language Foundation Models in Robotics: Challenges and Opportunities'
 acronym: ICRA-Safe-VLM-WS-2025
 conference: icra
 year: 2025
 website: https://sites.google.com/stanford.edu/safe-vlm-icra/home
 topics:
-  - llms
-  - safety-alignment
   - robotics
+  - safety-alignment
+  - vision
+  - multimodal
+  - llms
 submission_deadline: 2025-05-03 06:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: IEEE.org/ICRA/2025/Workshop/Safe-VLM
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

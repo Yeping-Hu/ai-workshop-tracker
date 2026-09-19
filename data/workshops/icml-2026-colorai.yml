@@ -4,6 +4,7 @@ conference: icml
 year: 2026
 website: https://grigoris.ece.wisc.edu/workshops/colorai-icml-2026
 topics:
+  - representation-learning
   - efficiency
 submission_deadline: 2026-05-11 23:59
 timezone: UTC

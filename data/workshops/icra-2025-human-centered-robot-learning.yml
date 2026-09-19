@@ -5,10 +5,12 @@ year: 2025
 website: https://human-cenetered-robot-learning-workshop.github.io/icra-2025/
 topics:
   - robotics
+  - llms
+  - human-ai
 submission_deadline: 2025-04-08 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: IEEE.org/ICRA/2025/Workshop/Human-Centered_Robot_Learning
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

@@ -4,6 +4,8 @@ conference: eccv
 year: 2026
 website: https://diliash.github.io/fai_eccv_workshop_2026/
 topics:
+  - vision
+  - vision-3d
   - generative-models
 submission_deadline: 2026-08-01 11:59
 timezone: UTC

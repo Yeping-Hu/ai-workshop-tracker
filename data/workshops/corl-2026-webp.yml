@@ -6,7 +6,6 @@ website: https://beneath-the-policy.github.io/
 location: Austin, USA
 topics:
   - robotics
-  - reinforcement-learning
   - interpretability
 openreview_venue_id: robot-learning.org/CoRL/2026/Workshop/WEBP
 submission_portal: openreview

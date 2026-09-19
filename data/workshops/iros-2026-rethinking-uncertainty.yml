@@ -4,6 +4,7 @@ conference: iros
 year: 2026
 website: https://rethinking-uncertainty.github.io/
 topics:
+  - probabilistic
   - robotics
 openreview_venue_id: IEEE.org/IROS/2026/Workshop/Rethinking_Uncertainty
 submission_portal: openreview

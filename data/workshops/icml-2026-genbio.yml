@@ -6,6 +6,9 @@ website: https://genbio-workshop.github.io/2026/
 topics:
   - agents
   - generative-models
+  - llms
+  - healthcare-bio
+  - genomics
 openreview_venue_id: ICML.cc/2026/Workshop/GenBio
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

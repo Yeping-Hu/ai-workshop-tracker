@@ -5,7 +5,6 @@ year: 2026
 website: https://neurips-workshop2026.github.io/foundation_model_agentic_privacy/
 topics:
   - llms
-  - privacy
 openreview_venue_id: NeurIPS.cc/2026/Workshop/MPLR-FM
 submission_portal: openreview
 notes: >-

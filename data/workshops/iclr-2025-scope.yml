@@ -4,9 +4,9 @@ conference: iclr
 year: 2025
 website: https://scope-workshop.github.io/
 topics:
-  - llms
-  - efficiency
   - optimization
+  - efficiency
+  - llms
 submission_deadline: 2025-02-10 12:05
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

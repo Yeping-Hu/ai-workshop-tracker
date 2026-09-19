@@ -3,8 +3,11 @@ acronym: VideoLLMs 2025
 conference: cvpr
 year: 2025
 topics:
-  - llms
   - vision
+  - llms
+  - video
+  - multimodal
+  - generative-models
 submission_deadline: 2025-04-20 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

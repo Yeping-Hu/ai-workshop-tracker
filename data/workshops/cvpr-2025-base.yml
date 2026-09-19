@@ -1,14 +1,14 @@
-name: "Another Brick in the AI Wall: Building Practical Solutions from Theoretical Foundations"
+name: 'Another Brick in the AI Wall: Building Practical Solutions from Theoretical Foundations'
 acronym: BASE 2025
 conference: cvpr
 year: 2025
 website: https://ml-theoretical-foundations-to-practice.github.io/
 topics:
-  - theory
+  - vision
 submission_deadline: 2025-04-03 00:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: thecvf.com/CVPR/2025/Workshop/BASE
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

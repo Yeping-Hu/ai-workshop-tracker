@@ -5,6 +5,7 @@ year: 2024
 website: https://sites.google.com/view/mint-2024
 topics:
   - llms
+  - safety-alignment
 submission_deadline: 2024-09-14 12:00
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

@@ -4,8 +4,7 @@ conference: neurips
 year: 2024
 website: https://d3s3workshop.github.io/
 topics:
-  - optimization
-  - science-applications
+  - physics
 submission_deadline: 2024-08-31 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

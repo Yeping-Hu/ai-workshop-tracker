@@ -4,12 +4,13 @@ conference: cvpr
 year: 2026
 website: https://datamfm.github.io
 topics:
-  - llms
   - multimodal
+  - vision
+  - datasets
 submission_deadline: 2026-03-11 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: thecvf.com/CVPR/2026/Workshop/DataMFM_Proceedings_Track
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

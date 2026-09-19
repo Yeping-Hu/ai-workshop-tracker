@@ -5,6 +5,7 @@ year: 2025
 website: https://pral-workshop.github.io
 topics:
   - agents
+  - representation-learning
 submission_deadline: 2025-05-31 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

@@ -4,7 +4,10 @@ conference: neurips
 year: 2026
 website: https://collaborative-open-decentralized-fomo.github.io/
 topics:
+  - federated-learning
   - llms
+  - systems
+  - research-practice
 openreview_venue_id: NeurIPS.cc/2026/Workshop/CODEC-FM
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.

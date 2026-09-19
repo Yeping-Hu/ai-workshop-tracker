@@ -4,8 +4,10 @@ conference: iros
 year: 2025
 website: https://4drobotics-iros2025.github.io/
 topics:
-  - robotics
+  - vision
   - generative-models
+  - vision-3d
+  - robotics
 submission_deadline: 2025-10-17 23:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions

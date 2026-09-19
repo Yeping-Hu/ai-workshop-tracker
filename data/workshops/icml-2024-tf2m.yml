@@ -4,12 +4,12 @@ conference: icml
 year: 2024
 website: https://sites.google.com/corp/view/tf2m
 topics:
-  - llms
   - theory
+  - llms
 submission_deadline: 2024-06-01 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: ICML.cc/2024/Workshop/TF2M
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

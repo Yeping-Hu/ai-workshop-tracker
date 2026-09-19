@@ -1,13 +1,13 @@
-name: "AI for Non-Human Animal Communication"
+name: AI for Non-Human Animal Communication
 conference: neurips
 year: 2025
 website: https://aiforanimalcomms.org/
 topics:
-  - systems
+  - other
 submission_deadline: 2025-09-06 11:59
 timezone: UTC
 deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: NeurIPS.cc/2025/Workshop/AiForAnimalComms
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-10"
+added: '2026-06-10'

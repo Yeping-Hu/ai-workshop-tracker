@@ -4,6 +4,8 @@ conference: colm
 year: 2025
 website: https://scalr-workshop.github.io/
 topics:
+  - llms
+  - nlp
   - math-reasoning
 submission_deadline: 2025-06-26 11:59
 timezone: UTC
@@ -11,4 +13,4 @@ deadline_notes: imported from OpenReview — check the website for extensions
 openreview_venue_id: colmweb.org/COLM/2025/Workshop/SCALR
 submission_portal: openreview
 notes: Topics were auto-suggested and may be imprecise — edits welcome.
-added: "2026-06-11"
+added: '2026-06-11'

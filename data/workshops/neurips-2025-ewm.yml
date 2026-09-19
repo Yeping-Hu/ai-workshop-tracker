@@ -4,6 +4,7 @@ conference: neurips
 year: 2025
 website: https://embodied-world-models.github.io/
 topics:
+  - world-models
   - robotics
 submission_deadline: 2025-09-03 23:59
 timezone: UTC
