@@ -59,8 +59,20 @@ const enabled = !!ALERTS_API;
           <span class="find-label">Abstract <span class="muted">(optional, but it sharpens the match)</span></span>
           <textarea id="findAbstract" rows="8" maxlength="4000"></textarea>
         </label>
+        {/* Turnstile decides per visitor whether a checkbox is needed; when it
+            is, the form must not be sent until it is ticked. The callbacks
+            record the widget's state on `window.__findTurnstile` so find.js can
+            say "tick the box" or quote a loading error, instead of the 403 the
+            Worker would answer with (its message can only say "did not pass"). */}
         {TURNSTILE_SITE_KEY && (
-          <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} data-appearance="interaction-only"></div>
+          <div
+            class="cf-turnstile"
+            data-sitekey={TURNSTILE_SITE_KEY}
+            data-appearance="interaction-only"
+            data-callback="findTurnstileDone"
+            data-error-callback="findTurnstileError"
+            data-expired-callback="findTurnstileExpired"
+          ></div>
         )}
         <div class="find-row">
           <button class="btn" type="submit" id="findGo">Find workshops</button>
@@ -76,6 +88,18 @@ const enabled = !!ALERTS_API;
         <p class="muted small" id="findSummary"></p>
         <ol class="find-list" id="findList"></ol>
       </section>
+      {/* Inline and before the Turnstile script on purpose: it looks the
+          callbacks up by name when it renders the widget, so they must exist
+          first, and a bundled module's timing against an async script is not
+          guaranteed. */}
+      {TURNSTILE_SITE_KEY && (
+        <script is:inline>
+          window.__findTurnstile = { state: 'pending', code: null };
+          window.findTurnstileDone = function () { window.__findTurnstile = { state: 'ok', code: null }; };
+          window.findTurnstileError = function (code) { window.__findTurnstile = { state: 'error', code: String(code == null ? '' : code) }; };
+          window.findTurnstileExpired = function () { window.__findTurnstile = { state: 'expired', code: null }; };
+        </script>
+      )}
       {TURNSTILE_SITE_KEY && (
         <script is:inline async defer src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
       )}

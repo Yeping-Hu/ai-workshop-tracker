@@ -22,7 +22,7 @@ const ERROR_TEXT = {
   unavailable: 'The matcher is switched off right now. The deadline board and search work as usual.',
   rate_limited: 'That is a lot of requests for one hour from this connection. Please try again later.',
   busy: 'The matcher has reached its limit for today. Please try again tomorrow.',
-  captcha: 'The anti-bot check did not pass. Reload the page and try again.',
+  captcha: 'The anti-bot check did not pass. Tick "Verify you are human" again and retry; if it keeps failing, reload the page.',
   too_long: 'The title or abstract is too long: the limits are 300 and 4,000 characters.',
   bad_request: 'A title of at least three characters is needed.',
 };
@@ -97,10 +97,22 @@ async function submit(e) {
     status.textContent = ERROR_TEXT.bad_request;
     return;
   }
-  // Turnstile writes its token into a hidden field of the form when its
-  // script loaded; when it did not (an ad blocker), the Worker fails closed
-  // and the page shows its captcha sentence — the honest outcome.
+  // Turnstile writes its token into a hidden field of the form once its
+  // widget rendered and its challenge passed. A rendered widget with no token
+  // is a challenge still waiting — usually a "Verify you are human" box the
+  // reader has not ticked — and sending anyway only buys a 403 whose message
+  // cannot say that. Say it here, and take them to the box. When the script
+  // never loaded at all (an ad blocker), there is no field: send, and let the
+  // Worker fail closed — the honest outcome, and the one the tests exercise.
   const tsField = form.querySelector('[name="cf-turnstile-response"]');
+  if (tsField && !tsField.value) {
+    const ts = window.__findTurnstile ?? {};
+    status.textContent = ts.state === 'error'
+      ? `The anti-bot check could not load (Turnstile error ${ts.code || 'unknown'}). An ad blocker or a strict privacy setting may be blocking challenges.cloudflare.com; reload the page to try again.`
+      : 'Tick "Verify you are human" above first, then press Find workshops again.';
+    form.querySelector('.cf-turnstile')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    return;
+  }
   const turnstile_token = tsField ? tsField.value : '';
   go.disabled = true;
   status.textContent = 'Judging your paper against the open calls…';

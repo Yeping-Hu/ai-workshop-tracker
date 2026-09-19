@@ -88,6 +88,28 @@ await page.click('#findPrefill');
 check('something that is not an arXiv id is refused without a request',
   /does not look like an arXiv/.test(await page.locator('#findStatus').innerText()) && doiRequests.length === 1);
 
+console.log('— a rendered but unsolved Turnstile widget —');
+// What a visitor who has not ticked "Verify you are human" looks like: the
+// widget rendered its hidden field, and it is empty. The page must not send.
+await page.evaluate(() => {
+  const f = document.createElement('input');
+  f.type = 'hidden';
+  f.name = 'cf-turnstile-response';
+  f.value = '';
+  document.getElementById('findForm').append(f);
+});
+await page.fill('#findTitle', 'Learning dexterous grasps from tactile feedback');
+await page.click('#findGo');
+await page.waitForFunction(() => /Verify you are human/.test(document.getElementById('findStatus').textContent));
+check('an unsolved widget stops the submit and says to tick the box, sending nothing',
+  /Tick "Verify you are human"/.test(await page.locator('#findStatus').innerText()) && matchBodies.length === 0);
+await page.evaluate(() => { window.__findTurnstile = { state: 'error', code: '110200' }; });
+await page.click('#findGo');
+await page.waitForFunction(() => /Turnstile error/.test(document.getElementById('findStatus').textContent));
+check('...and a widget that reported an error quotes its code',
+  /Turnstile error 110200/.test(await page.locator('#findStatus').innerText()) && matchBodies.length === 0);
+await page.evaluate(() => { document.querySelector('#findForm [name="cf-turnstile-response"]').remove(); delete window.__findTurnstile; });
+
 console.log('— a result —');
 await page.fill('#findTitle', 'Learning dexterous grasps from tactile feedback');
 await page.fill('#findAbstract', 'We train a policy on a real robot.');

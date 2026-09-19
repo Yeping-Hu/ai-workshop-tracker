@@ -1292,7 +1292,16 @@ response's fields alone: a fit label, the workshop's page, its deadline or
 "not announced yet", its website when it has one, and the line that says what
 the judgment stood on — "judged from 57 past papers" or "judged from the name
 and topics". The Worker's error codes are a closed set, and each has its own
-sentence on the page. An arXiv id or link fills the two fields in: the page
+sentence on the page. Turnstile decides per visitor whether to show a "Verify
+you are human" box, and a rendered widget with no token is that box unticked:
+the page says so and scrolls to it rather than sending a request the Worker
+can only answer with a 403 (whose message cannot know why). The widget's
+callbacks record its state on `window.__findTurnstile`, so a loading error
+surfaces with its code instead of as a mystery; when the script never loaded
+at all (an ad blocker), there is no field, the request is sent, and the Worker
+fails closed. The Worker logs Turnstile's rejection codes — never a token or
+an address — so `wrangler tail` can tell a page-side fault from a missing
+secret. An arXiv id or link fills the two fields in: the page
 fetches the paper's DataCite DOI (`10.48550/arXiv.<id>`) from doi.org as
 CSL-JSON, which carries the abstract — the same content negotiation the
 citation tools rely on, from a host whose CORS they have proven — rather than

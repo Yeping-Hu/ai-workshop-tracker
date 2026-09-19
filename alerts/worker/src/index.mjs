@@ -229,6 +229,11 @@ async function verifyTurnstile(env, token, ip) {
       body: form,
     });
     const body = await res.json();
+    // The codes, never the token or the address: `timeout-or-duplicate` and
+    // `invalid-input-response` are what a page-side bug looks like from here,
+    // and without this line a failed check is indistinguishable from a
+    // missing secret in `wrangler tail`.
+    if (!body.success) console.warn('turnstile rejected', JSON.stringify(body['error-codes'] ?? []));
     return !!body.success;
   } catch {
     return false;
