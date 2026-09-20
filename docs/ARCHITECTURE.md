@@ -1628,7 +1628,13 @@ burden on CI to reject. GitHub issue templates are static YAML and can't read
 `data/topics.yml` at render time, so the topic options are generated into both
 templates (between `topic-options` marker comments) by
 `scripts/gen_topic_options.mjs`; `scripts/topic_options_sync_test.mjs` fails CI
-if a template drifts from the vocabulary. The deadline dropdowns feed
+if a template drifts from the vocabulary. Each box reads `<id> — <Label>`: the id
+because it is what the entry stores and what `parseTopics()` reads (everything
+before the dash; a bare id, as every issue opened before 2026-09-19 has, passes
+through), the label because an id stopped being enough to choose by once topics
+were widened rather than multiplied — `graphs` is "Graphs & geometry", `climate`
+covers earth observation, `affinity` is a kind of workshop and not a subject.
+The deadline dropdowns feed
 `assembleDeadline()` in `lib/dates.mjs`, the single place that turns the parts
 into a `YYYY-MM-DD HH:MM` string (defaulting a missing time to 23:59 and
 rejecting impossible dates like Feb 30); the existing timezone→UTC conversion is

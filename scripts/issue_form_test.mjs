@@ -50,6 +50,16 @@ const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   check('indented boxes parse', eq(parseTopics('  - [x] agents'), ['agents']));
   check('ids are lowercased', eq(parseTopics('- [x] Agents'), ['agents']));
   check('duplicates collapse', eq(parseTopics('- [x] agents\n- [x] agents'), ['agents']));
+  // The forms show "<id> — <Label>" since 2026-09-19; the id is what is stored.
+  check('a labelled box yields its id, label and all punctuation dropped',
+    eq(parseTopics('- [x] graphs — Graphs & geometry\n- [ ] climate — Climate & environment\n- [x] economics — Economics, finance & games\n- [x] vision-3d — 3D vision'),
+      ['graphs', 'economics', 'vision-3d']),
+    JSON.stringify(parseTopics('- [x] graphs — Graphs & geometry\n- [x] economics — Economics, finance & games\n- [x] vision-3d — 3D vision')));
+  check('a hyphen inside an id is not the separator', eq(parseTopics('- [x] human-ai — Human-AI interaction'), ['human-ai']));
+  check('an en dash or a spaced hyphen, as a renderer or mail client may leave it, still separates',
+    eq(parseTopics('- [x] video – Video\n- [x] code - Code & software'), ['video', 'code']));
+  check('bare ids and labelled ones mix — an issue opened before the forms changed still converts',
+    eq(parseTopics('- [x] agents\n- [x] llms — Large language models\n- [x] other'), ['agents', 'llms', 'other']));
 }
 
 /* ----------------------------------------------------- dropdown (legacy) --- */
@@ -83,7 +93,7 @@ const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     const field = src.slice(src.indexOf('id: topics') - 200, src.indexOf('topic-options:end'));
     check(`${f}: topics is a checkboxes field`, /type: checkboxes/.test(field));
     check(`${f}: no leftover multi-select dropdown`, !/multiple: true/.test(field));
-    check(`${f}: options are labelled mappings`, /- label: agents/.test(field),
+    check(`${f}: options are labelled mappings that show the id and then the label`, /- label: "agents — Agents"/.test(field) && /- label: "graphs — Graphs & geometry"/.test(field) && /- label: "other"/.test(field),
       'checkboxes options are mappings; bare scalars are dropdown syntax');
   }
 

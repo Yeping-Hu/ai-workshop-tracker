@@ -28,8 +28,15 @@ export const TEMPLATES = [
 ];
 
 /**
- * The exact lines that belong between the markers: one `- label: <id>` per
- * topic.
+ * The exact lines that belong between the markers: one
+ * `- label: "<id> — <Label>"` per topic.
+ *
+ * The id first, because it is what the parser reads (lib/issue_form.mjs takes
+ * everything before the dash) and what the entry stores. The label after it,
+ * because an id stopped being enough to choose by once topics were widened
+ * rather than multiplied: `graphs` is "Graphs & geometry", `climate` covers
+ * earth observation and agriculture, `affinity` is a kind of workshop and not
+ * a subject. `other` needs no gloss.
  *
  * `label:` because the field is a `checkboxes`, whose options are mappings; a
  * `dropdown`'s were bare scalars. The forms switched on 2026-08-17 — a GitHub
@@ -37,7 +44,12 @@ export const TEMPLATES = [
  * reopening the list five times.
  */
 export function topicOptionLines() {
-  return loadTopics().map((t) => `${INDENT}- label: ${t.id}`);
+  return loadTopics().map((t) => `${INDENT}- label: ${JSON.stringify(topicOptionLabel(t))}`);
+}
+
+/** What one checkbox says. JSON.stringify above is also valid YAML double-quoting, which "&" and ", " need. */
+export function topicOptionLabel(t) {
+  return t.id === 'other' || !t.label ? t.id : `${t.id} — ${t.label}`;
 }
 
 /** Lines strictly between the start and end markers, or null if missing. */
