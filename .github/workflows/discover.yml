@@ -257,6 +257,17 @@ jobs:
               });
             }
 
+      # Which workshops are living on the keyword table's tags meanwhile — the
+      # question the issue below could not answer. Read from the working tree, so
+      # here it is the tree after the --pending sweep. Both workflows that write
+      # that issue run this, because whichever runs last replaces the body.
+      - name: List workshops still waiting for a topic judgment
+        if: always()
+        env:
+          SITE_URL: https://aiworkshoptracker.com
+          SITE_BASE: /
+        run: node scripts/waiting_topics.mjs --report "$RUNNER_TEMP/waiting-topics.md" || true
+
       # Jev failures never fail the job — topics fall back to the keyword table
       # — so the two failures that do not heal on their own, a revoked key and
       # an exhausted balance, would stay invisible. One issue, shared with the
@@ -291,14 +302,17 @@ jobs:
               }
               return;
             }
+            const waitingFile = `${process.env.RUNNER_TEMP}/waiting-topics.md`;
+            const waiting = fs.existsSync(waitingFile) ? fs.readFileSync(waitingFile, 'utf8').trim() : '';
             const body = [
               `During the **${context.workflow}** run on ${new Date().toISOString().slice(0, 10)}, ${failures} request(s) to TypeSafe's Jev failed and ${requests} succeeded.`,
               '',
               ...errors.map((e) => `- \`${e}\``),
               '',
-              'New venues imported in those cycles were tagged by the keyword table instead. Nothing was lost: once Jev answers again, `node scripts/retag_topics.mjs` gives the ones left as `other` real topics.',
+              'New venues imported in those cycles were tagged by the keyword table and say so in their note. Nothing is lost and nothing needs doing per workshop: this job ends every run by re-asking Jev about each entry marked that way (`retag_topics.mjs --pending`), until it gets an answer.',
               '',
               'The job stayed green and used its fallback, but a revoked key or an exhausted balance does not fix itself: check the TypeSafe account (https://typesafe.ai) and the `TYPESAFE_API_KEY` secret. This issue closes itself after the next run in which every request succeeded.',
+              ...(waiting ? ['', waiting] : []),
             ].join('\n');
             if (existing) {
               await github.rest.issues.update({

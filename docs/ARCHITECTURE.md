@@ -1753,6 +1753,23 @@ where no judgment is coming. When Jev is still not there the sweep stops after
 one unanswered batch rather than spending the retry budget under the
 `data-write` lock, and it can never cost the run its other findings.
 
+The "Jev did not answer" issue names them. It used to say a key or a balance
+needed looking at and nothing about which workshops were living on the keyword
+table's tags meanwhile, which is the question a maintainer has when it
+arrives. `scripts/waiting_topics.mjs` lists the entries still carrying the
+sentence — from the working tree, so after the sweep — and both workflows that
+write the issue quote it just before they do, because whichever runs last
+replaces the body and a list only discovery knew about would vanish the first
+time the series audit met the same dead key. It is a list to read, not a queue
+to work: the issue says nothing needs doing per workshop, and "nobody is
+waiting" is stated rather than left blank. `waiting_topics_test.mjs` runs the
+issue step of both workflows for real — the JavaScript in the YAML, against a
+mock client — since that is where this would silently break. One case stays
+quiet by design: with no key at all nothing is asked, so nothing fails and no
+issue opens. That is what keeps a fork silent, and it means a secret deleted
+from this repo would be too; the entries are still marked, and still heal when
+a key returns.
+
 Both guesses can be re-run over already-imported entries with
 `scripts/retag_topics.mjs`, which by default re-tags **only** entries still
 tagged `['other']` with the auto-suggested note. `--all` widens it to every

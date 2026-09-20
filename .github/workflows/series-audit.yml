@@ -130,6 +130,17 @@ jobs:
               });
             }
 
+      # Which workshops are living on the keyword table's tags meanwhile — the
+      # question the issue below could not answer. Read from the working tree, which
+      # here is main as this job checked it out. Both workflows that write
+      # that issue run this, because whichever runs last replaces the body.
+      - name: List workshops still waiting for a topic judgment
+        if: always()
+        env:
+          SITE_URL: https://aiworkshoptracker.com
+          SITE_BASE: /
+        run: node scripts/waiting_topics.mjs --report "$RUNNER_TEMP/waiting-topics.md" || true
+
       # A pair Jev could not answer is simply asked again next week, so this
       # job never goes red over it — which is why a revoked key or an empty
       # balance needs its own signal. Same issue and title as discovery's, on
@@ -164,6 +175,8 @@ jobs:
               }
               return;
             }
+            const waitingFile = `${process.env.RUNNER_TEMP}/waiting-topics.md`;
+            const waiting = fs.existsSync(waitingFile) ? fs.readFileSync(waitingFile, 'utf8').trim() : '';
             const body = [
               `During the **${context.workflow}** run on ${new Date().toISOString().slice(0, 10)}, ${failures} request(s) to TypeSafe's Jev failed and ${requests} succeeded.`,
               '',
@@ -172,6 +185,7 @@ jobs:
               'The candidate pairs that got no answer were left unrecorded and are asked again next Sunday, so nothing is lost.',
               '',
               'The job stayed green, but a revoked key or an exhausted balance does not fix itself: check the TypeSafe account (https://typesafe.ai) and the `TYPESAFE_API_KEY` secret. This issue closes itself after the next run in which every request succeeded.',
+              ...(waiting ? ['', waiting] : []),
             ].join('\n');
             if (existing) {
               await github.rest.issues.update({

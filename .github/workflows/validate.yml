@@ -2,12 +2,17 @@
 # On PR failure, posts a human-readable comment explaining exactly what to fix.
 name: Validate data
 
+# Workflows are in the paths because a dozen of the suites below read them —
+# which tests a workflow names, which step comes before which — and
+# waiting_topics_test.mjs goes further and RUNS the JavaScript embedded in two
+# of them. A change to a workflow alone used to reach main with none of that
+# checked.
 on:
   pull_request:
-    paths: ['data/**', 'schema/**', 'scripts/**', 'lib/**']
+    paths: ['data/**', 'schema/**', 'scripts/**', 'lib/**', '.github/workflows/**']
   push:
     branches: [main]
-    paths: ['data/**', 'schema/**', 'scripts/**', 'lib/**']
+    paths: ['data/**', 'schema/**', 'scripts/**', 'lib/**', '.github/workflows/**']
 
 permissions:
   contents: read
@@ -124,6 +129,8 @@ jobs:
         run: node scripts/topic_usage_test.mjs
       - name: Test that a venue its organizers deleted is never an entry (importer rule, corpus check)
         run: node scripts/tombstone_test.mjs
+      - name: Test that the "Jev did not answer" issue names the workshops left waiting (listing, both workflows' issue steps run for real)
+        run: node scripts/waiting_topics_test.mjs
       - name: Test the series audit (candidates, one question per pair, hashes, decisions, file)
         run: node scripts/series_audit_test.mjs
       - name: Test the matcher's candidate feed (open calls, past titles from the series)
