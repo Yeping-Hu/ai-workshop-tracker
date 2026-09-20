@@ -43,6 +43,7 @@ pairs:
   - {a: corl-2024-assembly, b: corl-2026-simbench2real, same: 0, judged: '2026-09-19', hash: a38ddf4b68de, via: names}
   - {a: corl-2024-assembly, b: corl-2026-uncertainwm, same: 0, judged: '2026-09-19', hash: 4248e5af7fc7, via: names}
   - {a: corl-2024-corobolearn, b: corl-2025-h2r, same: 0.01, judged: '2026-09-19', hash: 3ef371637a75, via: names}
+  - {a: corl-2024-corobolearn, b: corl-2026-humanrli, same: 0.16, judged: '2026-09-20', hash: 645bddd1faeb, via: names}
   - {a: corl-2024-diffsim, b: corl-2025-dexterous-manipulation, same: 0, judged: '2026-09-19', hash: ad6a37c1e4ce, via: names}
   - {a: corl-2024-diffsim, b: corl-2026-simbench2real, same: 0, judged: '2026-09-19', hash: 4a2932d4e03c, via: names}
   - {a: corl-2024-langrob, b: corl-2025-eval-deploy, same: 0, judged: '2026-09-19', hash: b871cdad99d5, via: names}
@@ -52,6 +53,7 @@ pairs:
   - {a: corl-2024-langrob, b: corl-2025-rational-robots, same: 0, judged: '2026-09-19', hash: 5e840da899e0, via: names}
   - {a: corl-2024-langrob, b: corl-2025-safe-rol, same: 0, judged: '2026-09-19', hash: bdc597b613eb, via: names}
   - {a: corl-2024-langrob, b: corl-2026-compositional, same: 0, judged: '2026-09-19', hash: 99896f3d2656, via: names}
+  - {a: corl-2024-langrob, b: corl-2026-humanrli, same: 0, judged: '2026-09-20', hash: eb79821b81e6, via: names}
   - {a: corl-2024-langrob, b: corl-2026-learn-deploy, same: 0, judged: '2026-09-19', hash: ba384dccdcad, via: names}
   - {a: corl-2024-langrob, b: corl-2026-simbench2real, same: 0, judged: '2026-09-19', hash: d80be1ae0ccc, via: names}
   - {a: corl-2024-lfdm, b: corl-2025-eval-deploy, same: 0, judged: '2026-09-19', hash: 5b7d5b7e784d, via: names}
@@ -63,6 +65,7 @@ pairs:
   - {a: corl-2024-lfdm, b: corl-2025-safe-rol, same: 0, judged: '2026-09-19', hash: 0f1326c78058, via: names}
   - {a: corl-2024-lfdm, b: corl-2026-bidextool, same: 0.01, judged: '2026-09-19', hash: 2b7c6f6cd648, via: names}
   - {a: corl-2024-lfdm, b: corl-2026-compositional, same: 0, judged: '2026-09-19', hash: ee72ec0284a6, via: names}
+  - {a: corl-2024-lfdm, b: corl-2026-humanrli, same: 0, judged: '2026-09-20', hash: 70f519c2019a, via: names}
   - {a: corl-2024-lfdm, b: corl-2026-learn-deploy, same: 0, judged: '2026-09-19', hash: fecde9953344, via: names}
   - {a: corl-2024-lfdm, b: corl-2026-simbench2real, same: 0, judged: '2026-09-19', hash: 5fd368fed18c, via: names}
   - {a: corl-2024-mrm-d, b: corl-2025-genpriors, same: 0.01, judged: '2026-09-19', hash: 197c0679b72c, via: names}
@@ -76,6 +79,7 @@ pairs:
   - {a: corl-2024-safe-rol, b: corl-2025-open-hardware, same: 0, judged: '2026-09-19', hash: 82a7fe869d4f, via: names}
   - {a: corl-2024-safe-rol, b: corl-2025-rational-robots, same: 0, judged: '2026-09-19', hash: 8ba36fbe1145, via: names}
   - {a: corl-2024-safe-rol, b: corl-2026-compositional, same: 0, judged: '2026-09-19', hash: 7b5190db01c2, via: names}
+  - {a: corl-2024-safe-rol, b: corl-2026-humanrli, same: 0, judged: '2026-09-20', hash: b82ab9e2ade1, via: names}
   - {a: corl-2024-safe-rol, b: corl-2026-learn-deploy, same: 0.01, judged: '2026-09-19', hash: 906594a975dd, via: names}
   - {a: corl-2024-safe-rol, b: corl-2026-r2rl, same: 0, judged: '2026-09-19', hash: 586753c8ece3, via: names}
   - {a: corl-2024-safe-rol, b: corl-2026-simbench2real, same: 0, judged: '2026-09-19', hash: e73c5caca7eb, via: names}
@@ -88,31 +92,40 @@ pairs:
   - {a: corl-2024-xe, b: corl-2025-rational-robots, same: 0, judged: '2026-09-19', hash: b914ee8b1faf, via: names}
   - {a: corl-2024-xe, b: corl-2025-safe-rol, same: 0, judged: '2026-09-19', hash: 58d3e702c0be, via: names}
   - {a: corl-2024-xe, b: corl-2026-compositional, same: 0, judged: '2026-09-19', hash: cb386c253694, via: names}
+  - {a: corl-2024-xe, b: corl-2026-humanrli, same: 0, judged: '2026-09-20', hash: e4908ef12098, via: names}
   - {a: corl-2024-xe, b: corl-2026-learn-deploy, same: 0, judged: '2026-09-19', hash: e5ab2fe0ba6e, via: names}
   - {a: corl-2024-xe, b: corl-2026-simbench2real, same: 0, judged: '2026-09-19', hash: 852e92465607, via: names}
   - {a: corl-2025-eval-deploy, b: corl-2026-compositional, same: 0, judged: '2026-09-19', hash: b08b0010bb9a, via: names}
+  - {a: corl-2025-eval-deploy, b: corl-2026-humanrli, same: 0, judged: '2026-09-20', hash: 1a61c31d3344, via: names}
   - {a: corl-2025-eval-deploy, b: corl-2026-learn-deploy, same: 0.22, judged: '2026-09-19', hash: 0e9f5df4a2ee, via: names}
   - {a: corl-2025-eval-deploy, b: corl-2026-simbench2real, same: 0.03, judged: '2026-09-19', hash: b81c09837a74, via: names}
   - {a: corl-2025-h2r, b: corl-2026-compositional, same: 0, judged: '2026-09-19', hash: b54658e31deb, via: names}
+  - {a: corl-2025-h2r, b: corl-2026-humanrli, same: 0.02, judged: '2026-09-20', hash: 3bbfe3d37379, via: names}
   - {a: corl-2025-h2r, b: corl-2026-learn-deploy, same: 0, judged: '2026-09-19', hash: 2d5f596dc39b, via: names}
+  - {a: corl-2025-h2r, b: corl-2026-roboletics, same: 0, judged: '2026-09-20', hash: f764ec598e92, via: names}
   - {a: corl-2025-h2r, b: corl-2026-simbench2real, same: 0, judged: '2026-09-19', hash: 4811404e970a, via: names}
   - {a: corl-2025-h2r, b: cvpr-2025-h2r, same: 0.09, judged: '2026-09-19', hash: a56db750c17a, via: stem}
   - {a: corl-2025-h2r, b: cvpr-2026-h2r, same: 0.17, judged: '2026-09-19', hash: 178538b7cf8b, via: stem}
   - {a: corl-2025-lsrw, b: corl-2026-compositional, same: 0, judged: '2026-09-19', hash: 060987df9f9d, via: names}
+  - {a: corl-2025-lsrw, b: corl-2026-humanrli, same: 0, judged: '2026-09-20', hash: 58530130012d, via: names}
   - {a: corl-2025-lsrw, b: corl-2026-learn-deploy, same: 0, judged: '2026-09-19', hash: ff2129039649, via: names}
   - {a: corl-2025-lsrw, b: corl-2026-simbench2real, same: 0.06, judged: '2026-09-19', hash: 7baf5bb228ac, via: names}
   - {a: corl-2025-open-hardware, b: corl-2026-compositional, same: 0, judged: '2026-09-19', hash: c619e408a544, via: names}
+  - {a: corl-2025-open-hardware, b: corl-2026-humanrli, same: 0, judged: '2026-09-20', hash: e203ccca32b3, via: names}
   - {a: corl-2025-open-hardware, b: corl-2026-learn-deploy, same: 0, judged: '2026-09-19', hash: 05f935d1bba6, via: names}
   - {a: corl-2025-open-hardware, b: corl-2026-simbench2real, same: 0, judged: '2026-09-19', hash: a417687f36aa, via: names}
   - {a: corl-2025-rational-robots, b: corl-2026-compositional, same: 0, judged: '2026-09-19', hash: bbba5f395784, via: names}
+  - {a: corl-2025-rational-robots, b: corl-2026-humanrli, same: 0, judged: '2026-09-20', hash: a9360f4fa72d, via: names}
   - {a: corl-2025-rational-robots, b: corl-2026-learn-deploy, same: 0, judged: '2026-09-19', hash: 08a095de72d7, via: names}
   - {a: corl-2025-rational-robots, b: corl-2026-simbench2real, same: 0, judged: '2026-09-19', hash: 9800cf00b672, via: names}
   - {a: corl-2025-robowm, b: corl-2026-uncertainwm, same: 0.19, judged: '2026-09-19', hash: 32e70232bc4a, via: names}
   - {a: corl-2025-safe-rol, b: corl-2026-compositional, same: 0, judged: '2026-09-19', hash: a0f8ac450efa, via: names}
+  - {a: corl-2025-safe-rol, b: corl-2026-humanrli, same: 0, judged: '2026-09-20', hash: bec7c0892f0d, via: names}
   - {a: corl-2025-safe-rol, b: corl-2026-learn-deploy, same: 0.01, judged: '2026-09-19', hash: e6010a96141d, via: names}
   - {a: corl-2025-safe-rol, b: corl-2026-r2rl, same: 0, judged: '2026-09-19', hash: 11e413695946, via: names}
   - {a: corl-2025-safe-rol, b: corl-2026-simbench2real, same: 0, judged: '2026-09-19', hash: 6b63bff710d8, via: names}
   - {a: corl-2025-safe-rol, b: corl-2026-umi-arena, same: 0, judged: '2026-09-19', hash: b38d3958c3d7, via: names}
+  - {a: corl-2026-roboletics, b: icra-2025-roboletics, same: 0.8, judged: '2026-09-20', hash: 2749faa70a08, via: stem}
   - {a: cvpr-2024-ai4cc, b: cvpr-2025-cveu, same: 0.32, judged: '2026-09-19', hash: 27d7e2982b52, via: names}
   - {a: cvpr-2024-ai4cc, b: cvpr-2025-cveu-extended-abstract, same: 0.17, judged: '2026-09-19', hash: d9011c5cdd3c, via: names}
   - {a: cvpr-2024-ai4cc, b: cvpr-2026-ailive, same: 0, judged: '2026-09-19', hash: 31844a333080, via: names}
