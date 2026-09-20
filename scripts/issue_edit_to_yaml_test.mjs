@@ -5,7 +5,7 @@
  */
 import { applyWorkshopEdit } from './issue_edit_to_yaml.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
-import { syncNote, AUTO_TOPICS_NOTE } from './discover_openreview.mjs';
+import { syncNote, AUTO_TOPICS_NOTE, KEYWORD_TOPICS_NOTE } from './discover_openreview.mjs';
 
 let failed = 0;
 const check = (name, cond) => { if (!cond) { failed++; console.log(`FAIL: ${name}`); } };
@@ -152,6 +152,13 @@ throws('topics: unchanged set throws (order-insensitive)',
   check('auto-note: the sentence goes and what followed it stays', record.notes === 'Website removed on review — host stopped serving the page.', record.notes);
   const kept = applyWorkshopEdit({ ...base(), notes: appended }, { deadline: '2026-06-01 09:00', timezone: 'UTC' }).record;
   check('auto-note: an appended note is untouched while the topics are', kept.notes === appended);
+}
+
+// 18c) An entry imported while Jev could not be asked carries a second sentence
+// saying its topics are a keyword match. A person's topics replace both claims.
+{
+  const { record } = applyWorkshopEdit({ ...base(), notes: KEYWORD_TOPICS_NOTE }, { topics: ['llms', 'vision'] });
+  check('auto-note: the keyword-match sentence goes with it, so the entry is no longer owed a judgment', record.notes === undefined, record.notes);
 }
 
 // 19) The historical "Auto-imported … (topics are keyword-guessed)" wording is recognized and cleared too.

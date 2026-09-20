@@ -7,7 +7,9 @@
  * acronym (subtitle), website, and the real submission deadline — except the
  * one inferred field, `topics`: Jev judges those from the title, acronym and
  * host conference (lib/jev_topics.mjs), and the keyword table below stands in
- * when no judgment can be had. The deadline is parsed
+ * when no judgment can be had — marking the entry's note when Jev could not
+ * even be asked, so the next run that can ask re-judges it (topicsForImport).
+ * The deadline is parsed
  * from the venue's human-written `date` line or, when that is blank, from
  * the submission invitation's machine-readable `duedate` (expired
  * invitations included; it's the value shown next to the Submission button
@@ -45,7 +47,7 @@ import * as yaml from 'js-yaml';
 import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, loadConferences, stripVenueFromName, normalizeAcronym, isNotRunning, slugify, slugOfFile } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs, plausibleDeadline } from '../lib/dates.mjs';
 import { unwrap, openreviewFetch, recordUnverified, getUnverified, writeUnverified } from '../lib/openreview.mjs';
-import { suggestTopics } from '../lib/jev_topics.mjs';
+import { askTopics } from '../lib/jev_topics.mjs';
 import { jevUsageLine } from '../lib/jev.mjs';
 import { recordJevStatus } from '../lib/jev_status.mjs';
 
@@ -154,16 +156,63 @@ export function hasAutoTopicsNote(notes) {
 }
 
 /**
+ * The sentence that follows the auto-suggested note when the topics came from
+ * the keyword table because Jev could not be ASKED — no key, an outage, an
+ * exhausted balance. It is the entry's own record that a judgment is still
+ * owed, and it is what makes the fallback heal: the weekly discovery run
+ * re-asks exactly the entries that carry it (retag_topics.mjs --pending) and
+ * takes it off once Jev has answered. Without it a keyword-tagged entry looked
+ * identical to a judged one, so a Sunday with a dead key left its imports on
+ * the keyword table's tags for good — green, and silent.
+ *
+ * Not written when Jev answered and nothing fit: the table's guess is then the
+ * considered answer, and asking again next week would say the same thing.
+ *
+ * An extra sentence rather than a different note, so every reader of the auto
+ * note — the edit form, the Markdown export, the search index — already treats
+ * the entry as machine-tagged with no change. It stays true on a fork, where no
+ * re-judgment is coming: the topics are a keyword match on the title.
+ */
+export const KEYWORD_TOPICS_SENTENCE = 'They are a keyword match on the title.';
+export const KEYWORD_TOPICS_NOTE = `${AUTO_TOPICS_NOTE} ${KEYWORD_TOPICS_SENTENCE}`;
+
+/** True while the entry's topics are the keyword table's and Jev has not been asked about it. */
+export function hasKeywordTopicsNote(notes) {
+  return hasAutoTopicsNote(notes) && notes.includes(KEYWORD_TOPICS_SENTENCE);
+}
+
+const tidy = (s) => s.replace(/\s{2,}/g, ' ').trim();
+
+/** `notes` once Jev has answered: the keyword sentence goes, everything else stays where it was. */
+export function judgedTopicsNote(notes) {
+  return hasKeywordTopicsNote(notes) ? tidy(notes.replace(KEYWORD_TOPICS_SENTENCE, '')) : notes;
+}
+
+/**
+ * What an import writes: Jev's list, else the keyword table's; and the note
+ * that says which. `judged` is askTopics()'s answer — null when Jev could not
+ * be asked, [] when it answered and nothing fit.
+ */
+export function topicsForImport(judged, keywords) {
+  return {
+    topics: judged?.length ? judged : keywords,
+    notes: judged === null ? KEYWORD_TOPICS_NOTE : AUTO_TOPICS_NOTE,
+  };
+}
+
+/**
  * `notes` with the auto-suggested sentence taken out — what the edit form
- * leaves once a person has chosen the topics. Whatever followed the sentence
- * is someone else's and stays; undefined when nothing else was there. This is
- * the other half of hasAutoTopicsNote(): if the sentence survived a human
- * edit, the sweep would read curated topics as machine-made and overwrite them.
+ * leaves once a person has chosen the topics — and the keyword sentence with
+ * it, since both are statements about topics a person has now replaced.
+ * Whatever else followed is someone else's and stays; undefined when nothing
+ * else was there. This is the other half of hasAutoTopicsNote(): if the
+ * sentence survived a human edit, the sweep would read curated topics as
+ * machine-made and overwrite them.
  */
 export function withoutAutoTopicsNote(notes) {
   if (!hasAutoTopicsNote(notes)) return notes;
   if (isAutoTopicsNote(notes)) return undefined;
-  return notes.slice(AUTO_TOPICS_NOTE.length).trim() || undefined;
+  return tidy(notes.slice(AUTO_TOPICS_NOTE.length).replace(KEYWORD_TOPICS_SENTENCE, '')) || undefined;
 }
 
 /**
@@ -902,8 +951,11 @@ async function main({ conf, year, dryRun }) {
     if (loc) record.location = loc;
     // Jev first; the keyword table when it has no answer — no key (every fork),
     // an outage, or nothing cleared the bar. lib/jev_topics.mjs has the why and
-    // the numbers; ARCHITECTURE.md, "Typed judgments from Jev", the rules.
-    record.topics = (await suggestTopics({ name: title, acronym, conference: conf, year })) ?? guessTopics(`${title} ${acronym}`);
+    // the numbers; ARCHITECTURE.md, "Typed judgments from Jev", the rules. When
+    // Jev could not be asked at all, the note says so (topicsForImport), and the
+    // next run that can ask re-judges the entry.
+    const tagged = topicsForImport(await askTopics({ name: title, acronym, conference: conf, year }), guessTopics(`${title} ${acronym}`));
+    record.topics = tagged.topics;
     if (deadline) {
       record.submission_deadline = deadline.submission_deadline;
       record.timezone = deadline.timezone;
@@ -919,7 +971,7 @@ async function main({ conf, year, dryRun }) {
     if (tracks.length) record.tracks = tracks;
     record.openreview_venue_id = g.id;
     record.submission_portal = 'openreview';
-    record.notes = AUTO_TOPICS_NOTE;
+    record.notes = tagged.notes;
     record.added = today;
 
     let base = `${conf}-${year}-${slugify(tail)}`;

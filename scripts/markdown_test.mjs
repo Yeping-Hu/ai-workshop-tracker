@@ -21,6 +21,8 @@ function check(label, got, expect) {
 // 1. Test auto topics note filtering
 check('isAutoTopicsNote identifies exact auto-suggested note',
   isAutoTopicsNote('Topics were auto-suggested and may be imprecise — edits welcome.'), true);
+check('isAutoTopicsNote identifies the auto note with the keyword-match sentence after it (an import Jev could not be asked about)',
+  isAutoTopicsNote('Topics were auto-suggested and may be imprecise — edits welcome. They are a keyword match on the title.'), true);
 check('isAutoTopicsNote identifies historical auto note',
   isAutoTopicsNote('Auto-imported from the OpenReview venue record on 2026-06-20 — please verify and enrich (topics are keyword-guessed).'), true);
 check('isAutoTopicsNote identifies SEED DATA note',

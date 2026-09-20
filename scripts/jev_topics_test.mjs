@@ -12,8 +12,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadTopics, loadConferences } from '../lib/workshops.mjs';
-import { topicQuestions, topicState, pickTopics, askTopics, suggestTopics, retagDecision, TOPIC_MIN, TOPIC_FLOOR, TOPIC_MAX } from '../lib/jev_topics.mjs';
-import { hasAutoTopicsNote, withoutAutoTopicsNote, AUTO_TOPICS_NOTE } from './discover_openreview.mjs';
+import { topicQuestions, topicState, pickTopics, askTopics, retagDecision, TOPIC_MIN, TOPIC_FLOOR, TOPIC_MAX } from '../lib/jev_topics.mjs';
+import { hasAutoTopicsNote, withoutAutoTopicsNote, hasKeywordTopicsNote, judgedTopicsNote, topicsForImport, AUTO_TOPICS_NOTE, KEYWORD_TOPICS_NOTE } from './discover_openreview.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -103,26 +103,47 @@ const conferences = loadConferences();
   const seen = [];
   const replay = (answers) => async (state, questions) => { seen.push({ state, questions }); return { answers, model: 'jev-1.13.0', usage: {} }; };
   const lfc = { name: 'Learning from Corrections and Interventions', acronym: 'LfC Workshop CoRL 2026', conference: 'corl', year: 2026 };
-  const got = await suggestTopics(lfc, { ask: replay(LFC), topics, conferences });
-  check('suggestTopics asks the topic questions over the entry state and applies the policy',
+  const got = await askTopics(lfc, { ask: replay(LFC), topics, conferences });
+  check('askTopics asks the topic questions over the entry state and applies the policy',
     got.join(',') === 'robotics'
       && seen[0].state.conference.full_name === 'Conference on Robot Learning'
       && Object.keys(seen[0].questions).length === topics.length - 1);
-
-  const none = await suggestTopics(lfc, { ask: async () => null, topics, conferences });
-  check('no judgment available -> null, so the caller falls back to the keyword table', none === null);
-
-  const flat = await suggestTopics(lfc, { ask: replay(noul({ robotics: 0.31, vision: 0.31 })), topics, conferences });
-  check('nothing over the bar -> null too (LMRL really did come back this way)', flat === null);
 
   const empty = await askTopics(lfc, { ask: replay(noul({ robotics: 0.31, vision: 0.31 })), topics, conferences });
   const silent = await askTopics(lfc, { ask: async () => null, topics, conferences });
   check('askTopics keeps the two apart: [] is "asked, nothing fits", null is "no answer"',
     Array.isArray(empty) && empty.length === 0 && silent === null);
 
-  const rogue = await suggestTopics(lfc, { ask: replay({ ...LFC, 'not-a-topic': { type: 'noul', noul: 0.99 } }), topics, conferences });
+  const rogue = await askTopics(lfc, { ask: replay({ ...LFC, 'not-a-topic': { type: 'noul', noul: 0.99 } }), topics, conferences });
   check('an answer under an id we never asked is dropped, never written',
     !rogue.includes('not-a-topic') && rogue[0] === 'robotics');
+}
+
+/* ------------------------------------- what an import writes, and the marker */
+{
+  const asked = topicsForImport(['robotics', 'agents'], ['agents']);
+  check("an import Jev answered: Jev's list under the plain auto-suggested note",
+    asked.topics.join() === 'robotics,agents' && asked.notes === AUTO_TOPICS_NOTE);
+  const nothing = topicsForImport([], ['privacy']);
+  check('asked and nothing fit: the keyword table, and STILL the plain note — that is a considered answer, not a debt',
+    nothing.topics.join() === 'privacy' && nothing.notes === AUTO_TOPICS_NOTE);
+  const silent = topicsForImport(null, ['vision']);
+  check('Jev could not be asked: the keyword table, and the note says a judgment is still owed',
+    silent.topics.join() === 'vision' && silent.notes === KEYWORD_TOPICS_NOTE && hasKeywordTopicsNote(silent.notes));
+  check('the marker is an extra sentence on the auto note, so every reader of that note needs no change',
+    KEYWORD_TOPICS_NOTE.startsWith(`${AUTO_TOPICS_NOTE} `) && hasAutoTopicsNote(KEYWORD_TOPICS_NOTE)
+      && /auto-suggested and may be imprecise/.test(KEYWORD_TOPICS_NOTE));
+  check('a judged entry is not owed one, and neither is a person\'s note that happens to quote the sentence',
+    !hasKeywordTopicsNote(AUTO_TOPICS_NOTE) && !hasKeywordTopicsNote('They are a keyword match on the title.') && !hasKeywordTopicsNote(undefined));
+
+  const later = `${KEYWORD_TOPICS_NOTE} Website removed on review — host stopped serving the page.`;
+  check('once Jev has answered, the sentence comes off and nothing else moves',
+    judgedTopicsNote(KEYWORD_TOPICS_NOTE) === AUTO_TOPICS_NOTE
+      && judgedTopicsNote(later) === `${AUTO_TOPICS_NOTE} Website removed on review — host stopped serving the page.`
+      && judgedTopicsNote(AUTO_TOPICS_NOTE) === AUTO_TOPICS_NOTE && judgedTopicsNote('mine') === 'mine');
+  check('a person choosing the topics clears both sentences and keeps what is theirs',
+    withoutAutoTopicsNote(KEYWORD_TOPICS_NOTE) === undefined
+      && withoutAutoTopicsNote(later) === 'Website removed on review — host stopped serving the page.');
 }
 
 /* ------------------------------------------------- the retag decision ----- */
@@ -146,9 +167,10 @@ const conferences = loadConferences();
 /* ---------------------------------------------------------- plumbing ------ */
 {
   const discover = fs.readFileSync(path.join(ROOT, 'scripts', 'discover_openreview.mjs'), 'utf8');
-  check('discovery asks Jev first and keeps the keyword table as the fallback',
-    /import \{[^}]*\bsuggestTopics\b[^}]*\} from '\.\.\/lib\/jev_topics\.mjs'/.test(discover)
-      && /await suggestTopics\([^)]*\)\)\s*\?\?\s*guessTopics\(/.test(discover));
+  check('discovery asks Jev first, keeps the keyword table as the fallback, and records which one answered',
+    /import \{[^}]*\baskTopics\b[^}]*\} from '\.\.\/lib\/jev_topics\.mjs'/.test(discover)
+      && /topicsForImport\(await askTopics\([^)]*\), guessTopics\(/.test(discover)
+      && /record\.topics = tagged\.topics;/.test(discover) && /record\.notes = tagged\.notes;/.test(discover));
   const retag = fs.readFileSync(path.join(ROOT, 'scripts', 'retag_topics.mjs'), 'utf8');
   check('the retag sweep asks Jev, keeps the table as the fallback, and leaves the policy to retagDecision',
     /askTopics\(/.test(retag) && /guessTopics\(/.test(retag) && /retagDecision\(/.test(retag));
@@ -162,7 +184,16 @@ const conferences = loadConferences();
       && withoutAutoTopicsNote(AUTO_TOPICS_NOTE) === undefined && withoutAutoTopicsNote('mine') === 'mine');
   check('the sweep keys on it, and takes --slug so a handful can be re-judged without paying for the corpus',
     /hasAutoTopicsNote\(raw\.notes\)/.test(retag) && /'--slug'/.test(retag));
+  check('the sweep has a mode for entries still owed a judgment, settles their note, and stops when a whole batch goes unanswered',
+    /'--pending'/.test(retag) && /pendingOnly && !hasKeywordTopicsNote\(raw\.notes\)/.test(retag)
+      && /raw\.notes = judgedTopicsNote\(raw\.notes\)/.test(retag) && /answers\.every\(\(a\) => a === null\)/.test(retag)
+      && /recordJevStatus\(/.test(retag));
   const wf = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'discover.yml'), 'utf8');
+  const crawl = wf.indexOf('- name: Discover venues');
+  const heal = wf.indexOf('run: node scripts/retag_topics.mjs --pending ||');
+  const publish = wf.indexOf('- name: Publish new/updated entries');
+  check('the weekly discovery job heals the fallback on its own: after the crawl, before the publish, and never fatal',
+    crawl !== -1 && heal > crawl && publish > heal);
   check('the discovery workflow passes the key (unset on a fork => keyword table, by design)',
     /TYPESAFE_API_KEY:\s*\$\{\{\s*secrets\.TYPESAFE_API_KEY\s*\}\}/.test(wf));
   const ci = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'validate.yml'), 'utf8');

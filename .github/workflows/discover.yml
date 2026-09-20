@@ -150,6 +150,19 @@ jobs:
             echo "::error::discovery did not complete for:$still"
           fi
 
+      # The fallback heals here. An import that could not ask Jev — a dead key,
+      # an empty balance, an outage — takes the keyword table's tags and says so
+      # in its note; this re-asks exactly those entries and takes the sentence
+      # off once Jev has answered, so the cost of a bad Sunday is a week on the
+      # keyword tags rather than forever. After the crawl, so a run whose own
+      # imports were the casualties retries them once before publishing; when
+      # Jev is still not there the sweep stops after one unanswered batch. It
+      # writes nothing without an answer and must never cost the run its other
+      # findings, hence the `||`. Its requests land in $JEV_STATUS with the
+      # crawl's, so the "Jev did not answer" issue below covers both.
+      - name: Re-judge topics imported while Jev could not be asked
+        run: node scripts/retag_topics.mjs --pending || echo "::warning::the pending-topics sweep failed; entries stay marked and are retried next week"
+
       - name: Validate
         run: node scripts/validate.mjs
       # This job is the only scheduled one that CREATES entries, and it publishes

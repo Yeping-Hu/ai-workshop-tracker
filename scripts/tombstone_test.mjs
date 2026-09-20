@@ -43,7 +43,7 @@ check('no title is not a tombstone — the empty-group rule owns that case',
 
 const discover = fs.readFileSync(path.join(ROOT, 'scripts', 'discover_openreview.mjs'), 'utf8');
 const guard = discover.indexOf("if (isTombstonedVenue({ title: val(c, 'title') }))");
-const create = discover.indexOf('record.notes = AUTO_TOPICS_NOTE');
+const create = discover.indexOf('const record = { name: title, acronym, conference: conf, year };');
 check('the importer refuses one before it builds a record', guard !== -1 && create !== -1 && guard < create);
 
 const husks = listWorkshopFiles().filter((f) => isTombstonedVenue({ title: readWorkshopFile(f).raw.name })).map(slugOfFile);

@@ -1404,7 +1404,11 @@ does not throw — when there is no judgment to be had: no `TYPESAFE_API_KEY`
 (every fork, every PR preview), an auth failure, a request the API rejected,
 or the service throttled or down past a three-retry budget with `retry-after`
 honoured. Each caller then does what the pipeline did before Jev: the keyword
-table tags the entry; the audit records nothing that week. The job prints a
+table tags the entry; the audit records nothing that week. Neither is
+permanent: the audit asks again next week because nothing was recorded, and an
+entry tagged by the table because Jev could not be asked says so in its note
+and is re-judged by the next discovery run that can ask ("The fallback heals",
+under "Contributors are validated by CI"). The job prints a
 `::warning::` annotation — once for a missing key, and once per failed request,
 because the Worker is one process serving requests for hours and a once-only
 warning there hid every failure after the first — and stays green, and
@@ -1721,6 +1725,27 @@ the table alone sent 157 of 944 entries to `other`, and an `other`-only entry
 matches no topic-filtered alerts subscription at all. The table covers the
 whole vocabulary — a topic it cannot produce is one no fork, and no run during
 an outage, could ever assign — and the test checks that in both directions.
+
+**The fallback heals.** "Jev has no answer" is two different facts, and an
+import records which (`topicsForImport`). Asked, and nothing cleared the bar:
+the table's guess is the considered answer and the entry carries the plain
+auto-suggested note. Could not be asked at all — no key, an outage, an empty
+balance: the note gains a second sentence, "They are a keyword match on the
+title." (`KEYWORD_TOPICS_NOTE`), which is the entry's own record that a judgment
+is still owed. The weekly discovery job ends its crawl with
+`retag_topics.mjs --pending`, which re-asks exactly the entries carrying that
+sentence and takes it off once Jev has answered — whatever it answered, the same
+topics included. Before this a keyword-tagged entry was indistinguishable from
+a judged one, so a Sunday with a dead key left its imports on the table's tags
+for good: the job green, the "Jev did not answer" issue opened and later closed
+by a healthy run, and nothing ever revisited what that Sunday imported. Now the
+cost of a bad week is a week. An extra sentence rather than a second note, so
+everything that reads the auto note — the edit form, the Markdown export, the
+search index's ignore rule — treats the entry as machine-tagged with no change;
+a person choosing the topics clears both sentences. It stays true on a fork,
+where no judgment is coming. When Jev is still not there the sweep stops after
+one unanswered batch rather than spending the retry budget under the
+`data-write` lock, and it can never cost the run its other findings.
 
 Both guesses can be re-run over already-imported entries with
 `scripts/retag_topics.mjs`, which by default re-tags **only** entries still

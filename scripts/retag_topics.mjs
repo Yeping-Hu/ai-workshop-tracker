@@ -28,21 +28,35 @@
  * better), so the edit form's "drop the note when a human curates" behavior
  * still applies.
  *
+ * `--pending` is the narrow one the weekly discovery job runs on its own
+ * (discover.yml): only entries whose note says their topics are a keyword match
+ * because Jev could not be asked when they were imported (KEYWORD_TOPICS_NOTE in
+ * discover_openreview.mjs). Once Jev answers, the entry is re-derived and that
+ * sentence comes off, in any mode — so a Sunday with a dead key or an empty
+ * balance costs its imports a week on the keyword table's tags, not forever.
+ * When a whole batch gets no answer the sweep stops: Jev is not there, the rest
+ * would burn the retry budget to learn the same thing, and they are still
+ * marked for next week.
+ *
  * Usage:
  *   node scripts/retag_topics.mjs --dry-run         # print the before/after, write nothing
  *   node scripts/retag_topics.mjs                   # apply to the `other` bucket
  *   node scripts/retag_topics.mjs --all [--dry-run] # re-judge every auto-suggested entry
  *   node scripts/retag_topics.mjs --all --slug <slug> [--slug <slug> …]   # only these
+ *   node scripts/retag_topics.mjs --pending [--dry-run]   # only entries still owed a judgment
  */
 import fs from 'node:fs';
 import * as yaml from 'js-yaml';
 import { listWorkshopFiles, readWorkshopFile, loadTopics, loadConferences, slugOfFile } from '../lib/workshops.mjs';
-import { guessTopics, hasAutoTopicsNote, DEADLINE_HINT } from './discover_openreview.mjs';
+import { guessTopics, hasAutoTopicsNote, hasKeywordTopicsNote, judgedTopicsNote, DEADLINE_HINT } from './discover_openreview.mjs';
 import { askTopics, retagDecision } from '../lib/jev_topics.mjs';
 import { jevUsageLine } from '../lib/jev.mjs';
+import { recordJevStatus } from '../lib/jev_status.mjs';
 
 const dryRun = process.argv.slice(2).includes('--dry-run');
-const all = process.argv.slice(2).includes('--all');
+const pendingOnly = process.argv.slice(2).includes('--pending');
+// --pending re-derives an entry the way --all does; it only asks about fewer.
+const all = process.argv.slice(2).includes('--all') || pendingOnly;
 // `--slug <slug>`, repeatable: the same sweep over named entries only — to
 // finish a run Jev did not fully answer, or to re-judge a handful after a
 // description changes, without paying for the corpus again.
@@ -60,6 +74,7 @@ for (const f of listWorkshopFiles()) {
   const t = Array.isArray(raw.topics) ? raw.topics : [];
   if (!all && !(t.length === 1 && t[0] === 'other')) continue; // only the 'other' bucket, unless --all
   if (!hasAutoTopicsNote(raw.notes)) continue;         // never touch human-curated
+  if (pendingOnly && !hasKeywordTopicsNote(raw.notes)) continue;
   if (slugs.length && !slugs.includes(slugOfFile(f))) continue;
   // yaml.dump drops comments, and a deadline-less entry carries the importer's
   // "know the deadline?" hint as one; keep it exactly as the importer would.
@@ -70,6 +85,8 @@ for (const f of listWorkshopFiles()) {
 const rows = [];
 let changed = 0;
 let unanswered = 0;
+let settled = 0;
+let stoppedAt = null;
 const via = { jev: 0, keywords: 0 };
 for (let i = 0; i < candidates.length; i += CONCURRENCY) {
   const chunk = candidates.slice(i, i + CONCURRENCY);
@@ -79,21 +96,41 @@ for (let i = 0; i < candidates.length; i += CONCURRENCY) {
     if (jev === null) unanswered++;
     // The policy is lib/jev_topics.mjs's retagDecision(); this loop is the I/O.
     const next = retagDecision(stored, jev, guessTopics(`${raw.name || ''} ${raw.acronym || ''}`), { all });
-    if (!next) return;
-    via[jev?.length ? 'jev' : 'keywords']++;
-    rows.push({ to: next.join('+'), name: raw.name, via: jev?.length ? 'jev' : 'kw' });
+    // Jev has now been asked about this entry, whatever it said, so the note
+    // stops saying it has not — even when the topics come out the same.
+    const settle = jev !== null && hasKeywordTopicsNote(raw.notes);
+    if (!next && !settle) return;
+    if (next) {
+      via[jev?.length ? 'jev' : 'keywords']++;
+      rows.push({ to: next.join('+'), name: raw.name, via: jev?.length ? 'jev' : 'kw' });
+      changed++;
+    }
+    if (settle) settled++;
     if (!dryRun) {
-      raw.topics = next;
+      if (next) raw.topics = next;
+      if (settle) raw.notes = judgedTopicsNote(raw.notes);
       fs.writeFileSync(f, (hint ? DEADLINE_HINT : '') + yaml.dump(raw, { lineWidth: 200, quotingType: '"' }));
     }
-    changed++;
   });
+  // A whole batch unanswered means Jev is not there (no key, an outage, no
+  // balance). In the modes that write nothing without an answer, asking about
+  // the rest would only spend minutes of retries under the data-write lock to
+  // learn the same thing. The default mode goes on: its fallback is the point.
+  if (all && answers.every((a) => a === null)) {
+    stoppedAt = Math.min(i + CONCURRENCY, candidates.length);
+    break;
+  }
 }
 
-console.log(`auto-suggested ${all ? 'entries' : "'other'"} scanned : ${candidates.length}`);
+console.log(`auto-suggested ${pendingOnly ? 'entries owed a judgment' : all ? 'entries' : "'other'"} scanned : ${candidates.length}`);
 console.log(`${dryRun ? 'WOULD reclassify' : 'reclassified'}        : ${changed}  (jev ${via.jev}, keywords ${via.keywords})`);
 console.log(`${all ? 'unchanged' : "still 'other' after"}            : ${candidates.length - changed}`);
+if (settled) console.log(`${dryRun ? 'WOULD mark' : 'marked'} as judged       : ${settled}  (the keyword-match sentence comes off the note)`);
 if (unanswered) console.log(`no answer from Jev             : ${unanswered}${all ? '  (left exactly as they were; re-run to finish)' : ''}`);
+if (stoppedAt !== null && stoppedAt < candidates.length) console.log(`stopped after ${stoppedAt} of ${candidates.length}: a whole batch went unanswered, so the rest are left for the next run`);
+// The run's Jev totals, for the workflow's "Jev did not answer" issue — the
+// same line discovery leaves, so a dead key shows up whichever job met it.
+recordJevStatus(`retag${pendingOnly ? ' --pending' : all ? ' --all' : ''}`);
 const usage = jevUsageLine();
 if (usage) console.log(usage);
 console.log('');

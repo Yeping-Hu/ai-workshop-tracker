@@ -21,7 +21,7 @@ for human review, as do dependency updates.
 | `pr-build-check.yml` | PRs & pushes to `main` | Builds the site, then runs the suites that need `site/dist` (`pagefind_index_test.mjs`, `saved_repair_test.mjs`) and the three browser suites — `ui_test.mjs` on the fork build, `alerts_ui_test.mjs` and `shipped_ui_test.mjs` on the alerts-configured one. The only job that asserts anything about the page it ships; it runs on pushes because work lands here without a PR |
 | `smoke.yml` | after each deploy, daily, manual | Runs `scripts/smoke_test.mjs` against the **live** site — the only check that sees what a reader gets rather than a locally built artefact: the pages answer, the board and search work, `/conference/` lists the deadlines, a DOI resolves to BibTeX through the live registries, the vendored MathJax renders. Opens or updates a `smoke`-labelled issue on failure, closes it on the next green run |
 | `deploy.yml` | push to `main`, daily, manual | Build & deploy (daily run refreshes derived statuses) |
-| `discover.yml` | weekly | Discovers new workshops/venues/deadlines from OpenReview, backfills a `website`/deadline/tracks that organizers published after the venue was imported, and syncs extensions (later-only); each new venue's topics are judged by Jev, with the keyword table standing in when no `TYPESAFE_API_KEY` is set → commits to `main`. Opens the `data-health` issue "Jev did not answer" when requests to Jev failed (closed by the next run in which every request succeeded) |
+| `discover.yml` | weekly | Discovers new workshops/venues/deadlines from OpenReview, backfills a `website`/deadline/tracks that organizers published after the venue was imported, and syncs extensions (later-only); each new venue's topics are judged by Jev, with the keyword table standing in when Jev cannot be asked — and the run ends by re-judging any entry still marked as tagged that way (`retag_topics.mjs --pending`), so an outage costs its imports a week, not their topics → commits to `main`. Opens the `data-health` issue "Jev did not answer" when requests to Jev failed (closed by the next run in which every request succeeded) |
 | `recheck-imminent.yml` | daily | Re-checks only deadlines within `[−7d, +14d]` for extensions (one lookup each, later-only) → commits to `main` |
 | `backfill-deadlines.yml` | daily | `scripts/backfill_deadlines.mjs` — fills a **blank** `submission_deadline` for OpenReview-linked, single-deadline entries (fill-only, never overwrites) → commits to `main` |
 | `sync-tracks.yml` | daily | `scripts/sync_tracks.mjs` — refreshes the per-track deadlines of **multi-track** venues from their sub-track child groups (fill blanks, later-only per track), re-deriving the headline → commits to `main` |
@@ -452,7 +452,10 @@ conference:
   auto-suggested note the keyword table left; without a `TYPESAFE_API_KEY` —
   every fork — the keyword table answers instead, exactly as before. Either way
   the note is what freeze-on-touch keys on, so a person's topics are never
-  revisited (ARCHITECTURE.md, "Typed judgments from Jev").
+  revisited (ARCHITECTURE.md, "Typed judgments from Jev"). When Jev could not
+  be asked at all the note says so in a second sentence, and the next weekly
+  run that can ask re-judges those entries and takes the sentence off — the
+  job heals its own bad Sundays.
 - **A two-stage venue** gets `abstract_deadline` filled at import and kept current
   by the daily re-check; the countdown labelling and ordering follow from the field
   with no per-entry configuration.
@@ -505,7 +508,7 @@ takes `--dry-run` (or prints a preview by default) and writes only what changed.
 | `scripts/normalize_stored_identity.mjs` | the full identity normalisation (`name` + `acronym`) | when `identity_fixed_point_test.mjs` fails; its message names this script |
 | `scripts/backfill_websites.mjs` | filling a **blank** `website` from the venue's OpenReview field, through the same reader and `review_ack` guard as import | after the website reader's rules widen (e.g. accepting a scheme-less host), so entries skipped under the old rules are filled |
 | `scripts/remove_tombstoned.mjs` (`--write` to apply) | the importer's refusal of a venue its organizers deleted — OpenReview cannot delete a group, so they rename it "Deleted" — by removing an entry stored under such a name, with its paper cache, and only when that cache is empty | if `tombstone_test.mjs` reports one — and ask first how it got past the importer |
-| `scripts/retag_topics.mjs` (`--all` for every auto-suggested entry, `--slug <slug>` to name some) | the topic judgment — Jev first, the keyword table when it has no answer — on entries still tagged `other` with the auto-suggested note; with `--all`, on every entry carrying that note, leaving untouched any entry Jev could not be asked about | after broadening the keyword table, or with a `TYPESAFE_API_KEY` set, to give the back catalogue the table could not classify real topics |
+| `scripts/retag_topics.mjs` (`--all` for every auto-suggested entry, `--slug <slug>` to name some; `--pending` is the mode `discover.yml` runs itself) | the topic judgment — Jev first, the keyword table when it has no answer — on entries still tagged `other` with the auto-suggested note; with `--all`, on every entry carrying that note, leaving untouched any entry Jev could not be asked about | after broadening the keyword table, or with a `TYPESAFE_API_KEY` set, to give the back catalogue the table could not classify real topics |
 | `scripts/digest_fixture.mjs [render.mjs] [name]` | renders one fixed digest through a given `alerts/render.mjs` | to diff an email template change against `main` with the code as the only variable (its header shows the worktree recipe) |
 
 ### Flags the workflows do not use
