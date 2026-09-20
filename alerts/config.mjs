@@ -23,6 +23,10 @@ export const RL_MATCH_PER_DAY = 500;
  *  The feed changes when the site deploys — daily, plus data pushes — so half an
  *  hour of staleness is at most a deadline that moved this morning. */
 export const MATCH_FEED_TTL_MS = 30 * 60_000;
+/** How long a day of the matcher's tally (alerts/usage.mjs) is kept before the
+ *  daily maintenance call deletes it. The dashboard's widest window is a year;
+ *  this clears it with a margin, and bounds the rows at about two thousand. */
+export const MATCH_USAGE_RETENTION_DAYS = 400;
 
 /** A starred workshop whose next stage lands inside this window triggers the
  *  opt-in urgent alert. */

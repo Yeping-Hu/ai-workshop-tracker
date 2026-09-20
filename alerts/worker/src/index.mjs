@@ -14,7 +14,8 @@
  *            endpoint ever reveals whether an address is on the list.
  *            /match — "find workshops for your paper": Turnstile-gated and
  *            rate-limited because each call spends money (Jev input tokens),
- *            stores nothing, and logs nothing of the paper. alerts/fit.mjs.
+ *            stores nothing and logs nothing of the paper — only a count per
+ *            day, for the dashboard. alerts/fit.mjs, alerts/usage.mjs.
  *   webhook  /webhooks/resend — bounces and complaints suppress or delete.
  *   admin    /admin/* — bearer ADMIN_TOKEN, called only by the GitHub Action.
  *
@@ -36,6 +37,7 @@ import {
   RL_MATCH_PER_IP_HOUR,
   RL_MATCH_PER_DAY,
   MATCH_FEED_TTL_MS,
+  MATCH_USAGE_RETENTION_DAYS,
   SEND_CHUNK,
   EVENT_RETENTION_DAYS,
 } from '../../config.mjs';
@@ -57,6 +59,7 @@ import { sendEmail, sendBatch } from './mail.mjs';
 import { verifyAccessJwt } from './access.mjs';
 import { renderDashboard } from './dashboard.mjs';
 import { matchPaper, validateInput } from '../../fit.mjs';
+import { bumpUsage, foldUsage, pruneBefore, PRUNE_SQL } from '../../usage.mjs';
 // The same client the pipeline jobs use — pure on purpose, so it bundles here.
 import { askJev } from '../../../lib/jev.mjs';
 
@@ -187,6 +190,12 @@ async function loadMatchFeed(env) {
  * limit, and a global daily brake. Without a TYPESAFE_API_KEY the endpoint is
  * simply absent (503), and the page says so — the same shape as a Worker with
  * no Turnstile secret refusing to send.
+ *
+ * What IS kept is a tally: how many searches a day, how each ended, and what
+ * Jev billed for them — a day, a counter and a number (alerts/usage.mjs), for
+ * the dashboard's "Paper matcher" card. It starts past Turnstile, so a request
+ * that never solved a challenge writes nothing, and a tally that cannot be
+ * written costs a count, never the visitor's answer.
  */
 async function handleMatch(request, env) {
   // An unavailable answer names its cause in `detail` — no key, no feed, or
@@ -199,17 +208,40 @@ async function handleMatch(request, env) {
   if (!body) return fail(request, env, 400, 'bad_request');
   const ip = request.headers.get('CF-Connecting-IP') || '';
   if (!(await verifyTurnstile(env, body.turnstile_token, ip))) return fail(request, env, 403, 'captcha');
+  const tally = async (counts) => {
+    const wrote = await bumpUsage(env.DB, today(), counts);
+    if (!wrote.ok) console.warn('match usage not counted', wrote.error);
+  };
   if (!(await rateLimit(env, await ipBucket(request, env, 'match'), RL_MATCH_PER_IP_HOUR, 3600))) {
+    await tally({ turned_away: 1 });
     return fail(request, env, 429, 'rate_limited');
   }
-  if (!(await rateLimit(env, `matchday:${today()}`, RL_MATCH_PER_DAY, 86_400))) return fail(request, env, 429, 'busy');
+  if (!(await rateLimit(env, `matchday:${today()}`, RL_MATCH_PER_DAY, 86_400))) {
+    await tally({ turned_away: 1 });
+    return fail(request, env, 429, 'busy');
+  }
+  // Not tallied: a body the page would never send is not someone using the matcher.
   const input = validateInput(body);
   if (!input.ok) return fail(request, env, 400, input.error);
   const feed = await loadMatchFeed(env);
-  if (!feed) return unavailable('the candidates feed could not be read');
+  if (!feed) {
+    await tally({ failed: 1 });
+    return unavailable('the candidates feed could not be read');
+  }
+  // Counted here, per request, rather than read off jevUsage(): that total is
+  // the isolate's, and two searches in flight would each claim the other's calls.
+  const spent = { jev_requests: 0, input_tokens: 0 };
   const result = await matchPaper(input, feed, {
-    ask: (state, questions) => askJev(state, questions, { env: { TYPESAFE_API_KEY: env.TYPESAFE_API_KEY } }),
+    ask: async (state, questions) => {
+      const res = await askJev(state, questions, { env: { TYPESAFE_API_KEY: env.TYPESAFE_API_KEY } });
+      if (res) {
+        spent.jev_requests += 1;
+        spent.input_tokens += Number(res.usage?.input_tokens) || 0;
+      }
+      return res;
+    },
   });
+  await tally({ ...spent, [result.ok ? 'answered' : 'failed']: 1 });
   if (!result.ok) return unavailable(result.detail ? `the model answered ${result.detail}` : 'the model did not answer');
   return json(result, { request, env });
 }
@@ -1047,12 +1079,16 @@ async function handleAdmin(request, env, path) {
     // older than the event retention concerns a deadline long passed, and
     // nothing else ever deletes it — the table only grew, one row per alert.
     const ur = await env.DB.prepare('DELETE FROM urgent_log WHERE sent < ?').bind(cutoff).run();
+    // The matcher's tally is a few rows a day and the dashboard looks back a
+    // year at most; past that they are deleted like everything else here.
+    const mu = await env.DB.prepare(PRUNE_SQL).bind(pruneBefore(today(), MATCH_USAGE_RETENTION_DAYS)).run();
     return json({
       ok: true,
       rate_limit_rows: rl.meta?.changes ?? 0,
       events_pruned: ev.meta?.changes ?? 0,
       unconfirmed_pruned: un.meta?.changes ?? 0,
       urgent_log_pruned: ur.meta?.changes ?? 0,
+      match_usage_pruned: mu.meta?.changes ?? 0,
     });
   }
 
@@ -1096,6 +1132,7 @@ async function collectStats(env, daysParam) {
     by_day: fillDays(await rows(STATS_SQL.signupsByDay(days)), days, today()),
     cadence: foldCadence(await rows(STATS_SQL.cadences())),
     regions: foldRegions(await rows(STATS_SQL.timezones())),
+    matcher: foldUsage(await rows(STATS_SQL.matchUsage(days)), days, today()),
     traffic: await goatcounter(env),
   };
 }

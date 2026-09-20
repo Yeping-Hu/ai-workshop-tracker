@@ -1,6 +1,7 @@
 /**
  * Aggregates over the subscriber table — the only shape in which subscriber
- * data is allowed to leave the database.
+ * data is allowed to leave the database — and, since the dashboard shows it
+ * beside them, the paper matcher's daily tally (alerts/usage.mjs).
  *
  * Two callers, one definition: scripts/alerts_stats.mjs (reads D1 directly
  * through wrangler, so it still answers when the Worker is down) and the
@@ -17,6 +18,8 @@
  *
  * Pure: no I/O, no Node built-ins. Runs unchanged in a Worker and in node.
  */
+
+import { USAGE_PREFIX } from './usage.mjs';
 
 /* `created` is written by the Worker as an ISO-8601 stamp ("…T12:00:00.000Z"),
  * so the cutoff is rendered in that same shape. SQLite's `datetime('now')`
@@ -79,6 +82,20 @@ export const SQL = {
     SELECT tz, COUNT(*) AS n FROM subscribers
     WHERE confirmed_at IS NOT NULL AND suppressed_at IS NULL
     GROUP BY tz`,
+
+  /**
+   * The matcher's tally: one row per day and counter, read out of `kv` by key
+   * range (the key is `matchuse:<day>:<counter>`, so it sorts by day and the
+   * primary key serves the range). Fold with foldUsage() in alerts/usage.mjs.
+   * `~` sorts after every character a key can hold, which closes the range.
+   */
+  matchUsage: (n) => `
+    SELECT substr(k, ${USAGE_PREFIX.length + 1}, 10) AS day,
+           substr(k, ${USAGE_PREFIX.length + 12}) AS counter,
+           SUM(CAST(v AS INTEGER)) AS n
+    FROM kv
+    WHERE k >= '${USAGE_PREFIX}' || date('now', '-${days(n)} days') AND k < '${USAGE_PREFIX}~'
+    GROUP BY day, counter ORDER BY day ASC`,
 };
 
 /**

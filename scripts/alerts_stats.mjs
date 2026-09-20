@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * How many people are subscribed, and what they asked for.
+ * How many people are subscribed, and what they asked for — and how often the
+ * paper matcher (/find/) was used, from its daily tally (alerts/usage.mjs).
  *
  * Counts only. No address is ever selected, printed, or returned — the whole
  * point is that this can be run casually, pasted into an issue, or left in a
@@ -21,6 +22,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SQL, foldCadence, foldRegions } from '../alerts/stats.mjs';
+import { foldUsage } from '../alerts/usage.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const WORKER_DIR = path.join(ROOT, 'alerts', 'worker');
@@ -65,6 +67,7 @@ const recent = query(SQL.signupsSince(DAYS))[0]?.n ?? 0;
 const byDay = query(SQL.signupsByDay(DAYS)).slice().reverse().slice(0, 14);
 const flags = foldCadence(query(SQL.cadences()));
 const regions = foldRegions(query(SQL.timezones()));
+const matcher = foldUsage(query(SQL.matchUsage(DAYS)), DAYS, new Date().toISOString().slice(0, 10));
 
 const pad = (label, value) => `  ${String(label).padEnd(22)}${value}`;
 
@@ -94,4 +97,12 @@ if (byDay.length) {
 } else {
   console.log('  (none)');
 }
+console.log('');
+console.log(`Paper matcher (/find/) in the last ${DAYS} days:`);
+console.log(pad('searches', matcher.searches));
+console.log(pad('answered', matcher.answered));
+console.log(pad('ended "unavailable"', matcher.failed));
+console.log(pad('turned away (limit)', matcher.turned_away));
+console.log(pad('Jev requests', matcher.jev_requests));
+console.log(pad('input tokens billed', `${matcher.input_tokens.toLocaleString('en-US')}   (≈ $${matcher.usd.toFixed(4)})`));
 console.log('\nNo email address is read or printed by this script.');

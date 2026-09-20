@@ -483,6 +483,17 @@ Two other views, neither of which needs this repo:
 <https://api.aiworkshoptracker.com/dashboard> — the same figures as the script,
 plus where subscribers are and site traffic, on one page that works on a phone.
 
+The **Paper matcher** card is how often `/find/` was used in the window:
+searches (answered plus ended "unavailable"), requests turned away by a rate
+limit, and what Jev billed — requests, input tokens, and the spend at the price
+`lib/jev.mjs` records, which is an estimate of the bill rather than the bill.
+It is read from the matcher's daily tally (`alerts/usage.mjs`; ARCHITECTURE.md,
+"What is kept is a count"), which starts with the first search after the
+Worker that introduced it deployed — earlier use was never recorded anywhere.
+A flagged "Ended unavailable" is a visitor who was told the matcher is off; the
+cause is under "The paper matcher says it is unavailable" below. Only requests that
+passed Turnstile are counted, so the card is people, not probes.
+
 The queries behind it live in `alerts/stats.mjs` and are shared with
 `scripts/alerts_stats.mjs`, so the page and the terminal cannot drift into
 disagreeing about how many people are subscribed. The script still reads D1
@@ -645,7 +656,8 @@ npx wrangler dev --remote --env dev --port 8799 --var TURNSTILE_SECRET:<always-p
 then `POST http://127.0.0.1:8799/match` with a `title`, an `abstract` and any
 non-empty `turnstile_token`. It answers in under a second when healthy. The
 `dev` environment binds the production D1, and `/match` writes only its
-rate-limit counters there. `wrangler tail` on the deployed Worker shows the
+rate-limit counters and its daily tally there — so a search made this way
+shows on the dashboard like any other. `wrangler tail` on the deployed Worker shows the
 client's `::warning::` line for every failed request to Jev and Turnstile's
 rejection codes — never a token, an address or the paper. Nothing opens an
 issue for this: the "Jev did not answer" issue belongs to the scheduled jobs,

@@ -533,7 +533,9 @@ async function main() {
   /* 6. maintenance -------------------------------------------------------- */
   if (!DRY_RUN) {
     const m = await admin('/admin/maintenance', { method: 'POST' });
-    log(`6. maintenance: ${priv(m.rate_limit_rows)} rate-limit row(s), ${m.events_pruned} old event(s), ${priv(m.unconfirmed_pruned)} abandoned signup(s), ${priv(m.urgent_log_pruned)} expired urgent-log row(s)`);
+    // `?? 0`: the Action and the Worker deploy separately, and a Worker one
+    // commit behind answers without the matcher field.
+    log(`6. maintenance: ${priv(m.rate_limit_rows)} rate-limit row(s), ${m.events_pruned} old event(s), ${priv(m.unconfirmed_pruned)} abandoned signup(s), ${priv(m.urgent_log_pruned)} expired urgent-log row(s), ${m.match_usage_pruned ?? 0} old matcher-tally row(s)`);
   } else {
     log('6. [dry-run] maintenance skipped');
   }

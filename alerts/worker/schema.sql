@@ -78,8 +78,11 @@ CREATE TABLE IF NOT EXISTS urgent_log (
   PRIMARY KEY (email, slug, deadline_utc)
 );
 
--- Small key/value store. Currently holds exactly one row: 'snapshot', the
--- previous run's workshop projection (~60 KB of JSON).
+-- Small key/value store. 'snapshot' is the previous run's workshop projection
+-- (~60 KB of JSON); 'goatcounter' is the dashboard's 15-minute traffic cache;
+-- 'matchuse:<day>:<counter>' rows are the paper matcher's daily tally — an
+-- integer each, nothing of any request (alerts/usage.mjs). They live here
+-- rather than in a table of their own so that counting needs no migration.
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
 
 -- Rate-limit buckets. `bucket` is e.g. 'sub:<sha256(ip+salt)>:<hour>' or

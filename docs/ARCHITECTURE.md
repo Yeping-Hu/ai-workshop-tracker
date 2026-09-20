@@ -1283,6 +1283,26 @@ handler judges it and discards it, stores nothing, and logs nothing of the body
 (the Worker's catch-all logs a stack, never a request); TypeSafe does not train
 on requests. The page says all of this above the form.
 
+**What is kept is a count.** The dashboard's "Paper matcher" card answers "is
+anyone using this, and what does it cost", from a daily tally
+(`alerts/usage.mjs`, pinned by `scripts/alerts_usage_test.mjs`): a day, a
+counter name from a closed set of five — answered, failed, turned away, Jev
+requests, input tokens billed — and an integer. No address or hash of one, no
+title, no topic, no time finer than the day, and a caller cannot write a
+counter outside the set, so the promise above holds by construction rather
+than by care. The rows live in the existing `kv` table under
+`matchuse:<day>:<counter>`, not in a table of their own, because the deploy
+workflow deliberately applies no schema: a new table would be a manual
+migration, and every search before someone ran it would go uncounted. The key
+sorts by day, so the dashboard's read and the daily maintenance prune (400
+days, past the dashboard's widest window) are both a range on the primary key.
+Counting starts past Turnstile — an unsolved challenge writes nothing, so the
+tally cannot be used to spend the free plan's D1 writes — and a tally that
+cannot be written is a warning in `wrangler tail`, never a failed search. Jev's
+spend is summed per request from the usage each answer reports, not read off
+the client's running total, which belongs to the isolate and would let two
+searches in flight claim each other's calls.
+
 **Gated like the mail endpoints, because it spends money.** Turnstile,
 fail-closed as everywhere; twenty requests an address an hour; and a global
 brake of five hundred a day (`alerts/config.mjs`), which caps the worst day —

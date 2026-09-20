@@ -83,6 +83,8 @@ jobs:
         run: node scripts/alerts_log_test.mjs
       - name: Test the paper matcher (input bounds, topic and fit questions, selection, batches, ranking)
         run: node scripts/alerts_fit_test.mjs
+      - name: Test the matcher's daily tally (numbers only, never fails a search, the SQL on a real SQLite)
+        run: node scripts/alerts_usage_test.mjs
 
       # scripts/alerts_ui_test.mjs is deliberately NOT run here, though the path
       # filter above matches its name. It drives a real browser against a built

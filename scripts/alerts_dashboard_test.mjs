@@ -16,6 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SQL, foldCadence, foldRegions, regionOf, fillDays, UNKNOWN_REGION } from '../alerts/stats.mjs';
+import { foldUsage } from '../alerts/usage.mjs';
 import { renderDashboard } from '../alerts/worker/src/dashboard.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -124,6 +125,11 @@ const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     by_day: [{ day: '2026-08-16', n: 4 }, { day: '2026-08-17', n: 2 }],
     cadence: { weekly: 5, urgent: 2, changes: 2 },
     regions: [{ region: 'Americas', n: 4 }, { region: 'Asia', n: 1 }],
+    matcher: foldUsage([
+      { day: '2026-08-16', counter: 'answered', n: 11 }, { day: '2026-08-17', counter: 'answered', n: 30 },
+      { day: '2026-08-17', counter: 'failed', n: 1 }, { day: '2026-08-17', counter: 'turned_away', n: 3 },
+      { day: '2026-08-17', counter: 'jev_requests', n: 190 }, { day: '2026-08-17', counter: 'input_tokens', n: 612000 },
+    ], 30, '2026-08-17'),
     traffic: { total: 1234, by_day: [{ day: '2026-08-16', n: 40 }, { day: '2026-08-17', n: 60 }],
                pages: [{ path: '/', n: 900 }], referrers: [{ name: 'google', n: 30 }],
                locations: [{ name: 'United States', n: 500 }] },
@@ -152,6 +158,18 @@ const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   }
   check('a missing token says so specifically',
     renderDashboard({ ...stats, traffic: { error: 'not_configured' } }).includes('GOATCOUNTER_TOKEN'));
+
+  /* The paper matcher's card: how often /find/ was used, and what Jev billed. */
+  check('shows how many searches the matcher answered', /Paper matcher/.test(html) && html.includes('>42 <span class="big-unit">searches</span>'));
+  check('...with the spend worked out from the billed tokens', html.includes('612,000') && html.includes('≈ $0.0257'));
+  check('...and a search that ended "unavailable" is flagged', /Ended “unavailable”<\/dt><dd class="flag">1</.test(html));
+  check('a quiet matcher says so instead of charting zeros',
+    /Paper matcher[\s\S]*No searches in this window yet/.test(renderDashboard({ ...stats, matcher: foldUsage([], 30, '2026-08-17') })));
+  check('one search is "1 search"',
+    renderDashboard({ ...stats, matcher: foldUsage([{ day: '2026-08-17', counter: 'answered', n: 1 }], 30, '2026-08-17') }).includes('>1 <span class="big-unit">search</span>'));
+  // /admin/stats from a Worker one deploy behind has no `matcher`; the page must not throw on it.
+  const before = renderDashboard({ ...stats, matcher: undefined });
+  check('stats without a matcher figure still render', before.includes('Mailable') && !before.includes('Paper matcher'));
 
   // Escaping: GoatCounter returns page paths and referrer names from the open
   // internet, so they are untrusted strings on a privileged page.

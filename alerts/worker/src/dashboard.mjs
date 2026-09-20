@@ -129,6 +129,44 @@ function sparkline(series, { unit = '' } = {}) {
     </svg>`;
 }
 
+/**
+ * The paper matcher (/find/): how often it was used and what Jev billed.
+ *
+ * The headline is *searches* — requests that got as far as asking — because
+ * that is the question the card exists to answer. "Ended unavailable" is
+ * flagged like a pending signup is: one is a visitor who was told the matcher
+ * is off, and the cause is in `wrangler tail` (docs/ALERTS.md). The spend is
+ * computed from the tokens Jev reported, at the price lib/jev.mjs records, so
+ * it is an estimate of the bill and says "≈".
+ */
+function matcherSection(m, days) {
+  if (!m) return '';
+  const head = `<h2>Paper matcher <span class="sub">/find/ · last ${n(days)} days</span></h2>`;
+  if (!m.searches && !m.turned_away) {
+    return `<section class="card span-all">
+        ${head}
+        <p class="empty">No searches in this window yet. Each one is counted as it happens — a number per day, nothing of the paper.</p>
+      </section>`;
+  }
+  const usd = Number(m.usd) || 0;
+  return `
+    <section class="card span-all">
+      ${head}
+      <div class="split">
+        <div class="big">${n(m.searches)} <span class="big-unit">${m.searches === 1 ? 'search' : 'searches'}</span></div>
+        <dl>
+          <dt>Answered</dt><dd class="${m.answered ? '' : 'zero'}">${n(m.answered)}</dd>
+          <dt>Ended “unavailable”</dt><dd class="${m.failed ? 'flag' : 'zero'}">${n(m.failed)}</dd>
+          <dt>Turned away by a rate limit</dt><dd class="${m.turned_away ? '' : 'zero'}">${n(m.turned_away)}</dd>
+          <dt>Jev requests</dt><dd class="${m.jev_requests ? '' : 'zero'}">${n(m.jev_requests)}</dd>
+          <dt>Input tokens billed</dt><dd class="${m.input_tokens ? '' : 'zero'}">${n(m.input_tokens)}</dd>
+          <dt>Spent on Jev</dt><dd class="${usd ? '' : 'zero'}">≈ $${usd.toFixed(usd < 1 ? 4 : 2)}</dd>
+        </dl>
+      </div>
+      ${sparkline(m.by_day, { unit: 'searches' })}
+    </section>`;
+}
+
 function trafficSection(t) {
   if (!t || t.error) {
     const why =
@@ -212,6 +250,8 @@ export function renderDashboard(stats) {
   dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
   dd.zero{font-weight:400;color:var(--muted)}
   dd.flag{color:var(--warn)}
+  /* A headline figure beside its breakdown; stacks when the card is narrow. */
+  .split{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:1rem 2.5rem;align-items:start}
   /* Name above its bar, so a long workshop path is readable in full. */
   .bars{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.7rem}
   .bar-top{display:flex;justify-content:space-between;align-items:baseline;gap:.7rem;margin-bottom:.25rem}
@@ -294,6 +334,8 @@ export function renderDashboard(stats) {
       <p class="empty">From the timezone the browser reported at signup. No IP lookup.</p>
     </section>
 
+    ${matcherSection(stats.matcher, stats.days)}
+
     ${trafficSection(stats.traffic)}
   </div>
 
@@ -302,6 +344,7 @@ export function renderDashboard(stats) {
     behind it cannot return one. For individual records use
     <code>node scripts/alerts_stats.mjs</code> or query D1 directly.<br>
     ${attention ? 'Pending or suppressed rows are highlighted above. ' : ''}Traffic is cached for 15 minutes.
+    Matcher searches are counted once past the human check, as a number per day.
   </footer>
 </div>
 </body>
