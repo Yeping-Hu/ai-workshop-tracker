@@ -127,6 +127,21 @@ export function isAutoTopicsNote(notes) {
 }
 
 /**
+ * A venue its organizers deleted. OpenReview has no delete for a venue group,
+ * so organizers who abandon one rename it: NeurIPS 2024's ATTRIB workshop opened
+ * a second group for late submissions on 2 October and the next day its title
+ * was "Deleted" and its subtitle "DELETE". The group is still listed under the
+ * conference's prefix forever after, with a date and a location, so nothing
+ * about its shape says husk — only the title does. Imported, it became a page
+ * headed "Deleted" with a countdown. Matched on the whole title, never a
+ * substring: "Deleted Scenes: What Generative Video Leaves Out" is a workshop.
+ */
+const TOMBSTONE_TITLE = /^\W*(?:deleted?|removed|to be deleted)\W*$/i;
+export function isTombstonedVenue({ title } = {}) {
+  return TOMBSTONE_TITLE.test(String(title ?? ''));
+}
+
+/**
  * True while `notes` still says the topics are machine-suggested: the note on
  * its own (isAutoTopicsNote), or that sentence with others after it. Later jobs
  * append to the note rather than replace it — "… edits welcome. Website removed
@@ -816,6 +831,15 @@ async function main({ conf, year, dryRun }) {
     }
     const c = g.content ?? {};
     const tail = g.id.split('/').pop();
+    // A venue the organizers deleted is not a workshop (isTombstonedVenue has
+    // the case). Only for a venue we do not track: one that is tombstoned after
+    // we imported it keeps its entry and its real name, and the weekly review
+    // report shows the title change to a person — a rename is not proof enough
+    // to unpublish a page on its own.
+    if (isTombstonedVenue({ title: val(c, 'title') })) {
+      console.log(`  ↳ skipping ${g.id}: its organizers deleted it (the title is "${val(c, 'title')}")`);
+      continue;
+    }
     // OpenReview venue titles routinely repeat the conference and year the
     // entry is already filed under; every surface that shows the name says that
     // already. Strip it here so it never reaches the YAML in the first place.

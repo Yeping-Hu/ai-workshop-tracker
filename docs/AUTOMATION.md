@@ -438,6 +438,14 @@ conference:
   the add form seeds it for a contributed one (so the board's "Deadline just
   announced" note appears either way). Editing a deadline through the edit form
   logs the move too, so a human change is as traceable as a bot one.
+- **A venue its organizers deleted is never imported.** OpenReview has no
+  delete for a venue group, so an abandoned one is renamed — "Deleted", in the
+  case that taught this — and stays listed under the conference's prefix with a
+  date and a location like any other. Discovery skips a group whose whole title
+  is such a tombstone (`isTombstonedVenue`). A venue tombstoned *after* it was
+  imported keeps its entry and its real name: the title change reaches a person
+  through the weekly review report, because a rename alone is not proof enough
+  to unpublish a page.
 - **A new workshop's topics are judged, not keyword-matched.** Discovery asks
   Jev one yes/no question per topic over the title, acronym and host conference
   (`lib/jev_topics.mjs`) and writes the ones that clear the bar under the same
@@ -496,6 +504,7 @@ takes `--dry-run` (or prints a preview by default) and writes only what changed.
 | `scripts/strip_venue_names.mjs` (`--write` to apply) | the venue-stripping of `name` | if `acronym_identity_test.mjs` reports a name repeating its own conference-year — and ask first how the entry got past the importer, because that is the actual defect |
 | `scripts/normalize_stored_identity.mjs` | the full identity normalisation (`name` + `acronym`) | when `identity_fixed_point_test.mjs` fails; its message names this script |
 | `scripts/backfill_websites.mjs` | filling a **blank** `website` from the venue's OpenReview field, through the same reader and `review_ack` guard as import | after the website reader's rules widen (e.g. accepting a scheme-less host), so entries skipped under the old rules are filled |
+| `scripts/remove_tombstoned.mjs` (`--write` to apply) | the importer's refusal of a venue its organizers deleted — OpenReview cannot delete a group, so they rename it "Deleted" — by removing an entry stored under such a name, with its paper cache, and only when that cache is empty | if `tombstone_test.mjs` reports one — and ask first how it got past the importer |
 | `scripts/retag_topics.mjs` (`--all` for every auto-suggested entry, `--slug <slug>` to name some) | the topic judgment — Jev first, the keyword table when it has no answer — on entries still tagged `other` with the auto-suggested note; with `--all`, on every entry carrying that note, leaving untouched any entry Jev could not be asked about | after broadening the keyword table, or with a `TYPESAFE_API_KEY` set, to give the back catalogue the table could not classify real topics |
 | `scripts/digest_fixture.mjs [render.mjs] [name]` | renders one fixed digest through a given `alerts/render.mjs` | to diff an email template change against `main` with the code as the only variable (its header shows the worktree recipe) |
 
