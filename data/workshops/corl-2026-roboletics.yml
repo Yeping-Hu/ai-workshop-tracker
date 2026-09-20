@@ -1,0 +1,20 @@
+# --- Missing: submission deadline -----------------------------------------
+# Know it? Add two lines anywhere below, for example:
+#   submission_deadline: 2026-09-15 23:59    # or just a date: 2026-09-15
+#   timezone: AoE                            # AoE / UTC / America/Los_Angeles
+# Then click "Commit changes..." -> "Propose changes" to open a pull request.
+# It is validated automatically and usually merged within a day.
+# ---------------------------------------------------------------------------
+name: 'RoboLetics 3.0: Benchmarks for Agile Physical Human-Robot Interaction'
+acronym: Roboletics
+conference: corl
+year: 2026
+website: https://roboletics.github.io/corl2026/
+location: Austin, Texas, USA
+topics:
+  - evaluation-benchmarks
+  - robotics
+openreview_venue_id: robot-learning.org/CoRL/2026/Workshop/Roboletics
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-09-20'
