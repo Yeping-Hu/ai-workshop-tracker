@@ -141,11 +141,16 @@ const datasetLd: Record<string, any> = {
         directly underneath: the statline and the conference line say it four
         times in the same screenful. So the link read as a pointer to what the
         visitor was already looking at, with only "it fits" to say otherwise.
-        This line is the only way in to /find/ anywhere on the site, so its
-        wording carries the whole feature; find_ui_test.mjs pins it. */}
+        It is no longer the only way in — `Find` sits in the nav for any build
+        with a matcher — but it is the one a first-time visitor meets, so the
+        wording carries the feature; find_ui_test.mjs pins it. "Have a paper?"
+        is dropped: the verb already implies one. At 13.76px a phone fits about
+        44 characters on a line, and "the open calls" was both the words that
+        pushed it to two and the phrase that made the link read as a pointer to
+        the list below — the board is right there and already named. */}
     {ALERTS_API && (
       <p class="muted small">
-        Have a paper? <a href={href('/find/')}>Paste its abstract and get the open calls ranked by fit →</a>
+        <a href={href('/find/')}>Paste an abstract, get calls ranked by fit →</a>
       </p>
     )}
     <div class="kw-box hero-box" onclick="document.getElementById('q')?.focus()">

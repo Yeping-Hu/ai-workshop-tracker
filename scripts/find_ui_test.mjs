@@ -148,12 +148,17 @@ check('a too-short title is refused on the page, without a request', /three char
 console.log('— the way in —');
 await page.goto(BASE, { waitUntil: 'domcontentloaded' });
 check('the homepage links the matcher', (await page.locator('a[href$="/find/"]').count()) >= 1);
-// That link is the only way in to /find/ on the site, and it sits one screen
+// That link is the first way in a visitor meets (`Find` is also in the nav for
+// builds with a matcher), and it sits one screen
 // above a list the homepage itself calls "open calls" four times over. It
 // shipped as "Find the open calls it fits", which read as a pointer to that
 // list. So it must name what the visitor does — paste an abstract — which no
 // list asks of anyone, and must not open on the list's own verb and noun.
-const wayIn = (await page.locator('a[href$="/find/"]').first().innerText()).replace(/\s+/g, ' ').trim();
+// Scoped to the hero: `Find` is also in the nav now, and the nav link comes
+// first in the DOM, so an unscoped locator reads "Find" and these checks fail
+// on the wrong element. The assertions are about the sentence a first-time
+// visitor meets, not the nav label.
+const wayIn = (await page.locator('.hero a[href$="/find/"]').first().innerText()).replace(/\s+/g, ' ').trim();
 check('...and the link says what you do there: paste an abstract', /\bpaste\b/i.test(wayIn) && /\babstract\b/i.test(wayIn), wayIn);
 check('...and says what comes back is a ranking by fit, which the board below is not', /\brank/i.test(wayIn) && /\bfit/i.test(wayIn), wayIn);
 check('...rather than reading as the list of open calls under it', !/^(find|see|browse|view)\b[^.]*\bopen calls\b/i.test(wayIn), wayIn);

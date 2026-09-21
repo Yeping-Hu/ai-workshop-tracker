@@ -50,8 +50,15 @@ const canonical = Astro.site && !noindex ? new URL(Astro.url.pathname, Astro.sit
 // it. Reconsider only alongside copy that states what the page withholds — it
 // carries neither the 72h alerts nor the same-day ones, and is up to six days
 // old by design.
+// `Find` only when this build has a matcher to point at: it lives on the alerts
+// satellite, so a fork without ALERTS_API would otherwise get a nav link to a
+// page that says the matcher is off. Placed after Home because it acts on the
+// same corpus the board shows, and before Tools because it is the one feature
+// that reads the reader's own paper — until now it was reachable from a single
+// line of muted text in the homepage hero and from nowhere else on the site.
 const nav = [
   { label: 'Home', path: '/' },
+  ...(ALERTS_API ? [{ label: 'Find', path: '/find/' }] : []),
   { label: 'Tools', path: '/tools/' },
   { label: 'Saved', path: '/saved/' },
   { label: 'About', path: '/about/' },
