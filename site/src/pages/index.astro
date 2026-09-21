@@ -131,28 +131,6 @@ const datasetLd: Record<string, any> = {
       Deadlines, past editions, and accepted papers for AI/ML/Robotics conference
       workshops.
     </p>
-    {/* The matcher lives on the alerts satellite, so the way in appears only
-        in a build that has one — a fork's build shows nothing here, and its
-        /find/ page says the matcher is off.
-
-        The link names the action — paste an abstract — and the one thing the
-        board below cannot give, a ranking by fit. It first read "Find the open
-        calls it fits", and on this page "open calls" is the name of the list
-        directly underneath: the statline and the conference line say it four
-        times in the same screenful. So the link read as a pointer to what the
-        visitor was already looking at, with only "it fits" to say otherwise.
-        It is no longer the only way in — `Find` sits in the nav for any build
-        with a matcher — but it is the one a first-time visitor meets, so the
-        wording carries the feature; find_ui_test.mjs pins it. "Have a paper?"
-        is dropped: the verb already implies one. At 13.76px a phone fits about
-        44 characters on a line, and "the open calls" was both the words that
-        pushed it to two and the phrase that made the link read as a pointer to
-        the list below — the board is right there and already named. */}
-    {ALERTS_API && (
-      <p class="muted small">
-        <a href={href('/find/')}>Paste an abstract, get calls ranked by fit →</a>
-      </p>
-    )}
     <div class="kw-box hero-box" onclick="document.getElementById('q')?.focus()">
       <span id="kwChips"></span>
       <input id="q" type="search" placeholder="Search workshops & papers… (Enter adds a keyword)" aria-label="Search workshops and papers" />
@@ -191,7 +169,7 @@ const datasetLd: Record<string, any> = {
         row below the fold. Conferences with nothing open are omitted rather
         than listed as "no open calls"; the eyebrow above already names every
         conference. Like the eyebrow, it is navigation and stays put while
-        searching. Not a heading: the first <h2> stays "Upcoming deadlines". */}
+        searching. Not a heading: the first <h2> stays "Upcoming workshops". */}
     {openConfs.length > 0 && (
       <nav class="conf-line" aria-label="Conferences with open calls">
         {openConfs.map((c) => (
@@ -218,10 +196,34 @@ const datasetLd: Record<string, any> = {
 
   <!-- default mode -->
   <div id="homeDefault">
-    <h2>Upcoming deadlines</h2>
-    {/* Workshop calls only. Readers who came for the main conference's date
-        get one line pointing at the page that has it. */}
-    <p class="muted small board-note">Workshop calls for papers. Main-conference paper deadlines are on the <a href={href('/conference/')}>AI conference deadlines</a> page.</p>
+    {/* The heading names what the rows are — workshops — so the note under it
+        no longer has to ("Workshop calls for papers." was its first sentence).
+
+        Beside it, the way in to the paper matcher. It used to be a muted line
+        in the hero, between the lede and the search box: the quietest text on
+        the page, ahead of the control every eye goes to, and nowhere near the
+        moment anyone wants it. That moment is here — facing a list of open
+        calls, wondering which of them the paper fits — so the link asks that
+        question and names what to do about it. Pasting an abstract is
+        something no list asks of anyone, which is what stops it reading as
+        "the list below" (the hero line's first wording, "Find the open calls
+        it fits", did). On the heading's row, not in the note: a second link
+        inside a grey disclaimer is where a feature goes to be missed. It wraps
+        under the heading on a phone, on one line (find_ui_test.mjs pins that).
+
+        Only in a build that has the alerts satellite, which is where /match
+        lives, and only over a list: with no open calls the question has
+        nothing to point at. The header's "Match" entry (Base.astro) is the
+        other way in, from every page. */}
+    <div class="board-head">
+      <h2>Upcoming workshops</h2>
+      {ALERTS_API && upcomingWithDeadline.length > 0 && (
+        <a class="board-match" href={href('/find/')}>Which fit your paper? Paste your abstract →</a>
+      )}
+    </div>
+    {/* Readers who came for the main conference's date get one line pointing
+        at the page that has it. The link text is that page's own query. */}
+    <p class="muted small board-note">Main-conference paper deadlines are on the <a href={href('/conference/')}>AI conference deadlines</a> page.</p>
     {upcomingWithDeadline.length > 0 ? (
       <section class="board" aria-label="Workshop deadlines">
         {upcomingWithDeadline.map((w) => <WorkshopRow w={w} />)}

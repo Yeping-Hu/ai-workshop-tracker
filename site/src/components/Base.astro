@@ -50,15 +50,20 @@ const canonical = Astro.site && !noindex ? new URL(Astro.url.pathname, Astro.sit
 // it. Reconsider only alongside copy that states what the page withholds — it
 // carries neither the 72h alerts nor the same-day ones, and is up to six days
 // old by design.
-// `Find` only when this build has a matcher to point at: it lives on the alerts
-// satellite, so a fork without ALERTS_API would otherwise get a nav link to a
-// page that says the matcher is off. Placed after Home because it acts on the
-// same corpus the board shows, and before Tools because it is the one feature
-// that reads the reader's own paper — until now it was reachable from a single
-// line of muted text in the homepage hero and from nowhere else on the site.
-const nav = [
+//
+// "Match" is the paper matcher (/find/), and it IS here: it was reachable only
+// from one muted line in the homepage hero, and a visitor who arrives on a
+// workshop or conference page — from a search, which is what those pages are
+// for — may never see the homepage at all. Only in a build with
+// the alerts satellite, where /match lives — a fork's header must not offer a
+// page that can only say it is switched off (ui_test.mjs checks). One short
+// word, because the phone header has room for exactly that beside the theme
+// toggle, and not "Find": on a site whose hero is a search box, "Find" reads
+// as the search. Second, ahead of Tools: it works on the corpus itself, which
+// the tools do not. `title` carries what the label is too short to say.
+const nav: { label: string; path: string; title?: string }[] = [
   { label: 'Home', path: '/' },
-  ...(ALERTS_API ? [{ label: 'Find', path: '/find/' }] : []),
+  ...(ALERTS_API ? [{ label: 'Match', path: '/find/', title: 'Find workshops for your paper' }] : []),
   { label: 'Tools', path: '/tools/' },
   { label: 'Saved', path: '/saved/' },
   { label: 'About', path: '/about/' },
@@ -163,7 +168,7 @@ const ALERTS_BOOTSTRAP = `
         <a class="wordmark" href={href('/')}><svg class="wm-logo" viewBox="0 0 64 64" width="26" height="26" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M 57.98 33.91 L 57.85 35.81 L 57.58 37.70 L 57.18 39.57 L 56.64 41.40 L 55.96 43.19 L 55.16 44.93 L 54.23 46.60 L 53.19 48.21 L 52.02 49.73 L 50.75 51.16 L 49.38 52.50 L 47.91 53.74 L 46.36 54.86 L 44.72 55.87 L 43.02 56.76 L 41.25 57.52 L 39.43 58.15 L 37.57 58.65 L 35.67 59.01 L 33.76 59.22 L 31.83 59.30 L 29.90 59.24 L 27.97 59.03 L 26.07 58.69 L 24.19 58.21 L 22.36 57.58 L 20.57 56.83 L 18.84 55.95 L 17.18 54.94 L 15.59 53.81 L 14.10 52.57 L 12.69 51.22 L 11.39 49.77 L 10.19 48.22 L 9.11 46.59 L 8.16 44.89 L 7.32 43.12 L 6.62 41.29 L 6.06 39.41 L 5.63 37.49 L 5.35 35.55 L 5.21 33.58 L 5.21 31.62 L 5.36 29.65 L 5.65 27.70 L 6.08 25.77 L 6.66 23.88 L 7.37 22.03 L 8.21 20.24 L 9.19 18.52 L 10.29 16.86 L 11.51 15.29 L 12.85 13.82 L 14.29 12.44 L 15.83 11.17 L 17.45 10.02 L 19.17 8.99 L 20.95 8.08 L 22.80 7.31 L 24.70 6.68 L 26.65 6.18 L 28.62 5.83 L 30.63 5.62 L 32.64 5.57 L 34.65 5.66 L 36.66 5.89 L 38.64 6.28 L 40.60 6.80 L 42.51 7.48 L 44.37 8.29 L 46.16 9.23 L 47.89 10.31 L 45.94 13.09 L 44.46 12.10 L 42.90 11.21 L 41.29 10.44 L 39.62 9.79 L 37.90 9.26 L 36.15 8.86 L 34.37 8.59 L 32.57 8.45 L 30.77 8.44 L 28.96 8.57 L 27.17 8.83 L 25.40 9.21 L 23.67 9.73 L 21.97 10.38 L 20.32 11.15 L 18.73 12.04 L 17.21 13.05 L 15.77 14.16 L 14.41 15.39 L 13.14 16.70 L 11.98 18.11 L 10.91 19.61 L 9.96 21.18 L 9.13 22.82 L 8.42 24.51 L 7.83 26.26 L 7.37 28.05 L 7.05 29.86 L 6.86 31.70 L 6.81 33.55 L 6.89 35.40 L 7.11 37.24 L 7.46 39.06 L 7.94 40.85 L 8.56 42.61 L 9.31 44.31 L 10.18 45.96 L 11.17 47.54 L 12.27 49.05 L 13.49 50.47 L 14.80 51.80 L 16.21 53.03 L 17.71 54.15 L 19.29 55.16 L 20.94 56.05 L 22.66 56.82 L 24.42 57.47 L 26.23 57.98 L 28.08 58.35 L 29.95 58.59 L 31.83 58.70 L 33.72 58.66 L 35.60 58.48 L 37.46 58.17 L 39.30 57.72 L 41.10 57.13 L 42.86 56.42 L 44.55 55.57 L 46.19 54.60 L 47.74 53.52 L 49.22 52.32 L 50.60 51.01 L 51.88 49.61 L 53.06 48.11 L 54.12 46.53 L 55.07 44.88 L 55.89 43.16 L 56.58 41.38 L 57.14 39.56 L 57.56 37.70 L 57.84 35.81 L 57.98 33.91 Z" fill="currentColor" stroke="currentColor"/><path d="M 50.40 34.93 L 50.22 36.25 L 49.94 37.55 L 49.58 38.82 L 49.12 40.07 L 48.58 41.29 L 47.95 42.46 L 47.24 43.59 L 46.45 44.66 L 45.59 45.67 L 44.66 46.62 L 43.65 47.51 L 42.59 48.32 L 41.47 49.05 L 40.31 49.70 L 39.09 50.27 L 37.84 50.75 L 36.56 51.13 L 35.25 51.43 L 33.92 51.63 L 32.58 51.74 L 31.24 51.75 L 29.89 51.67 L 28.56 51.49 L 27.23 51.21 L 25.94 50.84 L 24.66 50.38 L 23.43 49.82 L 22.23 49.18 L 21.09 48.46 L 20.00 47.65 L 18.96 46.77 L 17.99 45.81 L 17.09 44.79 L 16.27 43.70 L 15.52 42.56 L 14.86 41.36 L 14.29 40.12 L 13.80 38.84 L 13.41 37.52 L 13.11 36.18 L 12.90 34.82 L 12.80 33.45 L 12.79 32.07 L 12.89 30.69 L 13.08 29.32 L 13.37 27.97 L 13.75 26.64 L 14.23 25.34 L 14.81 24.07 L 15.47 22.85 L 16.22 21.67 L 17.05 20.55 L 17.96 19.50 L 18.95 18.51 L 20.01 17.59 L 21.13 16.75 L 22.31 15.99 L 23.54 15.31 L 24.82 14.72 L 26.14 14.23 L 27.50 13.83 L 28.88 13.53 L 30.28 13.33 L 31.69 13.23 L 33.11 13.23 L 34.53 13.33 L 35.94 13.54 L 37.33 13.84 L 38.70 14.25 L 40.04 14.75 L 41.34 15.35 L 42.60 16.04 L 41.01 18.58 L 39.97 17.95 L 38.88 17.39 L 37.75 16.91 L 36.59 16.51 L 35.40 16.20 L 34.19 15.97 L 32.97 15.83 L 31.73 15.77 L 30.50 15.81 L 29.26 15.93 L 28.04 16.15 L 26.83 16.45 L 25.65 16.84 L 24.50 17.31 L 23.38 17.86 L 22.30 18.50 L 21.27 19.21 L 20.29 20.00 L 19.37 20.85 L 18.51 21.77 L 17.72 22.75 L 17.00 23.79 L 16.36 24.88 L 15.79 26.01 L 15.31 27.18 L 14.91 28.39 L 14.60 29.62 L 14.38 30.87 L 14.25 32.14 L 14.21 33.41 L 14.26 34.69 L 14.41 35.96 L 14.64 37.22 L 14.97 38.46 L 15.38 39.68 L 15.88 40.86 L 16.47 42.01 L 17.14 43.11 L 17.88 44.16 L 18.70 45.16 L 19.60 46.10 L 20.55 46.97 L 21.57 47.77 L 22.65 48.50 L 23.77 49.15 L 24.94 49.71 L 26.15 50.19 L 27.40 50.59 L 28.67 50.89 L 29.96 51.10 L 31.26 51.22 L 32.57 51.24 L 33.87 51.17 L 35.18 51.01 L 36.46 50.75 L 37.73 50.40 L 38.97 49.96 L 40.17 49.43 L 41.34 48.81 L 42.45 48.12 L 43.52 47.34 L 44.53 46.49 L 45.47 45.56 L 46.35 44.57 L 47.15 43.52 L 47.87 42.41 L 48.52 41.25 L 49.07 40.05 L 49.54 38.81 L 49.92 37.54 L 50.21 36.25 L 50.40 34.93 Z" fill="currentColor" stroke="currentColor"/><path d="M 39.78 25.93 L 56.61 14.47 L 50.53 8.39 L 39.07 25.22 Z" fill="currentColor" stroke="currentColor" stroke-width="1.0" stroke-linejoin="round"/><path d="M 32.00 24.40 Q 33.82 31.18 40.60 33.00 Q 33.82 34.82 32.00 41.60 Q 30.18 34.82 23.40 33.00 Q 30.18 31.18 32.00 24.40 Z" fill="currentColor" stroke="currentColor"/></svg>AI Workshop <span>Tracker</span></a>
         <nav class="site-nav" aria-label="Main">
           {nav.map((n) => (
-            <a href={href(n.path)} aria-current={current(n.path) ? 'page' : undefined}>
+            <a href={href(n.path)} title={n.title} aria-current={current(n.path) ? 'page' : undefined}>
               {n.label}{n.path === '/saved/' && <span class="nav-count" id="navSavedCount" hidden></span>}
             </a>
           ))}

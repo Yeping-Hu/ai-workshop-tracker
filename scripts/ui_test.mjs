@@ -1731,8 +1731,19 @@ await page.evaluate(() => localStorage.clear());
   const res = await page.goto(`${BASE}/find/`, { waitUntil: 'networkidle' });
   check('/find/ exists on a fork build and says the matcher is not enabled', res.status() === 200 && /not enabled/.test(await page.textContent('body')));
   check('...with no form to post nowhere', (await page.$('#findForm')) === null);
+  // The header's "Match" entry is on every page of a build that has the
+  // matcher, so its absence is checked here, on the one page that would
+  // otherwise light it, as well as on the homepage below.
+  check('...and no Match entry in the header', (await page.$('.site-nav a[href$="/find/"]')) === null);
   await page.goto(BASE, { waitUntil: 'networkidle' });
   check('the homepage does not link a matcher this build lacks', (await page.$('a[href$="/find/"]')) === null);
+  // The board's heading row is built for a link beside the heading; without
+  // one it must still be just the heading, where it always was.
+  check('the board is headed "Upcoming workshops", alone on its row',
+    (await page.$eval('.board-head', (d) => d.children.length === 1 && d.querySelector('h2')?.textContent.trim() === 'Upcoming workshops')));
+  check('...over the one-sentence note about main conferences',
+    /^Main-conference paper deadlines/.test((await page.textContent('.board-note')).trim()) &&
+    (await page.$eval('.board-note a', (a) => a.textContent.trim() === 'AI conference deadlines' && /\/conference\/$/.test(a.getAttribute('href')))));
 }
 
 check('no page/console errors during the whole run', errors.length === 0, errors.slice(0, 3).join(' | '));

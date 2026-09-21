@@ -87,6 +87,13 @@ hr { border: none; border-top: 1px solid var(--line); margin: 2rem 0; }
 h1, h2, h3 { font-family: var(--font-display); font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; }
 h1 { font-size: clamp(1.9rem, 4.5vw, 2.9rem); margin: 0 0 0.5rem; }
 h2 { font-size: 1.45rem; margin: 2.2rem 0 0.7rem; }
+/* A section heading with one link beside it (the homepage board and the way in
+   to the paper matcher). The row takes the h2's margins so the heading sits
+   where it always did; the link shares the baseline on a wide screen and wraps
+   beneath the heading, on a line of its own, where there is no room for both. */
+.board-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.3rem 1.2rem; margin: 2.2rem 0 0.7rem; }
+.board-head h2 { margin: 0; }
+.board-match { font-size: 0.86rem; }
 h3 { font-size: 1.12rem; margin: 1.6rem 0 0.4rem; }
 .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 1.1rem; }
 .muted { color: var(--muted); }

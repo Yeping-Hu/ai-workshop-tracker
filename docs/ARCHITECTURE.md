@@ -1239,7 +1239,8 @@ stored, and deleting the satellite leaves the tracker unchanged.
 server, no paid API, and the registry test stamps every tool with that promise
 in its structured data. The matcher is the opposite on all three counts, and
 its audience is not a search query but the people already on the board. So it
-is a page of its own, linked from the homepage, and never a registry entry.
+is a page of its own, linked from the header and the homepage's board, and
+never a registry entry.
 
 **Two judgments, both bounded by code** (`alerts/fit.mjs`, pure; pinned by
 `scripts/alerts_fit_test.mjs`). First, which topics is the paper about — one
@@ -1315,16 +1316,27 @@ make. A typical query costs about $0.0006.
 
 **The page** (`site/src/pages/find.astro`, `site/src/scripts/find.js`) is
 reachable on every build and honest on a fork: with no `PUBLIC_ALERTS_API` it
-says the matcher is off and renders no form, and the homepage shows no way in.
-On a build that has one, the way in is a single line in the homepage hero — the
-only link to `/find/` anywhere on the site — and it names the action and the
-payoff: "Paste its abstract and get the open calls ranked by fit". It shipped as
-"Find the open calls it fits", and on that page "open calls" is what the
-statline and the conference line call the list directly underneath, four times
-in one screenful, so the link read as a pointer to the board the visitor was
-already looking at. Pasting an abstract is something no list asks of anyone, and
-a ranking by fit is the one order the board (by deadline) does not have;
-`find_ui_test.mjs` pins both words.
+says the matcher is off and renders no form, and neither the header nor the
+homepage shows a way in. On a build that has one there are two. The header
+carries **Match**, second after Home, on every page: a visitor who arrives on a
+workshop or conference page may never see the homepage. One short word because
+the phone header has room for that and not for a second row, and not "Find",
+which beside a search box reads as the search; its `title` says the rest. And
+the homepage board — headed "Upcoming workshops" — has "Which fit your paper?
+Paste your abstract →" on the heading's own row, because facing a list of open
+calls is the moment the question comes up. It began as a muted line in the hero,
+"Find the open calls it fits", the only link to `/find/` on the site: the
+quietest text on the page, ahead of the search box every eye goes to, and worded
+in the homepage's own name for the list underneath (the statline and the
+conference line say "open calls" four times in one screenful), so it read as a
+pointer to the board. Pasting an abstract is something no list asks of anyone,
+which is what the wording now rests on. It sits beside the heading rather than
+in the note under it, where it would be the second link in a grey disclaimer,
+and on a phone it wraps beneath the heading on a single line. With no open calls
+it is not rendered — the question would have nothing to point at — and the
+header entry remains. `find_ui_test.mjs` pins the words, both doors, the empty
+hero and the one line at 375 and 360 px; `ui_test.mjs` pins their absence on a
+fork.
 Results are built with `createElement` and text nodes, never markup, from the
 response's fields alone: a fit label, the workshop's page, its deadline or
 "not announced yet", its website when it has one, and the line that says what

@@ -146,22 +146,68 @@ await page.click('#findGo');
 check('a too-short title is refused on the page, without a request', /three characters/.test(await page.locator('#findStatus').innerText()) && matchBodies.length === 3);
 
 console.log('— the way in —');
+// Two doors, and neither is in the hero. The first was: one muted line between
+// the lede and the search box, the only link to /find/ on the site, worded
+// "Find the open calls it fits" — which, a screen above a list the homepage
+// calls "open calls" four times, read as a pointer to that list.
 await page.goto(BASE, { waitUntil: 'domcontentloaded' });
-check('the homepage links the matcher', (await page.locator('a[href$="/find/"]').count()) >= 1);
-// That link is the first way in a visitor meets (`Find` is also in the nav for
-// builds with a matcher), and it sits one screen
-// above a list the homepage itself calls "open calls" four times over. It
-// shipped as "Find the open calls it fits", which read as a pointer to that
-// list. So it must name what the visitor does — paste an abstract — which no
-// list asks of anyone, and must not open on the list's own verb and noun.
-// Scoped to the hero: `Find` is also in the nav now, and the nav link comes
-// first in the DOM, so an unscoped locator reads "Find" and these checks fail
-// on the wrong element. The assertions are about the sentence a first-time
-// visitor meets, not the nav label.
-const wayIn = (await page.locator('.hero a[href$="/find/"]').first().innerText()).replace(/\s+/g, ' ').trim();
-check('...and the link says what you do there: paste an abstract', /\bpaste\b/i.test(wayIn) && /\babstract\b/i.test(wayIn), wayIn);
-check('...and says what comes back is a ranking by fit, which the board below is not', /\brank/i.test(wayIn) && /\bfit/i.test(wayIn), wayIn);
-check('...rather than reading as the list of open calls under it', !/^(find|see|browse|view)\b[^.]*\bopen calls\b/i.test(wayIn), wayIn);
+check('the hero no longer carries the link', (await page.locator('.hero a[href$="/find/"]').count()) === 0);
+
+// Door one: beside the board's heading, where the question actually comes up.
+const boardLink = page.locator('.board-head a[href$="/find/"]');
+check('the board heading has the matcher beside it', (await boardLink.count()) === 1);
+check('...under a heading that names what the rows are', (await page.locator('.board-head h2').innerText()).trim() === 'Upcoming workshops');
+const wayIn = (await boardLink.innerText()).replace(/\s+/g, ' ').trim();
+// Pasting an abstract is something no list asks of anyone: it is what stops
+// the link reading as "the list below", so those words are the rule.
+check('...and it says what you do there: paste an abstract', /\bpaste\b/i.test(wayIn) && /\babstract\b/i.test(wayIn), wayIn);
+check('...as a question about the list, not a name for it', /your paper\?/i.test(wayIn) && !/^(find|see|browse|view)\b[^.]*\bopen calls\b/i.test(wayIn), wayIn);
+check('...on the heading\'s row, not buried in the grey note under it',
+  (await page.locator('.board-note a[href$="/find/"]').count()) === 0 &&
+  (await page.evaluate(() => {
+    const h = document.querySelector('.board-head h2').getBoundingClientRect();
+    const a = document.querySelector('.board-head a').getBoundingClientRect();
+    return a.left > h.right && a.top < h.bottom && a.bottom > h.top;
+  })));
+const note = (await page.locator('.board-note').innerText()).replace(/\s+/g, ' ').trim();
+check('the note under it is the one sentence about main conferences', /^Main-conference paper deadlines/.test(note) && !/Workshop calls for papers/.test(note), note);
+check('...and still links the deadlines page by its own query',
+  (await page.locator('.board-note a[href$="/conference/"]').innerText()).trim() === 'AI conference deadlines');
+
+// Door two: the header, from every page — a visitor who lands on a workshop
+// page never sees the homepage.
+const navLabel = async () => (await page.locator('.site-nav a[href$="/find/"]').innerText()).trim();
+check('the header has a Match entry', (await navLabel()) === 'Match');
+check('...second, after Home', (await page.locator('.site-nav a').nth(1).getAttribute('href')).endsWith('/find/'));
+check('...whose title says what the one word cannot', /your paper/i.test((await page.locator('.site-nav a[href$="/find/"]').getAttribute('title')) || ''));
+await page.goto(`${BASE}/about/`, { waitUntil: 'domcontentloaded' });
+check('...on a page that is not the homepage too', (await navLabel()) === 'Match');
+await page.goto(`${BASE}/find/`, { waitUntil: 'domcontentloaded' });
+check('...and lit on the matcher\'s own page', (await page.locator('.site-nav a[href$="/find/"]').getAttribute('aria-current')) === 'page');
+
+// A phone. The link has no room beside the heading, so it wraps beneath it —
+// and must stay ONE line there, which is why it is as short as it is. The
+// header likewise has room for one more short word and not for two rows.
+for (const width of [375, 360]) {
+  await page.setViewportSize({ width, height: 812 });
+  await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+  const m = await page.evaluate(() => {
+    const a = document.querySelector('.board-head a');
+    const h = document.querySelector('.board-head h2').getBoundingClientRect();
+    const r = a.getBoundingClientRect();
+    const navTops = [...document.querySelectorAll('.site-nav a')].map((n) => Math.round(n.getBoundingClientRect().top));
+    return {
+      lines: a.getClientRects().length,
+      under: r.top >= h.bottom - 1,
+      overflow: document.documentElement.scrollWidth > window.innerWidth,
+      navRows: new Set(navTops).size,
+    };
+  });
+  check(`at ${width}px the link sits under the heading, on one line`, m.under && m.lines === 1, JSON.stringify(m));
+  check(`at ${width}px the header's entries are still one row`, m.navRows === 1, JSON.stringify(m));
+  check(`at ${width}px nothing scrolls sideways`, !m.overflow);
+}
+await page.setViewportSize({ width: 1280, height: 900 });
 
 check('no page/console errors during the whole run', errors.length === 0, errors.slice(0, 3).join(' | '));
 await browser.close();
