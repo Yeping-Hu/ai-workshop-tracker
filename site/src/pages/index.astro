@@ -203,22 +203,28 @@ const datasetLd: Record<string, any> = {
         in the hero, between the lede and the search box: the quietest text on
         the page, ahead of the control every eye goes to, and nowhere near the
         moment anyone wants it. That moment is here — facing a list of open
-        calls, wondering which of them the paper fits — so the link asks that
-        question and names what to do about it. Pasting an abstract is
-        something no list asks of anyone, which is what stops it reading as
-        "the list below" (the hero line's first wording, "Find the open calls
-        it fits", did). On the heading's row, not in the note: a second link
-        inside a grey disclaimer is where a feature goes to be missed. It wraps
-        under the heading on a phone, on one line (find_ui_test.mjs pins that).
+        calls, wondering which of them the paper fits — so the link offers
+        what the board cannot: the same calls in a different order. The board
+        is by deadline; "ranked by fit" is the one order it does not have, and
+        "Have a paper?" says whose fit. That is what stops it reading as "the
+        list below", which the hero line's first wording, "Find the open calls
+        it fits", did: that one named the list and a verb for looking at it,
+        where this names something done to it. (An earlier wording here led
+        with the input instead — "Paste your abstract" — and the test required
+        those two words. The payoff reads better than the chore, and /find/
+        asks for the abstract in its first sentence.) On the heading's row, not
+        in the note: a second link inside a grey disclaimer is where a feature
+        goes to be missed. It wraps under the heading on a phone, on one line
+        (find_ui_test.mjs pins that).
 
         Only in a build that has the alerts satellite, which is where /match
-        lives, and only over a list: with no open calls the question has
-        nothing to point at. The header's "Match" entry (Base.astro) is the
+        lives, and only over a list: with no open calls there is nothing to
+        rank. The header's "Match" entry (Base.astro) is the
         other way in, from every page. */}
     <div class="board-head">
       <h2>Upcoming workshops</h2>
       {ALERTS_API && upcomingWithDeadline.length > 0 && (
-        <a class="board-match" href={href('/find/')}>Which fit your paper? Paste your abstract →</a>
+        <a class="board-match" href={href('/find/')}>Have a paper? Get the open calls ranked by fit →</a>
       )}
     </div>
     {/* Readers who came for the main conference's date get one line pointing

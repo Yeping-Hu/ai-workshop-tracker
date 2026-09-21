@@ -1322,20 +1322,27 @@ carries **Match**, second after Home, on every page: a visitor who arrives on a
 workshop or conference page may never see the homepage. One short word because
 the phone header has room for that and not for a second row, and not "Find",
 which beside a search box reads as the search; its `title` says the rest. And
-the homepage board — headed "Upcoming workshops" — has "Which fit your paper?
-Paste your abstract →" on the heading's own row, because facing a list of open
-calls is the moment the question comes up. It began as a muted line in the hero,
+the homepage board — headed "Upcoming workshops" — has "Have a paper? Get the
+open calls ranked by fit →" on the heading's own row, because facing a list of
+open calls is the moment the question comes up. It began as a muted line in the hero,
 "Find the open calls it fits", the only link to `/find/` on the site: the
 quietest text on the page, ahead of the search box every eye goes to, and worded
 in the homepage's own name for the list underneath (the statline and the
 conference line say "open calls" four times in one screenful), so it read as a
-pointer to the board. Pasting an abstract is something no list asks of anyone,
-which is what the wording now rests on. It sits beside the heading rather than
+pointer to the board. The wording now offers what the board cannot — the same
+calls in the one order it does not have, by fit rather than by deadline, with
+"Have a paper?" to say whose fit — which names something done to the list where
+the first wording named the list and a verb for looking at it. It sits beside the heading rather than
 in the note under it, where it would be the second link in a grey disclaimer,
-and on a phone it wraps beneath the heading on a single line. With no open calls
-it is not rendered — the question would have nothing to point at — and the
-header entry remains. `find_ui_test.mjs` pins the words, both doors, the empty
-hero and the one line at 375 and 360 px; `ui_test.mjs` pins their absence on a
+and on a phone it wraps beneath the heading on a single line (two at 320 px, the
+width of phones from 2016, without scrolling sideways — accepted). With no open calls
+it is not rendered — there would be nothing to rank — and the header entry
+remains. `find_ui_test.mjs` pins both doors, the empty hero, the one line at 375
+and 360 px, and one rule about the words, a negative one: no sentence of the
+link may be a verb for looking followed by "open calls", the shape that read as
+the list. It requires no particular words — the line was reworded four times in
+a week, and checks that named them failed on each rewording while protecting
+nothing the shape rule does not; `ui_test.mjs` pins their absence on a
 fork.
 Results are built with `createElement` and text nodes, never markup, from the
 response's fields alone: a fit label, the workshop's page, its deadline or
