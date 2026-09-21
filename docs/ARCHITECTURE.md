@@ -1316,6 +1316,15 @@ make. A typical query costs about $0.0006.
 **The page** (`site/src/pages/find.astro`, `site/src/scripts/find.js`) is
 reachable on every build and honest on a fork: with no `PUBLIC_ALERTS_API` it
 says the matcher is off and renders no form, and the homepage shows no way in.
+On a build that has one, the way in is a single line in the homepage hero — the
+only link to `/find/` anywhere on the site — and it names the action and the
+payoff: "Paste its abstract and get the open calls ranked by fit". It shipped as
+"Find the open calls it fits", and on that page "open calls" is what the
+statline and the conference line call the list directly underneath, four times
+in one screenful, so the link read as a pointer to the board the visitor was
+already looking at. Pasting an abstract is something no list asks of anyone, and
+a ranking by fit is the one order the board (by deadline) does not have;
+`find_ui_test.mjs` pins both words.
 Results are built with `createElement` and text nodes, never markup, from the
 response's fields alone: a fit label, the workshop's page, its deadline or
 "not announced yet", its website when it has one, and the line that says what

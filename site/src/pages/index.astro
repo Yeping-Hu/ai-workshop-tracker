@@ -133,10 +133,19 @@ const datasetLd: Record<string, any> = {
     </p>
     {/* The matcher lives on the alerts satellite, so the way in appears only
         in a build that has one — a fork's build shows nothing here, and its
-        /find/ page says the matcher is off. */}
+        /find/ page says the matcher is off.
+
+        The link names the action — paste an abstract — and the one thing the
+        board below cannot give, a ranking by fit. It first read "Find the open
+        calls it fits", and on this page "open calls" is the name of the list
+        directly underneath: the statline and the conference line say it four
+        times in the same screenful. So the link read as a pointer to what the
+        visitor was already looking at, with only "it fits" to say otherwise.
+        This line is the only way in to /find/ anywhere on the site, so its
+        wording carries the whole feature; find_ui_test.mjs pins it. */}
     {ALERTS_API && (
       <p class="muted small">
-        Have a paper? <a href={href('/find/')}>Find the open calls it fits →</a>
+        Have a paper? <a href={href('/find/')}>Paste its abstract and get the open calls ranked by fit →</a>
       </p>
     )}
     <div class="kw-box hero-box" onclick="document.getElementById('q')?.focus()">
