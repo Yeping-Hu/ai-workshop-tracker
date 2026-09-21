@@ -356,7 +356,7 @@ const slugsOf = (list) => list.map((e) => e.slug).sort();
   // A drop here means either the matcher regressed or coverage was lost.
   check('all 102 are covered by the corpus', r.counts.matched, 102);
   check('nothing on the list is missing', r.counts.missing, 0);
-  check('11 tracked entries are off-list', r.counts.offList, 11);
+  check('12 tracked entries are off-list', r.counts.offList, 12);
   check('the off-list set is the known one', slugsOf(r.offList), [
     'neurips-2026-africa-in-ai',
     'neurips-2026-eiml',
@@ -365,6 +365,7 @@ const slugsOf = (list) => list.map((e) => e.slug).sort();
     'neurips-2026-ml4ps',
     'neurips-2026-musiml',
     'neurips-2026-newinml',
+    'neurips-2026-paiec',
     'neurips-2026-queerinai',
     'neurips-2026-roco-spring',
     'neurips-2026-unireps',
@@ -375,10 +376,12 @@ const slugsOf = (list) => list.map((e) => e.slug).sort();
     r.offList.some((e) => /neurreps|genai4health|infpriv|tccml|vericodegen|iab-/.test(e.slug)), false);
 }
 
-// SECOND: the corpus as it actually stands. Each of those eleven now carries a
-// decision — eight acknowledged as events the conference hosts under its own
-// namespace and simply does not call "workshops" (affinity events, a
-// competition), three marked as not the conference's: one rejected proposal
+// SECOND: the corpus as it actually stands. Each of those twelve now carries a
+// decision — nine acknowledged as events the conference hosts under its own
+// namespace and simply does not call "workshops" (affinity events and two
+// competitions: RoCo-Spring, and PAIEC, which discovery imported on 2026-09-20
+// and whose own site gives its NeurIPS session slot), three marked as not the
+// conference's: one rejected proposal
 // (EIML) and two independent events that left NeurIPS.cc for their own
 // namespaces (ML4PS, UniReps) — so the weekly report is empty and the issue
 // closes. A new off-list entry appearing here turns this red, which is the point.
@@ -386,7 +389,7 @@ const slugsOf = (list) => list.map((e) => e.slug).sort();
   const entries = loadWorkshops().filter((w) => w.conference === 'neurips' && w.year === 2026);
   const r = run(entries);
   check('every off-list entry has a recorded decision', r.counts.offList, 0);
-  check('...eight acknowledged as running', r.counts.acked, 8);
+  check('...nine acknowledged as running', r.counts.acked, 9);
   check('...three marked as not running', r.counts.marked, 3);
   check('and nothing on the official list is untracked', r.counts.missing, 0);
   // The namespace rule against the corpus as it stands: every acknowledged
