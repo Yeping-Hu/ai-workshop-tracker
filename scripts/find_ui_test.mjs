@@ -167,6 +167,18 @@ const wayIn = (await boardLink.innerText()).replace(/\s+/g, ' ').trim();
 // without protecting anything the shape rule does not.
 const readsAsTheList = (t) => t.split(/(?<=[?.!])\s+/).some((sentence) => /^(find|see|browse|view|explore)\b[^?.!]*\bopen calls\b/i.test(sentence.trim()));
 check('...and it does not read as the list of open calls under it', !readsAsTheList(wayIn), wayIn);
+// One line on a phone is a requirement, and it cannot be asserted by rendering
+// the page: the body font is `system-ui`, so the line is as wide as whatever
+// font the machine running this has. It was tried — the current 48 characters
+// are one line at 360px on a Mac and two on the CI runner, whose fallback font
+// is wider than any phone's. Measured at the link's 13.76px (2026-09-21), those
+// 48 characters are 295px in Roboto, which is every Android phone, and 309px in
+// San Francisco, which is every iPhone; the row is 325px on a 360px phone and
+// 340px at 375px, the narrowest iPhone. That is 52 characters in either case,
+// so the rule is a budget, in characters, with two to spare. It constrains the
+// length and no word: a longer line is a line that wraps in someone's hand.
+const WAY_IN_MAX_CHARS = 50;
+check(`...and it is within the ${WAY_IN_MAX_CHARS} characters that stay on one line on a phone`, wayIn.length <= WAY_IN_MAX_CHARS, `${wayIn.length} characters: ${wayIn}`);
 check('...a rule the first wording fails, alone or behind a lead-in',
   readsAsTheList('Find the open calls it fits →') && readsAsTheList('Have a paper? See the open calls →') &&
   !readsAsTheList('Have a paper? Get the open calls ranked by fit →'));
@@ -193,18 +205,12 @@ check('...on a page that is not the homepage too', (await navLabel()) === 'Match
 await page.goto(`${BASE}/find/`, { waitUntil: 'domcontentloaded' });
 check('...and lit on the matcher\'s own page', (await page.locator('.site-nav a[href$="/find/"]').getAttribute('aria-current')) === 'page');
 
-// A phone. The link has no room beside the heading, so it wraps beneath it —
-// and must stay ONE line there. The header likewise has room for one more
-// short word and not for two rows.
-//
-// Lines are counted from a Range over the link's text, not from the link's own
-// getClientRects(): the link is a flex item, which makes it a block, and a
-// block reports one rectangle however many lines its text runs to. The first
-// version of this check asked the element, and so passed for any wording at
-// any width. The last check in the loop proves the instrument can see a wrap.
-// 320px is deliberately not here: the current wording (48 characters) runs to
-// two lines there, without scrolling sideways, and that is accepted — it is
-// the width of phones from 2016.
+// A phone. The link has no room beside the heading, so it wraps beneath it, and
+// the header has room for one more short word and not for two rows. These hold
+// whatever the font. How many lines the link runs to does not — see the budget
+// above — so it is printed, not checked. It is counted from a Range over the
+// text: the link is a flex item, so a block, and a block's own getClientRects()
+// is one rectangle however its text wraps.
 for (const width of [375, 360]) {
   await page.setViewportSize({ width, height: 812 });
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
@@ -212,28 +218,23 @@ for (const width of [375, 360]) {
     const a = document.querySelector('.board-head a');
     const h = document.querySelector('.board-head h2').getBoundingClientRect();
     const r = a.getBoundingClientRect();
-    const textLines = () => {
-      const range = document.createRange();
-      range.selectNodeContents(a);
-      return new Set([...range.getClientRects()].map((x) => Math.round(x.top))).size;
-    };
-    const lines = textLines();
-    a.style.width = '120px';
-    const squeezed = textLines();
-    a.style.width = '';
+    const range = document.createRange();
+    range.selectNodeContents(a);
     const navTops = [...document.querySelectorAll('.site-nav a')].map((n) => Math.round(n.getBoundingClientRect().top));
     return {
-      lines,
-      squeezed,
+      lines: new Set([...range.getClientRects()].map((x) => Math.round(x.top))).size,
+      textPx: Math.round(range.getBoundingClientRect().width),
+      rowPx: Math.round(document.querySelector('.board-head').getBoundingClientRect().width),
+      font: getComputedStyle(a).fontFamily.split(',')[0],
       under: r.top >= h.bottom - 1,
       overflow: document.documentElement.scrollWidth > window.innerWidth,
       navRows: new Set(navTops).size,
     };
   });
-  check(`at ${width}px the link sits under the heading, on one line`, m.under && m.lines === 1, JSON.stringify(m));
+  check(`at ${width}px the link sits under the heading`, m.under, JSON.stringify(m));
   check(`at ${width}px the header's entries are still one row`, m.navRows === 1, JSON.stringify(m));
   check(`at ${width}px nothing scrolls sideways`, !m.overflow);
-  check(`at ${width}px the line count would have seen a wrap (squeezed to 120px it reads ${m.squeezed})`, m.squeezed > 1, JSON.stringify(m));
+  console.log(`    (in this machine's ${m.font}: ${m.lines} line(s), ${m.textPx}px of text in a ${m.rowPx}px row — a note, not a check)`);
 }
 await page.setViewportSize({ width: 1280, height: 900 });
 

@@ -1337,8 +1337,14 @@ in the note under it, where it would be the second link in a grey disclaimer,
 and on a phone it wraps beneath the heading on a single line (two at 320 px, the
 width of phones from 2016, without scrolling sideways — accepted). With no open calls
 it is not rendered — there would be nothing to rank — and the header entry
-remains. `find_ui_test.mjs` pins both doors, the empty hero, the one line at 375
-and 360 px, and one rule about the words, a negative one: no sentence of the
+remains. `find_ui_test.mjs` pins both doors, the empty hero, and two rules about
+the words. One is a budget: fifty characters, which is what stays on one line on
+a phone. It is a count rather than a rendered check because the body font is
+`system-ui` — the line is as wide as the font of the machine running the test,
+and the 48 characters that are one line at 360 px on a Mac were two on the CI
+runner, whose fallback font no phone has. Measured at the link's 13.76 px they
+are 295 px in Roboto (every Android phone, 325 px row at 360 px) and 309 px in
+San Francisco (every iPhone, 340 px row at 375 px). The other is a negative one: no sentence of the
 link may be a verb for looking followed by "open calls", the shape that read as
 the list. It requires no particular words — the line was reworded four times in
 a week, and checks that named them failed on each rewording while protecting
