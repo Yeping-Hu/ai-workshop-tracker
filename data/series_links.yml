@@ -1842,6 +1842,7 @@ pairs:
   - {a: neurips-2025-wiml, b: neurips-2026-tccml-tutorials-track, same: 0, judged: '2026-09-19', hash: 902fe6324a0c, via: names}
 decisions:
   - {a: colm-2026-sci-fm, b: iclr-2025-sci-fm, verdict: different, recorded: '2026-09-19'}
+  - {a: corl-2026-roboletics, b: icra-2025-roboletics, verdict: same, recorded: '2026-09-22'}
   - {a: cvpr-2026-ai4va, b: eccv-2024-ai4va, verdict: same, recorded: '2026-09-19'}
   - {a: cvpr-2026-ai4va, b: eccv-2026-ai4va, verdict: same, recorded: '2026-09-19'}
   - {a: iclr-2025-financial-ai, b: iclr-2026-afa, verdict: same, recorded: '2026-09-19'}
