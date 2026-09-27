@@ -38,6 +38,7 @@ pairs:
   - {a: colm-2026-sci-fm, b: iclr-2025-sci-fm, same: 0.47, judged: '2026-09-19', hash: f39834b0f67f, via: stem}
   - {a: corl-2024-assembly, b: corl-2025-safe-rol, same: 0, judged: '2026-09-19', hash: c3aa0b3486b5, via: names}
   - {a: corl-2024-assembly, b: corl-2026-compositional, same: 0, judged: '2026-09-19', hash: 0c564448b463, via: names}
+  - {a: corl-2024-assembly, b: corl-2026-do-robots-need-world-models, same: 0, judged: '2026-09-27', hash: 2043085cc486, via: names}
   - {a: corl-2024-assembly, b: corl-2026-physwm, same: 0, judged: '2026-09-19', hash: 23025d1dc060, via: names}
   - {a: corl-2024-assembly, b: corl-2026-r2rl, same: 0, judged: '2026-09-19', hash: c189701e3655, via: names}
   - {a: corl-2024-assembly, b: corl-2026-simbench2real, same: 0, judged: '2026-09-19', hash: a38ddf4b68de, via: names}
