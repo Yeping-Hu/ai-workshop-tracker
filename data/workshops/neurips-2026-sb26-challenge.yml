@@ -1,0 +1,19 @@
+name: The Smart Buildings Challenge [Neurips 2026 Competition]
+acronym: SB26
+conference: neurips
+year: 2026
+website: https://smart-buildings-2026.github.io/competition/index.html
+location: Paris
+topics:
+  - evaluation-benchmarks
+submission_deadline: 2027-01-09 04:00
+timezone: UTC
+deadline_notes: OpenReview-synced 2027-01-09 04:00 UTC (as of 2026-10-04) — extensions on OpenReview are applied automatically; verify on the website.
+deadline_history:
+  - value: 2027-01-09 04:00
+    recorded: '2026-10-04'
+    timezone: UTC
+openreview_venue_id: NeurIPS.cc/2026/Workshop/SB26_Challenge
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-10-04'
