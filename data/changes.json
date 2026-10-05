@@ -1,71 +1,151 @@
 {
-  "generated_at": "2026-09-28T14:20:11.877Z",
-  "since": "2026-09-22",
-  "until": "2026-09-28",
+  "generated_at": "2026-10-05T15:09:00.711Z",
+  "since": "2026-09-29",
+  "until": "2026-10-05",
   "events": [
     {
-      "slug": "corl-2026-roboletics",
-      "kind": "deadline_announced",
-      "days": null,
-      "old_utc": null,
-      "new_utc": "2026-10-18T09:59:00.000Z",
-      "observed": "2026-09-22"
+      "slug": "corl-2026-csir",
+      "kind": "extended",
+      "days": 2,
+      "old_utc": "2026-09-29T12:59:00.000Z",
+      "new_utc": "2026-10-01T12:59:00.000Z",
+      "observed": "2026-09-29"
     },
     {
-      "slug": "corl-2026-robomem",
+      "slug": "corl-2026-oopsie",
+      "kind": "extended",
+      "days": 5,
+      "old_utc": "2026-09-30T09:59:00.000Z",
+      "new_utc": "2026-10-05T16:59:00.000Z",
+      "observed": "2026-09-29"
+    },
+    {
+      "slug": "corl-2026-pretrain-to-adapt",
+      "kind": "extended",
+      "days": 1,
+      "old_utc": "2026-10-04T12:00:00.000Z",
+      "new_utc": "2026-10-04T20:00:00.000Z",
+      "observed": "2026-09-29"
+    },
+    {
+      "slug": "corl-2026-r2rl",
+      "kind": "extended",
+      "days": 5,
+      "old_utc": "2026-10-01T12:00:00.000Z",
+      "new_utc": "2026-10-06T12:00:00.000Z",
+      "observed": "2026-09-29"
+    },
+    {
+      "slug": "corl-2026-dex",
       "kind": "extended",
       "days": 6,
-      "old_utc": "2026-09-25T11:59:00.000Z",
-      "new_utc": "2026-10-01T11:59:00.000Z",
-      "observed": "2026-09-23"
-    },
-    {
-      "slug": "corl-2026-contact-rich-loco-manipulation",
-      "kind": "extended",
-      "days": 9,
-      "old_utc": "2026-09-30T06:00:00.000Z",
-      "new_utc": "2026-10-09T11:59:00.000Z",
-      "observed": "2026-09-24"
-    },
-    {
-      "slug": "corl-2026-simbench2real",
-      "kind": "extended",
-      "days": 8,
-      "old_utc": "2026-10-01T11:59:00.000Z",
-      "new_utc": "2026-10-09T11:59:00.000Z",
-      "observed": "2026-09-25"
-    },
-    {
-      "slug": "corl-2026-uncertainwm",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-09-24T11:59:00.000Z",
-      "new_utc": "2026-10-01T11:59:00.000Z",
-      "observed": "2026-09-25"
-    },
-    {
-      "slug": "corl-2026-do-robots-need-world-models",
-      "kind": "announced",
-      "days": null,
-      "old_utc": null,
-      "new_utc": "2026-10-12T07:00:00.000Z",
-      "observed": "2026-09-27"
-    },
-    {
-      "slug": "neurips-2026-babyvlm-fast-track",
-      "kind": "announced",
-      "days": null,
-      "old_utc": null,
-      "new_utc": "2026-09-28T11:59:00.000Z",
-      "observed": "2026-09-27"
+      "old_utc": "2026-09-30T09:59:00.000Z",
+      "new_utc": "2026-10-06T09:59:00.000Z",
+      "observed": "2026-09-30"
     },
     {
       "slug": "corl-2026-agentic-robotics",
       "kind": "extended",
+      "days": 1,
+      "old_utc": "2026-09-30T12:59:00.000Z",
+      "new_utc": "2026-10-01T06:59:00.000Z",
+      "observed": "2026-10-01"
+    },
+    {
+      "slug": "corl-2026-agentic-robotics",
+      "kind": "extended",
+      "days": 1,
+      "old_utc": "2026-10-01T06:59:00.000Z",
+      "new_utc": "2026-10-01T19:00:00.000Z",
+      "observed": "2026-10-02"
+    },
+    {
+      "slug": "corl-2026-compositional",
+      "kind": "extended",
+      "days": 1,
+      "old_utc": "2026-10-02T00:00:00.000Z",
+      "new_utc": "2026-10-03T11:59:00.000Z",
+      "observed": "2026-10-02"
+    },
+    {
+      "slug": "corl-2026-physwm",
+      "kind": "extended",
+      "days": 7,
+      "old_utc": "2026-10-01T11:59:00.000Z",
+      "new_utc": "2026-10-08T11:59:00.000Z",
+      "observed": "2026-10-02"
+    },
+    {
+      "slug": "corl-2026-pretrain-to-adapt",
+      "kind": "extended",
+      "days": 1,
+      "old_utc": "2026-10-04T20:00:00.000Z",
+      "new_utc": "2026-10-05T11:59:00.000Z",
+      "observed": "2026-10-02"
+    },
+    {
+      "slug": "corl-2026-compositional",
+      "kind": "extended",
+      "days": 3,
+      "old_utc": "2026-10-03T11:59:00.000Z",
+      "new_utc": "2026-10-06T11:59:00.000Z",
+      "observed": "2026-10-03"
+    },
+    {
+      "slug": "corl-2026-lfc",
+      "kind": "extended",
       "days": 2,
-      "old_utc": "2026-09-28T12:59:00.000Z",
-      "new_utc": "2026-09-30T12:59:00.000Z",
-      "observed": "2026-09-28"
+      "old_utc": "2026-10-03T04:59:00.000Z",
+      "new_utc": "2026-10-05T04:59:00.000Z",
+      "observed": "2026-10-04"
+    },
+    {
+      "slug": "corl-2026-sim2real2field",
+      "kind": "extended",
+      "days": 8,
+      "old_utc": "2026-10-08T11:59:00.000Z",
+      "new_utc": "2026-10-16T05:59:00.000Z",
+      "observed": "2026-10-04"
+    },
+    {
+      "slug": "neurips-2026-a2netops",
+      "kind": "announced",
+      "days": null,
+      "old_utc": null,
+      "new_utc": "2026-11-08T10:59:00.000Z",
+      "observed": "2026-10-04"
+    },
+    {
+      "slug": "neurips-2026-aimointerp-challenge",
+      "kind": "announced",
+      "days": null,
+      "old_utc": null,
+      "new_utc": "2026-10-31T09:00:00.000Z",
+      "observed": "2026-10-04"
+    },
+    {
+      "slug": "neurips-2026-sb26-challenge",
+      "kind": "announced",
+      "days": null,
+      "old_utc": null,
+      "new_utc": "2027-01-09T04:00:00.000Z",
+      "observed": "2026-10-04"
+    },
+    {
+      "slug": "corl-2026-leap",
+      "kind": "earlier",
+      "days": 12,
+      "old_utc": "2026-10-19T23:59:00.000Z",
+      "new_utc": "2026-10-07T23:59:00.000Z",
+      "observed": "2026-10-05"
+    },
+    {
+      "slug": "corl-2026-umi-arena",
+      "kind": "earlier",
+      "days": 1,
+      "old_utc": "2026-10-17T05:59:00.000Z",
+      "new_utc": "2026-10-17T04:59:00.000Z",
+      "observed": "2026-10-05"
     }
   ]
 }
