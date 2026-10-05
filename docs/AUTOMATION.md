@@ -353,6 +353,15 @@ and the job fails with its work computed but unpublished — which is exactly wh
 happened when the re-check and the blank-fill were dispatched together. Queuing
 rather than cancelling matters: a cancelled run would silently skip a data write.
 
+A run that waited must also start from what the run ahead of it pushed, so each
+job checks out `ref: ${{ github.ref }}`, the branch tip when the job starts.
+Without a `ref`, checkout fetches the commit the run was *queued* on. On
+2026-08-14 the track sync, queued behind discovery, fetched `11ca701` fourteen
+seconds after discovery's `3b4e8b3` had landed on top of it. It computed and
+validated the tree from before discovery's push, and only the push-time rebase
+put its commit on top. `scripts/docs_sync_test.mjs` requires the `ref` on every
+checkout in the group.
+
 `cancel-in-progress: false` alone does not guarantee that. It only protects the
 run that is already going. By default GitHub keeps **one** pending run per group,
 and when another queues, the pending one is cancelled and replaced. In most groups

@@ -5,12 +5,13 @@
 #
 # Two things about it are load-bearing:
 #
-#   - The rebase-retry. Every workflow that commits shares the `data-write`
-#     concurrency group, but a merge, an admin push or a re-run can still move
-#     `main` between checkout and push. Rebasing onto whatever landed and
-#     trying again is what stops a job failing with its work computed but
-#     unpublished. Bounded, so a `main` that keeps moving fails loudly instead
-#     of looping.
+#   - The rebase-retry. Every data workflow that commits shares the
+#     `data-write` concurrency group and checks out the branch tip when its job
+#     starts (alerts.yml keeps its own group), but a merge, an admin push or a
+#     re-run can still move `main` between checkout and push. Rebasing onto
+#     whatever landed and trying again is what stops a job failing with its
+#     work computed but unpublished. Bounded, so a `main` that keeps moving
+#     fails loudly instead of looping.
 #   - The deploy dispatch. A push made with GITHUB_TOKEN does not trigger
 #     `on: push`, so without it the data would sit on `main` unbuilt until the
 #     next daily deploy — up to ~23 h. Everything here inherits this.

@@ -62,7 +62,12 @@ jobs:
       # The audit's Jev totals, for the "Jev did not answer" issue below.
       JEV_STATUS: ${{ github.workspace }}/.jev-status.jsonl
     steps:
+      # The branch tip when the job starts, not the commit the run was queued
+      # on: a run that waited in the data-write queue must compute on top of
+      # the push made by the run ahead of it (AUTOMATION.md).
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref }}
       - uses: actions/setup-node@v7
         with:
           node-version: 22

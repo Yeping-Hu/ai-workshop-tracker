@@ -153,7 +153,12 @@ if (unwired.length) {
 // in `data-write`, where every run is a different job, a waiting write simply
 // vanished: the 2026-08-14 blank-deadline backfill, behind a manual discovery
 // run, replaced by the track sync. `queue: max` keeps them all
-// (AUTOMATION.md, "The data jobs are serialised"). Separately, anything that
+// (AUTOMATION.md, "The data jobs are serialised"). A run that waited must
+// also check out the branch tip when its job starts: without a `ref`, checkout
+// fetches the commit the run was QUEUED on, so it computes and validates the
+// tree from before the push of the run ahead of it (the 2026-08-14 track sync
+// fetched 11ca701 fourteen seconds after discovery's 3b4e8b3 landed on it).
+// Separately, anything that
 // pushes to `main` must be serialised by SOME group that never cancels a run
 // mid-push; `alerts` is deliberately its own group, which is allowed.
 {
@@ -165,6 +170,10 @@ if (unwired.length) {
     if (c?.group === 'data-write') {
       if (c['cancel-in-progress'] !== false) problems.push('data-write without `cancel-in-progress: false`');
       if (c.queue !== 'max') problems.push('data-write without `queue: max` (a waiting run is cancelled when the next queues)');
+      const checkouts = Object.values(wf.jobs ?? {}).flatMap((j) => j.steps ?? [])
+        .filter((st) => /^actions\/checkout@/.test(st.uses ?? ''));
+      if (checkouts.some((st) => !['${{ github.ref }}', 'main', 'refs/heads/main'].includes(st.with?.ref)))
+        problems.push('data-write checkout without `ref: ${{ github.ref }}` (a queued run would compute on a stale main)');
     }
     if (PUSHES.test(src)) {
       if (!c?.group) problems.push('pushes to main with no concurrency group');
@@ -172,8 +181,9 @@ if (unwired.length) {
     }
     return problems;
   };
-  const wfFixture = (concurrency, run = 'node scripts/x.mjs') =>
-    `name: x\non: { workflow_dispatch: {} }\n${concurrency}\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n      - run: ${run}\n`;
+  const wfFixture = (concurrency, run = 'node scripts/x.mjs', checkout = '') =>
+    `name: x\non: { workflow_dispatch: {} }\n${concurrency}\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n${checkout}      - run: ${run}\n`;
+  const DW = 'concurrency: { group: data-write, cancel-in-progress: false, queue: max }';
   const fixtures = [
     ['a data-write job with queue: max passes',
       wfFixture('concurrency: { group: data-write, cancel-in-progress: false, queue: max }', 'git push'), 0],
@@ -185,6 +195,10 @@ if (unwired.length) {
     ['a job that pushes in its own non-cancelling group passes',
       wfFixture('concurrency: { group: alerts, cancel-in-progress: false }', 'git push'), 0],
     ['a read-only job needs no group', wfFixture(''), 0],
+    ['a data-write checkout of the branch tip passes',
+      wfFixture(DW, 'git push', '      - uses: actions/checkout@v7\n        with: { ref: "${{ github.ref }}" }\n'), 0],
+    ['a data-write checkout of the queued commit fails',
+      wfFixture(DW, 'git push', '      - uses: actions/checkout@v7\n'), 1],
   ];
   const wrong = fixtures.filter(([, src, n]) => concurrencyProblems(src).length !== n).map(([label]) => label);
   const wfDir = path.join(ROOT, '.github', 'workflows');
@@ -195,7 +209,7 @@ if (unwired.length) {
     if (wrong.length) console.log(`✗ the concurrency check misjudges its fixtures: ${wrong.join('; ')}`);
     if (offenders.length) console.log(`✗ workflow(s) that can lose or interrupt a write to main: ${offenders.join('; ')}`);
   } else {
-    console.log('✓ every write to main is serialised, and no queued data write can be dropped');
+    console.log('✓ every write to main is serialised, and no queued data write is dropped or computed on a stale main');
   }
 }
 
