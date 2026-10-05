@@ -529,6 +529,13 @@ auto-merge* plus a branch rule requiring `Validate data` and `Build check` would
 let a small workflow enable auto-merge on them; until that setting is flipped,
 this is the only routine job that waits for a person.
 
+Each group takes **minor and patch** updates only; a major version arrives as
+its own PR. A major is the one kind of bump that can need code changes, and in a
+catch-all group it fails the build for every bump beside it — MathJax 3 → 4
+(which moved the files `site/vendor.mjs` copies) sank the October 2026 site group
+that way. MathJax majors are ignored outright until the v4 migration is done as
+its own change; the entry in `.github/dependabot.yml` says what that involves.
+
 
 ## Adding a conference
 

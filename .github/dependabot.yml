@@ -1,15 +1,28 @@
 # Monthly, low-noise dependency updates (one PR per ecosystem).
+#
+# Each group takes minor and patch updates only. A major version is the one
+# kind of bump that can need code changes, and inside a catch-all group it
+# blocks every other bump with it: MathJax 3 -> 4 removed es5/tex-svg.js, which
+# site/vendor.mjs copies, so the October 2026 site group (#70) failed its build
+# and took three clean bumps down with it. Majors now arrive as their own PRs.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule: { interval: monthly }
-    groups: { all-root-deps: { patterns: ['*'] } }
+    groups: { all-root-deps: { patterns: ['*'], update-types: [minor, patch] } }
   - package-ecosystem: npm
     directory: /site
     schedule: { interval: monthly }
-    groups: { all-site-deps: { patterns: ['*'] } }
+    groups: { all-site-deps: { patterns: ['*'], update-types: [minor, patch] } }
+    ignore:
+      # MathJax 4 is a migration, not a bump: new file layout for vendor.mjs, a
+      # self-hosted font package, the LaTeX pages' loader config and speech
+      # settings (docs/ARCHITECTURE.md, MathJax). Deferred until done as its own
+      # change; delete this entry when that work starts.
+      - dependency-name: mathjax
+        update-types: ['version-update:semver-major']
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: monthly }
-    groups: { all-actions: { patterns: ['*'] } }
+    groups: { all-actions: { patterns: ['*'], update-types: [minor, patch] } }
