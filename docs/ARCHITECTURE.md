@@ -740,6 +740,16 @@ derives from the venue id and that the Tracks section on each page has always
 shown. Everything reads from it, so those surfaces cannot drift apart, and a
 newly imported track is named correctly with no edit at all.
 
+The label is said once even when upstream already put the track in the stem.
+A trailing track ("GenAI4Health Demonstration Paper Track") always comes off.
+A *leading* one ("fast track BabyVLM 2026", "Tutorials TCCML NeurIPS 2026") comes
+off only when it is the label's whole core, set off by a space or punctuation,
+and what is left is a single acronym-shaped token. The asymmetry is deliberate:
+a workshop's own name can begin with a track word ("Position Bias in LLMs",
+"Non-Euclidean Learning"), and a looser rule rewrote those, so a leading stutter
+on a longer name is left in place and `scripts/slug_redirects_test.mjs` turns red
+on it rather than discovery silently renaming a workshop.
+
 The disambiguation is *derived, never stored*. Writing "(Extended Abstracts)"
 into an acronym by hand fixes only the row someone remembers to edit, and it
 double-prints the moment the label is derived too. When a new track suffix is not

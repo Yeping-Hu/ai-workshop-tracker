@@ -11,6 +11,9 @@
  *    underscore-joined and often ends in the track it belongs to; the short
  *    name must not stutter ("GenAI4Health_Demonstration_Paper_Track
  *    (Demonstration Paper Track)") because that is a 100-character <title>.
+ *    Upstream sometimes LEADS with the track instead ("fast track BabyVLM
+ *    2026"); that is said once too, but only when what remains is a lone
+ *    acronym, so a workshop whose own name starts with a track word keeps it.
  *
  * Run: node scripts/slug_redirects_test.mjs
  */
@@ -78,6 +81,17 @@ check('an acronym with no track is untouched',
   name(fake('AIWILD', null)) === 'AIWILD');
 check('nothing is ever stripped to an empty stem',
   name(fake('Main', 'Main Track')).startsWith('Main'));
+// --- a track LEADING the stem is said once, too -------------------------------
+check('a track leading the stem is said once',
+  name(fake('fast track BabyVLM 2026', 'Fast Track')) === 'BabyVLM (Fast Track)');
+check('a leading track whose label adds "Track" is said once',
+  name(fake('Tutorials TCCML NeurIPS 2026', 'Tutorials Track')) === 'TCCML (Tutorials Track)');
+check('a hyphen glues a leading word to the name — not a track',
+  name(fake('Non-Euclidean Learning', 'Non Archival')) === 'Non-Euclidean Learning (Non Archival)');
+check('a leading track word followed by prose is the workshop\'s own name',
+  name(fake('Position Bias in LLMs', 'Position')) === 'Position Bias in LLMs (Position)');
+check('a leading track word followed by a phrase is left alone',
+  name(fake('Paper Reading Group', 'Paper')) === 'Paper Reading Group (Paper)');
 // --- a name that states its own acronym uses it ------------------------------
 check('"ACRO: subtitle" yields ACRO', acronymInName('OPT: Optimization for Machine Learning') === 'OPT');
 check('"… - ACRO" yields ACRO', acronymInName('New Frontiers in Game-Theoretic Learning - NExT-Game') === 'NExT-Game');
@@ -89,12 +103,17 @@ check('a stored acronym always wins over one embedded in the name',
 check('with no stored acronym the embedded one becomes the short name',
   name(fake(undefined, null, { name: 'OPT 2026: Optimization for Machine Learning' })) === 'OPT');
 
-// Across the real corpus: no short name repeats its own track label twice.
+// Across the real corpus: no short name says its track twice. Compared on the
+// label's core (minus a trailing "Track"), because the stem repeats the core
+// and not the label ("Tutorials TCCML (Tutorials Track)" never contains
+// "tutorials track" twice); bounded so "Non-Euclidean" does not count as "Non".
+const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const stutters = workshops.filter((w) => {
   if (!w.trackLabel) return false;
-  const full = name(w).toLowerCase();
-  const t = String(w.trackLabel).toLowerCase();
-  return full.indexOf(t) !== full.lastIndexOf(t);
+  const words = String(w.trackLabel).trim().split(/\s+/).map(escape);
+  const core = words.length > 1 && /^tracks?$/i.test(words[words.length - 1]) ? words.slice(0, -1) : words;
+  const said = new RegExp(`(?:^|[\\s(_:,;])${core.join('[\\s_-]+')}(?![\\w-])`, 'gi');
+  return (name(w).match(said) ?? []).length > 1;
 });
 check('no live entry repeats its track label in its short name', stutters.length === 0,
   stutters.map((w) => w.slug).slice(0, 5).join(', '));
