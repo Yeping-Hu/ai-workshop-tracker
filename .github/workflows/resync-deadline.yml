@@ -17,12 +17,17 @@ concurrency:
   # Serialise every workflow that commits to `main`. Each one checks out main,
   # computes, commits and pushes; if a sibling pushes in between, the push is
   # rejected as a non-fast-forward and the job fails with its work computed but
-  # unpublished. The crons are 30 minutes apart, but discovery can run ~35
-  # minutes on a slow OpenReview day, and a manual dispatch ignores the schedule
-  # entirely. `cancel-in-progress: false` queues the second run instead of
-  # dropping it, so no data write is ever silently skipped.
+  # unpublished. The crons are staggered, but GitHub starts scheduled runs late
+  # (by hours on a busy day), discovery can run ~35 minutes on a slow OpenReview
+  # day, and a manual dispatch ignores the schedule entirely, so runs routinely
+  # wait for one another. `cancel-in-progress: false` lets the running job
+  # finish, and `queue: max` keeps every run waiting behind it: without it
+  # GitHub holds ONE pending run per group and cancels it when the next one
+  # queues, which silently dropped a scheduled backfill on 2026-08-14
+  # (AUTOMATION.md).
   group: data-write
   cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: write

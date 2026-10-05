@@ -45,6 +45,7 @@ concurrency:
   # Serialise every workflow that commits to `main` — see discover.yml.
   group: data-write
   cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: write

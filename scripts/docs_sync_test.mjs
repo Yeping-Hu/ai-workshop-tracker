@@ -23,6 +23,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import * as yaml from 'js-yaml';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -143,6 +144,58 @@ if (unwired.length) {
     console.log('  Add `shell: bash` to the step, or the pipe swallows the command\'s exit code.');
   } else {
     console.log('✓ no workflow throws away an exit code through a pipe');
+  }
+}
+
+// --- fourth drift: a data write that can be dropped while it waits ----------
+// `cancel-in-progress: false` only spares the RUNNING job. GitHub keeps one
+// pending run per group by default and cancels it when the next one queues, so
+// in `data-write`, where every run is a different job, a waiting write simply
+// vanished: the 2026-08-14 blank-deadline backfill, behind a manual discovery
+// run, replaced by the track sync. `queue: max` keeps them all
+// (AUTOMATION.md, "The data jobs are serialised"). Separately, anything that
+// pushes to `main` must be serialised by SOME group that never cancels a run
+// mid-push; `alerts` is deliberately its own group, which is allowed.
+{
+  const PUSHES = /\.\/\.github\/actions\/publish-data|\bgit push\b/;
+  const concurrencyProblems = (src) => {
+    const wf = yaml.load(src) ?? {};
+    const c = typeof wf.concurrency === 'string' ? { group: wf.concurrency } : wf.concurrency;
+    const problems = [];
+    if (c?.group === 'data-write') {
+      if (c['cancel-in-progress'] !== false) problems.push('data-write without `cancel-in-progress: false`');
+      if (c.queue !== 'max') problems.push('data-write without `queue: max` (a waiting run is cancelled when the next queues)');
+    }
+    if (PUSHES.test(src)) {
+      if (!c?.group) problems.push('pushes to main with no concurrency group');
+      else if (c['cancel-in-progress'] === true) problems.push('pushes to main in a group that cancels in-progress runs');
+    }
+    return problems;
+  };
+  const wfFixture = (concurrency, run = 'node scripts/x.mjs') =>
+    `name: x\non: { workflow_dispatch: {} }\n${concurrency}\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n      - run: ${run}\n`;
+  const fixtures = [
+    ['a data-write job with queue: max passes',
+      wfFixture('concurrency: { group: data-write, cancel-in-progress: false, queue: max }', 'git push'), 0],
+    ['a data-write job without queue: max fails',
+      wfFixture('concurrency: { group: data-write, cancel-in-progress: false }', 'git push'), 1],
+    ['a job that pushes with no group fails', wfFixture('', 'git push'), 1],
+    ['a job that pushes in a cancel-in-progress group fails',
+      wfFixture('concurrency: { group: own, cancel-in-progress: true }', 'git push'), 1],
+    ['a job that pushes in its own non-cancelling group passes',
+      wfFixture('concurrency: { group: alerts, cancel-in-progress: false }', 'git push'), 0],
+    ['a read-only job needs no group', wfFixture(''), 0],
+  ];
+  const wrong = fixtures.filter(([, src, n]) => concurrencyProblems(src).length !== n).map(([label]) => label);
+  const wfDir = path.join(ROOT, '.github', 'workflows');
+  const offenders = fs.readdirSync(wfDir).filter((n) => n.endsWith('.yml'))
+    .flatMap((f) => concurrencyProblems(fs.readFileSync(path.join(wfDir, f), 'utf8')).map((p) => `${f}: ${p}`));
+  if (wrong.length || offenders.length) {
+    failed = true;
+    if (wrong.length) console.log(`✗ the concurrency check misjudges its fixtures: ${wrong.join('; ')}`);
+    if (offenders.length) console.log(`✗ workflow(s) that can lose or interrupt a write to main: ${offenders.join('; ')}`);
+  } else {
+    console.log('✓ every write to main is serialised, and no queued data write can be dropped');
   }
 }
 

@@ -344,19 +344,55 @@ deadline appears on OpenReview" — rare enough to stay green for a week.
 
 ## The data jobs are serialised
 
-Every workflow that commits to `main` shares
-`concurrency: { group: data-write, cancel-in-progress: false }`, so they queue
-rather than overlap. They each check out `main`, compute, commit and push; if a
-sibling pushes in between, the push is rejected as a non-fast-forward and the job
-fails with its work computed but unpublished — which is exactly what happened when
-the re-check and the blank-fill were dispatched together. Queuing rather than
-cancelling matters: a cancelled run would silently skip a data write.
+Every data workflow that commits to `main` (all but `alerts.yml`, see "The alerts
+job is outside the data-write group") shares
+`concurrency: { group: data-write, cancel-in-progress: false, queue: max }`, so
+they queue rather than overlap. They each check out `main`, compute, commit and
+push; if a sibling pushes in between, the push is rejected as a non-fast-forward
+and the job fails with its work computed but unpublished — which is exactly what
+happened when the re-check and the blank-fill were dispatched together. Queuing
+rather than cancelling matters: a cancelled run would silently skip a data write.
+
+`cancel-in-progress: false` alone does not guarantee that. It only protects the
+run that is already going. By default GitHub keeps **one** pending run per group,
+and when another queues, the pending one is cancelled and replaced. In most groups
+that is harmless because the replacement does the same work, but in this one every
+run is a different job. On 2026-08-14 a manual discovery run held the group from
+06:33 to 07:00 UTC. The daily blank-deadline backfill queued behind it at 06:40,
+and when the track sync queued at 06:52 the backfill was cancelled before any job
+started. It lost a day and nothing reported it. Three official-list decisions
+dispatched at once would have kept only the first and the last, or only the last
+if another data job already held the group.
+
+`queue: max` (generally available since May 2026) keeps up to 100 pending runs, in
+the order they started waiting. It was confirmed on GitHub's runners before it was
+relied on: three back-to-back runs in a probe group all succeeded, one after
+another, and none was cancelled. `scripts/docs_sync_test.mjs` fails if any
+workflow in the group lacks it, or if any workflow that pushes to `main` has no
+concurrency group at all.
+
+The other groups keep the default on purpose. `pages` (deploy.yml) and
+`pr-build-<ref>` cancel in progress, so a newer run supersedes the running one
+and the waiting one alike. GitHub rejects `queue: max` with that anyway.
+`alerts`, `smoke` and `alerts-worker-deploy` don't cancel, and each of their runs
+acts on whatever is current, so the run that replaces a waiting one nearly always
+covers its work, and no backlog of identical runs builds up. There are two
+exceptions, and a later run covers both:
+
+- A manual alerts dispatch is a dry run by default. If it replaces a waiting
+  scheduled run, that day's mail goes out with the next scheduled run: a dry run
+  advances no snapshot or send-log, and each real run re-diffs from the last
+  snapshot.
+- A smoke run triggered by a deploy that didn't succeed skips its job. If it
+  replaces a waiting check of a good deploy, that deploy goes unchecked until the
+  next deploy or the daily run.
 
 Every push is also wrapped in a bounded rebase-retry (3 attempts, fetch and rebase
 between, backing off 5s then 10s), because the group can't prevent a move from
-outside it — a merge, an admin push, or a re-run. The crons are 30 minutes apart,
-but discovery can take ~35 minutes on a slow OpenReview day and a manual dispatch
-ignores the schedule entirely.
+outside it — a merge, an admin push, or a re-run. The crons are staggered, but
+GitHub starts scheduled runs late (by hours on a busy day), discovery can take ~35
+minutes on a slow OpenReview day, and a manual dispatch ignores the schedule
+entirely, so the data jobs routinely wait for one another.
 
 The commit-push-dispatch sequence itself is one composite action,
 `.github/actions/publish-data`, that every committing workflow calls with its

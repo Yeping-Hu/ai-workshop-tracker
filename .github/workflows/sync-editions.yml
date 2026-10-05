@@ -36,6 +36,7 @@ concurrency:
   # data jobs are serialised"): queue behind a sibling rather than race its push.
   group: data-write
   cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: write

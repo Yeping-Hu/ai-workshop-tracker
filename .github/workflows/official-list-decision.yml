@@ -59,6 +59,7 @@ concurrency:
   # (which only reports) it belongs in the group.
   group: data-write
   cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: write
