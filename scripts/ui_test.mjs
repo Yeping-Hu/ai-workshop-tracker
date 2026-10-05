@@ -5,6 +5,8 @@
 import { chromium } from 'playwright';
 import { loadEditions, loadAcceptanceRates } from '../lib/editions.mjs';
 import { resolveDeadlineUtcMs } from '../lib/dates.mjs';
+import { loadConferences } from '../lib/workshops.mjs';
+import { openCalls, pickBrowseConference, pickSortQuery } from './ui_examples.mjs';
 
 const BASE = process.argv[2] || 'http://localhost:4321';
 let pass = 0, fail = 0;
@@ -13,6 +15,10 @@ function check(name, cond, extra = '') {
   if (cond) { pass++; console.log(`  ✓ ${name}`); }
   else { fail++; console.log(`  ✗ ${name} ${extra}`); }
 }
+// A check that needs open calls the corpus does not have today is skipped with
+// a named warning, never failed: the calendar is not a regression.
+const warnings = [];
+function warn(msg) { warnings.push(msg); console.log(`  ⚠ ${msg}`); }
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
@@ -35,6 +41,13 @@ check('eyebrow order matches conference dropdown', JSON.stringify(eyebrow) === J
 // comes from the API (the statline's definition of "open"), never a literal.
 const apiTop = JSON.parse(rfTop('site/dist/api/workshops.json', 'utf8')).workshops;
 const openConfIds = new Set(apiTop.filter((w) => w.status === 'upcoming' && w.deadline_utc).map((w) => w.conference));
+// The open-call examples below come from the corpus, never a literal
+// (scripts/ui_examples.mjs says why): IROS stood here until its last call
+// closed and turned three checks red on every run.
+const confNameOf = (id) => loadConferences().find((c) => c.id === id)?.name ?? id;
+const anyOpen = openCalls(apiTop, Date.now()).length > 0;
+const browsePick = pickBrowseConference(apiTop, Date.now());
+const sortPick = pickSortQuery(apiTop, Date.now(), ['robot', 'agent', 'language', 'vision', 'reasoning', 'safety', 'graph', 'speech', 'health', 'learning']);
 const lineItems = await page.$$eval('.conf-line .conf-tick', (els) =>
   els.map((e) => ({
     name: e.querySelector('.conf-tick-name')?.textContent.trim(),
@@ -161,15 +174,19 @@ await page.click('#clearSearch');
 await page.waitForSelector('#homeDefault:not([hidden])');
 
 console.log('— facet-only browse: clean headline, no paper sublists —');
-await page.click('summary[data-facet-summary="status"]');
-await page.check('[data-facet="status"] input[value="Open call"]');
-await page.waitForFunction(() => document.querySelectorAll('#results .pf-result').length > 0);
-await page.waitForFunction(() => /workshop/.test(document.querySelector('#searchCount')?.textContent || ''), null, { timeout: 15000 });
-const browseCount = await page.$eval('#searchCount', (el) => el.textContent);
-check('browse headline omits papers segment', /^\d+ workshops? · newest first( · page \d+\/\d+)?$/.test(browseCount), browseCount);
-check('browse entries have no paper sublists', (await page.$$('.pf-papers')).length === 0);
-await page.uncheck('[data-facet="status"] input[value="Open call"]');
-await page.waitForSelector('#homeDefault:not([hidden])');
+if (!anyOpen) {
+  warn('no open calls in the corpus today — the "Open call" facet browse is skipped');
+} else {
+  await page.click('summary[data-facet-summary="status"]');
+  await page.check('[data-facet="status"] input[value="Open call"]');
+  await page.waitForFunction(() => document.querySelectorAll('#results .pf-result').length > 0);
+  await page.waitForFunction(() => /workshop/.test(document.querySelector('#searchCount')?.textContent || ''), null, { timeout: 15000 });
+  const browseCount = await page.$eval('#searchCount', (el) => el.textContent);
+  check('browse headline omits papers segment', /^\d+ workshops? · newest first( · page \d+\/\d+)?$/.test(browseCount), browseCount);
+  check('browse entries have no paper sublists', (await page.$$('.pf-papers')).length === 0);
+  await page.uncheck('[data-facet="status"] input[value="Open call"]');
+  await page.waitForSelector('#homeDefault:not([hidden])');
+}
 
 console.log('— facet counts mean workshops (vs API ground truth) —');
 import { readFileSync } from 'node:fs';
@@ -270,37 +287,43 @@ console.log('— browse order (filters only) vs relevance order (keywords) —')
 // index excluded (it has no sort keys and would interleave unsorted).
 await page.goto(BASE, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => document.querySelector('[data-facet="conference"]')?.children.length >= 5, null, { timeout: 8000 });
-await page.click('summary[data-facet-summary="conference"]');
-await page.check('[data-facet="conference"] input[value="IROS"]');
-await page.waitForFunction(() => document.querySelectorAll('#results .pf-result').length > 0, null, { timeout: 8000 });
-await page.waitForFunction(() => /workshop/.test(document.querySelector('#searchCount')?.textContent || ''), null, { timeout: 15000 });
-const ordBrowseCount = await page.$eval('#searchCount', (el) => el.textContent);
-check('browse count line says "newest first"', /newest first/.test(ordBrowseCount), ordBrowseCount);
-const ordPills = await page.$$eval('#results .pf-result .pill', (els) => els.map((e) => e.textContent.trim()));
-check('first browse result is an Open call', ordPills[0] === 'Open call', ordPills.slice(0, 3).join(','));
-const ordLastOpen = ordPills.lastIndexOf('Open call');
-check('open calls form a contiguous leading band', ordPills.slice(0, ordLastOpen + 1).every((p) => p === 'Open call'), ordPills.join(','));
-// Result rows are the board's rows: the paper deadline is the browse sort key
-// and sits in the row's local-time element as an ISO instant (the countdown
-// may target an abstract stage instead, so it is not the thing to sort by).
-const ordDues = await page.$$eval('#results .pf-result', (els) =>
-  els
-    .filter((e) => e.querySelector('.pill')?.textContent.trim() === 'Open call')
-    .map((e) => e.querySelector('.ws-deadline .local[data-iso]')?.getAttribute('data-iso'))
-    .filter(Boolean));
-const ordDueMs = ordDues.map((d) => Date.parse(d));
-check('open-call deadlines ascend', ordDueMs.every((v, i) => i === 0 || !(v < ordDueMs[i - 1])), ordDues.slice(0, 4).join(' | '));
-check('due dates shown on open-call rows', ordDues.length >= 2, `got ${ordDues.length}`);
-// Rows rendered after load are hydrated like the board: a live countdown that
-// has already been given a value, not the "—" placeholder.
-let ordTicks = false;
-try {
-  await page.waitForFunction(() => /\d+[dhm]/.test(document.querySelector('#results .pf-result .countdown[data-deadline-ms]')?.textContent || ''), null, { timeout: 3000 });
-  ordTicks = true;
-} catch {}
-check('browse rows carry a live countdown', ordTicks);
-check('browse rows show the local time', (await page.$$eval('#results .pf-result .ws-deadline .local', (els) => els.filter((e) => /Your time:/.test(e.textContent)).length)) >= 2);
-await page.uncheck('[data-facet="conference"] input[value="IROS"]');
+if (!browsePick) {
+  warn('no conference has two open calls today — the browse-order checks are skipped');
+} else {
+  const browseConf = confNameOf(browsePick.conference);
+  console.log(`  (browsing ${browseConf}: ${browsePick.open} open calls)`);
+  await page.click('summary[data-facet-summary="conference"]');
+  await page.check(`[data-facet="conference"] input[value="${browseConf}"]`);
+  await page.waitForFunction(() => document.querySelectorAll('#results .pf-result').length > 0, null, { timeout: 8000 });
+  await page.waitForFunction(() => /workshop/.test(document.querySelector('#searchCount')?.textContent || ''), null, { timeout: 15000 });
+  const ordBrowseCount = await page.$eval('#searchCount', (el) => el.textContent);
+  check('browse count line says "newest first"', /newest first/.test(ordBrowseCount), ordBrowseCount);
+  const ordPills = await page.$$eval('#results .pf-result .pill', (els) => els.map((e) => e.textContent.trim()));
+  check('first browse result is an Open call', ordPills[0] === 'Open call', ordPills.slice(0, 3).join(','));
+  const ordLastOpen = ordPills.lastIndexOf('Open call');
+  check('open calls form a contiguous leading band', ordPills.slice(0, ordLastOpen + 1).every((p) => p === 'Open call'), ordPills.join(','));
+  // Result rows are the board's rows: the paper deadline is the browse sort key
+  // and sits in the row's local-time element as an ISO instant (the countdown
+  // may target an abstract stage instead, so it is not the thing to sort by).
+  const ordDues = await page.$$eval('#results .pf-result', (els) =>
+    els
+      .filter((e) => e.querySelector('.pill')?.textContent.trim() === 'Open call')
+      .map((e) => e.querySelector('.ws-deadline .local[data-iso]')?.getAttribute('data-iso'))
+      .filter(Boolean));
+  const ordDueMs = ordDues.map((d) => Date.parse(d));
+  check('open-call deadlines ascend', ordDueMs.every((v, i) => i === 0 || !(v < ordDueMs[i - 1])), ordDues.slice(0, 4).join(' | '));
+  check('due dates shown on open-call rows', ordDues.length >= 2, `got ${ordDues.length}`);
+  // Rows rendered after load are hydrated like the board: a live countdown that
+  // has already been given a value, not the "—" placeholder.
+  let ordTicks = false;
+  try {
+    await page.waitForFunction(() => /\d+[dhm]/.test(document.querySelector('#results .pf-result .countdown[data-deadline-ms]')?.textContent || ''), null, { timeout: 3000 });
+    ordTicks = true;
+  } catch {}
+  check('browse rows carry a live countdown', ordTicks);
+  check('browse rows show the local time', (await page.$$eval('#results .pf-result .ws-deadline .local', (els) => els.filter((e) => /Your time:/.test(e.textContent)).length)) >= 2);
+  await page.uncheck(`[data-facet="conference"] input[value="${browseConf}"]`);
+}
 
 // Keywords = relevance: count line says so; ordering is Pagefind's, not the bands.
 await page.fill('#q', 'surgical robotics');
@@ -315,8 +338,11 @@ await page.fill('#q', '');
 console.log('— sort picker —');
 // Hidden on the board, shown with results; the options are result-sort.js's.
 // The query needs a few open calls (fewer than a page) and plenty of closed
-// ones and papers, so every order has something to show on page one.
-const SORT_Q = 'robot';
+// ones and papers, so every order has something to show on page one. Which
+// word does that changes with the calendar, so it is picked from the corpus;
+// off-season, "robot" still exercises every order but the open-call band.
+const SORT_Q = sortPick?.q ?? 'robot';
+console.log(sortPick ? `  (query "${SORT_Q}": ${sortPick.open} open calls)` : `  (query "${SORT_Q}")`);
 await page.goto(BASE, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => document.querySelector('[data-facet="conference"]')?.children.length >= 5, null, { timeout: 8000 });
 check('sort picker hidden in default mode', await page.$eval('#sortPick', (el) => el.hidden));
@@ -347,9 +373,13 @@ const soonRows = await page.$$eval('#results .pf-result', (els) => els.map((e) =
   iso: e.querySelector('.ws-deadline .local[data-iso]')?.getAttribute('data-iso') || null,
 })));
 const lastOpen = soonRows.map((r) => r.pill).lastIndexOf('Open call');
-check('open calls lead as one band', lastOpen >= 0 && soonRows.slice(0, lastOpen + 1).every((r) => r.pill === 'Open call'), soonRows.slice(0, 6).map((r) => r.pill).join(','));
-const openMs = soonRows.slice(0, lastOpen + 1).map((r) => Date.parse(r.iso)).filter(Number.isFinite);
-check('open-call deadlines ascend', nonDecreasing(openMs), `${openMs.length} open`);
+if (!sortPick) {
+  warn('no keyword matches two open calls today — the open-call band of "Newest first" is skipped');
+} else {
+  check('open calls lead as one band', lastOpen >= 0 && soonRows.slice(0, lastOpen + 1).every((r) => r.pill === 'Open call'), soonRows.slice(0, 6).map((r) => r.pill).join(','));
+  const openMs = soonRows.slice(0, lastOpen + 1).map((r) => Date.parse(r.iso)).filter(Number.isFinite);
+  check('open-call deadlines ascend', nonDecreasing(openMs), `${openMs.length} open`);
+}
 const closedMs = soonRows.slice(lastOpen + 1).filter((r) => r.pill === 'Past' && r.iso).map((r) => Date.parse(r.iso));
 check('closed calls most recent first', nonIncreasing(closedMs), closedMs.slice(0, 4).map((v) => new Date(v).toISOString().slice(0, 10)).join(' | '));
 
@@ -1749,5 +1779,5 @@ await page.evaluate(() => localStorage.clear());
 check('no page/console errors during the whole run', errors.length === 0, errors.slice(0, 3).join(' | '));
 
 await browser.close();
-console.log(`\n${pass} passed, ${fail} failed`);
+console.log(`\n${pass} passed, ${fail} failed${warnings.length ? `, ${warnings.length} skipped (no open calls to show)` : ''}`);
 process.exit(fail ? 1 : 0);

@@ -2190,6 +2190,15 @@ deterministic result order, the external-vs-internal link rule, the back/forward
 restore, and the deploy-staleness heal. It runs in `pr-build-check.yml`, which
 already builds the site with the production environment.
 
+Its ordering checks need open calls, and which workshops have one is a fact
+about the calendar, not the code. So the suite never names one: the conference
+it browses and the keyword it sorts are picked from the build's
+`/api/workshops.json` at run time (`scripts/ui_examples.mjs`, pinned by
+`ui_examples_test.mjs`). It used to name IROS, and when IROS 2026's last call
+closed on 2026-09-26 three checks failed on every run with nothing broken. When
+the corpus has nothing to show (off-season), the checks that need open calls are
+skipped with a named warning, not failed.
+
 That last clause used to read "so the suite drives the artefact that would
 actually ship", and it was not true. `pr-build-check.yml` builds twice, and this
 suite drives the *fork* build, where `PUBLIC_ALERTS_API` is empty — and
