@@ -21,3 +21,8 @@ alerts/worker/node_modules/
 # Astro's per-machine update-check timestamp; the generated types beside it stay tracked
 site/.astro/settings.json
 site/.astro/preview.json
+
+# Local-only demo material. Anchored to the repo root so it can't match a
+# workshop whose slug or page path contains "demo"; nothing in the build,
+# scripts or workflows reads from it.
+/demo/
