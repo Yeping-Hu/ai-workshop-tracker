@@ -152,8 +152,9 @@ venue-id-less entries; its apply path reuses the sync helpers above.
 deadline trackers the way it should (zones, free-text dates, which entry is the
 paper track), takes each field from the right tracker, fills a hand-typed row
 without overwriting it, freezes a field a person edited, moves a deadline later
-only, and parses the acceptance-rate table (skipping rows that contradict
-themselves).
+only, reads both acceptance-rate tables (skipping rows that contradict
+themselves), takes each year whole from the first table that has it, and keeps
+a table's rows when it cannot be read.
 
 `node scripts/deadline_crosscheck_test.mjs` — the cross-check classifies a
 stored-vs-OpenReview gap (tz-suspect vs. real change) and, by provenance, decides
@@ -214,10 +215,11 @@ and `workshop_list_url` are never touched. To hand-type a row, give it
 `conference`, `year`, `end` and whatever else you know, and leave `synced` out.
 
 `data/acceptance_rates.yml` is the acceptance-rate history the same workflow
-writes from the table at github.com/lixin4ever/Conference-Acceptance-Rate — one
-row per conference-year with `rate`, `accepted`, `submitted`, an optional
-`detail` and a `source`. A row with any other `source` is yours and wins over
-the bot's for that year. `validate.mjs` checks both files (known conference,
+writes from two tables — github.com/ccfddl/ccf-deadlines (`accept_rates/`)
+first, github.com/lixin4ever/Conference-Acceptance-Rate for the older years —
+one row per conference-year with `rate`, `accepted`, `submitted`, an optional
+`detail` and a `source` naming the table it came from. A row with any other
+`source` is yours and wins over the bot's for that year. `validate.mjs` checks both files (known conference,
 real dates, a rate that agrees with its counts).
 
 ## Series links
@@ -254,6 +256,6 @@ Don't paste papers by hand. Set `openreview_venue_id` and the monthly `openrevie
 - **Fixing a stale/extended deadline now:** rather than hand-editing the time (easy to get the timezone wrong), re-pull it from OpenReview — Actions → **Re-sync deadline from OpenReview** → enter the slug (or locally `node scripts/resync_deadline.mjs --slug <slug>`). It sets the deadline to OpenReview's current duedate, in either direction, and re-stamps it for future auto-sync.
 - **Deadline review issue:** a daily `deadline-review` workflow keeps one self-maintaining issue ("Data health: deadlines to review", `data-health` label) listing only deadlines the auto-sync won't fix itself — ones you hand-edited that now disagree with OpenReview, and bot-managed ones OpenReview moved *earlier* (the bot is later-only). Each item links the re-sync command; resolve by re-syncing (trust OpenReview) or leaving it (keep yours). The issue closes itself when nothing's outstanding. Bot-managed later moves and legacy entries never appear — they sync automatically.
 - **Re-tagging auto-suggested topics:** topics on bot-imported entries are judged by Jev from the title, acronym and host conference — or keyword-guessed from the title when no `TYPESAFE_API_KEY` is set — and flagged "auto-suggested" in `notes`. If you improve the keyword table in `scripts/discover_openreview.mjs`, or want the back catalogue re-judged, run `node scripts/retag_topics.mjs --dry-run` to preview, then `node scripts/retag_topics.mjs` to apply — it re-tags **only** entries still tagged `other` with that auto note, so anything a human has curated is left untouched. After a change to `data/topics.yml` itself — a new topic, a reworded description — `node scripts/retag_topics.mjs --all` re-judges every entry that still carries the note (about $0.25 of Jev input tokens for the corpus; without a key it writes nothing). A topic needs at least three workshops to stay in the vocabulary (`validate.mjs` warns below that), ids are never renamed, and the reasoning is in docs/ARCHITECTURE.md, "Contributors are validated by CI".
-- **Health issues:** six auto-maintained issues labelled `data-health` — deadlines to review, conference editions to review (an upstream deadline moved earlier, trackers disagreeing, a hand-typed value the trackers contradict, a next cycle overdue, acceptance rates the source lacks), workshops not on the official list, venues not verified, stale entries, broken links. Each updates in place and closes itself when clean; a failing editions sync opens a seventh with its log, and the smoke test keeps one labelled `smoke` for the live site.
+- **Health issues:** six auto-maintained issues labelled `data-health` — deadlines to review, conference editions to review (an upstream deadline moved earlier, trackers disagreeing, a hand-typed value the trackers contradict, a next cycle overdue, acceptance rates neither table has), workshops not on the official list, venues not verified, stale entries, broken links. Each updates in place and closes itself when clean; a failing editions sync opens a seventh with its log, and the smoke test keeps one labelled `smoke` for the live site.
 - **Seed data:** entries whose `notes` contain `SEED DATA` are unverified placeholders from the initial build — verify or replace them.
 - Data is licensed CC-BY-4.0; by contributing you agree your additions are too.

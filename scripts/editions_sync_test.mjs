@@ -4,7 +4,8 @@
  * the edition helpers the pages read (lib/editions.mjs): how the two trackers'
  * files are read, how their zones become this site's, which tracker wins a
  * field, the create / fill / follow / freeze decision, the file shapes, the
- * acceptance-rate table parser, and which edition a hub headlines. Fixtures
+ * two acceptance-rate tables' readers and which one wins a year, and which
+ * edition a hub headlines. Fixtures
  * are the live records the job was designed against on 2026-09-10. No
  * network, no filesystem.
  *
@@ -23,8 +24,12 @@ import {
   serializeEditions,
   serializeAcceptanceRates,
   parseAcceptanceReadme,
+  readCcfddlRates,
+  mergeAcceptanceRates,
   sourceId,
-  ACCEPTANCE_SOURCE,
+  LIXIN_RATES_SOURCE,
+  CCFDDL_RATES_SOURCE,
+  RATE_PRECEDENCE,
   relevantReview,
   missingNextCycles,
   staleAcceptanceRates,
@@ -329,13 +334,97 @@ const README = `
 const confs = [{ id: 'neurips', name: 'NeurIPS' }, { id: 'icml', name: 'ICML' }, { id: 'iclr', name: 'ICLR' }, { id: 'cvpr', name: 'CVPR' }];
 const parsed = parseAcceptanceReadme(README, confs);
 check('one row per tracked conference-year with counts', parsed.rows.map((r) => `${r.conference}-${r.year}`), ['cvpr-2025', 'icml-2016', 'neurips-2022', 'neurips-2025', 'neurips-2017', 'iclr-2025', 'iclr-2024']);
-check('NeurIPS 2025 in full', parsed.rows.find((r) => r.conference === 'neurips' && r.year === 2025), { conference: 'neurips', year: 2025, rate: 24.5, accepted: 5290, submitted: 21575, detail: '77 orals, 688 spotlights and 4525 posters', source: ACCEPTANCE_SOURCE });
-check('a "?" count is left out, the rate kept', parsed.rows.find((r) => r.year === 2022), { conference: 'neurips', year: 2022, rate: 25.6, submitted: 10411, source: ACCEPTANCE_SOURCE });
+check('NeurIPS 2025 in full', parsed.rows.find((r) => r.conference === 'neurips' && r.year === 2025), { conference: 'neurips', year: 2025, rate: 24.5, accepted: 5290, submitted: 21575, detail: '77 orals, 688 spotlights and 4525 posters', source: LIXIN_RATES_SOURCE });
+check('a "?" count is left out, the rate kept', parsed.rows.find((r) => r.year === 2022), { conference: 'neurips', year: 2022, rate: 25.6, submitted: 10411, source: LIXIN_RATES_SOURCE });
 check('a detail with placeholders is left out', 'detail' in parsed.rows.find((r) => r.conference === 'iclr' && r.year === 2025), false);
 check('the NIPS alias maps to neurips', parsed.rows.find((r) => r.year === 2017).conference, 'neurips');
-check('a rate that contradicts its counts is skipped and named', parsed.skipped, [{ conference: 'iclr', year: 2023, message: '99% does not match 1574/4956' }]);
+check('a rate that contradicts its counts is skipped and named', parsed.skipped, [{ conference: 'iclr', year: 2023, source: LIXIN_RATES_SOURCE, message: '99% does not match 1574/4956' }]);
 const ratesText = serializeAcceptanceRates(parsed.rows);
 check('the rates file round-trips, sorted by conference and year', yaml.load(ratesText).map((r) => `${r.conference}-${r.year}`), ['cvpr-2025', 'iclr-2024', 'iclr-2025', 'icml-2016', 'neurips-2017', 'neurips-2022', 'neurips-2025']);
+
+// ccfddl's accept_rates/AI/nips.yml as it stood on 2026-10-06 (2021, 2022 and
+// 2025 of it), plus a row whose rate contradicts its counts, a second row for
+// a year, and one with counts and no rate.
+const CCFDDL_RATES = `
+# Main conference track only; Datasets and Benchmarks and journal showcase papers are excluded.
+- title: NeurIPS
+  accept_rates:
+    - year: 2021
+      submitted: 9122
+      accepted: 2334
+      str: 25.6%(2334/9122 21')
+      rate: 0.255864941898706
+      source: https://neurips.cc/media/Press/NeurIPS_2021-Fact_Sheet.pdf
+    # Accepted count: https://blog.neurips.cc/2022/11/22/getting-ready-for-neurips-3-2022-conference-highlights/
+    - year: 2022
+      submitted: 10411
+      accepted: 2672
+      str: 25.7%(2672/10411 22')
+      rate: 0.256651618480453
+      source: https://blog.neurips.cc/2023/12/09/reflections-on-the-neurips-2023-ethics-review-process/
+    - year: 2025
+      submitted: 21575
+      accepted: 5290
+      str: 24.5%(5290/21575 25')
+      rate: 0.245191193511008
+      source: https://media.neurips.cc/Conferences/NeurIPS2025/press/NeurIPS2025-Fact_Sheet.pdf
+    - year: 2025
+      submitted: 1
+      accepted: 1
+      rate: 0.5
+    - year: 2023
+      submitted: 12343
+      accepted: 3218
+      rate: 0.9
+    - year: 2024
+      submitted: 15671
+      accepted: 4037
+`;
+const ccf = readCcfddlRates(CCFDDL_RATES, 'neurips');
+check('ccfddl: one row per year, the fraction as a percentage to one decimal', ccf.rows.map((r) => [r.year, r.rate]), [[2021, 25.6], [2022, 25.7], [2025, 24.5], [2024, 25.8]]);
+check('… in full, with the table as its source', ccf.rows[0], { conference: 'neurips', year: 2021, rate: 25.6, accepted: 2334, submitted: 9122, source: CCFDDL_RATES_SOURCE });
+check('… a rate that contradicts its counts is skipped and named', ccf.skipped, [{ conference: 'neurips', year: 2023, source: CCFDDL_RATES_SOURCE, message: '90% does not match 3218/12343' }]);
+check('… YAML that is not a list throws, for the caller to name', (() => { try { readCcfddlRates('title: x', 'neurips'); return 'no throw'; } catch { return 'threw'; } })(), 'threw');
+// What would make validate.mjs refuse the file — and the day's editions with
+// it — is screened per row: a percentage where a fraction belongs gives way to
+// the counts, digit-string counts are read, and an unusable row is named.
+const screened = readCcfddlRates(`
+- title: NeurIPS
+  accept_rates:
+    - { year: 2020, submitted: 9454, accepted: 1900, rate: 20.1 }
+    - { year: 2019, submitted: "6,743", accepted: "1428", rate: 0.2117 }
+    - { year: 2208, submitted: 9454, accepted: 1900, rate: 0.201 }
+    - { year: 2018, rate: n/a }
+`, 'neurips', NOW);
+check('ccfddl: a percentage rate gives way to the counts\' rate', screened.rows.find((r) => r.year === 2020)?.rate, 20.1);
+check('… counts written as digit strings are read', [screened.rows.find((r) => r.year === 2019)?.accepted, screened.rows.find((r) => r.year === 2019)?.submitted], [1428, 6743]);
+check('… a year validate.mjs would refuse, and a row with no usable rate, are skipped and named', screened.skipped.map((s) => [s.year, s.message]), [[2208, 'year 2208 is not a plausible year'], [2018, 'no usable rate (rate "n/a", ?/?)']]);
+check('lixin: a year validate.mjs would refuse is skipped and named', parseAcceptanceReadme("|NeurIPS'99| 25.0% (100/400) | - |", confs, NOW), { rows: [], skipped: [{ conference: 'neurips', year: 2099, source: LIXIN_RATES_SOURCE, message: 'year 2099 is not a plausible year' }] });
+check('ccfddl comes first', RATE_PRECEDENCE, [CCFDDL_RATES_SOURCE, LIXIN_RATES_SOURCE]);
+
+const lixin = parsed.rows.filter((r) => r.conference === 'neurips');
+const handRow = { conference: 'neurips', year: 2022, rate: 25.6, accepted: 2665, submitted: 10411, source: 'https://neurips.cc/…' };
+const rmerged = mergeAcceptanceRates([], { [CCFDDL_RATES_SOURCE]: ccf.rows, [LIXIN_RATES_SOURCE]: lixin });
+const at = (rows, y) => rows.find((r) => r.conference === 'neurips' && r.year === y);
+check('a year both tables have is ccfddl\'s, rate and counts together', at(rmerged, 2022), { conference: 'neurips', year: 2022, rate: 25.7, accepted: 2672, submitted: 10411, source: CCFDDL_RATES_SOURCE });
+check('a year only lixin has is lixin\'s', at(rmerged, 2017).source, LIXIN_RATES_SOURCE);
+check('one row per conference-year', rmerged.map((r) => r.year).sort(), [2017, 2021, 2022, 2024, 2025]);
+check('lixin\'s breakdown is carried onto a ccfddl row with the same accepted count', at(rmerged, 2025).detail, '77 orals, 688 spotlights and 4525 posters');
+const lixin21 = { conference: 'neurips', year: 2021, rate: 25.7, accepted: 2344, submitted: 9122, detail: '55 orals, 260 spotlights and 2029 posters', source: LIXIN_RATES_SOURCE };
+check('… and not onto one whose accepted count differs', 'detail' in at(mergeAcceptanceRates([], { [CCFDDL_RATES_SOURCE]: ccf.rows, [LIXIN_RATES_SOURCE]: [lixin21] }), 2021), false);
+check('a row anyone else wrote wins over both tables and is kept as typed', at(mergeAcceptanceRates([handRow], { [CCFDDL_RATES_SOURCE]: ccf.rows, [LIXIN_RATES_SOURCE]: lixin }), 2022), handRow);
+const lastRun = rmerged;
+const ccfDown = mergeAcceptanceRates(lastRun, { [CCFDDL_RATES_SOURCE]: [], [LIXIN_RATES_SOURCE]: lixin }, { [CCFDDL_RATES_SOURCE]: ['neurips'] });
+check('a conference ccfddl could not be read for keeps its ccfddl rows, not lixin\'s', [at(ccfDown, 2022).source, at(ccfDown, 2025).detail, ccfDown.length], [CCFDDL_RATES_SOURCE, '77 orals, 688 spotlights and 4525 posters', 5]);
+const lixinDown = mergeAcceptanceRates(lastRun, { [CCFDDL_RATES_SOURCE]: ccf.rows, [LIXIN_RATES_SOURCE]: [] }, { [LIXIN_RATES_SOURCE]: ['*'] });
+check('a lixin table that could not be read keeps its rows', at(lixinDown, 2017)?.source, LIXIN_RATES_SOURCE);
+check('… and the breakdown it gave a ccfddl row: the outage changes nothing', serializeAcceptanceRates(lixinDown), serializeAcceptanceRates(lastRun));
+const dropped = mergeAcceptanceRates(lastRun, { [CCFDDL_RATES_SOURCE]: ccf.rows.filter((r) => r.year !== 2025), [LIXIN_RATES_SOURCE]: [] }, { [LIXIN_RATES_SOURCE]: ['*'] });
+check('… a year ccfddl lets go while lixin is down stays as it was until lixin is read', at(dropped, 2025), at(lastRun, 2025));
+check('… and then comes back as lixin\'s', at(mergeAcceptanceRates(dropped, { [CCFDDL_RATES_SOURCE]: ccf.rows.filter((r) => r.year !== 2025), [LIXIN_RATES_SOURCE]: lixin }), 2025).source, LIXIN_RATES_SOURCE);
+check('a table read in full drops a year it no longer has', mergeAcceptanceRates(lastRun, { [CCFDDL_RATES_SOURCE]: ccf.rows, [LIXIN_RATES_SOURCE]: lixin.filter((r) => r.year !== 2017) }).some((r) => r.year === 2017), false);
+const rerun = mergeAcceptanceRates(yaml.load(serializeAcceptanceRates(lastRun)), { [CCFDDL_RATES_SOURCE]: ccf.rows, [LIXIN_RATES_SOURCE]: lixin });
+check('a second run over the written file changes nothing', serializeAcceptanceRates(rerun), serializeAcceptanceRates(lastRun));
 
 console.log('— what the pages read —');
 const eds = [
@@ -407,8 +496,10 @@ const rateEds = [
 ];
 check('a finished edition without a rate is asked for after 120 days; a recent one is not; a conference with no rates at all is not', staleAcceptanceRates(rateEds, rateRows, [], NOW), [{ kind: 'rate-missing', conf: 'c', years: [2025] }]);
 check('a recent contradictory source row is reported, an old one is not', staleAcceptanceRates(rateEds, rateRows, [{ conference: 'c', year: 2025, message: 'bad' }, { conference: 'c', year: 2014, message: 'old' }], NOW).map((it) => it.kind), ['rate-missing', 'rate-contradiction']);
+check('… once, naming the table, when both tables skipped the year', staleAcceptanceRates(rateEds, rateRows, [{ conference: 'c', year: 2025, source: 'a', message: 'bad' }, { conference: 'c', year: 2025, source: 'b', message: 'worse' }], NOW).filter((it) => it.kind === 'rate-contradiction').map((it) => it.detail), ['bad (a)']);
+check('… and not when the other table stands in', staleAcceptanceRates(rateEds, [...rateRows, { conference: 'c', year: 2025, rate: 21, source: 'b' }], [{ conference: 'c', year: 2025, source: 'a', message: 'bad' }], NOW), []);
 const body = buildEditionsReport([...kept, ...missingNextCycles(cycleEds('2026-01-29 23:59', 2026, 2025), NOV), ...staleAcceptanceRates(rateEds, rateRows, [], NOW)], { names: new Map([['iclr', 'ICLR'], ['c', 'Conf']]) });
-check('the report has one section per kind and names the conference', ['### A tracker says a deadline moved earlier', '**ICLR 2027**', '### The next call should have appeared by now', '**Conf 2027**', '### Acceptance rates not yet in the source table'].every((t) => body.includes(t)), true);
+check('the report has one section per kind and names the conference', ['### A tracker says a deadline moved earlier', '**ICLR 2027**', '### The next call should have appeared by now', '**Conf 2027**', '### Acceptance rates neither table has yet'].every((t) => body.includes(t)), true);
 check('… and carries every key for the workflow', /<!-- editions-review-keys: earlier-blocked:iclr-2027:paper_deadline, frozen-diverged:eccv-2026:end, no-dates-yet:cvpr-2027, next-cycle-missing:c-2027, rate-missing:c-2025 -->/.test(body), true);
 check('nothing to review is an empty report', buildEditionsReport([]), '');
 

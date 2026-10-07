@@ -26,7 +26,7 @@ for human review, as do dependency updates.
 | `backfill-deadlines.yml` | daily | `scripts/backfill_deadlines.mjs` — fills a **blank** `submission_deadline` for OpenReview-linked, single-deadline entries (fill-only, never overwrites) → commits to `main` |
 | `sync-tracks.yml` | daily | `scripts/sync_tracks.mjs` — refreshes the per-track deadlines of **multi-track** venues from their sub-track child groups (fill blanks, later-only per track), re-deriving the headline → commits to `main` |
 | `sync-proposal-calls.yml` | daily | `scripts/sync_proposal_calls.mjs` — keeps `data/proposal_calls.yml` (each conference's call-for-workshop-proposals deadline) in step with the proposal venue OpenReview registers under the conference's prefix: records a cycle once its deadline is published, later-only afterwards, freeze on hand edit → commits to `main` |
-| `sync-editions.yml` | daily | `scripts/sync_editions.mjs` — keeps the main conference's facts in `data/editions.yml` (paper and abstract deadlines, notification, dates, place, website) and the acceptance-rate history in `data/acceptance_rates.yml` in step with the community trackers ccfddl/ccf-deadlines, huggingface/ai-deadlines and lixin4ever/Conference-Acceptance-Rate: a row appears for this year and next once an edition's dates are known, blanks are filled, bot values follow the trackers (deadlines later-only), a person's values are frozen → commits to `main`. Keeps one `data-health` issue of what needs a person ("conference editions to review") and opens another if the job itself fails |
+| `sync-editions.yml` | daily | `scripts/sync_editions.mjs` — keeps the main conference's facts in `data/editions.yml` (paper and abstract deadlines, notification, dates, place, website) and the acceptance-rate history in `data/acceptance_rates.yml` in step with the community trackers ccfddl/ccf-deadlines (deadlines and acceptance rates), huggingface/ai-deadlines and lixin4ever/Conference-Acceptance-Rate (older acceptance rates): a row appears for this year and next once an edition's dates are known, blanks are filled, bot values follow the trackers (deadlines later-only), a person's values are frozen → commits to `main`. Keeps one `data-health` issue of what needs a person ("conference editions to review") and opens another if the job itself fails |
 | `openreview-refresh.yml` | monthly | Re-fetch paper caches for recent years (`scripts/fetch_openreview.mjs --recent`) → commits to `main` |
 | `issue-to-pr.yml` | "Add a workshop" issue form | Converts the form to a YAML file + PR, validates, reports back |
 | `edit-to-pr.yml` | "Edit a workshop" issue form | Applies the edit to the existing YAML + PR (timezone-safe), validates, reports back |
@@ -206,10 +206,10 @@ conference's deadlines, notification date, place and website, plus
 "Main-conference deadlines, dates and acceptance rates"). Nobody types those
 dates here: three MIT-licensed community projects already maintain them, and the
 daily `sync-editions.yml` reads their raw files from GitHub —
-`ccfddl/ccf-deadlines` (`conference/AI/<id>.yml`), `huggingface/ai-deadlines`
-(`src/data/conferences/<id>.yml`) and the README table of
-`lixin4ever/Conference-Acceptance-Rate` — and applies the same discipline as the
-OpenReview syncs (`scripts/sync_editions.mjs`):
+`ccfddl/ccf-deadlines` (`conference/AI/<id>.yml` and `accept_rates/AI/<id>.yml`),
+`huggingface/ai-deadlines` (`src/data/conferences/<id>.yml`) and the README
+table of `lixin4ever/Conference-Acceptance-Rate` — and applies the same
+discipline as the OpenReview syncs (`scripts/sync_editions.mjs`):
 
 - **Two trackers, one record.** Per field the first tracker with a value wins:
   deadlines from ccfddl, dates and place from ai-deadlines, the edition's site
@@ -230,11 +230,32 @@ OpenReview syncs (`scripts/sync_editions.mjs`):
 - **New rows only for this year and next**, and only once a tracker knows the
   edition's `end` (validate.mjs requires one, and it is what "Past" derives
   from). Older years fill existing rows but never gain one.
-- **Acceptance rates:** rows the bot wrote (their `source` names the README's
-  repo) are replaced by the fresh parse; a row anyone else wrote is kept and
-  wins. A row whose rate contradicts its counts by over a point is skipped and
-  named — the table itself has one such typo (ECCV 2014). A parse that yields
-  no rows is treated as a failed fetch.
+- **Acceptance rates: two tables, one record.** Per conference-year the first
+  table with a row supplies all of it — rate and counts together, because the
+  tables count by different conventions (valid vs. all submissions) and a mix
+  would match neither — and its `source` names that table. ccfddl's
+  `accept_rates/` comes first. Each row there names where it was read, mostly
+  the conference's own fact sheet or blog. Checked on 2026-10-06 against those
+  primary sources, the ten conference-years where the two tables disagreed went
+  seven to ccfddl and none to lixin, with two defensible either way and one
+  unsettled. Until 2026-10-06 the lixin table was the only source; it stopped
+  at NeurIPS 2025 (its last commit, 2025-09-23), so no 2026 edition had a rate
+  and ICRA, IROS, CoRL and COLM had none at all, while the job stayed green — a
+  dormant source looks exactly like a quiet one. ccfddl lags as well (its
+  NeurIPS 2025 row landed 2026-09-27), so neither is assumed current: a year
+  either table has is shown, and an ended edition neither has goes to the
+  review issue. lixin still fills the years ccfddl does not reach back to
+  (NeurIPS 2014–2020, ICML 2015–2022, …), and its oral / spotlight / poster
+  breakdown is carried onto a ccfddl row when the accepted counts are the
+  same. Rows the bot wrote are replaced by the fresh read; a row anyone else
+  wrote is kept and wins. A row whose rate contradicts its counts by over a
+  point is skipped and named — the lixin table has one such typo (ECCV 2014).
+  A table, or one conference's ccfddl file, that cannot be fetched or yields no
+  rows is a failed fetch and stands in with what it contributed last time —
+  including a lixin breakdown or year stored on the ccfddl row above it — so
+  an outage changes nothing. A row validate.mjs would refuse (a year outside
+  its window, no usable rate) is skipped and named rather than written, since
+  one refused row would hold back the whole day's commit.
 - A tracker that cannot be fetched is named and the others still apply; nothing
   is ever blanked or removed; the job exits 0. Each file is written only when a
   row changed, through the one serializer that owns its header comment.
@@ -264,9 +285,9 @@ still matters (the edition not over, the deadline in question still ahead):
   the conference's own cadence (a biennial one is not asked for yearly), is
   within 90 days and no later edition has a deadline — dropped again 180 days
   past it, so a conference that stopped does not sit there for ever;
-- **acceptance rates the source lacks** for editions that ended over 120 days
-  ago, or a recent source row that contradicts itself (add a hand row with your
-  own `source`; it wins).
+- **acceptance rates neither table has** for editions that ended over 120 days
+  ago, or a recent table row that contradicts itself with no other row to stand
+  in (add a hand row with your own `source`; it wins).
 
 A run that **fails** — a crash, or validation refusing what a tracker sent, so
 nothing was committed — opens *Data health: the conference-edition sync failed*

@@ -850,7 +850,14 @@ from two files the daily `sync-editions` job keeps current (AUTOMATION.md,
   `superEvent` cannot disagree about one edition.
 - **`data/acceptance_rates.yml`** is the acceptance-rate history: one row per
   conference-year with the rate and, where the source has them, the accepted
-  and submitted counts and the oral/spotlight/poster breakdown.
+  and submitted counts and the oral/spotlight/poster breakdown. Each year
+  comes whole from one of two community tables — ccfddl's `accept_rates/`
+  first (it matched the official figures where the two disagreed), then the
+  older lixin table for the years ccfddl does not reach back to — and its
+  `source` says which. One table was the only source until it went quiet after
+  NeurIPS 2025 while the job kept passing. Two tables do not make either one
+  current: a year appears when either has it, and an ended edition neither has
+  goes to the review issue.
 
 What the pages do with it:
 
@@ -896,7 +903,7 @@ status ladder as a hand-typed one, so a 2027 workshop imported later flips to
 
 What the sync cannot settle on its own — an earlier upstream deadline,
 trackers that disagree, a hand-typed value the trackers now contradict, a
-next cycle that should have appeared, acceptance rates the source lacks —
+next cycle that should have appeared, acceptance rates neither table has —
 goes to one self-maintaining `data-health` issue, and a run that fails opens
 another (AUTOMATION.md, "Main-conference facts come from the community
 trackers"). The daily smoke test loads `/conference/`, resolves a DOI through

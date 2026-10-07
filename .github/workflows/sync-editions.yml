@@ -2,7 +2,8 @@
 # notification date, dates, place and website of each edition — and the
 # acceptance-rate history in step with the community trackers that maintain
 # them (ccfddl/ccf-deadlines and huggingface/ai-deadlines for deadlines and
-# dates, lixin4ever/Conference-Acceptance-Rate for the rates; all MIT). The
+# dates, ccfddl/ccf-deadlines and lixin4ever/Conference-Acceptance-Rate for
+# the rates; all MIT). The
 # conference hub, conference-year and /conference/ pages show them: "neurips
 # 2026 deadline" and "icml 2026 dates" are the largest family of queries the
 # site is shown for. A row appears in data/editions.yml for this year and next
@@ -17,7 +18,7 @@
 #   - "Data health: conference editions to review" — the cases the sync will
 #     not settle on its own (an earlier upstream deadline, trackers that
 #     disagree, a hand-typed value the trackers contradict, a next cycle that
-#     should have appeared, acceptance rates the source lacks). Updated in
+#     should have appeared, acceptance rates neither table has). Updated in
 #     place from the script's --report, commented on when something is new,
 #     closed when nothing is left.
 #   - "Data health: the conference-edition sync failed" — opened when the job

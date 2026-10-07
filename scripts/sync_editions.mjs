@@ -11,12 +11,18 @@
  *
  *   ccfddl/ccf-deadlines          conference/AI/<id>.yml — a deadline and an
  *                                 abstract deadline with a timezone, free-text
- *                                 dates ("July 6-12, 2026"), place, site
+ *                                 dates ("July 6-12, 2026"), place, site;
+ *                                 accept_rates/AI/<id>.yml — accepted and
+ *                                 submitted counts per year, each row naming
+ *                                 where it was read (mostly the conference's
+ *                                 own fact sheet or blog)
  *   huggingface/ai-deadlines      src/data/conferences/<id>.yml — typed
  *                                 deadlines (abstract, paper, notification),
  *                                 machine-readable start/end, city, country
  *   lixin4ever/Conference-Acceptance-Rate  README.md — the acceptance-rate
- *                                 table, "|NeurIPS'25| 24.5% (5290/21575) …"
+ *                                 table, "|NeurIPS'25| 24.5% (5290/21575) …";
+ *                                 the older years, and the oral / spotlight /
+ *                                 poster breakdown
  *
  * What is written:
  *
@@ -27,7 +33,7 @@
  *                              the edition's end date (validate.mjs requires
  *                              one; it is also what "Past" derives from)
  *   data/acceptance_rates.yml  one row per conference-year with the rate and,
- *                              where the table has them, the counts
+ *                              where the tables have them, the counts
  *
  * The rules, pinned by scripts/editions_sync_test.mjs:
  *
@@ -57,10 +63,26 @@
  *   - Plausibility as everywhere: a deadline within a year of the edition
  *     and no more than two years out (lib/dates.mjs); otherwise that field
  *     is skipped and named.
- *   - Acceptance rates: rows the bot wrote (their `source` is the README's
- *     repo) are replaced by the fresh parse; a row anyone else wrote is kept
- *     and wins over a bot row for the same year. A parse that finds no rows
- *     is treated as a failed fetch and changes nothing.
+ *   - Acceptance rates: two tables, one record. Per conference-year the first
+ *     table in RATE_PRECEDENCE with a row supplies the WHOLE row — rate and
+ *     counts together, since the tables count by different conventions
+ *     (valid vs all submissions) and a mix would match neither — and the
+ *     row's `source` names that table. ccfddl comes first. On 2026-10-06,
+ *     of the ten conference-years where the two disagreed, ccfddl matched the
+ *     conference's own fact sheet or blog on seven, two were defensible either
+ *     way and one could not be settled; lixin matched on none. ccfddl also had
+ *     2026 for six conferences where lixin, last committed 2025-09-23, had
+ *     none, and four conferences lixin never covered. It lags too (its NeurIPS
+ *     2025 row landed 2026-09-27), which is why there are two tables.
+ *     The lixin table fills the years ccfddl does not reach back to, and its
+ *     oral / spotlight / poster breakdown is carried onto a ccfddl row only
+ *     when its accepted count is that row's — the breakdown of the same
+ *     papers (the submitted counts may still differ by convention).
+ *   - Rows the bot wrote (their `source` is one of the two tables) are
+ *     replaced by the fresh read; a row anyone else wrote is kept and wins
+ *     over a bot row for the same year. A table, or one conference's ccfddl
+ *     file, that cannot be fetched or yields no rows is treated as a failed
+ *     fetch: the rows it wrote last time are kept as they are.
  *   - A tracker that cannot be fetched is named and the others still apply;
  *     nothing is ever blanked or removed; the job exits 0. Each file is
  *     written only when a row changed, and each change is appended to
@@ -84,8 +106,8 @@
  *     is dropped again 180 days past it, so a conference that stopped does
  *     not stay on the list forever;
  *   - a finished edition (120 days past its end) has no acceptance rate in
- *     the source table, or the table's row for a recent year contradicts
- *     itself and was skipped.
+ *     either table, or a table's row for a recent year contradicts itself
+ *     and was skipped (and the other table has no row to stand in).
  *
  * Usage:
  *   node scripts/sync_editions.mjs
@@ -125,8 +147,12 @@ export const SOURCES = {
     url: (id) => `https://raw.githubusercontent.com/huggingface/ai-deadlines/main/src/data/conferences/${id}.yml`,
   },
 };
-export const ACCEPTANCE_SOURCE = 'lixin4ever/Conference-Acceptance-Rate';
-export const ACCEPTANCE_URL = 'https://raw.githubusercontent.com/lixin4ever/Conference-Acceptance-Rate/master/README.md';
+export const CCFDDL_RATES_SOURCE = 'ccfddl/ccf-deadlines';
+export const CCFDDL_RATES_URL = (id) => `https://raw.githubusercontent.com/ccfddl/ccf-deadlines/main/accept_rates/AI/${id}.yml`;
+export const LIXIN_RATES_SOURCE = 'lixin4ever/Conference-Acceptance-Rate';
+export const LIXIN_RATES_URL = 'https://raw.githubusercontent.com/lixin4ever/Conference-Acceptance-Rate/master/README.md';
+/** Which acceptance-rate table supplies a conference-year first. */
+export const RATE_PRECEDENCE = [CCFDDL_RATES_SOURCE, LIXIN_RATES_SOURCE];
 
 /** Where a tracker files a conference under a name other than our id. A new
  *  conference whose id matches the tracker's file name needs nothing here. */
@@ -631,14 +657,15 @@ export function serializeEditions(rows) {
 
 const RATES_HEADER = `# Main-conference acceptance rates, one row per conference-year: the rate and,
 # where the source publishes them, the accepted and submitted counts, shown on
-# /conference/<id>/. Written by scripts/sync_editions.mjs (daily) from the
-# community-maintained table at github.com/lixin4ever/Conference-Acceptance-Rate
-# (MIT). Rows the bot wrote carry that \`source\` and are replaced on every run;
-# any other row is kept as typed and wins over the bot's for the same year.
-# validate.mjs checks every row: a known conference id, an integer year, a rate
-# between 0 and 100 that agrees with the counts.
+# /conference/<id>/. Written by scripts/sync_editions.mjs (daily) from two
+# community-maintained tables (both MIT): github.com/ccfddl/ccf-deadlines
+# (accept_rates/), first, and github.com/lixin4ever/Conference-Acceptance-Rate
+# for the years ccfddl does not reach back to. Rows the bot wrote carry their
+# table as \`source\` and are replaced on every run; any other row is kept as
+# typed and wins over the bot's for the same year. validate.mjs checks every
+# row: a known conference id, an integer year, a rate between 0 and 100 that
+# agrees with the counts.
 `;
-
 const RATE_KEYS = ['conference', 'year', 'rate', 'accepted', 'submitted', 'detail', 'source'];
 
 /** The file's text: header, then rows by conference and year. */
@@ -660,6 +687,10 @@ export function serializeAcceptanceRates(rows) {
 /** Names the table uses that differ from our conference names. */
 const RATE_ALIASES = { nips: 'neurips' };
 
+/** The years validate.mjs accepts in the rates file; a table row outside them
+ *  is skipped and named rather than written and refused with everything else. */
+const rateYearOk = (year, nowMs) => year >= 1980 && year <= new Date(nowMs).getUTCFullYear() + 1;
+
 /**
  * "|NeurIPS'25| 24.5% (5290/21575) (77 orals, 688 spotlights and 4525
  * posters) | - |" -> {conference: 'neurips', year: 2025, rate: 24.5, accepted:
@@ -668,7 +699,7 @@ const RATE_ALIASES = { nips: 'neurips' };
  * counts by more than a point is reported and skipped; conferences this site
  * does not track, and the "Findings" rows, are ignored.
  */
-export function parseAcceptanceReadme(md, conferences) {
+export function parseAcceptanceReadme(md, conferences, nowMs = Date.now()) {
   const byName = new Map();
   for (const c of conferences ?? []) {
     byName.set(String(c.name).toLowerCase(), c.id);
@@ -690,8 +721,12 @@ export function parseAcceptanceReadme(md, conferences) {
     const accepted = m[4] === '?' ? null : Number(m[4]);
     const submitted = m[5] === '?' ? null : Number(m[5]);
     if (!(rate > 0 && rate < 100)) continue;
+    if (!rateYearOk(year, nowMs)) {
+      skipped.push({ conference: id, year, source: LIXIN_RATES_SOURCE, message: `year ${year} is not a plausible year` });
+      continue;
+    }
     if (accepted != null && submitted != null && (submitted === 0 || Math.abs(rate - (accepted / submitted) * 100) > 1)) {
-      skipped.push({ conference: id, year, message: `${rate}% does not match ${accepted}/${submitted}` });
+      skipped.push({ conference: id, year, source: LIXIN_RATES_SOURCE, message: `${rate}% does not match ${accepted}/${submitted}` });
       continue;
     }
     seen.add(key);
@@ -703,10 +738,111 @@ export function parseAcceptanceReadme(md, conferences) {
       ...(accepted != null ? { accepted } : {}),
       ...(submitted != null ? { submitted } : {}),
       ...(detail ? { detail } : {}),
-      source: ACCEPTANCE_SOURCE,
+      source: LIXIN_RATES_SOURCE,
     });
   }
   return { rows, skipped };
+}
+
+// ---------------------------------------------------------------------------
+// Acceptance rates: ccfddl's accept_rates/AI/<id>.yml -> rows
+// ---------------------------------------------------------------------------
+
+/**
+ * "- title: NeurIPS / accept_rates: [{year: 2025, submitted: 21575, accepted:
+ * 5290, rate: 0.2451…, str, source}]" -> {conference, year, rate: 24.5,
+ * accepted, submitted}. The rate is a fraction there and a percentage here,
+ * kept to the one decimal ccfddl prints in `str`. What would make validate.mjs
+ * refuse the whole file — and with it the day's editions — is screened here
+ * instead, row by row: a stated rate outside (0, 1) (a percentage, a typo)
+ * gives way to the counts' rate, counts written as digit strings are read, and
+ * a row left with no usable rate, a year outside validate's window, or a rate
+ * that disagrees with its counts by more than a point is reported and skipped,
+ * as in the README. The first row for a year wins. Throws on YAML that is not
+ * a list, which the caller reports as a file that did not parse.
+ */
+export function readCcfddlRates(text, conf, nowMs = Date.now()) {
+  const doc = yaml.load(text);
+  if (!Array.isArray(doc)) throw new Error('not a list of conferences');
+  const rows = [];
+  const skipped = [];
+  const seen = new Set();
+  const skip = (year, message) => skipped.push({ conference: conf, year, source: CCFDDL_RATES_SOURCE, message });
+  const count = (v) => {
+    const n = typeof v === 'string' && /^\s*\d[\d,_]*\s*$/.test(v) ? Number(v.replace(/[\s,_]/g, '')) : v;
+    return Number.isInteger(n) && n >= 0 ? n : null;
+  };
+  for (const r of doc.flatMap((t) => (Array.isArray(t?.accept_rates) ? t.accept_rates : []))) {
+    const year = Number(r?.year);
+    if (!Number.isInteger(year) || seen.has(year)) continue;
+    if (!rateYearOk(year, nowMs)) {
+      skip(year, `year ${year} is not a plausible year`);
+      continue;
+    }
+    const accepted = count(r.accepted);
+    const submitted = count(r.submitted);
+    const stated = typeof r.rate === 'number' && r.rate > 0 && r.rate < 1 ? r.rate : null;
+    const fraction = stated ?? (accepted != null && submitted ? accepted / submitted : null);
+    const rate = fraction == null ? null : Math.round(fraction * 1000) / 10;
+    if (!(rate > 0 && rate < 100)) {
+      skip(year, `no usable rate (rate ${JSON.stringify(r.rate ?? null)}, ${accepted ?? '?'}/${submitted ?? '?'})`);
+      continue;
+    }
+    if (accepted != null && submitted != null && (submitted === 0 || Math.abs(rate - (accepted / submitted) * 100) > 1)) {
+      skip(year, `${rate}% does not match ${accepted}/${submitted}`);
+      continue;
+    }
+    seen.add(year);
+    rows.push({
+      conference: conf,
+      year,
+      rate,
+      ...(accepted != null ? { accepted } : {}),
+      ...(submitted != null ? { submitted } : {}),
+      source: CCFDDL_RATES_SOURCE,
+    });
+  }
+  return { rows, skipped };
+}
+
+/**
+ * The rates file after a run. `fresh` maps each table to the rows it gave;
+ * `unread` maps each table to the conferences it could not be read for ('*'
+ * for all). A row anyone else wrote is kept and wins. Per conference-year the
+ * first table in RATE_PRECEDENCE with a row supplies all of it; a later
+ * table's `detail` is carried only when its accepted count is the winner's —
+ * it breaks down the accepted papers, so it is then the breakdown of the same
+ * papers, whatever the two count as submitted.
+ *
+ * A table that could not be read stands in with what it contributed last
+ * time, which is not only its own rows: a lixin breakdown, or a lixin year
+ * behind a ccfddl one, lives in the file on the row of the table above it. So
+ * an unread table's pool is the existing bot rows of its own rank and above,
+ * for the conferences it missed — a failed fetch neither blanks a breakdown
+ * nor drops a year that the table above let go the same day; both settle on
+ * the next run that reads it.
+ */
+export function mergeAcceptanceRates(existing, fresh, unread = {}) {
+  const key = (r) => `${r.conference}-${r.year}`;
+  const ours = new Set(RATE_PRECEDENCE);
+  const kept = (existing ?? []).filter((r) => r && !ours.has(r.source));
+  const keptKeys = new Set(kept.map(key));
+  const pools = RATE_PRECEDENCE.map((src, rank) => {
+    const gone = unread[src] ?? [];
+    const carried = (existing ?? []).filter((r) => {
+      const at = RATE_PRECEDENCE.indexOf(r?.source);
+      return at >= 0 && at <= rank && (gone.includes('*') || gone.includes(r.conference));
+    });
+    return new Map([...carried, ...(fresh[src] ?? [])].map((r) => [key(r), r]));
+  });
+  const keys = [...new Set(pools.flatMap((p) => [...p.keys()]))].filter((k) => !keptKeys.has(k));
+  const bot = keys.map((k) => {
+    const [win, ...rest] = pools.map((p) => p.get(k)).filter(Boolean);
+    if (win.detail || win.accepted == null) return win;
+    const same = rest.find((r) => r.detail && r.accepted === win.accepted);
+    return same ? { ...win, detail: same.detail } : win;
+  });
+  return [...kept, ...bot];
 }
 
 // ---------------------------------------------------------------------------
@@ -773,10 +909,11 @@ export function missingNextCycles(resolved, nowMs = Date.now(), { leadDays = 90,
 }
 
 /**
- * Acceptance rates the source has not caught up with: for each conference
+ * Acceptance rates neither table has caught up with: for each conference
  * that has any rate at all, the tracked editions that ended more than
- * `graceDays` ago without a row for their year; plus a recent row the parser
- * skipped because it contradicted itself (older contradictions are history).
+ * `graceDays` ago without a row for their year; plus a recent row a parser
+ * skipped because it contradicted itself and nothing else stands in for
+ * (older contradictions are history), once per conference-year.
  */
 export function staleAcceptanceRates(resolved, rates, skipped = [], nowMs = Date.now(), { graceDays = 120 } = {}) {
   const have = new Set((rates ?? []).map((r) => `${r.conference}-${r.year}`));
@@ -791,7 +928,10 @@ export function staleAcceptanceRates(resolved, rates, skipped = [], nowMs = Date
   }
   const thisYear = new Date(nowMs).getUTCFullYear();
   for (const s of skipped) {
-    if (s.year >= thisYear - 3 && !have.has(`${s.conference}-${s.year}`)) out.push({ kind: 'rate-contradiction', conf: s.conference, year: s.year, detail: s.message });
+    const k = `${s.conference}-${s.year}`;
+    if (s.year < thisYear - 3 || have.has(k)) continue;
+    have.add(k);
+    out.push({ kind: 'rate-contradiction', conf: s.conference, year: s.year, detail: s.source ? `${s.message} (${s.source})` : s.message });
   }
   return out;
 }
@@ -806,8 +946,8 @@ const SECTIONS = [
   ['implausible', 'A tracker value looked implausible and was skipped', (it, n) => `**${n(it.conf)} ${it.year}** \`${it.field}\`: ${it.source} gives ${it.tracker}. Set it by hand if it is right after all.`],
   ['no-dates-yet', 'A deadline is known but the edition has no dates yet', (it, n) => `**${n(it.conf)} ${it.year}**: ${it.source} gives the paper deadline ${it.tracker} but no conference dates, so no row was created. Add a row with \`end\` (and \`start\`) by hand and the deadline flows in on the next run.`],
   ['next-cycle-missing', 'The next call should have appeared by now', (it, n) => `**${n(it.conf)} ${it.year}**: ${n(it.conf)} ${it.lastYear}'s paper deadline was ${it.last}, so the ${it.year} call is normally out around ${it.expected}, and ${it.hasRow ? 'its row has no deadline yet' : 'the trackers have nothing for it yet'}. Add the deadline by hand from the official call for papers, or wait for the trackers.`],
-  ['rate-missing', 'Acceptance rates not yet in the source table', (it, n) => `**${n(it.conf)}** ${it.years.join(', ')}: the conference has ended but the source table (${ACCEPTANCE_SOURCE}) has no row. If the official numbers are out, add a row to \`data/acceptance_rates.yml\` with \`source\` set to where you read them; it wins over the bot's.`],
-  ['rate-contradiction', 'A source row contradicts itself and was skipped', (it, n) => `**${n(it.conf)} ${it.year}**: ${it.detail}. Add the correct row by hand if you know it.`],
+  ['rate-missing', 'Acceptance rates neither table has yet', (it, n) => `**${n(it.conf)}** ${it.years.join(', ')}: the conference has ended but neither table (${RATE_PRECEDENCE.join(', ')}) has a row. If the official numbers are out, add a row to \`data/acceptance_rates.yml\` with \`source\` set to where you read them; it wins over the bot's.`],
+  ['rate-contradiction', 'A table row contradicts itself and was skipped', (it, n) => `**${n(it.conf)} ${it.year}**: ${it.detail}. Add the correct row by hand if you know it.`],
 ];
 
 /**
@@ -915,29 +1055,61 @@ async function main({ dryRun, reportPath }) {
   if (editionsTouched && !dryRun) fs.writeFileSync(EDITIONS_FILE, serializeEditions(rows));
 
   // --- acceptance rates -------------------------------------------------------
+  // Each table read on its own: a failure, or a read that yields no rows, keeps
+  // what that table wrote last time (mergeAcceptanceRates) and is named.
   let ratesChanged = 0;
   let finalRates = loadAcceptanceRates();
-  let rateSkips = [];
-  const ratesRes = await fetchText(ACCEPTANCE_URL);
-  if (!ratesRes.ok) notes.push(`acceptance rates: the README could not be fetched (${ratesRes.reason})`);
-  else {
-    const { rows: fresh, skipped: bad } = parseAcceptanceReadme(ratesRes.text, confs);
-    rateSkips = bad;
-    warnings.push(...bad.map((s) => `acceptance rates: ${s.conference} ${s.year}: ${s.message}`));
-    if (!fresh.length) notes.push('acceptance rates: the README yielded no rows (format changed?) — file left as it is');
+  const rateSkips = [];
+  const freshRates = { [CCFDDL_RATES_SOURCE]: [], [LIXIN_RATES_SOURCE]: [] };
+  const unreadRates = { [CCFDDL_RATES_SOURCE]: [], [LIXIN_RATES_SOURCE]: [] };
+  // The nine files are fetched together: one at a time, a stalled host would
+  // add nine retry timeouts to the deadline side's and run the job past its
+  // 20-minute limit, a red day for a transient condition.
+  const rateFiles = await Promise.all(confs.map((c) => fetchText(CCFDDL_RATES_URL(sourceId(c.id, 'ccfddl')))));
+  confs.forEach((c, i) => {
+    const r = rateFiles[i];
+    let got = null;
+    if (!r.ok) notes.push(`acceptance rates: ${c.id}: ccfddl ${r.reason === '404' ? 'has no file for it' : `could not be fetched (${r.reason})`}`);
     else {
-      const existing = finalRates;
-      const kept = existing.filter((r) => r?.source !== ACCEPTANCE_SOURCE);
-      const keptKeys = new Set(kept.map((r) => `${r.conference}-${r.year}`));
-      const next = [...kept, ...fresh.filter((r) => !keptKeys.has(`${r.conference}-${r.year}`))];
-      const before = new Map(existing.map((r) => [`${r.conference}-${r.year}`, JSON.stringify(r)]));
-      for (const r of next) if (before.get(`${r.conference}-${r.year}`) !== JSON.stringify(r)) ratesChanged++;
-      ratesChanged += existing.filter((r) => !next.some((n) => n.conference === r.conference && n.year === r.year)).length;
-      const text = serializeAcceptanceRates(next);
-      if ((ratesChanged || !fs.existsSync(RATES_FILE)) && !dryRun) fs.writeFileSync(RATES_FILE, text);
-      if (ratesChanged) changes.push(`acceptance rates: ${ratesChanged} row(s) added or changed from ${ACCEPTANCE_SOURCE}`);
-      finalRates = next;
+      try {
+        got = readCcfddlRates(r.text, c.id, nowMs);
+      } catch (e) {
+        notes.push(`acceptance rates: ${c.id}: ccfddl did not parse (${e.message.split('\n')[0]})`);
+      }
     }
+    if (got) rateSkips.push(...got.skipped);
+    if (got?.rows.length) freshRates[CCFDDL_RATES_SOURCE].push(...got.rows);
+    else {
+      if (got) notes.push(`acceptance rates: ${c.id}: ccfddl yielded no rows (format changed?) — its rows kept as they are`);
+      unreadRates[CCFDDL_RATES_SOURCE].push(c.id);
+    }
+  });
+  const readme = await fetchText(LIXIN_RATES_URL);
+  if (!readme.ok) notes.push(`acceptance rates: the lixin README could not be fetched (${readme.reason})`);
+  else {
+    const { rows, skipped } = parseAcceptanceReadme(readme.text, confs, nowMs);
+    rateSkips.push(...skipped);
+    if (!rows.length) notes.push('acceptance rates: the lixin README yielded no rows (format changed?) — its rows kept as they are');
+    freshRates[LIXIN_RATES_SOURCE] = rows;
+  }
+  if (!freshRates[LIXIN_RATES_SOURCE].length) unreadRates[LIXIN_RATES_SOURCE].push('*');
+  warnings.push(...rateSkips.map((s) => `acceptance rates: ${s.conference} ${s.year}: ${s.message} (${s.source})`));
+  {
+    const existing = finalRates;
+    const next = mergeAcceptanceRates(existing, freshRates, unreadRates);
+    // Compared field by field in the file's order, so a row read back from
+    // YAML and the same row built this run are equal.
+    const canon = (r) => JSON.stringify(Object.entries(r).filter(([, v]) => v != null).sort(([a], [b]) => a.localeCompare(b)));
+    const key = (r) => `${r.conference}-${r.year}`;
+    const before = new Map(existing.map((r) => [key(r), canon(r)]));
+    const touched = next.filter((r) => before.get(key(r)) !== canon(r)).map(key);
+    const removed = existing.filter((r) => !next.some((n) => key(n) === key(r))).map(key);
+    ratesChanged = touched.length + removed.length;
+    const text = serializeAcceptanceRates(next);
+    if ((ratesChanged || !fs.existsSync(RATES_FILE)) && !dryRun) fs.writeFileSync(RATES_FILE, text);
+    if (touched.length) changes.push(`acceptance rates: ${touched.length} row(s) added or changed (${touched.join(', ')})`);
+    if (removed.length) changes.push(`acceptance rates: ${removed.length} row(s) no table has any more, removed (${removed.join(', ')})`);
+    finalRates = next;
   }
 
   // --- what a person has to decide ---------------------------------------------
