@@ -22,7 +22,9 @@
  *
  * Run: node scripts/official_list_fetch_test.mjs
  */
-import { readList, get, resetPageCache, EMPTY_RETRY_BACKOFF_MS } from './official_list_check.mjs';
+import fs from 'node:fs';
+import { readList, get, resetPageCache, EMPTY_RETRY_BACKOFF_MS, proposesCandidate } from './official_list_check.mjs';
+import { loadEditions } from '../lib/workshops.mjs';
 import { MIN_LISTED } from '../lib/official_list.mjs';
 
 let failed = 0;
@@ -165,6 +167,36 @@ const NO_WAIT = [0, 0, 0];
   const r = await readList(LIST_URL, entries, { backoff: [] });
   check('a list matching nothing we track is refused', r.ok, false);
   check('...for that reason, not as unreadable', /does not look like/.test(r.reason), true);
+}
+
+/* ---- which editions it looks for a list for at all ---------------------- */
+// A list protects readers from an open call that will never be judged, and a
+// finished conference has none. ICLR 2024 and 2025 sat in the issue as
+// candidate lists for weeks; adopting them would have added five rows that can
+// never close (workshops that never used OpenReview) to reach one real fix. So
+// a feed is walked only for an edition that has not ended — by the site's own
+// rule, the day after `end`.
+{
+  const NOW = Date.UTC(2026, 9, 19, 12); // 2026-10-19
+  const row = (start, end) => ({ conference: 'iclr', year: 2026, start, end });
+  check('an edition that ended months ago is not proposed a list', proposesCandidate(row('2026-04-23', '2026-04-27'), NOW), false);
+  check('one still ahead is', proposesCandidate(row('2026-12-06', '2026-12-13'), NOW), true);
+  check('one running right now is', proposesCandidate(row('2026-10-15', '2026-10-20'), NOW), true);
+  check('one ending today still is', proposesCandidate(row('2026-10-15', '2026-10-19'), NOW), true);
+  check('...and the day after its end it is over, as everywhere on the site', proposesCandidate(row('2026-10-14', '2026-10-18'), NOW), false);
+
+  // On the real rows: the two editions that sat in the issue, and one that is not over.
+  const ed = (conf, year) => loadEditions().find((e) => e.conference === conf && e.year === year);
+  check('ICLR 2024 and 2025 are not proposed lists any more',
+    [proposesCandidate(ed('iclr', 2024), NOW), proposesCandidate(ed('iclr', 2025), NOW)], [false, false]);
+  check('NeurIPS 2026 would be', proposesCandidate(ed('neurips', 2026), NOW), true);
+
+  // And main() asks before it walks a feed, not after.
+  const src = fs.readFileSync(new URL('./official_list_check.mjs', import.meta.url), 'utf8');
+  const branch = src.slice(src.indexOf('if (!ed.workshop_list_url) {'));
+  const asks = branch.indexOf('proposesCandidate(ed)');
+  check('the check asks proposesCandidate() before findCandidate() for an unconfigured edition',
+    asks !== -1 && asks < branch.indexOf('findCandidate('), true);
 }
 
 console.log(failed === 0 ? '\nOfficial-list fetch behaviour OK.' : `\n${failed} test(s) failed.`);

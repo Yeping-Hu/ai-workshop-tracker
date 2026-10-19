@@ -17,7 +17,8 @@
  *   - It writes nothing. Every finding is a line in a data-health issue for a
  *     human, matching how this repo treats every risky inference.
  *   - A conference-year with no `workshop_list_url` is simply not reconciled. It
- *     behaves exactly as it does today.
+ *     behaves exactly as it does today. A list is proposed for one only while
+ *     the conference has not ended (proposesCandidate).
  *
  * And it never concludes "rejected" on its own, because an official list is
  * authoritative for PRESENCE, not for ABSENCE: a workshop can be running and
@@ -46,6 +47,7 @@ import {
   MIN_LISTED,
 } from '../lib/official_list.mjs';
 import { matchOfficialList, hostedByConference } from '../lib/official_match.mjs';
+import { resolveEdition } from '../lib/editions.mjs';
 import { CONF_TEMPLATE } from './discover_openreview.mjs';
 
 /**
@@ -209,6 +211,25 @@ export async function readList(url, entries, { conferenceWebsite = null, venueNa
 }
 
 /**
+ * Is a list still worth proposing for this edition?
+ *
+ * A list is for catching a rejected proposal that still advertises an open
+ * call, and once the conference is over no call is open. Proposing one for a
+ * finished edition buys an archive tidy-up at the price of rows that never
+ * close: its "missing" workshops are mostly ones that never used OpenReview,
+ * which no crawl will find and nothing can acknowledge. ICLR 2024 and 2025 sat
+ * in the issue as candidates for weeks; adopting both would have added five
+ * such rows (ML4RS and Climate Change AI twice, Generative Models for Robot
+ * Learning once) to reach one real fix. "Over" is the site's own rule
+ * (resolveEdition: the day after `end`), the same one the editions review uses
+ * to stop asking about a finished edition. A list already configured is still
+ * read whatever the date: someone decided it was worth it.
+ */
+export function proposesCandidate(edition, nowMs = Date.now()) {
+  return !resolveEdition(edition, nowMs).over;
+}
+
+/**
  * Propose a list URL for a conference-year that has none. Proposes ONLY —
  * adopting it is a human's dispatch, because a mis-read page would declare the
  * whole corpus rejected.
@@ -268,7 +289,7 @@ async function main() {
       // No list configured. Nothing is reconciled — and nothing is broken; the
       // OpenReview crawl for this conference-year runs exactly as before.
       const feed = confById.get(ed.conference)?.announcement_feed;
-      if (!feed) continue;
+      if (!feed || !proposesCandidate(ed)) continue;
       const cand = await findCandidate(feed, ed.year, entries, confById.get(ed.conference)?.website ?? null, venueNamespace);
       if (cand) {
         const disagrees = cand.stated != null && cand.stated !== cand.result.counts.listed;
