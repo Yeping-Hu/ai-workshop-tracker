@@ -139,6 +139,8 @@ jobs:
         run: node scripts/match_candidates_test.mjs
       - name: Test the matcher's arXiv prefill helper (ids, the doi.org record)
         run: node scripts/paper_meta_test.mjs
+      - name: Test that data-health pings are hidden once resolved (item rules, the three issue steps run for real)
+        run: node scripts/issue_pings_test.mjs
       - name: Validate workshop data
         id: validate
         run: node scripts/validate.mjs --report validation-report.md

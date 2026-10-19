@@ -656,6 +656,8 @@ check('ack is irrelevant when we already agree', titleDrift('Same Title', 'Same 
   const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const wf = yaml.load(fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'deadline-review.yml'), 'utf8'));
   const step = Object.values(wf.jobs)[0].steps.find((s) => s.name === 'Create/update the consolidated issue');
+  // The step imports scripts/issue_pings.mjs from the checkout, as in Actions.
+  process.env.GITHUB_WORKSPACE = ROOT;
   async function runIssueStep({ report, open = [] }) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'deadline-review-'));
     if (report != null) fs.writeFileSync(path.join(dir, 'deadline-review.md'), report);

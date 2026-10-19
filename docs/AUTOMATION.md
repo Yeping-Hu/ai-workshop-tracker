@@ -31,8 +31,8 @@ for human review, as do dependency updates.
 | `issue-to-pr.yml` | "Add a workshop" issue form | Converts the form to a YAML file + PR, validates, reports back |
 | `edit-to-pr.yml` | "Edit a workshop" issue form | Applies the edit to the existing YAML + PR (timezone-safe), validates, reports back |
 | `resync-deadline.yml` | manual | Re-pull one workshop's deadline from OpenReview's duedate (either direction) |
-| `deadline-review.yml` | daily | One consolidated issue listing deadlines that need a human decision — including ones OpenReview reopened after they had closed, where the site says shut and OpenReview says open — daily because it is the only job that ever looks at a **human-edited** deadline, which freeze-on-touch excludes from every automatic sync. Comments when a workshop first appears, since editing an issue body notifies nobody. Also reports a `website` that changed on OpenReview (reported, never applied), a stored `openreview_venue_id` that no longer resolves — with the verified replacement when the workshop merely moved namespaces, or the not-running decision when the entry was already acknowledged as absent from the official list, since off the list *and* gone from the conference's OpenReview namespace is what an independent event looks like (see *An OpenReview venue is not proof a workshop was accepted*) — and names any entry OpenReview could not answer for rather than counting it. A run OpenReview answered nothing in leaves the issue as it was, and only review rows count as new (see *An empty answer is not an answer*). |
-| `official-list-check.yml` | weekly | Reconciles the corpus against each conference-edition's **official accepted-workshop list** (`data/editions.yml` → `workshop_list_url`), and proposes one from the conference's `announcement_feed` where none is configured and the conference has not ended. One consolidated issue: entries we track that are not on the list (ranked so a still-open call comes first), acknowledged entries whose venue has since left the conference's OpenReview namespace (the independent-event signature — see below), listed workshops we do not track, and title/website drift. Reports only — see below. |
+| `deadline-review.yml` | daily | One consolidated issue listing deadlines that need a human decision — including ones OpenReview reopened after they had closed, where the site says shut and OpenReview says open — daily because it is the only job that ever looks at a **human-edited** deadline, which freeze-on-touch excludes from every automatic sync. Comments when a workshop first appears, since editing an issue body notifies nobody, and hides that comment once everything it named has left the issue (see *A ping is hidden once it has done its job*). Also reports a `website` that changed on OpenReview (reported, never applied), a stored `openreview_venue_id` that no longer resolves — with the verified replacement when the workshop merely moved namespaces, or the not-running decision when the entry was already acknowledged as absent from the official list, since off the list *and* gone from the conference's OpenReview namespace is what an independent event looks like (see *An OpenReview venue is not proof a workshop was accepted*) — and names any entry OpenReview could not answer for rather than counting it. A run OpenReview answered nothing in leaves the issue as it was, and only review rows count as new (see *An empty answer is not an answer*). |
+| `official-list-check.yml` | weekly | Reconciles the corpus against each conference-edition's **official accepted-workshop list** (`data/editions.yml` → `workshop_list_url`), and proposes one from the conference's `announcement_feed` where none is configured and the conference has not ended. One consolidated issue: entries we track that are not on the list (ranked so a still-open call comes first), acknowledged entries whose venue has since left the conference's OpenReview namespace (the independent-event signature — see below), listed workshops we do not track, and title/website drift; comments on what is new and hides those comments once resolved, like `deadline-review.yml`. Reports only — see below. |
 | `official-list-decision.yml` | manual | Records one decision the official-list report asked for — `not_running` / `review_ack.official_list` via `scripts/mark_not_running.mjs` (a later verdict supersedes the earlier one in either direction, so a changed mind never fails the dispatch), or adopting/declining a drifted name or website via `scripts/apply_official_list.mjs` → commits to `main` |
 | `series-audit.yml` | weekly, manual | `scripts/series_audit.mjs` — asks Jev whether each candidate pair of entries (a shared OpenReview stem across conferences, or agreeing names across years in one conference; nothing already linked) is one workshop series, records every answer in `data/series_links.yml` → commits to `main`, and keeps one `data-health` issue ("workshop series to confirm") of the pairs between 0.4 and 0.9. The build links what cleared 0.9 (ARCHITECTURE.md, "Related entries", signal 5). Dispatching it with two slugs and `same`/`different` records a person's verdict, which outranks the model. Without a `TYPESAFE_API_KEY` it asks nothing; when requests to Jev failed it opens the same "Jev did not answer" issue discovery does, waiting-workshops list included, since whichever job runs last rewrites the body |
 | `stale-check.yml` | weekly | One consolidated issue listing entries needing follow-up |
@@ -40,6 +40,37 @@ for human review, as do dependency updates.
 | `alerts.yml` | daily, manual | `scripts/alerts_run.mjs` — diffs `/api/workshops.json` against yesterday's snapshot, records events, sends urgent starred-deadline alerts, and the week's digest — an edition closes each Monday and is mailed to each subscriber once, on the first run on or after it — committing that edition's `data/changes.json` for the `/changes/` page. |
 | `alerts-worker-deploy.yml` | push touching `alerts/**`, `lib/identity.mjs`, `lib/events.mjs` or `lib/jev.mjs`; manual | `wrangler deploy` of the alerts Worker, after checking `alerts/ids.json` is in sync with the data vocabulary. The three `lib/` files are inside the Worker bundle (`lib/jev.mjs` for the paper matcher's `/match`) |
 | `alerts-ci.yml` | PRs & pushes touching `alerts/**`, `scripts/alerts_*`, the `lib/` files the Worker bundles, the two site sync scripts, or the conference/topic vocabularies | The twelve pure-logic alerts suites (tokens, diff, matching, rendering, sending, rate limits, mail, star-merge, session, dashboard, log hygiene, the paper matcher) plus the ids sync check |
+
+## A ping is hidden once it has done its job
+
+Three workflows keep one self-maintaining issue each and rewrite its body on
+every run: `deadline-review.yml`, `official-list-check.yml` and
+`sync-editions.yml`. Editing a body notifies nobody, so each also comments when
+an item first appears ("New since the last run — …"), and that comment is the
+part that reaches anyone. It also outlives its news. Items get synced,
+acknowledged or fixed, while the issue stays open as long as anything else is
+listed, so the comments piled up: *deadlines to review* had collected nineteen
+by 2026-10-17, one of them 946 lines long. Deleting them did not help. GitHub
+records the deletion of someone else's comment as a timeline line of its own,
+so the maintainer's twenty deletions became twenty "deleted a comment" lines.
+
+So each run now hides (minimises, reason "resolved") every earlier ping none of
+whose items is still in the body, and hides them all when it closes the issue.
+A hidden comment collapses to one line anyone can expand, nothing is deleted,
+and a ping that still names an open item stays as it is. Hiding is
+housekeeping and never fails a run: if GitHub refuses (the workflow token's
+right to minimise is not documented), the step warns once and carries on, and
+the issue is exactly what it would have been without this.
+
+What counts as an item differs per issue: entry files on review rows for the
+deadline review, entry files and candidate list URLs for the official list, the
+stable keys in the report's trailing comment for the editions review. Each rule
+lives in `scripts/issue_pings.mjs`, imported by the workflow's issue step,
+because the same rule decides both "new since the last run" and "resolved" —
+two copies would eventually disagree, hiding a ping whose item is still listed.
+`scripts/issue_pings_test.mjs` runs all three issue steps for real against a mock
+client, feeding back the pings each one posts. The six pings already resolved
+on 2026-10-19 were hidden by hand the same way.
 
 ## An OpenReview venue is not proof a workshop was accepted
 
@@ -285,8 +316,9 @@ is picked up with no change when the file names match. Rules are pinned by
 **What needs a person goes to an issue.** The script's `--report` writes the
 body of one self-maintaining issue, *Data health: conference editions to
 review* (label `data-health`), which the workflow updates in place, comments on
-when an item is new (editing a body notifies nobody), and closes when nothing is
-left. It lists only what the sync will not settle on its own, and only while it
+when an item is new (editing a body notifies nobody; the comment is hidden once
+its items are gone, see *A ping is hidden once it has done its job*), and closes
+when nothing is left. It lists only what the sync will not settle on its own, and only while it
 still matters (the edition not over, the deadline in question still ahead):
 
 - a tracker gives an **earlier** deadline than the stored bot value (later-only

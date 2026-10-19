@@ -51,6 +51,10 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            // What counts as an item on this issue, and hiding the pings about
+            // items that are gone: one module for all three data-health issues,
+            // so "new since the last run" and "resolved" cannot disagree.
+            const pings = await import(`${process.env.GITHUB_WORKSPACE}/scripts/issue_pings.mjs`);
             // No file means OpenReview answered nothing: the script writes one,
             // possibly empty, after every run that checked anything, and a crash
             // fails the step before this one. A blind run has nothing to say, so
@@ -78,6 +82,8 @@ jobs:
                   issue_number: existing.number,
                   state: 'closed',
                 });
+                // Nothing is left, so every ping is resolved.
+                await pings.hideResolvedPings({ github, owner: context.repo.owner, repo: context.repo.repo, issueNumber: existing.number, open: new Set() });
               }
               return;
             }
@@ -88,16 +94,11 @@ jobs:
               // nine days. Diff the entry files named by the old body against the
               // new one and comment on whatever is genuinely new; the comment is
               // the part that actually reaches anyone.
-              //
-              // Only review rows count, and a review row is a checkbox. A "Could
-              // not be checked this run" row describes the run rather than the
-              // data and carries no box, so a throttled day never pings anyone
-              // about hundreds of entries nothing is wrong with. `[x]` is a box
-              // somebody ticked, still the same row.
-              const named = (text) =>
-                new Set([...String(text || '').matchAll(/^- \[[ xX]\] `(data\/workshops\/[\w.-]+\.yml)`/gm)].map((m) => m[1]));
-              const before = named(existing.body);
-              const added = [...named(report)].filter((f) => !before.has(f));
+              // Only review rows count (deadlineReviewItems), so a throttled
+              // day never pings anyone about entries nothing is wrong with.
+              const before = pings.deadlineReviewItems(existing.body);
+              const now = pings.deadlineReviewItems(report);
+              const added = [...now].filter((f) => !before.has(f));
               await github.rest.issues.update({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -115,6 +116,9 @@ jobs:
                     '\n\nSee the issue body above for the stored vs OpenReview values and the re-sync command.',
                 });
               }
+              // Earlier pings whose entries have all left the body have done
+              // their job: hidden as resolved, one line each. Warns, never fails.
+              await pings.hideResolvedPings({ github, owner: context.repo.owner, repo: context.repo.repo, issueNumber: existing.number, open: now });
             } else {
               await github.rest.issues.create({
                 owner: context.repo.owner,

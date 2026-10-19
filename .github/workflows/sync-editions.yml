@@ -92,6 +92,10 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            // What counts as an item on this issue, and hiding the pings about
+            // items that are gone: one module for all three data-health issues,
+            // so "new since the last run" and "resolved" cannot disagree.
+            const pings = await import(`${process.env.GITHUB_WORKSPACE}/scripts/issue_pings.mjs`);
             const report = fs.existsSync('editions-review.md') ? fs.readFileSync('editions-review.md', 'utf8').trim() : '';
             const title = 'Data health: conference editions to review';
             const { data: open } = await github.rest.issues.listForRepo({
@@ -105,13 +109,15 @@ jobs:
                   body: 'Nothing is left to review; closed automatically by the `sync-editions` workflow.',
                 });
                 await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, state: 'closed' });
+                // Nothing is left, so every ping is resolved.
+                await pings.hideResolvedPings({ github, owner: context.repo.owner, repo: context.repo.repo, issueNumber: existing.number, open: new Set() });
               }
               return;
             }
-            const keysOf = (text) => new Set(((String(text || '').match(/<!-- editions-review-keys: ([^>]*) -->/) || [, ''])[1]).split(',').map((k) => k.trim()).filter(Boolean));
             if (existing) {
-              const before = keysOf(existing.body);
-              const added = [...keysOf(report)].filter((k) => !before.has(k));
+              const before = pings.editionsReviewItems(existing.body);
+              const now = pings.editionsReviewItems(report);
+              const added = [...now].filter((k) => !before.has(k));
               await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, body: report });
               if (added.length) {
                 await github.rest.issues.createComment({
@@ -119,6 +125,9 @@ jobs:
                   body: `New since the last run — ${added.length} item${added.length === 1 ? '' : 's'}:\n\n` + added.map((k) => `- \`${k}\``).join('\n') + '\n\nSee the issue body above for what to do.',
                 });
               }
+              // Earlier pings whose items have all left the body have done
+              // their job: hidden as resolved, one line each. Warns, never fails.
+              await pings.hideResolvedPings({ github, owner: context.repo.owner, repo: context.repo.repo, issueNumber: existing.number, open: now });
             } else {
               await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body: report, labels: ['data-health'] });
             }
