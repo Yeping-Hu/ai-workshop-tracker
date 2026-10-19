@@ -30,7 +30,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import * as yaml from 'js-yaml';
-import { listWorkshopFiles, readWorkshopFile, isNotRunning } from '../lib/workshops.mjs';
+import { listWorkshopFiles, readWorkshopFile, isNotRunning, websiteKey } from '../lib/workshops.mjs';
 import { __resetForTests } from '../lib/openreview.mjs';
 // From its own module: the crosscheck no longer re-exports it.
 import { normalizeWebsite } from './discover_openreview.mjs';
@@ -133,6 +133,38 @@ check('no stored website -> nothing', websiteDrift(null, 'https://b.org'), null)
 check('no OpenReview website -> nothing', websiteDrift('https://a.org', null), null);
 check('neither -> nothing', websiteDrift(null, null), null);
 check('normalize strips scheme/www/slash', normalizeWebsite('HTTPS://WWW.Example.org/a/'), 'example.org/a');
+
+// Google Sites spells one page several ways. The review used to know only the
+// generic differences above and reported COLM 2025 Social Sim and CVPR 2025 MIV
+// as moved: ours https://sites.google.com/view/<site>, OpenReview's the same
+// with /home (which by then answered 404). websiteKey() — related entries, the
+// official-list check — already folded these; now both share one rule.
+check('Google Sites /home is the same page',
+  websiteDrift('https://sites.google.com/view/social-sims-with-llms', 'https://sites.google.com/view/social-sims-with-llms/home'), null);
+check('...in either direction',
+  websiteDrift('https://sites.google.com/view/miv-cvpr2025/home', 'https://sites.google.com/view/miv-cvpr2025'), null);
+check('Google Sites /corp/view is the same page as /view',
+  websiteDrift('https://sites.google.com/corp/view/x-2026', 'https://sites.google.com/view/x-2026'), null);
+check('the classic /a/<domain>/ spelling is the same page',
+  websiteDrift('https://sites.google.com/a/umich.edu/x-lab', 'https://sites.google.com/umich.edu/x-lab'), null);
+check('two different Google Sites are still drift',
+  websiteDrift('https://sites.google.com/view/x-2026', 'https://sites.google.com/view/y-2026/home') !== null, true);
+check('/home anywhere but Google Sites is a different page',
+  websiteDrift('https://example.org', 'https://example.org/home') !== null, true);
+// One definition: on every spelling above, the review and websiteKey() agree.
+{
+  const spellings = [
+    'https://sites.google.com/view/x-2026', 'https://sites.google.com/view/x-2026/home',
+    'https://sites.google.com/corp/view/x-2026/', 'https://sites.google.com/a/umich.edu/x-lab',
+    'https://sites.google.com/umich.edu/x-lab/home', 'https://sites.google.com/view/y-2026',
+    'https://example.org', 'https://example.org/home',
+  ];
+  const disagree = [];
+  for (const a of spellings) for (const b of spellings) {
+    if ((normalizeWebsite(a) === normalizeWebsite(b)) !== (websiteKey(a) === websiteKey(b))) disagree.push(`${a} ~ ${b}`);
+  }
+  check('normalizeWebsite() and websiteKey() agree on which of these are one page', disagree, []);
+}
 
 console.log('— name / acronym drift —');
 

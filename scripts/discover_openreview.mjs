@@ -44,7 +44,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as yaml from 'js-yaml';
-import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, loadConferences, stripVenueFromName, normalizeAcronym, isNotRunning, slugify, slugOfFile } from '../lib/workshops.mjs';
+import { WORKSHOPS_DIR, listWorkshopFiles, readWorkshopFile, recordDeadlineObservation, loadConferences, stripVenueFromName, normalizeAcronym, isNotRunning, slugify, slugOfFile, foldGoogleSites } from '../lib/workshops.mjs';
 import { resolveDeadlineUtcMs, plausibleDeadline } from '../lib/dates.mjs';
 import { unwrap, openreviewFetch, recordUnverified, getUnverified, writeUnverified } from '../lib/openreview.mjs';
 import { askTopics } from '../lib/jev_topics.mjs';
@@ -256,13 +256,21 @@ const val = (c, k) => unwrap(c?.[k]);
  *  missing, blank, or non-URL value (organizers do occasionally type a bare
  *  hostname or an email address in there). */
 /** Compare two URLs ignoring differences that aren't worth a human's attention:
- *  scheme, a leading "www.", a trailing slash, and case. */
+ *  scheme, a leading "www.", a trailing slash, case, and Google Sites' several
+ *  spellings of one page — the same foldGoogleSites() that websiteKey() uses,
+ *  applied at the same point, so the review and the related-entries code agree
+ *  on what "the same website" is. Unlike websiteKey() it keeps a query string
+ *  and a fragment, which can name a different page. Every caller asks "is this
+ *  the URL already stored, or already declined?": the daily review's website
+ *  check, and the two places a blank `website` is filled unless OpenReview's
+ *  value was turned down (discovery and backfill_websites.mjs). */
 export function normalizeWebsite(url) {
   if (!url) return null;
-  const n = String(url).trim().toLowerCase()
-    .replace(/^https?:\/\//, '')
-    .replace(/^www\./, '')
-    .replace(/\/+$/, '');
+  const n = foldGoogleSites(
+    String(url).trim().toLowerCase()
+      .replace(/^https?:\/\//, '')
+      .replace(/^www\./, ''),
+  ).replace(/\/+$/, '');
   return n || null;
 }
 

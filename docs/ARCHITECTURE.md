@@ -402,7 +402,12 @@ offset, ≤14h, not ~a day) vs. a real change, as a hint. The same pass also rep
 means one that goes stale stays stale — IROS BEMHAT's stored site had been
 unpublished and redirected to a Google sign-in page while OpenReview listed a
 working one. Differences in scheme, a leading `www.`, a trailing slash or case are
-ignored so the report stays quiet. Like an earlier deadline move, it is reported
+ignored so the report stays quiet, and so are Google Sites' several spellings of
+one page (`/corp/view/…`, `/a/<domain>/…`, a trailing `/home`) — through the same
+`foldGoogleSites()` that `websiteKey()` applies for related entries and the
+official-list check. The review once had a narrower rule of its own and reported
+two workshops' sites as moved when OpenReview merely spelled them with `/home`
+(a spelling that, for both, no longer resolved). Like an earlier deadline move, it is reported
 and never applied: ours is sometimes the better link. It costs no extra requests,
 since the venue group is already in hand from the batched listing.
 
