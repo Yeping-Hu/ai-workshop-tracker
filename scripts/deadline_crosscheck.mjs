@@ -25,6 +25,13 @@
  * to be counted instead, and a run reporting "147 checked, 37 unfetchable" read
  * exactly like one that had checked all 184.
  *
+ * An empty answer from OpenReview is a verdict only where OpenReview
+ * demonstrably answered (silentListings): a conference-year listing that comes
+ * back empty while we track venues under it has not answered, so its venues are
+ * "could not be checked", never "gone". A run in which NO listing answered
+ * writes no report file at all, and the workflow leaves the issue as it was —
+ * on 2026-10-17 such a run reported all 949 venues deleted.
+ *
  * Usage:
  *   node scripts/deadline_crosscheck.mjs --recent                      # upcoming + recently-passed only
  *   node scripts/deadline_crosscheck.mjs --recent --report review.md   # + write the issue body
@@ -133,6 +140,43 @@ export function venuePrefix(venueId) {
   const id = String(venueId || '');
   const i = id.lastIndexOf('/');
   return i > 0 ? id.slice(0, i + 1) : null;
+}
+
+/**
+ * Which conference-year listings did not actually answer, and whether any did.
+ *
+ * OpenReview answers a group that does not exist with HTTP 200 and an empty
+ * list, and on 2026-10-17 it answered EVERY request that way for the length of
+ * a run: all 24 listings came back empty, every single lookup after them too,
+ * and the identity pass reported all 949 tracked venues as "no longer exists" —
+ * a 946-entry "new since the last run" comment on the review issue, for venues
+ * that were all still there the next morning. No status code separates the two
+ * cases, so the evidence has to come from the corpus: every listing prefix here
+ * is derived from venues we imported FROM that listing, so one that comes back
+ * empty while we track venues under it has not answered. It is not every
+ * workshop of a conference-year deleted at once, which no organiser does.
+ *
+ * Absence is concluded only where OpenReview demonstrably answered. A silent
+ * listing's venues are "could not be checked", never "gone" and never "has no
+ * deadline". A listing that answered but lacks one of our venues still sends
+ * that venue to the single lookup that tells a move (ML4PS) from a failure.
+ * When no listing answered at all the run is blind: it has nothing to say, and
+ * the caller writes no report, so the issue is left exactly as it was.
+ *
+ * Every prefix in the corpus is a conference-year namespace holding at least
+ * three of our venues (2026-10-19: 24 prefixes, 949 venues, none outside its
+ * conference's namespace). A venue in its organisers' own namespace sits alone
+ * under its prefix, so if that whole namespace ever vanished it would read here
+ * as silence rather than as gone: the safe direction, and named in the log.
+ *
+ * @param listings {prefix, returned, tracked}[] — `returned` is how many groups
+ *   the listing came back with (null when the request itself failed), `tracked`
+ *   how many of our venues sit under that prefix. Pure + exported for tests.
+ * @returns {{ silent: Set<string>, blind: boolean }}
+ */
+export function silentListings(listings) {
+  const silent = new Set(listings.filter((l) => l.tracked > 0 && !l.returned).map((l) => l.prefix));
+  return { silent, blind: listings.length > 0 && silent.size === listings.length };
 }
 
 /** Every venue group under one conference-year prefix, in a SINGLE request.
@@ -595,8 +639,10 @@ export function buildReport(items, drift = [], renames = [], unchecked = [], dea
   return out.join('\n') + '\n';
 }
 
-async function main() {
-  const args = process.argv.slice(2);
+/** The CLI. Exported, with its arguments as a parameter, so a test can run the
+ *  whole job against a stubbed OpenReview — the only way to pin what a run DOES
+ *  when the server misbehaves, which no helper on its own can show. */
+export async function runCrosscheck(args = process.argv.slice(2)) {
   const recent = args.includes('--recent');
   const strict = args.includes('--strict');
   const slug = args.includes('--slug') ? args[args.indexOf('--slug') + 1] : null;
@@ -658,11 +704,40 @@ async function main() {
     ...new Set(identityEntries.map((e) => venuePrefix(e.raw.openreview_venue_id)).filter(Boolean)),
   ];
   const groupById = new Map();
+  const returned = new Map();
   for (const p of prefixes) {
     const gs = await fetchVenueGroupsByPrefix(p);
     for (const g of gs ?? []) groupById.set(g.id, g);
+    returned.set(p, gs ? gs.length : null);
   }
   console.log(`Prefetched ${groupById.size} venue group(s) in ${prefixes.length} listing request(s).`);
+
+  // An empty answer is a verdict only where OpenReview demonstrably answered —
+  // see silentListings(). A silent listing is named in the log, and its venues
+  // in the deadline window under "Could not be checked"; when every listing is
+  // silent there is nothing to report at all.
+  const trackedUnder = new Map();
+  for (const e of identityEntries) {
+    const p = venuePrefix(e.raw.openreview_venue_id);
+    trackedUnder.set(p, (trackedUnder.get(p) ?? 0) + 1);
+  }
+  const { silent, blind } = silentListings(
+    prefixes.map((p) => ({ prefix: p, returned: returned.get(p), tracked: trackedUnder.get(p) ?? 0 })),
+  );
+  for (const p of silent) {
+    console.warn(`  ⚠ ${p}: the listing returned no venues while we track ${trackedUnder.get(p)} under it — not read as their deletion`);
+  }
+  if (blind) {
+    // Writing a report from this would rewrite the issue with whatever a blind
+    // run can say, and a report that came out empty would CLOSE it. Removing a
+    // stale file matters only locally; in CI the checkout never has one.
+    if (reportPath) fs.rmSync(reportPath, { force: true });
+    console.log(
+      `::warning::OpenReview answered none of the ${prefixes.length} conference-year listing(s) with a single venue. ` +
+        'Nothing was checked, no report was written, and the deadline-review issue is left as it was; the next run checks again.',
+    );
+    return;
+  }
 
   // Then the venues the listing can't answer: those whose `date` line carries no
   // "Submission Deadline:". Their invitation ids go out in batches of 40 rather
@@ -782,6 +857,10 @@ async function main() {
     // against the run.
     clearUnverified();
     const stillUnchecked = [];
+    // Venues whose single lookup came back as empty as their conference-year's
+    // listing did. Those lookups "completed", so they record nothing, but the
+    // silence they completed with says nothing about the venue (silentListings).
+    const unanswered = new Set();
     for (const u of unchecked) {
       const entry = toCheck.find((e) => e.slug === u.slug);
       let dl = null;
@@ -789,6 +868,8 @@ async function main() {
         const g = await fetchGroupById(u.venueId);
         if (g) {
           dl = parseGroupDeadline(val(g.content ?? {}, 'date')) || (await deadlineFromInvitation(g));
+        } else if (silent.has(venuePrefix(u.venueId))) {
+          unanswered.add(u.slug);
         }
       } catch {
         dl = null;
@@ -825,12 +906,13 @@ async function main() {
     // section — which is exactly how 37 silently-dropped entries stayed invisible
     // behind a number. Keep only entries where a lookup genuinely did not finish.
     const failed = new Set(getUnverified().flatMap((e) => [e.id, String(e.id).split('/-/')[0]]));
-    const dropped = stillUnchecked.filter((u) => !failed.has(u.venueId));
+    const notAnswered = (u) => failed.has(u.venueId) || unanswered.has(u.slug);
+    const dropped = stillUnchecked.filter((u) => !notAnswered(u));
     for (const u of dropped) {
       console.log(`    · ${u.slug}: OpenReview publishes no submission deadline for ${u.venueId} — nothing to compare`);
     }
     unchecked.length = 0;
-    unchecked.push(...stillUnchecked.filter((u) => failed.has(u.venueId)));
+    unchecked.push(...stillUnchecked.filter(notAnswered));
   }
 
   // Identity pass. Normally no network at all — every group is cached above —
@@ -866,6 +948,9 @@ async function main() {
         // A completed lookup that found nothing is a permanent fault; a lookup
         // that never completed is the transient case handled above.
         if (getUnverified().length > unverifiedBefore) continue;
+        // ...and so is an empty answer about a venue whose whole conference-year
+        // came back empty: the same silence, not evidence the venue has gone.
+        if (silent.has(venuePrefix(raw.openreview_venue_id))) continue;
         const meta = { slug: s2, file: f2, name: raw.name, conf: String(raw.conference || '').toUpperCase(), year: raw.year };
         const moved = await findMovedVenue(raw);
         // Whether a human has already recorded this entry as absent from the
@@ -926,5 +1011,5 @@ async function main() {
 // Only run the CLI when invoked directly, so the pure helpers can be imported in
 // tests without the module hitting the network.
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch((e) => { console.error(e.message); process.exit(1); });
+  runCrosscheck().catch((e) => { console.error(e.message); process.exit(1); });
 }

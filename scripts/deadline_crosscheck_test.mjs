@@ -20,7 +20,18 @@ import {
   siblingVenueCandidates,
   lateResurrection,
   declinedUpstreamValue,
+  silentListings,
+  venuePrefix,
+  runCrosscheck,
 } from './deadline_crosscheck.mjs';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import * as yaml from 'js-yaml';
+import { listWorkshopFiles, readWorkshopFile, isNotRunning } from '../lib/workshops.mjs';
+import { __resetForTests } from '../lib/openreview.mjs';
 // From its own module: the crosscheck no longer re-exports it.
 import { normalizeWebsite } from './discover_openreview.mjs';
 import { syncNote, LEGACY_IMPORT_NOTE } from './discover_openreview.mjs';
@@ -490,6 +501,183 @@ check('ack is irrelevant when we already agree', titleDrift('Same Title', 'Same 
   check('no venue id -> never acks',
     declinedUpstreamValue({ ...base, openreview_venue_id: undefined }, 'name', 'Anything Else'), null);
   check('no upstream value -> never acks', declinedUpstreamValue(base, 'name', null), null);
+}
+
+// --- an empty answer is a verdict only where OpenReview answered -------------
+// 2026-10-17: OpenReview answered every request of one run with HTTP 200 and an
+// empty list — the same answer it gives for a group that does not exist — and
+// the job reported all 949 tracked venues as deleted, in a 946-entry "new since
+// the last run" comment. They were all there the next morning.
+{
+  const L = (prefix, returned, tracked = 5) => ({ prefix, returned, tracked });
+  const both = silentListings([L('A/2026/Workshop/', 0), L('B/2026/Workshop/', 0)]);
+  check('every listing empty -> the run is blind', both.blind, true);
+  check('...and every listing is silent', [...both.silent].sort(), ['A/2026/Workshop/', 'B/2026/Workshop/']);
+  const one = silentListings([L('A/2026/Workshop/', 0), L('B/2026/Workshop/', 40)]);
+  check('one empty listing beside one that answered -> not blind', one.blind, false);
+  check('...but the empty one is silent', [...one.silent], ['A/2026/Workshop/']);
+  check('a listing whose request failed outright is silent too',
+    [...silentListings([L('A/', null), L('B/', 3)]).silent], ['A/']);
+  // ML4PS's shape: the listing answered and our venue was not in it. That is a
+  // move or a deletion, and the single lookup after it decides which.
+  check('a listing that answered with fewer venues than we track is not silent',
+    [...silentListings([L('A/', 1, 40)]).silent], []);
+  check('a listing nothing of ours sits under expects nothing', [...silentListings([L('A/', 0, 0)]).silent], []);
+  check('no listings at all is not a blind run', silentListings([]).blind, false);
+}
+
+// --- the whole job, against a stubbed OpenReview -----------------------------
+// The helper above is only half the fix; what matters is what a RUN does with
+// it. So the CLI runs here end to end on the real corpus, with `fetch` stubbed
+// to answer the way OpenReview did that day — and the way it does when one
+// venue really has gone, which must still be reported.
+{
+  const corpus = listWorkshopFiles().map(readWorkshopFile)
+    .filter(({ raw }) => raw?.openreview_venue_id && !isNotRunning(raw));
+  const listedUnder = new Map(); // prefix -> the groups OpenReview would list
+  for (const { raw } of corpus) {
+    const p = venuePrefix(raw.openreview_venue_id);
+    if (!listedUnder.has(p)) listedUnder.set(p, []);
+    listedUnder.get(p).push({
+      id: raw.openreview_venue_id,
+      content: { title: { value: raw.name }, website: { value: raw.website ?? '' } },
+    });
+  }
+  const prefixes = [...listedUnder.keys()];
+  const answer = (body) => {
+    const h = new Map([['ratelimit-remaining', '100000'], ['ratelimit-limit', '100000']]);
+    return { status: 200, ok: true, headers: { get: (k) => h.get(k.toLowerCase()) ?? null }, json: async () => body };
+  };
+  /** Serve OpenReview from `listing(prefix)` and `group(id)`; count requests. */
+  function stubOpenReview({ listing, group }) {
+    const log = [];
+    globalThis.fetch = async (url) => {
+      const u = new URL(String(url));
+      log.push(u.pathname + u.search);
+      if (u.pathname === '/groups' && u.searchParams.has('prefix')) {
+        const gs = listing(u.searchParams.get('prefix'));
+        return answer({ groups: gs, count: gs.length });
+      }
+      if (u.pathname === '/groups') {
+        const g = group(u.searchParams.get('id'));
+        return answer({ groups: g ? [g] : [], count: g ? 1 : 0 });
+      }
+      return answer({ invitations: [], count: 0 });
+    };
+    return log;
+  }
+  async function run() {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'crosscheck-'));
+    const report = path.join(dir, 'deadline-review.md');
+    const out = [];
+    const [log, warn] = [console.log, console.warn];
+    console.log = (...a) => out.push(a.join(' '));
+    console.warn = (...a) => out.push(a.join(' '));
+    __resetForTests({ remaining: 100000, limit: 100000 });
+    try {
+      await runCrosscheck(['--recent', '--report', report]);
+    } finally {
+      [console.log, console.warn] = [log, warn];
+    }
+    const body = fs.existsSync(report) ? fs.readFileSync(report, 'utf8') : null;
+    fs.rmSync(dir, { recursive: true, force: true });
+    return { body, out: out.join('\n') };
+  }
+  const realFetch = globalThis.fetch;
+
+  // That day: every answer empty.
+  const blindLog = stubOpenReview({ listing: () => [], group: () => null });
+  const blind = await run();
+  check('a run OpenReview answered nothing in writes no report — the issue is left as it was',
+    blind.body, null);
+  check('...says so where the Actions UI shows it',
+    /::warning::OpenReview answered none of the \d+ conference-year listing/.test(blind.out), true);
+  check('...calls nothing gone', /GONE/.test(blind.out), false);
+  check('...and stops after the listings rather than asking about every venue one by one',
+    blindLog.length, prefixes.length);
+
+  // One conference-year silent, the others answering, and one venue there
+  // really gone: the silence costs that year its check, the deletion is still
+  // reported.
+  const silentPrefix = [...listedUnder].sort((a, b) => b[1].length - a[1].length)[0][0];
+  const gone = listedUnder.get(prefixes.find((p) => p !== silentPrefix))[0].id;
+  const exists = (id) => id !== gone && listedUnder.get(venuePrefix(id))?.find((g) => g.id === id);
+  stubOpenReview({
+    listing: (p) => (p === silentPrefix ? [] : (listedUnder.get(p) ?? []).filter((g) => g.id !== gone)),
+    group: (id) => (venuePrefix(id) === silentPrefix ? null : exists(id) || null),
+  });
+  const partial = await run();
+  const deadRows = [...(partial.body ?? '').matchAll(/ours: `([^`]+)` \(gone\)/g)].map((m) => m[1]);
+  check('a venue missing from a listing that answered is still reported gone', deadRows, [gone]);
+  check('...and none of the silent year\'s venues is', deadRows.some((id) => venuePrefix(id) === silentPrefix), false);
+  check('the silent listing is named in the log',
+    partial.out.includes(`${silentPrefix}: the listing returned no venues`), true);
+
+  globalThis.fetch = realFetch;
+}
+
+// --- the issue step, run for real ---------------------------------------------
+// The JavaScript embedded in deadline-review.yml, against a mock client: the
+// job's half of the outage fix lives there, so it is exercised, not described.
+{
+  const require = createRequire(import.meta.url);
+  const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const wf = yaml.load(fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'deadline-review.yml'), 'utf8'));
+  const step = Object.values(wf.jobs)[0].steps.find((s) => s.name === 'Create/update the consolidated issue');
+  async function runIssueStep({ report, open = [] }) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'deadline-review-'));
+    if (report != null) fs.writeFileSync(path.join(dir, 'deadline-review.md'), report);
+    const calls = [];
+    const github = { rest: { issues: {
+      listForRepo: async () => ({ data: open }),
+      create: async (a) => calls.push({ kind: 'create', ...a }),
+      update: async (a) => calls.push({ kind: 'update', ...a }),
+      createComment: async (a) => calls.push({ kind: 'comment', ...a }),
+    } } };
+    const cwd = process.cwd();
+    const log = console.log;
+    process.chdir(dir);
+    console.log = () => {};
+    try {
+      const fn = new Function('github', 'context', 'require', `return (async () => { ${step.with.script} })()`);
+      await fn(github, { repo: { owner: 'o', repo: 'r' } }, require);
+    } finally {
+      console.log = log;
+      process.chdir(cwd);
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+    return calls;
+  }
+  const row = (slug) => ({
+    kind: 'human-conflict', slug, file: `data/workshops/${slug}.yml`, name: slug, conf: 'NEURIPS', year: 2026,
+    stored: '2026-08-24 11:59', fetched: '2026-08-31 12:00', label: 'differs by 7.00d',
+  });
+  // Three hundred entries a throttled run could not check: named in the body,
+  // but never anything to ping about.
+  const unchecked = Array.from({ length: 300 }, (_, i) => ({
+    file: `data/workshops/neurips-2026-u${i}.yml`, name: `U${i}`, conf: 'NEURIPS', year: 2026,
+    venueId: `NeurIPS.cc/2026/Workshop/U${i}`, reason: 'venue group could not be fetched',
+  }));
+  const yesterday = buildReport([row('neurips-2026-old')]);
+  const ISSUE = { number: 29, title: 'Data health: deadlines to review', body: yesterday };
+
+  const none = await runIssueStep({ report: null, open: [ISSUE] });
+  check('no report file -> the issue is not touched', none, []);
+
+  const throttled = await runIssueStep({ report: buildReport([row('neurips-2026-old')], [], [], unchecked), open: [ISSUE] });
+  check('a throttled run rewrites the body but pings nobody about the entries it could not check',
+    throttled.map((c) => c.kind), ['update']);
+
+  const fresh = await runIssueStep({ report: buildReport([row('neurips-2026-old'), row('neurips-2026-new')], [], [], unchecked), open: [ISSUE] });
+  const comment = fresh.find((c) => c.kind === 'comment')?.body ?? '';
+  check('a new review row is still announced — it alone',
+    [...comment.matchAll(/data\/workshops\/[\w.-]+\.yml/g)].map((m) => m[0]), ['data/workshops/neurips-2026-new.yml']);
+
+  const ticked = await runIssueStep({ report: yesterday, open: [{ ...ISSUE, body: yesterday.replace('- [ ]', '- [x]') }] });
+  check('a row somebody ticked is not new', ticked.map((c) => c.kind), ['update']);
+
+  const empty = await runIssueStep({ report: '', open: [ISSUE] });
+  check('an empty report still closes the issue', empty.map((c) => `${c.kind}:${c.state}`), ['update:closed']);
 }
 
 console.log(failed === 0 ? '\nDeadline cross-check logic OK.' : `\n${failed} test(s) failed.`);

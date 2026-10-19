@@ -42,16 +42,25 @@ jobs:
       # in a "Could not be checked this run" section of the issue itself, so the
       # review owns its own reporting rather than writing into the TSV that
       # discovery's "venues not verified" issue is built from — two workflows
-      # maintaining one issue would just take turns closing it.
+      # maintaining one issue would just take turns closing it. A run in which
+      # OpenReview answered nothing at all writes no report file, and the next
+      # step then leaves the issue exactly as it was (silentListings()).
       - run: node scripts/deadline_crosscheck.mjs --recent --report deadline-review.md
       - name: Create/update the consolidated issue
         uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
-            const report = fs.existsSync('deadline-review.md')
-              ? fs.readFileSync('deadline-review.md', 'utf8').trim()
-              : '';
+            // No file means OpenReview answered nothing: the script writes one,
+            // possibly empty, after every run that checked anything, and a crash
+            // fails the step before this one. A blind run has nothing to say, so
+            // the issue keeps its items rather than losing them — an empty body
+            // here would close it, and tomorrow would open a new one.
+            if (!fs.existsSync('deadline-review.md')) {
+              console.log('No report this run: OpenReview did not answer, so the issue is left as it was.');
+              return;
+            }
+            const report = fs.readFileSync('deadline-review.md', 'utf8').trim();
             const title = 'Data health: deadlines to review';
             const { data: open } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
@@ -79,8 +88,14 @@ jobs:
               // nine days. Diff the entry files named by the old body against the
               // new one and comment on whatever is genuinely new; the comment is
               // the part that actually reaches anyone.
+              //
+              // Only review rows count, and a review row is a checkbox. A "Could
+              // not be checked this run" row describes the run rather than the
+              // data and carries no box, so a throttled day never pings anyone
+              // about hundreds of entries nothing is wrong with. `[x]` is a box
+              // somebody ticked, still the same row.
               const named = (text) =>
-                new Set((String(text || '').match(/data\/workshops\/[\w.-]+\.yml/g) || []));
+                new Set([...String(text || '').matchAll(/^- \[[ xX]\] `(data\/workshops\/[\w.-]+\.yml)`/gm)].map((m) => m[1]));
               const before = named(existing.body);
               const added = [...named(report)].filter((f) => !before.has(f));
               await github.rest.issues.update({

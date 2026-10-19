@@ -31,7 +31,7 @@ for human review, as do dependency updates.
 | `issue-to-pr.yml` | "Add a workshop" issue form | Converts the form to a YAML file + PR, validates, reports back |
 | `edit-to-pr.yml` | "Edit a workshop" issue form | Applies the edit to the existing YAML + PR (timezone-safe), validates, reports back |
 | `resync-deadline.yml` | manual | Re-pull one workshop's deadline from OpenReview's duedate (either direction) |
-| `deadline-review.yml` | daily | One consolidated issue listing deadlines that need a human decision — including ones OpenReview reopened after they had closed, where the site says shut and OpenReview says open — daily because it is the only job that ever looks at a **human-edited** deadline, which freeze-on-touch excludes from every automatic sync. Comments when a workshop first appears, since editing an issue body notifies nobody. Also reports a `website` that changed on OpenReview (reported, never applied), a stored `openreview_venue_id` that no longer resolves — with the verified replacement when the workshop merely moved namespaces, or the not-running decision when the entry was already acknowledged as absent from the official list, since off the list *and* gone from the conference's OpenReview namespace is what an independent event looks like (see *An OpenReview venue is not proof a workshop was accepted*) — and names any entry OpenReview could not answer for rather than counting it. |
+| `deadline-review.yml` | daily | One consolidated issue listing deadlines that need a human decision — including ones OpenReview reopened after they had closed, where the site says shut and OpenReview says open — daily because it is the only job that ever looks at a **human-edited** deadline, which freeze-on-touch excludes from every automatic sync. Comments when a workshop first appears, since editing an issue body notifies nobody. Also reports a `website` that changed on OpenReview (reported, never applied), a stored `openreview_venue_id` that no longer resolves — with the verified replacement when the workshop merely moved namespaces, or the not-running decision when the entry was already acknowledged as absent from the official list, since off the list *and* gone from the conference's OpenReview namespace is what an independent event looks like (see *An OpenReview venue is not proof a workshop was accepted*) — and names any entry OpenReview could not answer for rather than counting it. A run OpenReview answered nothing in leaves the issue as it was, and only review rows count as new (see *An empty answer is not an answer*). |
 | `official-list-check.yml` | weekly | Reconciles the corpus against each conference-edition's **official accepted-workshop list** (`data/editions.yml` → `workshop_list_url`), and proposes one from the conference's `announcement_feed` where none is configured. One consolidated issue: entries we track that are not on the list (ranked so a still-open call comes first), acknowledged entries whose venue has since left the conference's OpenReview namespace (the independent-event signature — see below), listed workshops we do not track, and title/website drift. Reports only — see below. |
 | `official-list-decision.yml` | manual | Records one decision the official-list report asked for — `not_running` / `review_ack.official_list` via `scripts/mark_not_running.mjs` (a later verdict supersedes the earlier one in either direction, so a changed mind never fails the dispatch), or adopting/declining a drifted name or website via `scripts/apply_official_list.mjs` → commits to `main` |
 | `series-audit.yml` | weekly, manual | `scripts/series_audit.mjs` — asks Jev whether each candidate pair of entries (a shared OpenReview stem across conferences, or agreeing names across years in one conference; nothing already linked) is one workshop series, records every answer in `data/series_links.yml` → commits to `main`, and keeps one `data-health` issue ("workshop series to confirm") of the pairs between 0.4 and 0.9. The build links what cleared 0.9 (ARCHITECTURE.md, "Related entries", signal 5). Dispatching it with two slugs and `same`/`different` records a person's verdict, which outranks the model. Without a `TYPESAFE_API_KEY` it asks nothing; when requests to Jev failed it opens the same "Jev did not answer" issue discovery does, waiting-workshops list included, since whichever job runs last rewrites the body |
@@ -489,6 +489,36 @@ checked. Instead:
    (label `data-health`), edited in place and **closed automatically** once a
    later run verifies everything. It needs no action unless it persists for
    several weeks, which would point at something other than rate limiting.
+
+### An empty answer is not an answer
+
+A failure that raises nothing cannot be recorded, and OpenReview has one:
+it answers a group that does not exist with HTTP 200 and an empty list, and on
+2026-10-17 it answered *every* request of one deadline-review run that way.
+All 24 conference-year listings came back empty, and the job reported all 949
+tracked venues as "no longer exists" — a 946-entry "new since the last run"
+comment on the review issue, for venues that were all there the next morning.
+Nothing was written (the job is read-only), and the body edit itself never
+landed: 270K characters is four times what GitHub accepts for an issue body.
+
+So the review now concludes absence only where OpenReview demonstrably
+answered (`silentListings()` in `scripts/deadline_crosscheck.mjs`). Every
+listing prefix is derived from venues imported *from* that listing, so one
+that comes back empty while we track venues under it has not answered — no
+organiser deletes a conference-year's workshops at once. Its venues are
+"could not be checked", never "gone" and never "publishes no deadline". A
+listing that answered but lacks one of our venues still sends that venue to
+the single lookup that tells a move from a failure, which is how ML4PS was
+caught. When **no** listing answered, the run is blind: it stops after the
+listings (24 requests, where the 2026-10-17 run made about 2,500), writes no
+report file, and the workflow leaves the issue as it was rather than
+rewriting it, or — from an empty body — closing it. The workflow's "new since
+the last run" comment, meanwhile, counts only review rows, which are the
+checkboxes: a "could not be checked" row describes the run rather than the
+data, so a throttled day never pings anyone about entries nothing is wrong
+with. `scripts/deadline_crosscheck_test.mjs` runs the whole job against a
+stubbed OpenReview for both shapes, and the issue step itself against a mock
+client.
 
 ## What a new entry inherits automatically
 

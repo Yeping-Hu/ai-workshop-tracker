@@ -440,7 +440,15 @@ conference-year (each venue comes back with its content), then the venues whose
 date line carries no deadline are fetched 40 invitation ids at a time. That took a
 ~190-request run down to ~9 and ended the rate-limit skips that were silently
 dropping ~5% of entries per run — a skipped entry is simply not reviewed that
-week, which is how a real change once went unreported. And an **on-demand
+week, which is how a real change once went unreported. Batching also means
+an empty listing would speak for a whole conference-year, and OpenReview
+answers a group that does not exist with HTTP 200 and an empty list — the same
+answer it gave every request of the 2026-10-17 run, which then reported all 949
+venues deleted. So absence is concluded only where OpenReview demonstrably
+answered: a listing that comes back empty while we track venues under it has
+not answered, its venues are "could not be checked", and a run in which no
+listing answered writes no report and leaves the issue as it was
+(`silentListings()`; AUTOMATION.md, *An empty answer is not an answer*). And an **on-demand
 re-sync** (`scripts/resync_deadline.mjs --slug <slug>`, also a
 `workflow_dispatch`) lets a maintainer re-pull one workshop's deadline from
 OpenReview in either direction, re-stamping it for future auto-sync — so fixing a
