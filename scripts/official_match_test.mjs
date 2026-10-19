@@ -160,6 +160,39 @@ const slugsOf = (list) => list.map((e) => e.slug).sort();
     run([track]).drifted.map((d) => d.field), ['website']);
 }
 
+/* ------------------------------------- a track's name is not drift either */
+// The list prints one title per workshop; a track file is named for its track.
+// The two real NeurIPS 2026 shapes: BabyVLM's fast track (venue-noisy, so the
+// report said ADOPT, which would have given two entries one name) and VLM4RWD's
+// challenge track (a different name entirely, so it asked).
+{
+  const fast = ws({ slug: 'babyvlm-fast-track', name: 'FAST TRACK BabyVLM Workshop NEURIPS 2026', website: 'https://babyvlm.github.io/#cfp' });
+  const baby = ws({ slug: 'babyvlm', name: 'The BabyVLM Workshop: Toward Developmentally Plausible Multimodal Systems', website: 'https://babyvlm.github.io/#cfp' });
+  const both = run([baby, fast]);
+  check('the workshop and its fast track match the one listed BabyVLM', [both.pairs.length, both.counts.matched], [2, 1]);
+  check('...and the fast track\'s name is not reported once its sibling carries the title', both.drifted, []);
+
+  const challenges = ws({ slug: 'vlm4rwd-challenges', name: 'VLM4RWD Challenges', website: 'https://vlm4rwd.github.io/' });
+  const vlm = ws({ slug: 'vlm4rwd', name: 'Grounded and Faithful Vision-Language Models for Real-World Deployment 2026', website: 'https://vlm4rwd.github.io' });
+  check('a challenge track beside a sibling that carries the title: nothing to report', run([vlm, challenges]).drifted, []);
+
+  // Conditional, as for the URL: with no sibling carrying the title, a track's
+  // name is a real question, and so is every other sibling's.
+  check('the fast track alone still reports, with its verdict',
+    run([fast]).drifted.map((d) => `${d.field}:${d.verdict}`), ['name:adopt']);
+  check('the challenge track alone still reports, as a person\'s call',
+    run([challenges]).drifted.map((d) => `${d.field}:${d.verdict}`), ['name:unclear']);
+  const stub = ws({ slug: 'babyvlm', name: 'BabyVLM Workshop NEURIPS 2026', website: 'https://babyvlm.github.io/' });
+  check('before the main entry takes the title, both siblings are reported',
+    run([stub, fast]).drifted.map((d) => d.entry.slug).sort(), ['babyvlm', 'babyvlm-fast-track']);
+  // A sibling that DECLINED the title has recorded a decision about its own
+  // name; it does not carry the title, so it says nothing about the track's.
+  const declined = ws({ slug: 'babyvlm', name: 'BabyVLM Workshop NEURIPS 2026', website: 'https://babyvlm.github.io/',
+    review_ack: { name: both.pairs[0].item.title } });
+  check('a sibling that declined the title does not quiet the track',
+    run([declined, fast]).drifted.map((d) => d.entry.slug), ['babyvlm-fast-track']);
+}
+
 /* --------------------------- a list that links OpenReview instead of homepages */
 // Four of ICLR 2024's twenty entries link the workshop's OpenReview GROUP rather
 // than its website. websiteKey() drops the query string, so all four normalise to

@@ -98,6 +98,16 @@ Three things follow, and they are the whole design:
   name or year and nearly all do so legitimately ("4th CoRL Workshop on…",
   "co-located with NeurIPS 2025"), so a stripper aggressive enough to catch the
   handful of bad ones would mangle correct ones.
+- **A track is named for its track, not for the list.** A workshop's separate
+  track files all match its one listed entry, and the list prints one title and
+  one URL per workshop. So once a sibling carries the official title (or URL), a
+  track whose name (or site) says something else is not reported:
+  "FAST TRACK BabyVLM…" and "VLM4RWD Challenges" were, and the report told the
+  first to adopt the workshop's title, which would have given two entries one
+  name. Until some sibling carries the title, each one that differs is still
+  reported; taking it for the main entry quiets the tracks on the next run.
+  On 2026-10-19, 13 listed workshops were matched by 29 of our track files, and
+  those two were the only name rows the rule removed.
 - **A marked entry is never deleted.** Its OpenReview group is still live, so the
   next weekly crawl would re-create a deleted file — the same lesson
   `merged_venue_ids` records for duplicates. Keeping the file is what makes the
