@@ -16,6 +16,18 @@
   submitted: 1305
   source: ccfddl/ccf-deadlines
 - conference: corl
+  year: 2024
+  rate: 38.1
+  accepted: 264
+  submitted: 693
+  source: ccfddl/ccf-deadlines
+- conference: corl
+  year: 2025
+  rate: 35.7
+  accepted: 263
+  submitted: 737
+  source: ccfddl/ccf-deadlines
+- conference: corl
   year: 2026
   rate: 32.8
   accepted: 687
@@ -274,6 +286,12 @@
   rate: 27.5
   accepted: 2609
   submitted: 9473
+  source: ccfddl/ccf-deadlines
+- conference: icml
+  year: 2025
+  rate: 26.9
+  accepted: 3260
+  submitted: 12107
   source: ccfddl/ccf-deadlines
 - conference: icml
   year: 2026
