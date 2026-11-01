@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
-    "astro": "^7.3.5",
-    "js-yaml": "^5.4.2"
+    "astro": "^7.4.4",
+    "js-yaml": "^5.5.0"
   },
   "devDependencies": {
     "mathjax": "^3.2.2",
