@@ -1196,6 +1196,7 @@ pairs:
   - {a: neurips-2024-afm, b: neurips-2026-robopad, same: 0, judged: '2026-09-19', hash: 2fba3f25d4ca, via: names}
   - {a: neurips-2024-afm, b: neurips-2026-robotics-world-modeling, same: 0, judged: '2026-09-19', hash: 1bd789b4a1cb, via: names}
   - {a: neurips-2024-afm, b: neurips-2026-wm-pai, same: 0, judged: '2026-09-19', hash: a3fe42c5c56c, via: names}
+  - {a: neurips-2024-afm, b: neurips-2026-wma-pai, same: 0, judged: '2026-11-08', hash: deba9c7db8b0, via: names}
   - {a: neurips-2024-afm, b: neurips-2026-wrl, same: 0, judged: '2026-09-19', hash: b9b0dc1ed16b, via: names}
   - {a: neurips-2024-afm, b: neurips-2026-xai4science, same: 0, judged: '2026-09-19', hash: 70a567835dce, via: names}
   - {a: neurips-2024-ai4mat, b: neurips-2026-ai4chipdesign, same: 0, judged: '2026-09-19', hash: f782fb231782, via: names}
@@ -1502,6 +1503,7 @@ pairs:
   - {a: neurips-2024-opt, b: neurips-2026-tccml, same: 0, judged: '2026-09-19', hash: 9234ad74f73b, via: names}
   - {a: neurips-2024-opt, b: neurips-2026-tccml-tutorials-track, same: 0, judged: '2026-09-19', hash: 7cd4cbe5aab8, via: names}
   - {a: neurips-2024-opt, b: neurips-2026-wiml, same: 0, judged: '2026-09-19', hash: 20cf084fbb23, via: names}
+  - {a: neurips-2024-owa, b: neurips-2026-wma-pai, same: 0, judged: '2026-11-08', hash: e790b57c7020, via: names}
   - {a: neurips-2024-rbfm, b: neurips-2025-ai4nextg, same: 0, judged: '2026-09-19', hash: dc778bd64bf1, via: names}
   - {a: neurips-2024-rbfm, b: neurips-2026-bento, same: 0, judged: '2026-09-19', hash: 7cc7ca3c0ac2, via: names}
   - {a: neurips-2024-red-teaming-genai, b: neurips-2025-wctd, same: 0, judged: '2026-09-19', hash: b488b2c7abab, via: names}
@@ -1650,6 +1652,7 @@ pairs:
   - {a: neurips-2025-ewm, b: neurips-2026-robotics-world-modeling, same: 0.15, judged: '2026-09-19', hash: e45a418f232d, via: names}
   - {a: neurips-2025-ewm, b: neurips-2026-vlm4rwd, same: 0, judged: '2026-09-19', hash: 6cbf3dbc1104, via: names}
   - {a: neurips-2025-ewm, b: neurips-2026-wm-pai, same: 0.03, judged: '2026-09-19', hash: 6f4e44afa25d, via: names}
+  - {a: neurips-2025-ewm, b: neurips-2026-wma-pai, same: 0.07, judged: '2026-11-08', hash: e0e25f453e6f, via: names}
   - {a: neurips-2025-ewm, b: neurips-2026-wmhs, same: 0, judged: '2026-09-19', hash: 4496c989f1f7, via: names}
   - {a: neurips-2025-fm4ls, b: neurips-2026-asci, same: 0, judged: '2026-09-19', hash: 7ccce502fe88, via: names}
   - {a: neurips-2025-fm4ls, b: neurips-2026-brainbodyfm, same: 0, judged: '2026-09-19', hash: c7d75ffc28a7, via: names}
@@ -1679,6 +1682,7 @@ pairs:
   - {a: neurips-2025-fmea, b: neurips-2026-odi, same: 0, judged: '2026-09-19', hash: f87b7d6af16e, via: names}
   - {a: neurips-2025-fmea, b: neurips-2026-physunderstand, same: 0.02, judged: '2026-09-19', hash: 04a225e9d5ed, via: names}
   - {a: neurips-2025-fmea, b: neurips-2026-robopad, same: 0, judged: '2026-09-19', hash: 2f63a9486ab4, via: names}
+  - {a: neurips-2025-fmea, b: neurips-2026-wma-pai, same: 0.01, judged: '2026-11-08', hash: 91042c5505ff, via: names}
   - {a: neurips-2025-fmea, b: neurips-2026-xai4science, same: 0, judged: '2026-09-19', hash: 9bfd19016e85, via: names}
   - {a: neurips-2025-forlm, b: neurips-2026-diffulm, same: 0, judged: '2026-09-19', hash: 98fb6310fb24, via: names}
   - {a: neurips-2025-forlm, b: neurips-2026-flmsec, same: 0, judged: '2026-09-19', hash: 8f0ed7d201da, via: names}
@@ -1701,6 +1705,7 @@ pairs:
   - {a: neurips-2025-law, b: neurips-2026-socialagent, same: 0, judged: '2026-09-19', hash: 98bee6141f21, via: names}
   - {a: neurips-2025-law, b: neurips-2026-vlm4rwd, same: 0, judged: '2026-09-19', hash: e932dc3c0f7c, via: names}
   - {a: neurips-2025-law, b: neurips-2026-wm-pai, same: 0, judged: '2026-09-19', hash: 8fa0ce309447, via: names}
+  - {a: neurips-2025-law, b: neurips-2026-wma-pai, same: 0.01, judged: '2026-11-08', hash: 8d8e11b991ce, via: names}
   - {a: neurips-2025-law, b: neurips-2026-wmhs, same: 0, judged: '2026-09-19', hash: b5fd80d0aa83, via: names}
   - {a: neurips-2025-lit, b: neurips-2026-automlr, same: 0, judged: '2026-09-19', hash: 96687ea1c244, via: names}
   - {a: neurips-2025-lit, b: neurips-2026-econml, same: 0, judged: '2026-09-19', hash: 0d3b361d7aa8, via: names}
@@ -1790,6 +1795,7 @@ pairs:
   - {a: neurips-2025-negel, b: neurips-2026-physunderstand, same: 0, judged: '2026-09-19', hash: 7642d9a80bfe, via: names}
   - {a: neurips-2025-negel, b: neurips-2026-robopad, same: 0, judged: '2026-09-19', hash: 55512c91a380, via: names}
   - {a: neurips-2025-negel, b: neurips-2026-wm-pai, same: 0, judged: '2026-09-19', hash: 31633f9a08fe, via: names}
+  - {a: neurips-2025-negel, b: neurips-2026-wma-pai, same: 0, judged: '2026-11-08', hash: 50d93dfbc3a4, via: names}
   - {a: neurips-2025-negel, b: neurips-2026-xai4science, same: 0, judged: '2026-09-19', hash: 85e2f7113745, via: names}
   - {a: neurips-2025-neurreps, b: neurips-2026-unireps, same: 0.01, judged: '2026-09-19', hash: b2ff46a24227, via: names}
   - {a: neurips-2025-npgml, b: neurips-2026-automlr, same: 0, judged: '2026-09-19', hash: 73145cf4e7b4, via: names}
