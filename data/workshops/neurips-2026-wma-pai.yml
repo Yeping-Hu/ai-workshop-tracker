@@ -1,0 +1,21 @@
+# --- Missing: submission deadline -----------------------------------------
+# Know it? Add two lines anywhere below, for example:
+#   submission_deadline: 2026-09-15 23:59    # or just a date: 2026-09-15
+#   timezone: AoE                            # AoE / UTC / America/Los_Angeles
+# Then click "Commit changes..." -> "Propose changes" to open a pull request.
+# It is validated automatically and usually merged within a day.
+# ---------------------------------------------------------------------------
+name: World Models and Agents for Physical AI
+acronym: WMA-PAI
+conference: neurips
+year: 2026
+website: https://dalr2027.github.io/
+location: Seattle
+topics:
+  - world-models
+  - agents
+  - robotics
+openreview_venue_id: NeurIPS.cc/2026/Workshop/WMA-PAI
+submission_portal: openreview
+notes: Topics were auto-suggested and may be imprecise — edits welcome.
+added: '2026-11-08'
