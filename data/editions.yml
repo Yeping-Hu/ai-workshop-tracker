@@ -553,15 +553,15 @@
     timezone: AoE
 - conference: icml
   year: 2027
-  start: '2027-07-31'
-  end: '2027-08-06'
+  start: '2027-08-02'
+  end: '2027-08-04'
   url: https://icml.cc/Conferences/2027
   place: Riocentro, Rio de Janeiro, Brazil
   synced:
     from: ccfddl
-    as_of: '2026-11-03'
-    start: '2027-07-31'
-    end: '2027-08-06'
+    as_of: '2026-11-09'
+    start: '2027-08-02'
+    end: '2027-08-04'
     url: https://icml.cc/Conferences/2027
     place: Riocentro, Rio de Janeiro, Brazil
 - conference: iros
