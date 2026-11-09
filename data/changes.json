@@ -1,23 +1,23 @@
 {
-  "generated_at": "2026-11-02T16:27:02.265Z",
-  "since": "2026-10-27",
-  "until": "2026-11-02",
+  "generated_at": "2026-11-09T16:45:12.128Z",
+  "since": "2026-11-03",
+  "until": "2026-11-09",
   "events": [
     {
-      "slug": "corl-2026-roboletics",
-      "kind": "extended",
-      "days": 3,
-      "old_utc": "2026-10-24T15:59:00.000Z",
-      "new_utc": "2026-10-27T17:00:00.000Z",
-      "observed": "2026-10-28"
+      "slug": "icra-2027-shrimp",
+      "kind": "announced",
+      "days": null,
+      "old_utc": null,
+      "new_utc": null,
+      "observed": "2026-11-08"
     },
     {
-      "slug": "neurips-2026-paiec",
-      "kind": "extended",
-      "days": 7,
-      "old_utc": "2026-10-31T11:59:00.000Z",
-      "new_utc": "2026-11-07T11:59:00.000Z",
-      "observed": "2026-10-31"
+      "slug": "neurips-2026-wma-pai",
+      "kind": "announced",
+      "days": null,
+      "old_utc": null,
+      "new_utc": null,
+      "observed": "2026-11-08"
     }
   ]
 }
